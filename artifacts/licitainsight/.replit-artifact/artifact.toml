@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Licita Insight"
+description = "Uma plataforma de inteligência para pesquisar, avaliar, salvar e acompanhar oportunidades de licitação pública com uma experiência clara, rápida e orientada a dados."
+version = "1.0.0"
+id = "artifacts/licitainsight"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24252
+
+[services.development]
+run = "pnpm --filter @workspace/licitainsight run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/licitainsight", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/licitainsight/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24252"
+BASE_PATH = "/"
