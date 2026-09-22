@@ -5,12 +5,33 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Licita Insight design tokens.
+ * Documentation: /design-system/tokens.md (repo root). Living reference: /design-system route.
+ *
+ * Layers:
+ *   1. Raw values live on :root / .dark as HSL triplets ("H S% L%") so they can take alpha: hsl(var(--x) / .5).
+ *   2. @theme inline maps them to Tailwind colors, so `bg-status-open`, `text-foreground-subtle`, … exist.
+ *   3. @theme (static) holds values that do not change per theme: type scale, tracking, easing, shadows, layout.
+ *   4. @utility adds roles Tailwind has no namespace for: type-*, duration-*, z-*, focus-ring.
+ */
+
 @theme inline {
+  /* ── Surfaces & text ─────────────────────────────────────────── */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
+  --color-foreground-subtle: hsl(var(--foreground-subtle));
+
+  --color-surface: hsl(var(--surface));
+  --color-surface-sunken: hsl(var(--surface-sunken));
+  --color-surface-raised: hsl(var(--surface-raised));
+
   --color-border: hsl(var(--border));
+  --color-border-subtle: hsl(var(--border-subtle));
+  --color-border-strong: hsl(var(--border-strong));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-scrim: hsl(var(--scrim));
 
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
@@ -20,9 +41,18 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-popover-border: hsl(var(--popover-border));
 
+  /* ── Brand / intent ──────────────────────────────────────────── */
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-primary-border: var(--primary-border);
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-active: hsl(var(--primary-active));
+  --color-primary-subtle: hsl(var(--primary-subtle));
+  --color-primary-subtle-foreground: hsl(var(--primary-subtle-foreground));
+
+  --color-inverse: hsl(var(--inverse));
+  --color-inverse-foreground: hsl(var(--inverse-foreground));
+  --color-inverse-hover: hsl(var(--inverse-hover));
 
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
@@ -39,15 +69,35 @@
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
   --color-destructive-border: var(--destructive-border);
+  --color-destructive-subtle: hsl(var(--destructive-subtle));
+  --color-destructive-subtle-foreground: hsl(var(--destructive-subtle-foreground));
+  --color-destructive-subtle-border: hsl(var(--destructive-subtle-border));
 
+  /* ── Tender status (bg + fg pairs, AA in both themes) ────────── */
+  --color-status-open: hsl(var(--status-open));
+  --color-status-open-foreground: hsl(var(--status-open-foreground));
+  --color-status-under-review: hsl(var(--status-under-review));
+  --color-status-under-review-foreground: hsl(var(--status-under-review-foreground));
+  --color-status-closed: hsl(var(--status-closed));
+  --color-status-closed-foreground: hsl(var(--status-closed-foreground));
+  --color-status-suspended: hsl(var(--status-suspended));
+  --color-status-suspended-foreground: hsl(var(--status-suspended-foreground));
+  --color-status-cancelled: hsl(var(--status-cancelled));
+  --color-status-cancelled-foreground: hsl(var(--status-cancelled-foreground));
+
+  /* ── Data viz ────────────────────────────────────────────────── */
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
+  /* ── Sidebar (always dark navy, both themes) ─────────────────── */
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-muted-foreground: hsl(var(--sidebar-muted-foreground));
+  --color-sidebar-subtle-foreground: hsl(var(--sidebar-subtle-foreground));
+  --color-sidebar-strong-foreground: hsl(var(--sidebar-strong-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-primary: hsl(var(--sidebar-primary));
   --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
@@ -57,18 +107,60 @@
   --color-sidebar-accent-border: var(--sidebar-accent-border);
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  /* ── Fonts ───────────────────────────────────────────────────── */
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
+  /* ── Radius (base 8px) ───────────────────────────────────────── */
+  --radius-xs: 2px;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+@theme {
+  /* Type scale. Names stay t-shirt shaped so tailwind-merge (cn) keeps treating them as font sizes. */
+  --text-3xs: 0.625rem; /* 10px — mono labels, eyebrows */
+  --text-3xs--line-height: 0.875rem;
+  --text-2xs: 0.6875rem; /* 11px — meta, badges, helper text */
+  --text-2xs--line-height: 1rem;
+
+  --tracking-display: -0.04em;
+  --tracking-heading: -0.02em;
+  --tracking-label: 0.04em;
+  --tracking-eyebrow: 0.14em;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Elevation — restrained. One hairline + one soft layer at most. */
+  --shadow-2xs: 0 1px 0 0 hsl(var(--shadow-color) / 0.04);
+  --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / 0.05);
+  --shadow-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.06), 0 1px 3px 0 hsl(var(--shadow-color) / 0.04);
+  --shadow-md: 0 2px 4px -1px hsl(var(--shadow-color) / 0.06), 0 4px 12px -2px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg: 0 4px 8px -2px hsl(var(--shadow-color) / 0.06), 0 12px 32px -8px hsl(var(--shadow-color) / 0.14);
+  --shadow-xl: 0 8px 16px -4px hsl(var(--shadow-color) / 0.08), 0 24px 48px -12px hsl(var(--shadow-color) / 0.18);
+  --shadow-2xl: 0 32px 64px -16px hsl(var(--shadow-color) / 0.22);
+
+  /* Layout. Breakpoints are Tailwind defaults (sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536). */
+  --spacing-header: 76px;
+  --spacing-sidebar: 248px;
+  --spacing-sidebar-collapsed: 76px;
+  --container-page: 1440px;
+  --container-prose: 68ch;
 }
 
 /* LIGHT MODE */
 :root {
+  color-scheme: light;
+
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
 
@@ -79,146 +171,163 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
+  /* Surfaces */
   --background: 210 24% 97%;
-
-  --foreground: 215 32% 14%;
-
-  --border: 214 20% 88%;
-
-  --card: 0 0% 100%;
-
+  --surface: 0 0% 100%;
+  --surface-sunken: 210 22% 95%;
+  --surface-raised: 0 0% 100%;
+  --card: var(--surface);
   --card-foreground: 215 32% 14%;
-
   --card-border: 214 20% 88%;
-
-  --sidebar: 216 30% 12%;
-
-  --sidebar-foreground: 214 26% 86%;
-
-  --sidebar-border: 215 23% 21%;
-
-  --sidebar-primary: 210 80% 58%;
-
-  --sidebar-primary-foreground: 216 30% 12%;
-
-  --sidebar-accent: 215 24% 19%;
-
-  --sidebar-accent-foreground: 214 26% 94%;
-
-  --sidebar-ring: 210 80% 58%;
-
-  --popover: 0 0% 100%;
-
+  --popover: var(--surface-raised);
   --popover-foreground: 215 32% 14%;
-
   --popover-border: 214 20% 88%;
 
-  --primary: 210 78% 43%;
+  /* Text levels */
+  --foreground: 215 32% 14%; /* 15.0:1 on background */
+  --muted-foreground: 215 14% 42%; /* 5.2:1 on background · 4.8:1 on muted */
+  --foreground-subtle: 215 12% 56%; /* 3.4:1 — icons, disabled, decorative only */
 
-  --primary-foreground: 0 0% 100%;
+  /* Borders */
+  --border-subtle: 214 20% 92%;
+  --border: 214 20% 88%;
+  --border-strong: 214 16% 72%;
+  --input: 214 18% 80%;
+  --ring: 210 78% 43%; /* 4.9:1 on background */
+
+  /* Scrim behind modals, sheets and the mobile nav. Always dark, so use it with alpha: bg-scrim/50 */
+  --scrim: 216 30% 8%;
+
+  /* Primary — signal blue */
+  --primary: 210 78% 43%;
+  --primary-foreground: 0 0% 100%; /* 5.2:1 */
+  --primary-hover: 210 80% 38%;
+  --primary-active: 210 82% 34%;
+  --primary-subtle: 210 80% 95%;
+  --primary-subtle-foreground: 210 80% 34%; /* 6.5:1 */
+
+  /* Inverse — navy emphasis (Button variant "dark") */
+  --inverse: 216 30% 14%;
+  --inverse-foreground: 214 26% 96%; /* 14.7:1 */
+  --inverse-hover: 216 26% 20%;
 
   --secondary: 210 20% 93%;
-
   --secondary-foreground: 215 32% 20%;
-
   --muted: 210 20% 93%;
-
-  --muted-foreground: 215 12% 48%;
-
   --accent: 40 92% 57%;
+  --accent-foreground: 215 32% 14%; /* 8.7:1 */
 
-  --accent-foreground: 215 32% 14%;
+  --destructive: 4 72% 48%;
+  --destructive-foreground: 0 0% 100%; /* 5.0:1 */
+  --destructive-subtle: 6 80% 96%;
+  --destructive-subtle-foreground: 4 66% 40%; /* 6.1:1 */
+  --destructive-subtle-border: 5 60% 86%;
 
-  --destructive: 4 74% 55%;
+  /* Tender status */
+  --status-open: 152 46% 92%;
+  --status-open-foreground: 158 72% 24%; /* 5.8:1 */
+  --status-under-review: 42 92% 90%;
+  --status-under-review-foreground: 30 88% 27%; /* 6.6:1 */
+  --status-closed: 214 20% 92%;
+  --status-closed-foreground: 215 18% 34%; /* 6.4:1 */
+  --status-suspended: 6 82% 94%;
+  --status-suspended-foreground: 4 64% 38%; /* 6.2:1 */
+  --status-cancelled: 214 18% 95%;
+  --status-cancelled-foreground: 215 12% 40%; /* 5.4:1 */
 
-  --destructive-foreground: 0 0% 100%;
-
-  --input: 214 20% 82%;
-  --ring: 210 78% 43%;
   --chart-1: 210 78% 43%;
   --chart-2: 40 92% 57%;
   --chart-3: 211 72% 48%;
   --chart-4: 4 74% 55%;
   --chart-5: 270 45% 57%;
 
-  --app-font-sans: 'DM Sans', sans-serif;
+  /* Sidebar — same navy in both themes */
+  --sidebar: 216 30% 12%;
+  --sidebar-foreground: 214 26% 86%; /* 12.1:1 */
+  --sidebar-muted-foreground: 215 16% 66%; /* 6.9:1 — replaces text-slate-400 */
+  --sidebar-subtle-foreground: 215 14% 55%; /* 4.8:1 — eyebrows, meta; replaces text-slate-500 */
+  --sidebar-strong-foreground: 0 0% 100%; /* replaces text-white / text-slate-100 */
+  --sidebar-border: 215 23% 21%;
+  --sidebar-primary: 210 80% 58%;
+  --sidebar-primary-foreground: 216 30% 12%;
+  --sidebar-accent: 215 24% 19%;
+  --sidebar-accent-foreground: 214 26% 94%;
+  --sidebar-ring: 210 80% 58%;
+
+  --shadow-color: 215 32% 14%;
+
+  --app-font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: 'Space Mono', monospace;
+  --app-font-mono: 'Space Mono', ui-monospace, monospace;
   --radius: 0.5rem; /* 8px */
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
-  --shadow-sm:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-md:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-lg:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-xl:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+
+  /* Type roles (consumed by the type-* utilities below) */
+  --type-eyebrow-size: 0.625rem;
+  --type-label-size: 0.625rem;
+  --type-meta-size: 0.6875rem;
+  --type-ui-size: 0.8125rem;
+  --type-body-size: 0.875rem;
+  --type-section-size: 0.9375rem;
+  --type-title-size: 1.25rem;
+  --type-display-sm-size: 1.6875rem;
+  --type-display-size: 2.25rem;
+
+  /* Motion */
+  --duration-instant: 80ms;
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-nav: 40;
+  --z-modal: 50;
+  --z-popover: 50;
+  --z-toast: 100;
+
+  /* Focus */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
   /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(
-    from hsl(var(--sidebar-primary)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(
-    from hsl(var(--sidebar-accent)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --primary-border: hsl(var(--primary));
-  --primary-border: hsl(
-    from hsl(var(--primary)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(
-    from hsl(var(--secondary)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --muted-border: hsl(var(--muted));
-  --muted-border: hsl(
-    from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) /
-      alpha
-  );
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --accent-border: hsl(var(--accent));
-  --accent-border: hsl(
-    from hsl(var(--accent)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(
-    from hsl(var(--destructive)) h s
-      calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
 .dark {
+  color-scheme: dark;
+
   --button-outline: rgba(255, 255, 255, 0.1);
   --badge-outline: rgba(255, 255, 255, 0.05);
 
@@ -228,87 +337,89 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
+  /* Surfaces */
   --background: 216 30% 10%;
-
-  --foreground: 214 26% 92%;
-
-  --border: 215 23% 22%;
-
-  --card: 216 27% 14%;
-
+  --surface: 216 27% 14%;
+  --surface-sunken: 216 30% 12%;
+  --surface-raised: 216 25% 17%;
+  --card: var(--surface);
   --card-foreground: 214 26% 92%;
-
   --card-border: 215 23% 22%;
-
-  --sidebar: 216 34% 8%;
-
-  --sidebar-foreground: 214 26% 86%;
-
-  --sidebar-border: 215 23% 17%;
-
-  --sidebar-primary: 210 82% 66%;
-
-  --sidebar-primary-foreground: 216 34% 8%;
-
-  --sidebar-accent: 215 24% 16%;
-
-  --sidebar-accent-foreground: 214 26% 94%;
-
-  --sidebar-ring: 210 82% 66%;
-
-  --popover: 216 27% 14%;
-
+  --popover: var(--surface-raised);
   --popover-foreground: 214 26% 92%;
+  --popover-border: 215 23% 24%;
 
-  --popover-border: 215 23% 22%;
+  /* Text levels */
+  --foreground: 214 26% 92%; /* 14.7:1 on background */
+  --muted-foreground: 215 15% 64%; /* 6.8:1 on background · 5.2:1 on muted */
+  --foreground-subtle: 215 12% 52%; /* 4.1:1 on card — icons, disabled, decorative only */
 
+  /* Borders */
+  --border-subtle: 215 23% 18%;
+  --border: 215 23% 22%;
+  --border-strong: 215 20% 32%;
+  /* Border around inputs: more contrast than --border on a --card background */
+  --input: 215 23% 29%;
+  --ring: 210 82% 66%; /* 7.1:1 on background */
+
+  --scrim: 216 50% 3%;
+
+  /* Primary */
   --primary: 210 82% 66%;
+  --primary-foreground: 216 34% 8%; /* 7.4:1 */
+  --primary-hover: 210 84% 72%;
+  --primary-active: 210 80% 60%;
+  --primary-subtle: 212 45% 18%;
+  --primary-subtle-foreground: 210 82% 72%; /* 6.7:1 */
 
-  --primary-foreground: 216 34% 8%;
+  /* Inverse — flips to a light surface so "dark" buttons keep maximum emphasis */
+  --inverse: 214 26% 92%;
+  --inverse-foreground: 216 30% 10%; /* 14.7:1 */
+  --inverse-hover: 214 26% 84%;
 
   --secondary: 215 24% 19%;
-
   --secondary-foreground: 214 26% 92%;
-
   --muted: 215 24% 19%;
-
-  --muted-foreground: 215 15% 64%;
-
   --accent: 40 92% 57%;
-
   --accent-foreground: 215 32% 14%;
 
-  --destructive: 4 74% 58%;
+  --destructive: 4 80% 66%;
+  --destructive-foreground: 216 34% 8%; /* 6.2:1 */
+  --destructive-subtle: 4 36% 15%;
+  --destructive-subtle-foreground: 6 86% 76%; /* 7.5:1 */
+  --destructive-subtle-border: 4 34% 26%;
 
-  --destructive-foreground: 0 0% 100%;
+  /* Tender status */
+  --status-open: 158 38% 15%;
+  --status-open-foreground: 152 52% 68%; /* 7.9:1 */
+  --status-under-review: 36 46% 16%;
+  --status-under-review-foreground: 40 88% 66%; /* 8.1:1 */
+  --status-closed: 215 22% 20%;
+  --status-closed-foreground: 214 18% 74%; /* 6.8:1 */
+  --status-suspended: 4 42% 18%;
+  --status-suspended-foreground: 6 86% 76%; /* 6.9:1 */
+  --status-cancelled: 215 22% 16%;
+  --status-cancelled-foreground: 215 12% 62%; /* 5.4:1 */
 
-  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
-  --input: 215 23% 29%;
-  --ring: 210 82% 66%;
   --chart-1: 210 82% 66%;
   --chart-2: 40 92% 57%;
   --chart-3: 211 72% 60%;
   --chart-4: 4 74% 58%;
   --chart-5: 270 45% 65%;
 
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-sm:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-md:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-lg:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-xl:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --sidebar: 216 34% 8%;
+  --sidebar-foreground: 214 26% 86%;
+  --sidebar-muted-foreground: 215 16% 66%;
+  --sidebar-subtle-foreground: 215 14% 55%;
+  --sidebar-strong-foreground: 0 0% 100%;
+  --sidebar-border: 215 23% 17%;
+  --sidebar-primary: 210 82% 66%;
+  --sidebar-primary-foreground: 216 34% 8%;
+  --sidebar-accent: 215 24% 16%;
+  --sidebar-accent-foreground: 214 26% 94%;
+  --sidebar-ring: 210 82% 66%;
+
+  --shadow-color: 216 50% 2%;
 }
 
 @layer base {
@@ -316,9 +427,142 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.22);
+  }
+
+  /* One focus language for every interactive element. Components that draw their own ring opt out with outline-none. */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Honor reduced motion globally: keep state changes, drop movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ── Type roles ────────────────────────────────────────────────────
+ * Named type-* (not text-*) so cn()/tailwind-merge never mistakes them for text colors.
+ */
+@utility type-eyebrow {
+  font-family: var(--app-font-mono);
+  font-size: var(--type-eyebrow-size);
+  line-height: 0.875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility type-label {
+  font-family: var(--app-font-mono);
+  font-size: var(--type-label-size);
+  line-height: 0.875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@utility type-meta {
+  font-size: var(--type-meta-size);
+  line-height: 1rem;
+}
+@utility type-ui {
+  font-size: var(--type-ui-size);
+  line-height: 1.25rem;
+}
+@utility type-body {
+  font-size: var(--type-body-size);
+  line-height: 1.375rem;
+}
+@utility type-section {
+  font-size: var(--type-section-size);
+  line-height: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+@utility type-title {
+  font-size: var(--type-title-size);
+  line-height: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+@utility type-display-sm {
+  font-size: var(--type-display-sm-size);
+  line-height: 2.125rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+@utility type-display {
+  font-size: var(--type-display-size);
+  line-height: 2.625rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+@utility type-data {
+  font-family: var(--app-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Motion durations ─────────────────────────────────────────── */
+@utility duration-instant {
+  --tw-duration: var(--duration-instant);
+  transition-duration: var(--duration-instant);
+}
+@utility duration-fast {
+  --tw-duration: var(--duration-fast);
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  --tw-duration: var(--duration-base);
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  --tw-duration: var(--duration-slow);
+  transition-duration: var(--duration-slow);
+}
+
+/* ── Z-index scale ────────────────────────────────────────────── */
+@utility z-raised {
+  z-index: var(--z-raised);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-nav {
+  z-index: var(--z-nav);
+}
+@utility z-modal {
+  z-index: var(--z-modal);
+}
+@utility z-popover {
+  z-index: var(--z-popover);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+
+/* ── Focus ring (for custom controls that suppress the default outline) ── */
+@utility focus-ring {
+  outline: var(--focus-ring-width) solid hsl(var(--ring));
+  outline-offset: var(--focus-ring-offset);
 }
 
 /**
@@ -342,49 +586,72 @@
  * need to be distinguished from eachother visually.
  */
 @layer utilities {
+  /* Legacy role classes — kept for existing feature code. Prefer type-* in new code. */
   .label {
     color: hsl(var(--muted-foreground));
     font-family: var(--app-font-mono);
-    font-size: 10px;
-    letter-spacing: .04em;
+    font-size: var(--type-label-size);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   .value {
-    margin-top: .35rem;
+    margin-top: 0.35rem;
     font-size: 12px;
     font-weight: 600;
   }
 
   .section-title {
-    font-size: 15px;
+    font-size: var(--type-section-size);
     font-weight: 600;
-    letter-spacing: -.02em;
+    letter-spacing: -0.02em;
   }
 
   .field {
     display: flex;
     flex-direction: column;
-    gap: .5rem;
+    gap: 0.5rem;
     color: hsl(var(--muted-foreground));
-    font-size: 11px;
+    font-size: var(--type-meta-size);
     font-weight: 600;
   }
 
   .field input {
-    height: 2.6rem;
+    height: 2.625rem;
     border: 1px solid hsl(var(--input));
-    border-radius: .5rem;
+    border-radius: var(--radius);
     background: hsl(var(--background));
-    padding: 0 .75rem;
+    padding: 0 0.75rem;
     color: hsl(var(--foreground));
-    font-size: .8125rem;
+    font-size: var(--type-ui-size);
     font-weight: 400;
     outline: none;
+    transition:
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
   }
 
-  .field input:focus {
-    box-shadow: 0 0 0 2px hsl(var(--primary) / .22);
+  .field input::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .field input:hover:not(:disabled) {
+    border-color: hsl(var(--border-strong));
+  }
+
+  .field input:focus,
+  .field input:focus-visible {
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.2);
+  }
+
+  .field input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .field input[aria-invalid='true'] {
+    border-color: hsl(var(--destructive));
   }
 
   .dark .field input {
@@ -479,85 +746,5 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
-  }
-
-  /* Keep legacy landing/auth utility classes aligned with the blue brand palette. */
-  [class*="text-[#278f73]"],
-  [class*="text-[#258d72]"],
-  [class*="text-[#227d64]"],
-  [class*="text-[#14765c]"] {
-    color: #2369a8 !important;
-  }
-
-  [class*="text-[#6ad4b4]"] {
-    color: #83c2f1 !important;
-  }
-
-  [class*="text-[#172625]"],
-  [class*="text-[#273b38]"],
-  [class*="text-[#35504b]"] {
-    color: #172b44 !important;
-  }
-
-  [class*="text-[#61716f]"] {
-    color: #617287 !important;
-  }
-
-  [class*="text-[#71807d]"],
-  [class*="text-[#77988d]"],
-  [class*="text-[#81908c]"],
-  [class*="text-[#879692]"],
-  [class*="text-[#9aa8a4]"] {
-    color: #718198 !important;
-  }
-
-  [class*="text-[#b0c8c0]"] {
-    color: #b0c5d8 !important;
-  }
-
-  [class*="bg-[#172f2e]"],
-  [class*="bg-[#152c2c]"] {
-    background-color: #152f4d !important;
-  }
-
-  [class*="bg-[#234a47]"]:hover {
-    background-color: #224d76 !important;
-  }
-
-  [class*="bg-[#6ad4b4]"] {
-    background-color: #83c2f1 !important;
-  }
-
-  [class*="bg-[#39ad87]"] {
-    background-color: #4d9fe0 !important;
-  }
-
-  [class*="bg-[#e1f4ed]"],
-  [class*="bg-[#e7f4ef]"],
-  [class*="bg-[#e9f4ef]"],
-  [class*="bg-[#e4f4ee]"],
-  [class*="bg-[#e4f2ed]"],
-  [class*="bg-[#dcece6]"] {
-    background-color: #e7f1fb !important;
-  }
-
-  [class*="bg-[#f5f7f6]"] {
-    background-color: #f5f7fb !important;
-  }
-
-  [class*="border-[#b8d7cc]"] {
-    border-color: #b8d1e6 !important;
-  }
-
-  [class*="border-[#cbd8d4]"],
-  [class*="border-[#cbdcd6]"] {
-    border-color: #cbd8e5 !important;
-  }
-
-  [class*="bg-[#dce6e2]"],
-  [class*="bg-[#e4ebe8]"],
-  [class*="bg-[#edf1ef]"],
-  [class*="bg-[#f0f5f3]"] {
-    background-color: #edf2f8 !important;
   }
 }

@@ -5,13 +5,17 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AppShell } from '@/components/app-shell';
-import { AuthPage, DashboardPage, DesignSystemPage, LandingPage, MonitoringPage, SavedSearchesPage, SavedTendersPage, SearchPage, SettingsPage, TenderDetailPage } from '@/pages/pages';
-import {
-  Route,
-  Switch,
-  useLocation,
-  Router as WouterRouter,
-} from 'wouter';
+import AuthPage from '@/features/auth/auth-page';
+import DashboardPage from '@/features/dashboard/dashboard-page';
+import DesignSystemPage from '@/features/design-system/design-system-page';
+import LandingPage from '@/features/landing/landing-page';
+import MonitoringPage from '@/features/monitoring/monitoring-page';
+import SavedSearchesPage from '@/features/saved-searches/saved-searches-page';
+import SavedTendersPage from '@/features/saved-tenders/saved-tenders-page';
+import SearchPage from '@/features/search/search-page';
+import SettingsPage from '@/features/settings/settings-page';
+import TenderDetailPage from '@/features/tenders/tender-detail-page';
+import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient();
 
@@ -25,14 +29,62 @@ function Router() {
         <Route path="/login">{() => <AuthPage mode="login" />}</Route>
         <Route path="/register">{() => <AuthPage mode="register" />}</Route>
         <Route path="/forgot-password">{() => <AuthPage mode="forgot" />}</Route>
-        <Route path="/dashboard">{() => <AppShell><DashboardPage /></AppShell>}</Route>
-        <Route path="/search">{() => <AppShell><SearchPage /></AppShell>}</Route>
-        <Route path="/tenders/:id">{() => <AppShell><TenderDetailPage /></AppShell>}</Route>
-        <Route path="/saved-searches">{() => <AppShell><SavedSearchesPage /></AppShell>}</Route>
-        <Route path="/saved-tenders">{() => <AppShell><SavedTendersPage /></AppShell>}</Route>
-        <Route path="/monitoring">{() => <AppShell><MonitoringPage /></AppShell>}</Route>
-        <Route path="/settings">{() => <AppShell><SettingsPage /></AppShell>}</Route>
-        <Route path="/design-system">{() => <AppShell><DesignSystemPage /></AppShell>}</Route>
+        <Route path="/dashboard">
+          {() => (
+            <AppShell>
+              <DashboardPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/search">
+          {() => (
+            <AppShell>
+              <SearchPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/tenders/:id">
+          {() => (
+            <AppShell>
+              <TenderDetailPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/saved-searches">
+          {() => (
+            <AppShell>
+              <SavedSearchesPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/saved-tenders">
+          {() => (
+            <AppShell>
+              <SavedTendersPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/monitoring">
+          {() => (
+            <AppShell>
+              <MonitoringPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/settings">
+          {() => (
+            <AppShell>
+              <SettingsPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/design-system">
+          {() => (
+            <AppShell>
+              <DesignSystemPage />
+            </AppShell>
+          )}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

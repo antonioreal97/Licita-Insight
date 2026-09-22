@@ -2,21 +2,22 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.1.0
+  description: Public Licita Insight API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: search
+    description: Tender discovery operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +25,730 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /v1/tenders/search:
+    get:
+      operationId: searchTenders
+      tags: [search]
+      summary: Search tenders
+      parameters:
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/SearchMode"
+        - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/ModalityFilter"
+        - $ref: "#/components/parameters/StateFilter"
+        - $ref: "#/components/parameters/CityFilter"
+        - $ref: "#/components/parameters/OrganizationFilter"
+        - $ref: "#/components/parameters/SourceFilter"
+        - $ref: "#/components/parameters/CategoryFilter"
+        - $ref: "#/components/parameters/ValueMin"
+        - $ref: "#/components/parameters/ValueMax"
+        - $ref: "#/components/parameters/PublishedFrom"
+        - $ref: "#/components/parameters/PublishedTo"
+        - $ref: "#/components/parameters/DeadlineFrom"
+        - $ref: "#/components/parameters/DeadlineTo"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Facets"
+      responses:
+        "200":
+          description: Search result page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
+  /v1/tenders/{id}:
+    get:
+      operationId: getTenderById
+      tags: [search]
+      summary: Get a tender by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Tender detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /v1/search/suggestions:
+    get:
+      operationId: getSearchSuggestions
+      tags: [search]
+      summary: Get search autocomplete suggestions
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+      responses:
+        "200":
+          description: Suggestions ordered by relevance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestionsResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
 components:
+  parameters:
+    Query:
+      name: q
+      in: query
+      schema:
+        type: string
+    SearchMode:
+      name: mode
+      in: query
+      schema:
+        $ref: "#/components/schemas/SearchMode"
+        default: keyword
+    StatusFilter:
+      name: status
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/TenderStatus"
+    ModalityFilter:
+      name: modality
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/Modality"
+    StateFilter:
+      name: state
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          pattern: "^[A-Za-z]{2}$"
+    CityFilter:
+      name: city
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          minLength: 1
+    OrganizationFilter:
+      name: organizationId
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          minLength: 1
+    SourceFilter:
+      name: sourceId
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          minLength: 1
+    CategoryFilter:
+      name: category
+      in: query
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          minLength: 1
+    ValueMin:
+      name: valueMin
+      in: query
+      schema:
+        type: number
+        minimum: 0
+    ValueMax:
+      name: valueMax
+      in: query
+      schema:
+        type: number
+        minimum: 0
+    PublishedFrom:
+      name: publishedFrom
+      in: query
+      schema:
+        type: string
+        format: date
+    PublishedTo:
+      name: publishedTo
+      in: query
+      schema:
+        type: string
+        format: date
+    DeadlineFrom:
+      name: deadlineFrom
+      in: query
+      schema:
+        type: string
+        format: date
+    DeadlineTo:
+      name: deadlineTo
+      in: query
+      schema:
+        type: string
+        format: date
+    Sort:
+      name: sort
+      in: query
+      schema:
+        $ref: "#/components/schemas/SortOption"
+        default: relevance
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Facets:
+      name: facets
+      in: query
+      schema:
+        type: boolean
+        default: true
+  responses:
+    InvalidParameter:
+      description: Invalid request parameter
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    SearchUnavailable:
+      description: Search subsystem unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
+      required: [status]
+    TenderStatus:
+      type: string
+      enum: [open, under_review, closed, suspended, cancelled]
+    EstimatedValueStatus:
+      type: string
+      enum: [disclosed, confidential, not_published]
+    Modality:
+      type: string
+      enum:
+        - pregao_eletronico
+        - pregao_presencial
+        - concorrencia
+        - concorrencia_eletronica
+        - dispensa
+        - inexigibilidade
+        - credenciamento
+        - leilao
+        - dialogo_competitivo
+        - other
+    SortOption:
+      type: string
+      enum: [relevance, deadline_asc, published_desc, value_desc, value_asc]
+    SearchMode:
+      type: string
+      enum: [keyword, semantic, hybrid]
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required: [id, name]
+    Location:
+      type: object
+      properties:
+        state:
+          type: [string, "null"]
+        city:
+          type: [string, "null"]
+        cityIbgeCode:
+          type: [string, "null"]
+      required: [state, city, cityIbgeCode]
+    Source:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: [string, "null"]
+          format: uri
+      required: [id, name, url]
+    Category:
+      type: object
+      properties:
+        slug:
+          type: string
+        label:
+          type: string
+      required: [slug, label]
+    Highlight:
+      type: object
+      properties:
+        field:
+          type: string
+          enum: [title, objectSummary, items]
+        fragments:
+          type: array
+          items:
+            type: string
+      required: [field, fragments]
+    Relevance:
+      type: object
+      properties:
+        score:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+        highlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/Highlight"
+      required: [score, highlights]
+    TenderSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        objectSummary:
+          type: [string, "null"]
+        organization:
+          $ref: "#/components/schemas/Organization"
+        purchasingUnit:
+          type: [string, "null"]
+        modality:
+          $ref: "#/components/schemas/Modality"
+        modalityLabel:
+          type: string
+        status:
+          $ref: "#/components/schemas/TenderStatus"
+        tenderNumber:
+          type: [string, "null"]
+        estimatedValue:
+          type: [number, "null"]
+        estimatedValueStatus:
+          $ref: "#/components/schemas/EstimatedValueStatus"
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+        openingAt:
+          type: [string, "null"]
+          format: date-time
+        proposalDeadline:
+          type: [string, "null"]
+          format: date-time
+        location:
+          $ref: "#/components/schemas/Location"
+        source:
+          $ref: "#/components/schemas/Source"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        relevance:
+          $ref: "#/components/schemas/Relevance"
+        updatedAt:
+          type: string
+          format: date-time
       required:
+        - id
+        - title
+        - objectSummary
+        - organization
+        - purchasingUnit
+        - modality
+        - modalityLabel
         - status
-
+        - tenderNumber
+        - estimatedValue
+        - publishedAt
+        - openingAt
+        - proposalDeadline
+        - location
+        - source
+        - categories
+        - relevance
+        - updatedAt
+    TenderItem:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: [number, "null"]
+        unit:
+          type: [string, "null"]
+        estimatedUnitValue:
+          type: [number, "null"]
+        estimatedTotalValue:
+          type: [number, "null"]
+      required:
+        [
+          id,
+          description,
+          quantity,
+          unit,
+          estimatedUnitValue,
+          estimatedTotalValue,
+        ]
+    TenderDocument:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        sizeBytes:
+          type: [integer, "null"]
+        url:
+          type: string
+          format: uri
+        publishedAt:
+          type: [string, "null"]
+          format: date-time
+      required: [id, name, type, sizeBytes, url, publishedAt]
+    TenderTimelineEntry:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum:
+            [
+              published,
+              amended,
+              deadline_changed,
+              status_changed,
+              document_added,
+            ]
+        description:
+          type: string
+      required: [at, type, description]
+    TenderDetail:
+      allOf:
+        - $ref: "#/components/schemas/TenderSummary"
+        - type: object
+          properties:
+            description:
+              type: [string, "null"]
+            processNumber:
+              type: [string, "null"]
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/TenderItem"
+            documents:
+              type: array
+              items:
+                $ref: "#/components/schemas/TenderDocument"
+            timeline:
+              type: array
+              items:
+                $ref: "#/components/schemas/TenderTimelineEntry"
+            createdAt:
+              type: string
+              format: date-time
+          required:
+            [description, processNumber, items, documents, timeline, createdAt]
+    FacetBucket:
+      type: object
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+      required: [value, label, count]
+    ValueHistogramBucket:
+      type: object
+      properties:
+        from:
+          type: number
+          minimum: 0
+        to:
+          type: number
+          minimum: 0
+        count:
+          type: integer
+          minimum: 0
+      required: [from, to, count]
+    FacetGroupTotals:
+      type: object
+      properties:
+        status:
+          type: integer
+          minimum: 0
+        modality:
+          type: integer
+          minimum: 0
+        state:
+          type: integer
+          minimum: 0
+        source:
+          type: integer
+          minimum: 0
+        category:
+          type: integer
+          minimum: 0
+        organization:
+          type: integer
+          minimum: 0
+      required: [status, modality, state, source, category, organization]
+    SearchFacets:
+      type: object
+      properties:
+        status:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        modality:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        state:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        city:
+          type: array
+          maxItems: 30
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        category:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        organization:
+          type: array
+          description: Top 20 plus every organization selected in the request.
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        groupTotals:
+          $ref: "#/components/schemas/FacetGroupTotals"
+        valueRange:
+          type: object
+          properties:
+            min:
+              type: [number, "null"]
+            max:
+              type: [number, "null"]
+            histogram:
+              type: array
+              maxItems: 12
+              items:
+                $ref: "#/components/schemas/ValueHistogramBucket"
+          required: [min, max]
+      required:
+        [status, modality, state, source, category, organization, valueRange]
+    SearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenderSummary"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+            totalIsEstimate:
+              type: boolean
+          required: [page, pageSize, total, totalPages, totalIsEstimate]
+        facets:
+          anyOf:
+            - $ref: "#/components/schemas/SearchFacets"
+            - type: "null"
+        meta:
+          type: object
+          properties:
+            query:
+              type: [string, "null"]
+            searchMode:
+              $ref: "#/components/schemas/SearchMode"
+            searchModeFallbackReason:
+              anyOf:
+                - type: string
+                  enum: [not_available, query_too_short]
+                - type: "null"
+            tookMs:
+              type: number
+              minimum: 0
+            indexUpdatedAt:
+              type: [string, "null"]
+              format: date-time
+          required:
+            [
+              query,
+              searchMode,
+              searchModeFallbackReason,
+              tookMs,
+              indexUpdatedAt,
+            ]
+      required: [data, pagination, facets, meta]
+    Suggestion:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [term, organization, category]
+        value:
+          type: string
+        label:
+          type: string
+        count:
+          type: [integer, "null"]
+          description: Number of matching tenders; null only when counting is too expensive.
+      required: [type, value, label, count]
+    SuggestionsResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Suggestion"
+      required: [suggestions]
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+      required: [field, issue]
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              INVALID_PARAMETER,
+              NOT_FOUND,
+              RATE_LIMITED,
+              INTERNAL_ERROR,
+              SEARCH_UNAVAILABLE,
+            ]
+        message:
+          type: string
+        details:
+          type: [array, "null"]
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+        requestId:
+          type: string
+      required: [code, message, requestId]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/ApiError"
+      required: [error]
