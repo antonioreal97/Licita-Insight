@@ -13,13 +13,13 @@ type Props = {
   className?: string;
 };
 
-/** A single labelled fact: icon + value inline (lists) or label over value (fact strips). */
+/** A single labelled fact: icon + value inline (lists) or label over value (fact strips). Inline size is inherited from the parent. */
 export function MetaItem({ icon: Icon, label, children, variant = 'inline', title, className }: Props) {
   if (variant === 'stacked') {
     return (
       <div className={cn('min-w-0', className)}>
-        <dt className="label flex items-center gap-1.5">
-          {Icon && <Icon size={12} aria-hidden="true" className="shrink-0" />}
+        <dt className="flex items-center gap-1.5 type-label text-muted-foreground">
+          {Icon && <Icon size={12} aria-hidden="true" className="shrink-0 text-foreground-subtle" />}
           {label}
         </dt>
         <dd title={title} className="mt-1.5 min-w-0 text-sm">
@@ -29,8 +29,8 @@ export function MetaItem({ icon: Icon, label, children, variant = 'inline', titl
     );
   }
   return (
-    <span title={title} className={cn('inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground', className)}>
-      {Icon && <Icon size={13} aria-hidden="true" className="shrink-0" />}
+    <span title={title} className={cn('inline-flex min-w-0 items-center gap-1.5 text-muted-foreground', className)}>
+      {Icon && <Icon size={13} aria-hidden="true" className="shrink-0 text-foreground-subtle" />}
       <span className="sr-only">{label}: </span>
       <span className="min-w-0 truncate">{children}</span>
     </span>

@@ -59,3 +59,8 @@ export const formatTime = (value: string | null) => {
 
 /** "R$ 12,9 mi". */
 export const formatCurrencyCompact = (value: number | null, fallback = 'Não informado') => (value === null ? fallback : compactCurrency.format(value));
+
+const longDate = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric', timeZone: TZ });
+
+/** "terça-feira, 22 de set. de 2026" in São Paulo time — dashboard eyebrow. Defaults to today. */
+export const formatLongDate = (date: Date = new Date()) => longDate.format(date);

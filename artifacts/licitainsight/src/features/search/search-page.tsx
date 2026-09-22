@@ -25,6 +25,7 @@ import { useSearchUrlState } from './hooks/use-search-url-state';
 import { useTenderSearch } from './hooks/use-tender-search';
 import { rememberFacetLabels, rememberLabel } from './lib/facet-config';
 import { suggestRelaxation } from './lib/relaxation';
+import { relevanceVaries } from '@/features/tenders/lib/tender-display';
 
 const SORTS = Object.keys(sortLabels) as SortOption[];
 const PAGE_SIZES = [10, 20, 50];
@@ -40,6 +41,7 @@ export default function SearchPage() {
 
   const response = search.data;
   const facets = response?.facets;
+  const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
   const page = params.page ?? 1;
   const activeFilters = countActiveFilters(params);
@@ -238,7 +240,7 @@ export default function SearchPage() {
                   {/* Table view is a desktop affordance; phones always get the list. */}
                   <div className={`overflow-hidden rounded-xl border border-border bg-card ${view === 'table' ? 'md:hidden' : ''}`}>
                     {response!.data.map((tender) => (
-                      <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} />
+                      <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} relevanceVaries={scoresVary} />
                     ))}
                   </div>
                   {view === 'table' && (

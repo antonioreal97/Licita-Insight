@@ -1,19 +1,21 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-// Local-only store until the saved-tenders API exists (future CODEX_HANDOFF).
-// Swap the storage calls for a service when it does; the hook signature stays the same.
+// Saved tender ids live in this browser until a per-user saved-tenders API exists.
 
 const STORAGE_KEY = 'licita-saved-tenders';
-const DEFAULT_SAVED = ['pe-042-2026', 'pe-301-2026'];
 const listeners = new Set<() => void>();
 
 function read(): string[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : DEFAULT_SAVED;
-  } catch {
-    return DEFAULT_SAVED;
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) return parsed;
+    console.error(`[saved-tenders] Ignoring invalid value in localStorage "${STORAGE_KEY}".`);
+  } catch (error) {
+    console.error(`[saved-tenders] Could not read localStorage "${STORAGE_KEY}".`, error);
   }
+  return [];
 }
 
 let snapshot = read();
@@ -22,8 +24,9 @@ function write(next: string[]) {
   snapshot = next;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Storage unavailable (private mode): keep in-memory state only.
+  } catch (error) {
+    // Private mode / quota: the change still applies for this session, but won't persist.
+    console.error('[saved-tenders] Could not persist saved tenders; changes will be lost on reload.', error);
   }
   listeners.forEach((listener) => listener());
 }

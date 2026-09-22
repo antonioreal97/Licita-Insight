@@ -1,62 +1,55 @@
 import { Link } from 'wouter';
-import { Bookmark, BookmarkCheck } from 'lucide-react';
 import type { TenderSummary } from '@/api';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { DeadlineIndicator } from '@/features/tenders/components/deadline-indicator';
 import { HighlightedText } from '@/features/tenders/components/highlighted-text';
 import { RelevanceMeter } from '@/features/tenders/components/relevance-meter';
+import { SaveButton } from '@/features/tenders/components/save-button';
 import { StatusBadge } from '@/features/tenders/components/status-badge';
 import { ValueDisplay } from '@/features/tenders/components/value-display';
-import { highlightFor } from '@/features/tenders/lib/tender-display';
+import { highlightFor, relevanceVaries, shortTenderNumber } from '@/features/tenders/lib/tender-display';
 
 type Props = { tenders: TenderSummary[]; isSaved: (id: string) => boolean; onToggleSave: (id: string) => void };
 
 // Sticky header needs its own scroll container: the wrapper scrolls on both axes, so horizontal overflow
 // stays inside the table (never the page) and the header sticks while scrolling rows.
 const th =
-  'sticky top-0 z-10 whitespace-nowrap border-b border-border bg-muted px-3 py-2.5 text-left align-bottom font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground';
-const td = 'border-b border-border px-3 py-3 align-top';
+  'sticky top-0 z-[2] whitespace-nowrap border-b border-border bg-muted px-3 py-2.5 text-left align-bottom type-label font-medium text-muted-foreground';
+const td = 'border-b border-border-subtle px-3 py-2.5 align-top';
 // ≥sm the Objeto column stays pinned while the other columns scroll horizontally (needs an opaque background).
+// Local z-indexes (1–3) stay below the app header (z-sticky) — the table container does not create a stacking context.
 const pinned = 'sm:sticky sm:left-0 sm:border-r sm:border-r-border';
 
+/**
+ * Dense power-user view. Decision columns (valor, prazo, status) come right after the objeto so they are visible
+ * without horizontal scroll at ~1000px; modalidade folds into the objeto meta line and fonte into the órgão cell.
+ */
 export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
+  const varies = relevanceVaries(tenders);
   return (
     <div
       role="region"
       aria-label="Resultados em tabela"
       tabIndex={0}
       data-testid="results-table"
-      className="max-h-[calc(100dvh-9rem)] overflow-auto overscroll-x-contain rounded-xl border border-border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="max-h-[calc(100dvh-9rem)] overflow-auto overscroll-x-contain rounded-xl border border-border bg-card"
     >
-      <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0 text-left text-xs">
+      <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0 text-left type-ui">
         <caption className="sr-only">Licitações encontradas. Role horizontalmente para ver todas as colunas.</caption>
         <colgroup>
-          <col className="min-w-[240px]" />
-          <col className="w-[150px]" />
-          <col className="w-[96px]" />
-          <col className="w-[120px]" />
+          <col />
+          <col className="w-[128px]" />
           <col className="w-[116px]" />
-          <col className="w-[108px]" />
-          <col className="w-[116px]" />
-          <col className="w-[100px]" />
-          <col className="w-[48px]" />
+          <col className="w-[124px]" />
+          <col className="w-[172px]" />
+          <col className="w-[104px]" />
+          <col className="w-[52px]" />
         </colgroup>
         <thead>
           <tr>
-            <th scope="col" className={cn(th, pinned, 'pl-4 sm:z-20')}>
+            <th scope="col" className={cn(th, pinned, 'pl-4 sm:z-[3]')}>
               Objeto
-            </th>
-            <th scope="col" className={th}>
-              Órgão
-            </th>
-            <th scope="col" className={th}>
-              <abbr title="UF / Município" className="no-underline">
-                UF / Mun.
-              </abbr>
-            </th>
-            <th scope="col" className={th}>
-              Modalidade
             </th>
             <th scope="col" className={cn(th, 'text-right')}>
               Valor estimado
@@ -68,7 +61,12 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
               Status
             </th>
             <th scope="col" className={th}>
-              Fonte
+              Órgão · fonte
+            </th>
+            <th scope="col" className={th}>
+              <abbr title="UF / Município" className="no-underline">
+                UF / Mun.
+              </abbr>
             </th>
             <th scope="col" className={cn(th, 'pr-4')}>
               <span className="sr-only">Salvar</span>
@@ -77,53 +75,45 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
         </thead>
         <tbody>
           {tenders.map((t) => {
-            const saved = isSaved(t.id);
             const modality = modalityLabels[t.modality];
+            const number = shortTenderNumber(t, modality);
             const { state, city } = t.location;
+            const titleId = `table-title-${t.id}`;
             return (
-              <tr key={t.id} data-testid={`table-row-${t.id}`} className="group transition-colors hover:bg-muted [&:last-child>*]:border-b-0">
-                <th scope="row" className={cn(td, pinned, 'z-[1] bg-card pl-4 font-normal transition-colors group-hover:bg-muted')}>
+              <tr
+                key={t.id}
+                data-testid={`table-row-${t.id}`}
+                className="group transition-colors duration-fast ease-standard hover:bg-surface-sunken [&:last-child>*]:border-b-0"
+              >
+                <th
+                  scope="row"
+                  className={cn(td, pinned, 'z-[1] bg-card pl-4 font-normal transition-colors duration-fast ease-standard group-hover:bg-surface-sunken')}
+                >
                   <Link
+                    id={titleId}
                     href={`/tenders/${t.id}`}
                     title={t.title}
-                    className="line-clamp-2 break-words rounded-sm font-semibold leading-[1.35rem] text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="line-clamp-1 break-words font-semibold text-foreground transition-colors duration-fast ease-standard hover:text-primary"
                   >
                     <HighlightedText fragment={highlightFor(t, 'title')} fallback={t.title} />
                   </Link>
-                  <div className="mt-1 flex min-w-0 items-center gap-2">
-                    {t.tenderNumber && (
-                      <span title={t.tenderNumber} className="min-w-0 truncate font-mono text-[10px] text-muted-foreground">
-                        {t.tenderNumber}
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5 type-meta text-muted-foreground">
+                    <span
+                      title={t.modalityLabel !== modality ? `Na fonte: ${t.modalityLabel}` : undefined}
+                      className="shrink-0 font-semibold text-foreground/80"
+                    >
+                      {modality}
+                    </span>
+                    {number && (
+                      <span title={t.tenderNumber ?? undefined} className="min-w-0 truncate type-data text-3xs">
+                        {number}
                       </span>
                     )}
-                    <RelevanceMeter score={t.relevance.score} className="ml-auto shrink-0" />
+                    <RelevanceMeter score={t.relevance.score} varies={varies} className="ml-auto shrink-0" />
                   </div>
                 </th>
-                <td className={cn(td, 'text-muted-foreground')}>
-                  <span title={t.organization.name} className="line-clamp-2 break-words">
-                    {t.organization.name}
-                  </span>
-                </td>
-                <td className={td}>
-                  <span className="block font-mono text-[11px] font-bold text-foreground">{state ?? '—'}</span>
-                  <span
-                    title={city ?? 'Município não informado'}
-                    className={cn('block truncate', city ? 'text-muted-foreground' : 'italic text-muted-foreground/80')}
-                  >
-                    {city ?? 'não informado'}
-                  </span>
-                </td>
-                <td className={td}>
-                  <span
-                    title={t.modalityLabel !== modality ? `${modality} (na fonte: ${t.modalityLabel})` : modality}
-                    className="line-clamp-2 hyphens-auto"
-                    lang="pt-BR"
-                  >
-                    {modality}
-                  </span>
-                </td>
                 <td className={cn(td, 'text-right')}>
-                  <ValueDisplay value={t.estimatedValue} className="text-[12px]" />
+                  <ValueDisplay value={t.estimatedValue} status={t.estimatedValueStatus} />
                 </td>
                 <td className={td}>
                   <DeadlineIndicator deadline={t.proposalDeadline} status={t.status} variant="table" />
@@ -131,26 +121,32 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                 <td className={td}>
                   <StatusBadge status={t.status} />
                 </td>
-                <td className={cn(td, 'text-muted-foreground')}>
-                  <span title={t.source.name} className="block truncate">
+                <td className={td}>
+                  <span title={t.organization.name} className="block truncate text-foreground/80">
+                    {t.organization.name}
+                  </span>
+                  <span title={t.source.name} className="block truncate type-meta text-muted-foreground">
                     {t.source.name}
                   </span>
                 </td>
-                <td className={cn(td, 'pr-4 text-right')}>
-                  <button
-                    type="button"
-                    aria-label={saved ? 'Remover dos salvos' : 'Salvar edital'}
-                    aria-pressed={saved}
-                    title={saved ? 'Remover dos salvos' : 'Salvar edital'}
-                    data-testid={`button-table-save-${t.id}`}
-                    onClick={() => onToggleSave(t.id)}
-                    className={cn(
-                      '-my-1 grid h-8 w-8 place-items-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      saved ? 'text-primary' : 'text-muted-foreground hover:text-primary',
-                    )}
+                <td className={td}>
+                  <span className="block type-data font-bold text-foreground">{state ?? '—'}</span>
+                  <span
+                    title={city ?? 'Município não informado'}
+                    className={cn('block truncate type-meta', city ? 'text-muted-foreground' : 'italic text-muted-foreground/80')}
                   >
-                    {saved ? <BookmarkCheck size={16} aria-hidden="true" /> : <Bookmark size={16} aria-hidden="true" />}
-                  </button>
+                    {city ?? 'não informado'}
+                  </span>
+                </td>
+                <td className={cn(td, 'pr-4 text-right')}>
+                  <SaveButton
+                    saved={isSaved(t.id)}
+                    onToggle={() => onToggleSave(t.id)}
+                    describedBy={titleId}
+                    testId={`button-table-save-${t.id}`}
+                    iconSize={16}
+                    className="-my-1 ml-auto h-8 w-8"
+                  />
                 </td>
               </tr>
             );
