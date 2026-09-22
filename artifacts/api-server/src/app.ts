@@ -3,12 +3,18 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
+import { requestContext } from "./middlewares/request-context";
 
 const app: Express = express();
 
+app.use(requestContext);
 app.use(
   pinoHttp({
     logger,
+    genReqId(_req, res) {
+      return res.locals.requestId;
+    },
     serializers: {
       req(req) {
         return {
@@ -30,5 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

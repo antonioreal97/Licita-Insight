@@ -181,6 +181,83 @@ Meta de latência: p95 < 150 ms.
 
 ---
 
+## v1.1 — aditivos
+
+Os campos abaixo são aditivos. Rotas, parâmetros existentes e semântica da v1 permanecem
+inalterados.
+
+```ts
+type EstimatedValueStatus = 'disclosed' | 'confidential' | 'not_published';
+
+type ValueHistogramBucket = {
+  from: number;
+  to: number;
+  count: number;
+};
+```
+
+`TenderSummary` e, por herança, `TenderDetail` passam a incluir:
+
+```ts
+{
+  estimatedValueStatus?: EstimatedValueStatus;
+}
+```
+
+`estimatedValueStatus` é sempre `disclosed` quando `estimatedValue` não é `null`. Quando o
+valor é `null`, diferencia sigilo (`confidential`) de ausência de publicação
+(`not_published`).
+
+Quando `facets` é `true`, o objeto passa a incluir:
+
+```ts
+{
+  city?: FacetBucket[]; // top 30; value=código IBGE, label="Município/UF"
+  organization: FacetBucket[]; // top 20 + todos os organizationId selecionados
+  groupTotals?: {
+    status: number;
+    modality: number;
+    state: number;
+    source: number;
+    category: number;
+    organization: number;
+  };
+  valueRange: {
+    min: number | null;
+    max: number | null;
+    histogram?: ValueHistogramBucket[]; // escala logarítmica, máximo de 12 buckets
+  };
+}
+```
+
+Cada `groupTotals.<grupo>` representa o total de licitações após aplicar todos os filtros,
+exceto o filtro daquele grupo. A facet `city` ignora apenas o próprio filtro `city` e continua
+respeitando `state` e os demais filtros. Buckets de organizações selecionadas são sempre
+incluídos, inclusive com `count: 0`; quando o identificador não for conhecido, o próprio ID é
+usado como label.
+
+Os campos v1.1 não-null são opcionais no schema para compatibilidade estrutural com clientes
+v1, mas a implementação v1.1 os devolve sempre que `facets=true`; `estimatedValueStatus` é
+sempre devolvido em resultados e detalhes.
+
+`meta` passa a incluir:
+
+```ts
+{
+  searchModeFallbackReason: 'not_available' | 'query_too_short' | null;
+}
+```
+
+O motivo é `null` quando não há fallback. Na implementação keyword da v1.1, solicitações
+`semantic` ou `hybrid` usam `query_too_short` para consultas normalizadas com menos de três
+caracteres e `not_available` nos demais casos.
+
+Em `/api/v1/search/suggestions`, `count` representa o número de licitações que a sugestão
+retornaria e é preenchido para sugestões de termo, organização e categoria enquanto esse
+cálculo permanecer barato.
+
+---
+
 ## Performance esperada
 
 | Rota | p95 |
