@@ -13,7 +13,7 @@ const PRESERVED_KEYS = ['mock'];
 export function useSearchUrlState() {
   const search = useSearch();
   const [, navigate] = useLocation();
-  const params = useMemo(() => searchParamsFromUrl(search), [search]);
+  const params = useMemo<TenderSearchParams>(() => searchParamsFromUrl(search), [search]);
 
   const replaceAll = useCallback(
     (next: TenderSearchParams, opts: { replace?: boolean } = {}) => {
@@ -37,7 +37,11 @@ export function useSearchUrlState() {
     [params, replaceAll],
   );
 
-  const clearFilters = useCallback(() => replaceAll({ q: params.q, sort: params.sort }), [params.q, params.sort, replaceAll]);
+  /** Drops every filter but keeps the query, sort, search mode and page size. */
+  const clearFilters = useCallback(
+    () => replaceAll({ q: params.q, sort: params.sort, mode: params.mode, pageSize: params.pageSize }),
+    [params.q, params.sort, params.mode, params.pageSize, replaceAll],
+  );
 
   return { params, update, replaceAll, clearFilters };
 }

@@ -1,4 +1,4 @@
-import { searchAdapter, type Modality, type SortOption, type TenderSearchParams, type TenderStatus } from '@/api';
+import { searchAdapter, type Modality, type SearchMode, type SortOption, type TenderSearchParams, type TenderStatus } from '@/api';
 
 export const DEFAULT_PAGE_SIZE = 20;
 
@@ -66,6 +66,8 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
   if (Number.isInteger(page) && page > 1) params.page = page;
   const pageSize = Number(url.get('pageSize'));
   if (Number.isInteger(pageSize) && pageSize > 0) params.pageSize = pageSize;
+  const mode = searchModeFromUrl(search);
+  if (mode) params.mode = mode;
   return normalizeSearchParams(params);
 }
 
@@ -87,6 +89,14 @@ export function countActiveFilters(params: TenderSearchParams) {
     NUMBER_KEYS.filter((key) => params[key] !== undefined).length +
     DATE_KEYS.filter((key) => params[key] !== undefined).length
   );
+}
+
+const SEARCH_MODES: SearchMode[] = ['keyword', 'semantic', 'hybrid'];
+
+/** Returns `undefined` for keyword/unknown so normalized params stay canonical. */
+export function searchModeFromUrl(search: string): SearchMode | undefined {
+  const mode = new URLSearchParams(search).get('mode') as SearchMode | null;
+  return mode && mode !== 'keyword' && SEARCH_MODES.includes(mode) ? mode : undefined;
 }
 
 export const searchService = {
