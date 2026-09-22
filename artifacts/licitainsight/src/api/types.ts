@@ -51,7 +51,10 @@ export type SearchFacets = {
   source: FacetBucket[];
   category: FacetBucket[];
   organization: FacetBucket[];
-  valueRange: { min: number | null; max: number | null };
+  valueRange: { min: number | null; max: number | null; histogram?: { from: number; to: number; count: number }[] };
+  // v1.1 (optional so older servers stay valid)
+  city?: FacetBucket[];
+  groupTotals?: Record<'status' | 'modality' | 'state' | 'source' | 'category' | 'organization', number>;
 };
 
 export type Highlight = { field: 'title' | 'objectSummary' | 'items'; fragments: string[] };
@@ -67,6 +70,8 @@ export type TenderSummary = {
   status: TenderStatus;
   tenderNumber: string | null;
   estimatedValue: number | null;
+  /** v1.1: why the value is null. */
+  estimatedValueStatus?: 'disclosed' | 'confidential' | 'not_published';
   publishedAt: string | null;
   openingAt: string | null;
   proposalDeadline: string | null;
@@ -122,7 +127,14 @@ export type TenderSearchResponse = {
   data: TenderSummary[];
   pagination: Pagination;
   facets: SearchFacets | null;
-  meta: { query: string | null; searchMode: SearchMode; tookMs: number; indexUpdatedAt: string | null };
+  meta: {
+    query: string | null;
+    searchMode: SearchMode;
+    /** v1.1: why a semantic/hybrid request fell back to keyword. */
+    searchModeFallbackReason?: 'not_available' | 'query_too_short' | null;
+    tookMs: number;
+    indexUpdatedAt: string | null;
+  };
 };
 
 export type SearchSuggestion = {

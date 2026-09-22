@@ -206,3 +206,14 @@ Added because `bg-black/80` was a palette literal and `bg-foreground/40` flips t
 dark in both themes, so always use it with alpha. It is exposed as `--color-scrim` in `@theme inline`.
 
 The `!important` remap of the old green palette that sat at the end of `index.css` has been removed: landing and auth now use tokens.
+
+## Warning / urgent (cycle 1 polish)
+
+| Token (class) | Light | Dark | Contrast | Use |
+|---|---|---|---|---|
+| `--warning` (`bg-warning`, `text-warning`) | `36 92% 42%` | `40 90% 60%` | 3.16:1 / 8.99:1 vs surface (graphic ≥ 3:1) | top rules, icons |
+| `--warning-subtle` (`bg-warning-subtle`) | `42 92% 92%` | `38 42% 16%` | — | pill / banner fill |
+| `--warning-subtle-foreground` (`text-warning-subtle-foreground`) | `30 88% 27%` | `42 88% 66%` | 6.77:1 / 8.37:1 on warning-subtle | text on warning-subtle |
+| `urgent-subtle` / `urgent-subtle-foreground` | alias of `destructive-subtle` pair | alias | 6.1:1 / 7.5:1 | deadlines ≤ 48 h |
+
+Warning is "look at this soon" (deadline ≤ 7 days, degraded service), never an error. `accent` stays reserved for counters.

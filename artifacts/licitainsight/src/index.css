@@ -72,6 +72,11 @@
   --color-destructive-subtle: hsl(var(--destructive-subtle));
   --color-destructive-subtle-foreground: hsl(var(--destructive-subtle-foreground));
   --color-destructive-subtle-border: hsl(var(--destructive-subtle-border));
+  --color-warning: hsl(var(--warning));
+  --color-warning-subtle: hsl(var(--warning-subtle));
+  --color-warning-subtle-foreground: hsl(var(--warning-subtle-foreground));
+  --color-urgent-subtle: hsl(var(--destructive-subtle));
+  --color-urgent-subtle-foreground: hsl(var(--destructive-subtle-foreground));
 
   /* ── Tender status (bg + fg pairs, AA in both themes) ────────── */
   --color-status-open: hsl(var(--status-open));
@@ -222,6 +227,10 @@
   --destructive-subtle: 6 80% 96%;
   --destructive-subtle-foreground: 4 66% 40%; /* 6.1:1 */
   --destructive-subtle-border: 5 60% 86%;
+  /* Warning = "look at this soon" (deadlines ≤ 7 days, degraded service). Not an error. */
+  --warning: 36 92% 42%;
+  --warning-subtle: 42 92% 92%;
+  --warning-subtle-foreground: 30 88% 27%;
 
   /* Tender status */
   --status-open: 152 46% 92%;
@@ -388,6 +397,9 @@
   --destructive-subtle: 4 36% 15%;
   --destructive-subtle-foreground: 6 86% 76%; /* 7.5:1 */
   --destructive-subtle-border: 4 34% 26%;
+  --warning: 40 90% 60%;
+  --warning-subtle: 38 42% 16%;
+  --warning-subtle-foreground: 42 88% 66%;
 
   /* Tender status */
   --status-open: 158 38% 15%;

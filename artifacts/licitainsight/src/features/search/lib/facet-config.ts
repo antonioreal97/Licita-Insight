@@ -3,7 +3,7 @@ import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 
 /** Multi-value filter keys in `TenderSearchParams` that are backed by a facet group. */
 export type ArrayFilterKey = 'status' | 'modality' | 'state' | 'category' | 'sourceId' | 'organizationId';
-export type FacetKey = Exclude<keyof SearchFacets, 'valueRange'>;
+export type FacetKey = 'status' | 'modality' | 'state' | 'source' | 'category' | 'organization';
 
 export type FacetGroupConfig = {
   param: ArrayFilterKey;
