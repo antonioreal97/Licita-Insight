@@ -1,7 +1,9 @@
 # Contrato — Search API v1
 
-Status: **PROPOSTO** pelo Claude Orchestrator (frontend) · aguardando confirmação do `CODEX_BACKEND_AGENT`
+Status: **ACEITO** pelo `CODEX_BACKEND_AGENT` sem alterações (`docs/handoffs/CLAUDE_HANDOFF-001-search.md`) · integrado ao frontend via `VITE_API_MODE=http`
 Handoff: `docs/handoffs/CODEX_HANDOFF-001-search.md`
+
+Nota de implementação: com `total = 0` a API retorna `totalPages = 0`; o frontend trata ambos (0 ou 1).
 
 O Codex é autoridade sobre a implementação backend (schema, índice, ranking). Este documento
 fixa apenas a **forma pública** que o frontend consome. Mudanças de forma devem voltar como
