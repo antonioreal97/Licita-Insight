@@ -24,28 +24,38 @@ export function SearchUnavailable({ onRetry, retrying, requestId }: { onRetry: (
   }, [seconds, retrying, onRetry]);
 
   return (
-    <div role="alert" data-testid="state-unavailable" className="rounded-xl border border-accent/50 bg-accent/10 px-5 py-10 text-center sm:px-6">
-      <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-accent/25 text-foreground">
+    <div
+      role="alert"
+      data-testid="state-unavailable"
+      // Degraded, not an error: neutral surface, a short warning rule on top, warning only on the icon.
+      className="rounded-xl border border-border bg-surface px-5 py-12 text-center before:mx-auto before:mb-6 before:block before:h-0.5 before:w-12 before:rounded-full before:bg-warning sm:px-6"
+    >
+      <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-warning-subtle text-warning-subtle-foreground">
         <CloudOff size={19} aria-hidden />
       </div>
-      <h2 className="mt-4 text-base font-semibold">Busca temporariamente indisponível</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        O índice de licitações está sendo atualizado. Seus filtros foram mantidos e tentaremos de novo automaticamente
-        {retrying ? '…' : ` em ${seconds}s.`}
+      <h2 className="mt-4 type-section">Busca temporariamente indisponível</h2>
+      <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">
+        O índice de licitações está sendo atualizado. Seus filtros foram mantidos e tentaremos de novo automaticamente.
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         <Button variant="outline" data-testid="button-retry" onClick={onRetry} disabled={retrying}>
           <RefreshCw size={14} className={retrying ? 'animate-spin' : ''} aria-hidden />
-          {retrying ? 'Tentando…' : 'Tentar agora'}
+          {retrying ? (
+            'Tentando…'
+          ) : (
+            <>
+              Tentar agora <span className="type-data text-muted-foreground">· {seconds}s</span>
+            </>
+          )}
         </Button>
         <Link
           href="/saved-tenders"
-          className="inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-[13px] font-semibold text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="inline-flex h-9 items-center justify-center rounded-lg px-3.5 type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
         >
           Ver editais salvos
         </Link>
       </div>
-      {requestId && <div className="mt-3 font-mono text-[10px] text-muted-foreground">ref. {requestId}</div>}
+      {requestId && <div className="mt-3 type-data text-3xs text-muted-foreground">ref. {requestId}</div>}
     </div>
   );
 }

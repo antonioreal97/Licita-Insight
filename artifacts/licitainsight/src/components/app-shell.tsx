@@ -4,11 +4,11 @@ import {
   Bell,
   Bookmark,
   ChevronDown,
-  CircleHelp,
   FileSearch,
   LayoutDashboard,
   Menu,
   Moon,
+  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -16,14 +16,33 @@ import {
   Sun,
   Target,
   X,
+  type LucideIcon,
 } from 'lucide-react';
-const navItems = [
-  { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard },
-  { href: '/search', label: 'Explorar editais', icon: Search },
-  { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark },
-  { href: '/saved-tenders', label: 'Editais salvos', icon: FileSearch },
-  { href: '/monitoring', label: 'Monitoramento', icon: Target },
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+type NavItem = { href: string; label: string; icon: LucideIcon; testId: string };
+
+const navGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'Workspace',
+    items: [
+      { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard, testId: 'link-nav-visão-geral' },
+      { href: '/search', label: 'Explorar editais', icon: Search, testId: 'link-nav-explorar-editais' },
+      { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark, testId: 'link-nav-buscas-salvas' },
+      { href: '/saved-tenders', label: 'Editais salvos', icon: FileSearch, testId: 'link-nav-editais-salvos' },
+      { href: '/monitoring', label: 'Monitoramento', icon: Target, testId: 'link-nav-monitoramento' },
+    ],
+  },
+  {
+    label: 'Conta',
+    items: [
+      { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
+      { href: '/design-system', label: 'Design system', icon: Palette, testId: 'link-nav-design-system' },
+    ],
+  },
 ];
+
+const headerIconButton = 'rounded-lg p-2 text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -46,9 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         Pular para o conteúdo
       </a>
       <aside
-        className={`fixed inset-y-0 left-0 z-nav flex w-sidebar flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-slow ease-emphasized lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-sidebar-collapsed' : ''}`}
+        className={`fixed inset-y-0 left-0 z-nav flex w-sidebar flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[translate,width] duration-slow ease-emphasized lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-sidebar-collapsed' : ''}`}
       >
-        <div className="flex h-header items-center gap-3 border-b border-sidebar-border px-5">
+        <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-5 lg:h-header">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary type-section font-bold tracking-normal text-sidebar-primary-foreground">
             LI
           </div>
@@ -64,54 +83,51 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Fechar menu"
             data-testid="button-close-menu"
             onClick={() => setOpen(false)}
-            className="ml-auto rounded-md p-1 text-sidebar-muted-foreground transition-colors duration-fast hover:bg-sidebar-accent hover:text-sidebar-strong-foreground focus-visible:outline-sidebar-ring lg:hidden"
+            className="ml-auto rounded-md p-1 text-sidebar-muted-foreground transition-colors duration-fast ease-standard hover:bg-sidebar-accent hover:text-sidebar-strong-foreground focus-visible:outline-sidebar-ring lg:hidden"
           >
-            <X size={16} />
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-6">
-          {!collapsed && <div className="mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground">Workspace</div>}
-          <nav className="space-y-1">
-            {navItems.map(({ href, label, icon: Icon }) => {
-              const active = location === href || (href === '/search' && location.startsWith('/tenders/'));
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}
-                  aria-current={active ? 'page' : undefined}
-                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 type-ui font-medium transition-colors duration-fast focus-visible:outline-sidebar-ring ${active ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
-                >
-                  <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
-                  <span className={collapsed ? 'sr-only' : ''}>{label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          {!collapsed && <div className="mb-3 mt-10 px-3 type-eyebrow text-sidebar-subtle-foreground">Conta</div>}
-          <nav className="space-y-1">
-            <Link
-              href="/settings"
-              onClick={() => setOpen(false)}
-              data-testid="link-nav-configuracoes"
-              aria-current={location === '/settings' ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 type-ui font-medium transition-colors duration-fast focus-visible:outline-sidebar-ring ${location === '/settings' ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
-            >
-              <Settings size={17} />
-              <span className={collapsed ? 'sr-only' : ''}>Configurações</span>
-            </Link>
-            <Link
-              href="/design-system"
-              onClick={() => setOpen(false)}
-              data-testid="link-nav-design-system"
-              aria-current={location === '/design-system' ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 type-ui font-medium transition-colors duration-fast focus-visible:outline-sidebar-ring ${location === '/design-system' ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
-            >
-              <CircleHelp size={17} />
-              <span className={collapsed ? 'sr-only' : ''}>Design system</span>
-            </Link>
-          </nav>
+          {navGroups.map((group, index) => (
+            <div key={group.label}>
+              {collapsed ? (
+                index > 0 && <div className="mx-3 my-4 h-px bg-sidebar-border" />
+              ) : (
+                <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.label}</div>
+              )}
+              <nav aria-label={group.label} className="space-y-1">
+                {group.items.map(({ href, label, icon: Icon, testId }) => {
+                  const active = location === href || (href === '/search' && location.startsWith('/tenders/'));
+                  const link = (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setOpen(false)}
+                      data-testid={testId}
+                      aria-current={active ? 'page' : undefined}
+                      className={`flex items-center gap-3 rounded-lg py-2.5 type-ui font-medium transition-colors duration-fast ease-standard focus-visible:outline-sidebar-ring ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
+                    >
+                      <Icon size={17} strokeWidth={active ? 2 : 1.75} className="shrink-0" />
+                      <span className={collapsed ? 'sr-only' : ''}>{label}</span>
+                    </Link>
+                  );
+                  if (!collapsed) return link;
+                  // The link already has its accessible name (sr-only label); don't also announce the tooltip as a description.
+                  return (
+                    <Tooltip key={href} delayDuration={300}>
+                      <TooltipTrigger asChild aria-describedby={undefined}>
+                        {link}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={10}>
+                        {label}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
         </div>
         <div className="border-t border-sidebar-border p-3">
           <div className={`flex items-center gap-3 rounded-lg p-2 ${collapsed ? 'justify-center' : ''}`}>
@@ -122,7 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="truncate type-meta text-sidebar-subtle-foreground">Operações · Atlas Engenharia</div>
               </div>
             )}
-            {!collapsed && <ChevronDown size={14} className="text-sidebar-subtle-foreground" />}
+            {!collapsed && <ChevronDown size={14} strokeWidth={1.75} className="text-sidebar-subtle-foreground" />}
           </div>
         </div>
       </aside>
@@ -134,44 +150,36 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="fixed inset-0 z-overlay bg-scrim/40 lg:hidden"
         />
       )}
-      <div className={`min-h-[100dvh] transition-[padding] duration-base ease-standard ${collapsed ? 'lg:pl-sidebar-collapsed' : 'lg:pl-sidebar'}`}>
-        <header className="sticky top-0 z-sticky flex h-header items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-8">
+      <div className={`min-h-[100dvh] transition-[padding] duration-slow ease-emphasized ${collapsed ? 'lg:pl-sidebar-collapsed' : 'lg:pl-sidebar'}`}>
+        <header className="sticky top-0 z-sticky flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-8 lg:h-header">
           <div className="flex items-center gap-3">
-            <button
-              aria-label="Abrir menu"
-              data-testid="button-open-menu"
-              onClick={() => setOpen(true)}
-              className="rounded-lg p-2 transition-colors duration-fast hover:bg-muted lg:hidden"
-            >
-              <Menu size={20} />
+            <button aria-label="Abrir menu" data-testid="button-open-menu" onClick={() => setOpen(true)} className={`-ml-2 lg:hidden ${headerIconButton}`}>
+              <Menu size={20} strokeWidth={1.75} />
             </button>
+            <Link
+              href="/dashboard"
+              aria-label="Licita Insight — Visão geral"
+              className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground lg:hidden"
+            >
+              LI
+            </Link>
             <button
-              aria-label="Recolher barra lateral"
+              aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+              aria-expanded={!collapsed}
               data-testid="button-collapse-sidebar"
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden rounded-lg p-2 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground lg:block"
+              className={`hidden lg:block ${headerIconButton}`}
             >
-              {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+              {collapsed ? <PanelLeftOpen size={19} strokeWidth={1.75} /> : <PanelLeftClose size={19} strokeWidth={1.75} />}
             </button>
-            <div className="hidden type-eyebrow text-muted-foreground sm:block">
-              Fonte: PNCP
-            </div>
+            <div className="hidden type-eyebrow text-muted-foreground sm:block">Fonte: PNCP</div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              aria-label="Alternar tema"
-              data-testid="button-toggle-theme"
-              onClick={() => setDark(!dark)}
-              className="rounded-lg p-2 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
-            >
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            <button aria-label="Alternar tema" data-testid="button-toggle-theme" onClick={() => setDark(!dark)} className={headerIconButton}>
+              {dark ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
             </button>
-            <button
-              aria-label="Notificações"
-              data-testid="button-notifications"
-              className="relative rounded-lg p-2 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
-            >
-              <Bell size={18} />
+            <button aria-label="Notificações" data-testid="button-notifications" className={`relative ${headerIconButton}`}>
+              <Bell size={18} strokeWidth={1.75} />
             </button>
             <div className="ml-2 hidden h-7 w-px bg-border sm:block" />
             <span className="hidden text-xs font-medium text-muted-foreground sm:block">Marina Almeida</span>

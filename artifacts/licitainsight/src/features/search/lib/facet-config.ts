@@ -2,8 +2,8 @@ import type { SearchFacets, TenderSearchParams } from '@/api';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 
 /** Multi-value filter keys in `TenderSearchParams` that are backed by a facet group. */
-export type ArrayFilterKey = 'status' | 'modality' | 'state' | 'category' | 'sourceId' | 'organizationId';
-export type FacetKey = 'status' | 'modality' | 'state' | 'source' | 'category' | 'organization';
+export type ArrayFilterKey = 'status' | 'modality' | 'state' | 'city' | 'category' | 'sourceId' | 'organizationId';
+export type FacetKey = 'status' | 'modality' | 'state' | 'city' | 'source' | 'category' | 'organization';
 
 export type FacetGroupConfig = {
   param: ArrayFilterKey;
@@ -20,6 +20,8 @@ export const FACET_GROUPS: FacetGroupConfig[] = [
   { param: 'status', facet: 'status', title: 'Status', noun: 'status', visible: 6 },
   { param: 'modality', facet: 'modality', title: 'Modalidade', noun: 'modalidade', visible: 5 },
   { param: 'state', facet: 'state', title: 'Estado (UF)', noun: 'estado', visible: 6, searchPlaceholder: 'Buscar UF' },
+  // v1.1: value = IBGE code, label = "Município/UF" (top 30).
+  { param: 'city', facet: 'city', title: 'Município', noun: 'município', visible: 6, searchPlaceholder: 'Buscar município' },
   { param: 'category', facet: 'category', title: 'Categoria', noun: 'categoria', visible: 6, searchPlaceholder: 'Buscar categoria' },
   { param: 'organizationId', facet: 'organization', title: 'Órgão', noun: 'órgão', visible: 5, searchPlaceholder: 'Buscar órgão' },
   { param: 'sourceId', facet: 'source', title: 'Fonte', noun: 'fonte', visible: 5 },
@@ -38,9 +40,10 @@ export function rememberLabel(param: ArrayFilterKey, value: string, label: strin
 
 export function rememberFacetLabels(facets: SearchFacets | null | undefined) {
   if (!facets) return;
-  for (const group of FACET_GROUPS) for (const bucket of facets[group.facet]) rememberLabel(group.param, bucket.value, bucket.label);
+  for (const group of FACET_GROUPS) for (const bucket of facets[group.facet] ?? []) rememberLabel(group.param, bucket.value, bucket.label);
 }
 
+/** Status and modality are enums: always the PT-BR labels from tender-labels (the API's bucket labels differ, e.g. "Aberta" vs badge "Aberto"). */
 export function labelFor(param: ArrayFilterKey, value: string) {
   if (param === 'status') return statusLabels[value as keyof typeof statusLabels] ?? value;
   if (param === 'modality') return modalityLabels[value as keyof typeof modalityLabels] ?? value;

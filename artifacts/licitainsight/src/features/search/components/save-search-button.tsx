@@ -15,12 +15,13 @@ export function SaveSearchButton() {
           variant="outline"
           aria-disabled="true"
           data-testid="button-save-search"
-          className="cursor-not-allowed self-start opacity-70 sm:self-auto"
+          className="w-9 cursor-not-allowed px-0 opacity-70 sm:w-auto sm:px-3.5"
           onClick={() => toast({ title: 'Buscas salvas em breve', description: 'Em breve você poderá salvar esta busca e receber alertas de novos editais.' })}
         >
           <Bookmark size={14} aria-hidden />
-          Salvar busca
-          <span className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide text-secondary-foreground">em breve</span>
+          {/* Icon-only on phones so it shares the title row; the name stays for screen readers. */}
+          <span className="sr-only sm:not-sr-only">Salvar busca</span>
+          <span className="hidden rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground sm:inline">em breve</span>
         </Button>
       </TooltipTrigger>
       <TooltipContent>Em breve: salve esta busca e receba alertas</TooltipContent>

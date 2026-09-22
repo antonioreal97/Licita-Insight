@@ -56,23 +56,23 @@ export function FiltersSheet({ open, onOpenChange, params, onApply }: Props) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <SheetPortal>
-        <SheetOverlay className="bg-foreground/40" />
+        <SheetOverlay />
         <DialogPrimitive.Content
           data-testid="sheet-filters"
-          className="fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border bg-background shadow-lg transition ease-in-out data-[state=closed]:duration-200 data-[state=open]:duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
+          className="fixed inset-y-0 right-0 z-modal flex h-full w-full flex-col border-l border-border bg-background shadow-xl duration-slow ease-emphasized data-[state=closed]:duration-base data-[state=closed]:ease-exit data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
-              <DialogPrimitive.Title className="text-base font-semibold">Filtros</DialogPrimitive.Title>
-              <DialogPrimitive.Description className="text-xs text-muted-foreground">
+              <DialogPrimitive.Title className="type-section">Filtros</DialogPrimitive.Title>
+              <DialogPrimitive.Description className="type-meta text-muted-foreground">
                 {draftCount > 0 ? `${draftCount} ${draftCount === 1 ? 'filtro selecionado' : 'filtros selecionados'}` : 'Refine as oportunidades exibidas'}
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
               aria-label="Fechar filtros"
-              className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
             >
-              <X size={18} />
+              <X size={18} aria-hidden />
             </DialogPrimitive.Close>
           </div>
           <div className="flex-1 overflow-y-auto overscroll-contain px-4">

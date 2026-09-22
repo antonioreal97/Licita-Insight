@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, RefreshCw, Search, Sparkles } from 'lucide-react';
-import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
@@ -20,15 +19,20 @@ function saoPauloDate(offsetDays = 0): string {
   return new Date(Date.UTC(year, month - 1, day + offsetDays)).toISOString().slice(0, 10);
 }
 
-function MiniMetric({ label, value, detail, tone = 'green' }: { label: string; value: string; detail: string; tone?: 'green' | 'amber' | 'blue' }) {
-  const toneClass = tone === 'amber' ? 'text-status-under-review-foreground' : 'text-primary';
+function MiniMetric({ label, value, detail, attention = false }: { label: string; value: string; detail: string; attention?: boolean }) {
   return (
-    <div className="border-l border-primary/40 pl-4">
+    <div className="min-w-0 sm:px-7">
       <div className="type-label text-muted-foreground">{label}</div>
-      <div className="mt-2 type-display-sm tabular-nums text-foreground">{value}</div>
-      <div className={`mt-1 text-xs font-medium ${toneClass}`}>{detail}</div>
+      <div className="mt-2 type-title type-data text-foreground sm:type-display-sm">{value}</div>
+      <div className={`mt-1 type-meta ${attention ? 'font-medium text-status-under-review-foreground' : 'text-muted-foreground'}`}>{detail}</div>
     </div>
   );
+}
+
+function greeting(): string {
+  const hour = Number(new Intl.DateTimeFormat('pt-BR', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Sao_Paulo' }).format(new Date()));
+  if (hour < 12) return 'Bom dia';
+  return hour < 18 ? 'Boa tarde' : 'Boa noite';
 }
 
 function metricValue(total: number | undefined, pending: boolean, failed: boolean) {
@@ -65,6 +69,7 @@ export default function DashboardPage() {
     deadlineTo: weekAhead,
   });
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], facets: false });
+  const refreshing = catalog.isFetching || recent.isFetching || soon.isFetching || priority.isFetching;
   const refresh = () => {
     void catalog.refetch();
     void recent.refetch();
@@ -76,18 +81,20 @@ export default function DashboardPage() {
     <>
       <PageTitle
         eyebrow={eyebrow}
-        title="Bom dia, Marina."
+        title={`${greeting()}, Marina.`}
         description="Uma leitura rápida das publicações do PNCP que estão no banco."
         action={
-          <Link href="/search" data-testid="link-dashboard-search">
-            <Button>
-              <Search size={15} />
-              Explorar editais
-            </Button>
+          <Link
+            href="/search"
+            data-testid="link-dashboard-search"
+            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg bg-primary px-3.5 type-ui font-semibold text-primary-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active focus-visible:focus-ring sm:self-auto"
+          >
+            <Search size={15} strokeWidth={1.75} />
+            Explorar editais
           </Link>
         }
       />
-      <div className="mb-8 grid gap-6 border-y border-border bg-card px-5 py-6 sm:grid-cols-3 sm:px-7">
+      <div className="mb-8 grid grid-cols-3 gap-3 rounded-xl border border-border bg-card px-4 py-5 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
         <MiniMetric
           label="Editais no banco"
           value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
@@ -97,13 +104,12 @@ export default function DashboardPage() {
           label="Publicados em 7 dias"
           value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)}
           detail="contados a partir de hoje"
-          tone="amber"
         />
         <MiniMetric
           label="Aberturas próximas"
           value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)}
           detail="em aberto, prazo nos próximos 7 dias"
-          tone="blue"
+          attention
         />
       </div>
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -113,8 +119,12 @@ export default function DashboardPage() {
               <h2 className="type-section text-foreground">Prazos mais próximos</h2>
               <p className="mt-1 text-xs text-muted-foreground">Editais em aberto, ordenados pelo prazo de proposta</p>
             </div>
-            <Link href="/search" data-testid="link-dashboard-all" className="text-xs font-semibold text-primary hover:underline">
-              Ver todos <ArrowRight size={13} className="ml-1 inline" />
+            <Link
+              href="/search"
+              data-testid="link-dashboard-all"
+              className="shrink-0 rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+            >
+              Ver todos <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
             </Link>
           </div>
           {priority.isPending ? (
@@ -122,13 +132,11 @@ export default function DashboardPage() {
           ) : priority.isError ? (
             <ErrorState error={priority.error} onRetry={() => priority.refetch()} />
           ) : priority.data.data.length === 0 ? (
-            <p className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">
-              Nenhum edital em aberto no banco.
-            </p>
+            <p className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">Nenhum edital em aberto no banco.</p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {priority.data.data.map((tender) => (
-                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} />
+                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact />
               ))}
             </div>
           )}
@@ -140,10 +148,11 @@ export default function DashboardPage() {
               <button
                 data-testid="button-refresh-activity"
                 aria-label="Atualizar leitura"
+                aria-busy={refreshing || undefined}
                 onClick={refresh}
-                className="rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-primary"
+                className="rounded-md p-1 text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
               >
-                <RefreshCw size={14} />
+                <RefreshCw size={14} strokeWidth={1.75} className={refreshing ? 'animate-spin' : undefined} />
               </button>
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
@@ -152,12 +161,16 @@ export default function DashboardPage() {
           </div>
           <div className="rounded-xl border border-primary/20 bg-primary-subtle/50 p-5">
             <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">
-              <Sparkles size={16} />
+              <Sparkles size={16} strokeWidth={1.75} />
             </div>
             <h3 className="text-sm font-semibold">Seu radar está aprendendo</h3>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">Salve editais relevantes para calibrar as próximas recomendações.</p>
-            <Link href="/settings" data-testid="link-dashboard-preferences" className="mt-4 inline-block text-xs font-semibold text-primary">
-              Revisar preferências <ArrowRight size={13} className="ml-1 inline" />
+            <Link
+              href="/settings"
+              data-testid="link-dashboard-preferences"
+              className="mt-4 inline-block rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+            >
+              Revisar preferências <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
             </Link>
           </div>
         </aside>

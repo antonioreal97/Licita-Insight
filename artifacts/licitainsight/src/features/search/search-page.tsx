@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { LayoutGrid, List, Loader2, SlidersHorizontal } from 'lucide-react';
+import { List, Loader2, SlidersHorizontal, Table2 } from 'lucide-react';
 import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
@@ -69,9 +69,11 @@ export default function SearchPage() {
 
   const resultCount = search.isPending
     ? 'Buscando oportunidades…'
-    : pagination
-      ? `${pagination.totalIsEstimate ? 'Aprox. ' : ''}${formatNumber(pagination.total)} ${pagination.total === 1 ? 'resultado' : 'resultados'}`
-      : '';
+    : search.isError
+      ? 'Resultados indisponíveis'
+      : pagination
+        ? `${pagination.totalIsEstimate ? 'Aprox. ' : ''}${formatNumber(pagination.total)} ${pagination.total === 1 ? 'resultado' : 'resultados'}`
+        : '';
 
   return (
     <>
@@ -82,11 +84,13 @@ export default function SearchPage() {
         action={<SaveSearchButton />}
       />
 
-      <div className="mb-5 space-y-3 rounded-xl border border-border bg-card p-3 sm:p-4">
+      {/* No card: the input carries its own border, so the search sits on the page (one data surface: the results). */}
+      <div className="mb-5 space-y-3 sm:mb-6">
         <SearchCombobox value={params.q ?? ''} onSubmitQuery={submitQuery} onSelectFilter={selectFilter} />
         <SearchModeControl
           mode={params.mode}
           appliedMode={search.isPlaceholderData ? undefined : response?.meta.searchMode}
+          fallbackReason={search.isPlaceholderData ? undefined : response?.meta.searchModeFallbackReason}
           onChange={(mode) => update({ mode })}
         />
       </div>
@@ -95,9 +99,10 @@ export default function SearchPage() {
       <div className="@container/page">
         <div className="grid gap-6 @min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]">
           <aside aria-labelledby="facets-title" className="hidden @min-[52rem]/page:block">
-            <div className="sticky top-[92px] max-h-[calc(100dvh-108px)] overflow-y-auto rounded-xl border border-border bg-card px-4 pb-2">
-              <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                <h2 id="facets-title" className="text-sm font-semibold">
+            {/* A flat rail, not a card. Offsets follow the header token. */}
+            <div className="sticky top-[calc(3.5rem+1rem)] max-h-[calc(100dvh-3.5rem-2rem)] lg:top-[calc(var(--spacing-header)+1rem)] lg:max-h-[calc(100dvh-var(--spacing-header)-2rem)] overflow-y-auto overscroll-contain border-r border-border-subtle pr-4 pb-2 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]">
+              <div className="sticky top-0 z-raised flex items-center justify-between border-b border-border-subtle bg-background pb-3">
+                <h2 id="facets-title" className="type-section">
                   Filtros
                 </h2>
                 {activeFilters > 0 && (
@@ -105,7 +110,7 @@ export default function SearchPage() {
                     type="button"
                     onClick={clearFilters}
                     data-testid="button-sidebar-clear"
-                    className="rounded px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="rounded-sm px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
                   >
                     Limpar ({activeFilters})
                   </button>
@@ -116,7 +121,8 @@ export default function SearchPage() {
           </aside>
 
           <section ref={resultsRef} aria-label="Resultados da busca" className="@container/results min-w-0 scroll-mt-24">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+            {/* Phones: Filtros · sort on one 40px row, the count wraps under it. */}
+            <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
               <Button
                 variant="outline"
                 aria-haspopup="dialog"
@@ -128,36 +134,40 @@ export default function SearchPage() {
                 <SlidersHorizontal size={14} aria-hidden />
                 Filtros
                 {activeFilters > 0 && (
-                  <span className="rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-primary-foreground">
+                  <span className="rounded-full bg-primary px-1.5 py-0.5 type-data text-3xs leading-none font-bold text-primary-foreground">
                     {activeFilters}
                   </span>
                 )}
               </Button>
-              <p aria-live="polite" aria-atomic="true" data-testid="text-result-count" className="min-w-0 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{resultCount}</span>
-                {params.q && pagination && !search.isPending && <span className="hidden sm:inline"> para “{params.q}”</span>}
-              </p>
-              {refreshing && (
-                <span role="status" className="inline-flex items-center gap-1 text-xs text-muted-foreground" data-testid="status-refreshing">
-                  <Loader2 size={13} className="animate-spin" aria-hidden />
-                  Atualizando…
-                </span>
-              )}
-              {!search.isPending && (
-                <span data-testid="text-index-updated" className="text-xs text-muted-foreground">
-                  {response?.meta.indexUpdatedAt
-                    ? `Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}`
-                    : 'Nenhuma coleta do PNCP registrada'}
-                </span>
-              )}
+              <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:order-none sm:basis-auto">
+                <p aria-live="polite" aria-atomic="true" data-testid="text-result-count" className="min-w-0 text-sm text-muted-foreground">
+                  <span className={search.isError ? 'font-medium' : 'font-semibold text-foreground'}>{resultCount}</span>
+                  {params.q && pagination && !search.isPending && !search.isError && <span className="hidden sm:inline"> para “{params.q}”</span>}
+                </p>
+                {refreshing && (
+                  <span role="status" className="inline-flex items-center gap-1 type-meta text-muted-foreground" data-testid="status-refreshing">
+                    <Loader2 size={13} className="animate-spin" aria-hidden />
+                    Atualizando…
+                  </span>
+                )}
+                {!search.isPending && !search.isError && (
+                  <span data-testid="text-index-updated" className="type-meta text-muted-foreground">
+                    {response?.meta.indexUpdatedAt ? `Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}` : 'Nenhuma coleta do PNCP registrada'}
+                  </span>
+                )}
+              </div>
 
               <div className="ml-auto flex items-center gap-2">
                 <div className="flex items-center gap-2">
                   <span aria-hidden className="hidden text-xs text-muted-foreground sm:inline">
                     Ordenar por
                   </span>
-                  <Select value={params.sort ?? 'relevance'} onValueChange={(sort) => update({ sort: sort as SortOption })}>
-                    <SelectTrigger aria-label="Ordenar por" data-testid="select-sort" className="h-10 w-[172px] bg-card text-xs sm:h-9">
+                  <Select value={params.sort ?? 'relevance'} onValueChange={(sort) => update({ sort: sort as SortOption })} disabled={search.isError}>
+                    <SelectTrigger
+                      aria-label="Ordenar por"
+                      data-testid="select-sort"
+                      className="h-10 w-auto max-w-[9.5rem] min-w-0 bg-card text-xs sm:h-9 sm:w-[172px] sm:max-w-none"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -170,27 +180,26 @@ export default function SearchPage() {
                   </Select>
                 </div>
 
-                <div role="group" aria-label="Modo de visualização" className="hidden rounded-lg border border-border bg-card p-0.5 md:flex">
-                  <button
-                    type="button"
-                    aria-label="Visualização em lista"
-                    aria-pressed={view === 'list'}
-                    data-testid="button-view-list"
-                    onClick={() => setView('list')}
-                    className={`grid h-8 w-8 place-items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${view === 'list' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <List size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Visualização em tabela"
-                    aria-pressed={view === 'table'}
-                    data-testid="button-view-table"
-                    onClick={() => setView('table')}
-                    className={`grid h-8 w-8 place-items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${view === 'table' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    <LayoutGrid size={15} />
-                  </button>
+                <div role="group" aria-label="Modo de visualização" className="hidden rounded-lg border border-border bg-muted/60 p-0.5 md:flex">
+                  {(
+                    [
+                      { value: 'list', label: 'Visualização em lista', icon: List },
+                      { value: 'table', label: 'Visualização em tabela', icon: Table2 },
+                    ] as const
+                  ).map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-label={label}
+                      aria-pressed={view === value}
+                      disabled={search.isError}
+                      data-testid={`button-view-${value}`}
+                      onClick={() => setView(value)}
+                      className={`grid h-8 w-8 place-items-center rounded-md transition-[background-color,color,box-shadow] duration-fast ease-standard focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50 ${view === value ? 'bg-surface text-foreground shadow-2xs' : 'text-muted-foreground enabled:hover:text-foreground'}`}
+                    >
+                      <Icon size={15} aria-hidden />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -201,7 +210,8 @@ export default function SearchPage() {
 
             <div
               aria-busy={search.isFetching}
-              className={`transition-opacity duration-200 ${search.isPlaceholderData ? 'pointer-events-none opacity-60' : ''}`}
+              // Dim stale results only after 120ms so fast refetches don't flicker; un-dim is immediate.
+              className={`transition-opacity duration-base ease-standard ${search.isPlaceholderData ? 'pointer-events-none opacity-50 delay-120' : ''}`}
               data-testid="search-results"
             >
               {search.isPending ? (

@@ -27,9 +27,6 @@ export function buildFilterChips(params: TenderSearchParams): FilterChip[] {
       });
     }
   }
-  for (const city of params.city ?? []) {
-    chips.push({ id: `city:${city}`, group: 'Cidade', label: city, remove: { city: params.city!.filter((item) => item !== city) } });
-  }
   if (params.valueMin !== undefined || params.valueMax !== undefined) {
     chips.push({
       id: 'value',

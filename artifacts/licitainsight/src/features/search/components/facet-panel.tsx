@@ -18,29 +18,33 @@ type PanelProps = {
   loading?: boolean;
 };
 
+/** DS input spec: border-strong on hover, ring + 3px halo on focus. `text-base` on phones avoids iOS zoom. */
+const inputBase =
+  'w-full rounded-md border border-input bg-background text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 aria-[invalid=true]:border-destructive sm:type-ui';
+
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 function Section({ title, badge, children, defaultOpen = true }: { title: string; badge?: number; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const id = useId();
   return (
-    <section className="border-b border-border py-3 last:border-0">
+    <section className="border-b border-border-subtle py-4 last:border-0">
       <h3>
         <button
           type="button"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
-          className="flex min-h-9 w-full items-center gap-2 rounded-md text-left text-[13px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="flex min-h-8 w-full items-center gap-2 rounded-sm text-left type-label text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
         >
           <span className="flex-1">{title}</span>
           {badge ? (
-            <span className="rounded-full bg-primary px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-primary-foreground">{badge}</span>
+            <span className="rounded-full bg-primary px-1.5 py-0.5 type-data text-3xs leading-none font-bold text-primary-foreground">{badge}</span>
           ) : null}
-          <ChevronDown size={15} className={`text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+          <ChevronDown size={15} className={`transition-transform duration-fast ease-standard ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
       </h3>
-      <div id={id} hidden={!open} className="pt-1.5">
+      <div id={id} hidden={!open} className="pt-2">
         {children}
       </div>
     </section>
@@ -68,11 +72,14 @@ function FacetGroup({
   const groupId = useId();
 
   // Keep selected values visible even when the current result set has no hits for them.
+  // Enum groups render the app's PT-BR labels, not the API's bucket labels (see labelFor).
   const options = useMemo(() => {
+    const enumLabels = config.param === 'status' || config.param === 'modality';
+    const known = enumLabels ? buckets.map((b) => ({ ...b, label: labelFor(config.param, b.value) })) : buckets;
     const missing = selected
       .filter((value) => !buckets.some((b) => b.value === value))
       .map((value) => ({ value, label: labelFor(config.param, value), count: 0 }));
-    return [...buckets, ...missing];
+    return [...known, ...missing];
   }, [buckets, selected, config.param]);
 
   const searchable = Boolean(config.searchPlaceholder) && options.length > config.visible;
@@ -88,7 +95,7 @@ function FacetGroup({
     <Section title={config.title} badge={selected.length}>
       {searchable && (
         <div className="relative mb-1.5">
-          <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Search size={13} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-foreground-subtle" aria-hidden />
           <input
             type="search"
             value={filter}
@@ -96,14 +103,14 @@ function FacetGroup({
             placeholder={config.searchPlaceholder}
             aria-label={config.searchPlaceholder}
             data-testid={`input-facet-filter-${config.param}`}
-            className={`w-full rounded-md border border-input bg-background pl-8 pr-2 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/25 sm:text-xs ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
+            className={`${inputBase} pr-2 pl-8 ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
           />
         </div>
       )}
       {options.length === 0 ? (
-        <p className="py-1 text-xs text-muted-foreground">{countsKnown ? 'Sem opções para os resultados atuais.' : 'Opções indisponíveis no momento.'}</p>
+        <p className="py-1 type-meta text-muted-foreground">{countsKnown ? 'Sem opções para os resultados atuais.' : 'Opções indisponíveis no momento.'}</p>
       ) : filtered.length === 0 ? (
-        <p className="py-1 text-xs text-muted-foreground">Nenhuma opção corresponde a “{filter}”.</p>
+        <p className="py-1 type-meta text-muted-foreground">Nenhuma opção corresponde a “{filter}”.</p>
       ) : (
         <ul role="group" aria-label={config.title} id={groupId} className="space-y-0.5">
           {shown.map((option) => {
@@ -113,7 +120,7 @@ function FacetGroup({
               <li key={option.value}>
                 <label
                   htmlFor={id}
-                  className={`flex ${row} cursor-pointer items-center gap-2.5 rounded-md px-1.5 text-[13px] hover:bg-muted ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
+                  className={`flex ${row} cursor-pointer items-center gap-2.5 rounded-md px-1.5 type-ui transition-colors duration-fast ease-standard hover:bg-surface-sunken ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
                 >
                   <Checkbox
                     id={id}
@@ -125,7 +132,7 @@ function FacetGroup({
                   <span className="min-w-0 flex-1 truncate" title={option.label}>
                     {option.label}
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{countsKnown ? formatNumber(option.count) : '—'}</span>
+                  <span className="shrink-0 type-data text-2xs text-muted-foreground">{countsKnown ? formatNumber(option.count) : '—'}</span>
                 </label>
               </li>
             );
@@ -138,7 +145,7 @@ function FacetGroup({
           aria-expanded={expanded}
           aria-controls={groupId}
           onClick={() => setExpanded(!expanded)}
-          className={`mt-1 rounded-md px-1.5 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'}`}
+          className={`mt-1 rounded-sm px-1.5 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'}`}
         >
           {expanded ? 'Ver menos' : `Ver mais (${hiddenCount})`}
         </button>
@@ -168,9 +175,9 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
   const bounds = facets?.valueRange;
   const field = (label: string, value: string, set: (v: string) => void, placeholder: number | null | undefined, testId: string) => (
     <label className="min-w-0 flex-1">
-      <span className="mb-1 block text-[11px] font-medium text-muted-foreground">{label}</span>
+      <span className="mb-1 block type-meta font-medium text-muted-foreground">{label}</span>
       <span className="relative block">
-        <span aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+        <span aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 type-meta text-muted-foreground">
           R$
         </span>
         <input
@@ -188,7 +195,7 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
           aria-invalid={invalid}
           aria-describedby={invalid ? errorId : undefined}
           data-testid={testId}
-          className={`w-full rounded-md border border-input bg-background pl-8 pr-2 font-mono text-base tabular-nums outline-none placeholder:text-muted-foreground/70 focus:ring-2 focus:ring-primary/25 aria-[invalid=true]:border-destructive sm:text-xs ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
+          className={`${inputBase} pr-2 pl-8 type-data ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
         />
       </span>
     </label>
@@ -201,11 +208,11 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
         {field('Máximo', max, setMax, bounds?.max, 'input-value-max')}
       </div>
       {invalid ? (
-        <p id={errorId} role="alert" className="mt-1.5 text-[11px] text-destructive">
+        <p id={errorId} role="alert" className="mt-1.5 type-meta text-destructive">
           O valor mínimo deve ser menor que o máximo.
         </p>
       ) : bounds?.min != null && bounds.max != null ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">
+        <p className="mt-1.5 type-meta text-muted-foreground">
           Nos resultados: {formatCompactCurrency(bounds.min)} – {formatCompactCurrency(bounds.max)}. Editais sem valor informado são excluídos ao filtrar.
         </p>
       ) : null}
@@ -228,7 +235,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
     return toISODate(date);
   };
   const invalid = Boolean(params.deadlineFrom && params.deadlineTo && params.deadlineFrom > params.deadlineTo);
-  const input = `w-full rounded-md border border-input bg-background px-2 text-base outline-none focus:ring-2 focus:ring-primary/25 aria-[invalid=true]:border-destructive sm:text-xs ${density === 'comfortable' ? 'h-10' : 'h-8'}`;
+  const input = `${inputBase} px-2 ${density === 'comfortable' ? 'h-10' : 'h-8'}`;
 
   return (
     <Section title="Prazo de proposta" badge={params.deadlineFrom || params.deadlineTo ? 1 : 0}>
@@ -243,7 +250,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
               aria-pressed={active}
               data-testid={`button-deadline-${days}`}
               onClick={() => onChange(active ? { deadlineFrom: undefined, deadlineTo: undefined } : { deadlineFrom: today, deadlineTo: end })}
-              className={`rounded-full border px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'} ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              className={`rounded-full border px-2.5 type-meta font-semibold transition-colors duration-fast ease-standard focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'} ${active ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:bg-surface-sunken hover:text-foreground'}`}
             >
               Próx. {label}
             </button>
@@ -252,7 +259,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
       </div>
       <div className="flex gap-2">
         <label className="min-w-0 flex-1">
-          <span className="mb-1 block text-[11px] font-medium text-muted-foreground">De</span>
+          <span className="mb-1 block type-meta font-medium text-muted-foreground">De</span>
           <input
             type="date"
             value={params.deadlineFrom ?? ''}
@@ -264,7 +271,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
           />
         </label>
         <label className="min-w-0 flex-1">
-          <span className="mb-1 block text-[11px] font-medium text-muted-foreground">Até</span>
+          <span className="mb-1 block type-meta font-medium text-muted-foreground">Até</span>
           <input
             type="date"
             value={params.deadlineTo ?? ''}
@@ -277,7 +284,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
         </label>
       </div>
       {invalid && (
-        <p role="alert" className="mt-1.5 text-[11px] text-destructive">
+        <p role="alert" className="mt-1.5 type-meta text-destructive">
           A data inicial deve ser anterior à final.
         </p>
       )}
@@ -287,14 +294,14 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
 
 function PanelSkeleton() {
   return (
-    <div aria-hidden className="space-y-5 py-3">
+    <div aria-hidden className="space-y-6 py-4">
       {Array.from({ length: 4 }, (_, group) => (
         <div key={group} className="space-y-2">
-          <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-3 w-20 animate-pulse rounded-sm bg-muted" />
           {Array.from({ length: 4 }, (_, row) => (
             <div key={row} className="flex items-center gap-2">
               <div className="h-4 w-4 animate-pulse rounded-sm bg-muted" />
-              <div className="h-3 flex-1 animate-pulse rounded bg-muted" />
+              <div className="h-3 flex-1 animate-pulse rounded-sm bg-muted" />
             </div>
           ))}
         </div>
@@ -307,14 +314,23 @@ function PanelSkeleton() {
 export function FacetPanel({ params, facets, onChange, density = 'compact', loading = false }: PanelProps) {
   if (loading && !facets) return <PanelSkeleton />;
   const empty: FacetBucket[] = [];
+  const countsKnown = Boolean(facets);
+  // Groups with nothing to pick are hidden (no repeated "no options" lines); a group with a selection always stays so it can be cleared.
+  const groups = FACET_GROUPS.filter((config) => facets?.[config.facet]?.length || selectedValues(params, config.param).length);
+  const noOptions = FACET_GROUPS.every((config) => !facets?.[config.facet]?.length);
   return (
     <div data-testid="facet-panel">
-      {FACET_GROUPS.map((config) => (
+      {noOptions && (
+        <p className="border-b border-border-subtle py-4 type-meta text-muted-foreground">
+          {countsKnown ? 'Nenhum filtro disponível para estes resultados.' : 'Filtros indisponíveis: não foi possível carregar os resultados.'}
+        </p>
+      )}
+      {groups.map((config) => (
         <FacetGroup
           key={config.param}
           config={config}
           density={density}
-          countsKnown={Boolean(facets)}
+          countsKnown={countsKnown}
           buckets={facets?.[config.facet] ?? empty}
           selected={selectedValues(params, config.param)}
           onChange={(values) => onChange({ [config.param]: values } as unknown as Partial<TenderSearchParams>)}
