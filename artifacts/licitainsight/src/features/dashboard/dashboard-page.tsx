@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/common/action-button';
@@ -6,10 +7,20 @@ import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
+import { formatNumber } from '@/lib/format';
 
-// TODO(dashboard): metrics and activity are static placeholders until an analytics endpoint exists.
+function saoPauloDate(offsetDays = 0): string {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const [year, month, day] = today.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + offsetDays)).toISOString().slice(0, 10);
+}
+
 function MiniMetric({ label, value, detail, tone = 'green' }: { label: string; value: string; detail: string; tone?: 'green' | 'amber' | 'blue' }) {
-  // 'green' and 'blue' are legacy names: both read as the signal blue. 'amber' uses the under-review tone (AA as text).
   const toneClass = tone === 'amber' ? 'text-status-under-review-foreground' : 'text-primary';
   return (
     <div className="border-l border-primary/40 pl-4">
@@ -20,15 +31,53 @@ function MiniMetric({ label, value, detail, tone = 'green' }: { label: string; v
   );
 }
 
+function metricValue(total: number | undefined, pending: boolean, failed: boolean) {
+  if (pending) return '…';
+  if (failed || total === undefined) return '—';
+  return formatNumber(total);
+}
+
 export default function DashboardPage() {
   const { isSaved, toggle } = useSavedTenders();
+  const today = useMemo(() => saoPauloDate(0), []);
+  const weekAgo = useMemo(() => saoPauloDate(-6), []);
+  const weekAhead = useMemo(() => saoPauloDate(7), []);
+  const eyebrow = useMemo(
+    () =>
+      new Intl.DateTimeFormat('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'short',
+        timeZone: 'America/Sao_Paulo',
+      })
+        .format(new Date())
+        .replace('.', ''),
+    [],
+  );
+  const catalog = useTenderSearch({ pageSize: 1, sort: 'published_desc', facets: false });
+  const recent = useTenderSearch({ pageSize: 1, sort: 'published_desc', facets: false, publishedFrom: weekAgo });
+  const soon = useTenderSearch({
+    pageSize: 1,
+    sort: 'deadline_asc',
+    facets: false,
+    status: ['open'],
+    deadlineFrom: today,
+    deadlineTo: weekAhead,
+  });
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], facets: false });
+  const refresh = () => {
+    void catalog.refetch();
+    void recent.refetch();
+    void soon.refetch();
+    void priority.refetch();
+  };
+
   return (
     <>
       <PageTitle
-        eyebrow="terça-feira, 22 out 2024"
+        eyebrow={eyebrow}
         title="Bom dia, Marina."
-        description="Uma leitura rápida do que mudou no seu radar de compras públicas."
+        description="Uma leitura rápida das publicações do PNCP que estão no banco."
         action={
           <Link href="/search" data-testid="link-dashboard-search">
             <Button>
@@ -39,16 +88,30 @@ export default function DashboardPage() {
         }
       />
       <div className="mb-8 grid gap-6 border-y border-border bg-card px-5 py-6 sm:grid-cols-3 sm:px-7">
-        <MiniMetric label="Editais no radar" value="1.248" detail="+12,4% nesta semana" />
-        <MiniMetric label="Oportunidades novas" value="47" detail="8 acima de R$ 1 mi" tone="amber" />
-        <MiniMetric label="Aberturas próximas" value="12" detail="nos próximos 7 dias" tone="blue" />
+        <MiniMetric
+          label="Editais no banco"
+          value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
+          detail="publicações coletadas"
+        />
+        <MiniMetric
+          label="Publicados em 7 dias"
+          value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)}
+          detail="contados a partir de hoje"
+          tone="amber"
+        />
+        <MiniMetric
+          label="Aberturas próximas"
+          value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)}
+          detail="em aberto, prazo nos próximos 7 dias"
+          tone="blue"
+        />
       </div>
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="type-section text-foreground">Prioridade para você</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Editais com maior aderência ao seu perfil</p>
+              <h2 className="type-section text-foreground">Prazos mais próximos</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Editais em aberto, ordenados pelo prazo de proposta</p>
             </div>
             <Link href="/search" data-testid="link-dashboard-all" className="text-xs font-semibold text-primary hover:underline">
               Ver todos <ArrowRight size={13} className="ml-1 inline" />
@@ -58,6 +121,10 @@ export default function DashboardPage() {
             <RowsSkeleton rows={4} />
           ) : priority.isError ? (
             <ErrorState error={priority.error} onRetry={() => priority.refetch()} />
+          ) : priority.data.data.length === 0 ? (
+            <p className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">
+              Nenhum edital em aberto no banco.
+            </p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {priority.data.data.map((tender) => (
@@ -69,31 +136,19 @@ export default function DashboardPage() {
         <aside className="space-y-6">
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="type-section text-foreground">Atividade recente</h2>
+              <h2 className="type-section text-foreground">Coleta</h2>
               <button
                 data-testid="button-refresh-activity"
-                aria-label="Atualizar atividade"
+                aria-label="Atualizar leitura"
+                onClick={refresh}
                 className="rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-primary"
               >
                 <RefreshCw size={14} />
               </button>
             </div>
-            <div className="space-y-4">
-              {[
-                ['09:42', 'Novo documento', 'PE 042/2024 · Curitiba'],
-                ['ontem', 'Prazo alterado', 'Concorrência 018/2024'],
-                ['18 out', 'Edital salvo', 'PE 301/2024 · TJBA'],
-              ].map(([time, title, detail]) => (
-                <div key={title} className="flex gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium">{title}</div>
-                    <div className="truncate type-meta text-muted-foreground">{detail}</div>
-                    <div className="mt-1 type-data text-3xs text-muted-foreground">{time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              A API atualiza as publicações novas todo dia e revisa os editais que ainda estão em aberto. O histórico que já entrou no banco permanece.
+            </p>
           </div>
           <div className="rounded-xl border border-primary/20 bg-primary-subtle/50 p-5">
             <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">

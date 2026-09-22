@@ -17,7 +17,6 @@ import {
   Target,
   X,
 } from 'lucide-react';
-
 const navItems = [
   { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard },
   { href: '/search', label: 'Explorar editais', icon: Search },
@@ -86,9 +85,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
                   <span className={collapsed ? 'sr-only' : ''}>{label}</span>
-                  {label === 'Monitoramento' && !collapsed && (
-                    <span className="ml-auto rounded-full bg-accent px-1.5 py-0.5 type-data text-3xs font-bold text-accent-foreground">3</span>
-                  )}
                 </Link>
               );
             })}
@@ -157,7 +153,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
             </button>
-            <div className="hidden type-eyebrow text-muted-foreground sm:block">Ambiente de demonstração</div>
+            <div className="hidden type-eyebrow text-muted-foreground sm:block">
+              Fonte: PNCP
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -174,7 +172,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="relative rounded-lg p-2 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
             >
               <Bell size={18} />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
             </button>
             <div className="ml-2 hidden h-7 w-px bg-border sm:block" />
             <span className="hidden text-xs font-medium text-muted-foreground sm:block">Marina Almeida</span>

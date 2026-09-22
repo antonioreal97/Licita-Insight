@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && node ./build.mjs && node --enable-source-maps ./dist/index.mjs",
+    "dev": "export NODE_ENV=development && node ./build.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "start": "node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
+    "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

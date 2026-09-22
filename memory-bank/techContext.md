@@ -6,7 +6,8 @@
 - Frontend: Vite 7, React 19.1, wouter 3, TanStack Query 5, Tailwind CSS 4, lucide-react
 - UI kit (template, pouco usado pelas páginas): Radix, shadcn-style em `src/components/ui`
 - API: Express 5, Pino, CORS, esbuild (bundle CJS/ESM em `artifacts/api-server/build.mjs`)
-- DB (preparado, vazio): PostgreSQL + Drizzle. Env `DATABASE_URL`
+- DB: PostgreSQL + Drizzle. Env `DATABASE_URL`. Local: `docker compose up -d` na raiz.
+- Contrato de busca: `docs/contracts/search-v1.md`. OpenAPI em `lib/api-spec`.
 - Contrato: OpenAPI 3.1 + Orval → `@workspace/api-client-react` e `@workspace/api-zod`
 - Validação no template de DB: Zod v4 (`zod/v4`) + `drizzle-zod`. O catalog do workspace ainda lista `zod` 3.25 para o frontend.
 
@@ -15,11 +16,13 @@
 Na raiz:
 
 - `PORT=24252 BASE_PATH=/ pnpm --filter @workspace/licitainsight run dev` — frontend (Vite, host `0.0.0.0`)
-- `pnpm --filter @workspace/api-server run dev` — API na porta 5000 (build + start)
+- `pnpm --filter @workspace/api-server run dev` — API. Com `PORT=3001` e `DATABASE_URL` (lido de `.env` na raiz, se existir).
+- `pnpm --filter @workspace/api-server run collect:pncp` — carga do PNCP. Janela padrão: 30 dias, todas as modalidades. `PNCP_FROM`, `PNCP_TO`, `PNCP_UF`, `PNCP_MODALITIES` e `PNCP_REFRESH_LIMIT` restringem a execução.
+- Sem `PNCP_FROM`/`PNCP_TO`, a coleta usa `ingest_days` e pula dias já selados; datas explícitas forçam backfill. A cobertura usa `America/Sao_Paulo`. Configuração e testes em `docs/ingest-pncp-calendar.md`.
+- `pnpm --filter @workspace/db run push-force` — aplica o schema Drizzle no Postgres local.
 - `pnpm run typecheck` — typecheck de libs e artifacts
 - `pnpm run build` — typecheck + build dos pacotes
 - `pnpm --filter @workspace/api-spec run codegen` — regenera hooks e schemas
-- `pnpm --filter @workspace/db run push` — push do schema Drizzle (só dev)
 
 O frontend de licitações funciona sem `DATABASE_URL` e sem a API. `PORT` e `BASE_PATH` são obrigatórios no Vite.
 
@@ -45,7 +48,7 @@ Overrides removem binários nativos que não são linux-x64 (herança Replit). E
 - Spec de produto: `README.md`
 - Notas de operação do template: `replit.md` (ainda genérico)
 - Tema: `artifacts/licitainsight/src/index.css`
-- Mocks: `artifacts/licitainsight/src/lib/mock-data.ts`
+- Schema: `lib/db/src/schema/tenders.ts`
 - Rotas: `artifacts/licitainsight/src/App.tsx`
 - OpenAPI: `lib/api-spec/openapi.yaml`
 - Schema: `lib/db/src/schema/index.ts`

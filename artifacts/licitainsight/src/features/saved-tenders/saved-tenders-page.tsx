@@ -6,7 +6,7 @@ import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { useSavedTenders } from './hooks/use-saved-tenders';
 
-// TODO(saved-tenders): priority chips are static placeholders.
+// Saved ids live in the browser. The rows themselves come from the search API.
 export default function SavedTendersPage() {
   const { saved, isSaved, toggle } = useSavedTenders();
   // Until a saved-tenders endpoint exists, resolve the saved ids through the search API.
@@ -25,23 +25,6 @@ export default function SavedTendersPage() {
           </Button>
         }
       />
-      <div className="mb-5 flex gap-2 overflow-x-auto">
-        <button data-testid="button-priority-all" className="rounded-full bg-inverse px-3 py-1.5 text-xs font-semibold text-inverse-foreground">
-          Todos <span className="ml-1 type-data text-3xs text-inverse-foreground/70">{saved.length}</span>
-        </button>
-        <button
-          data-testid="button-priority-high"
-          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
-        >
-          Alta prioridade <span className="ml-1 type-data text-3xs">1</span>
-        </button>
-        <button
-          data-testid="button-priority-review"
-          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
-        >
-          Em revisão <span className="ml-1 type-data text-3xs">2</span>
-        </button>
-      </div>
       {results.isPending ? (
         <RowsSkeleton rows={3} />
       ) : results.isError ? (

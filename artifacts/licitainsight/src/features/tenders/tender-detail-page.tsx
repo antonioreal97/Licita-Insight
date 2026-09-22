@@ -111,7 +111,6 @@ export default function TenderDetailPage() {
               {modality}
             </span>
             {tender.tenderNumber && <span className="font-mono text-[11px]">{tender.tenderNumber}</span>}
-            <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] text-secondary-foreground">DEMO · não oficial</span>
           </div>
           {/* Long objetos (some exceed 300 chars) step down in size so the facts strip stays above the fold. */}
           <h1

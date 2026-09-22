@@ -7,7 +7,7 @@ import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
-import { formatNumber } from '@/lib/format';
+import { formatDateTime, formatNumber } from '@/lib/format';
 import { sortLabels } from '@/lib/tender-labels';
 import { countActiveFilters, DEFAULT_PAGE_SIZE } from '@/services/search-service';
 import { ActiveFilters } from './components/active-filters';
@@ -78,7 +78,7 @@ export default function SearchPage() {
       <PageTitle
         eyebrow="central de pesquisa"
         title="Explorar editais"
-        description="Pesquise por oportunidade, órgão, categoria ou localização. Dados demonstrativos para navegação."
+        description="Pesquise por objeto, órgão ou localização nas publicações coletadas do PNCP."
         action={<SaveSearchButton />}
       />
 
@@ -141,6 +141,13 @@ export default function SearchPage() {
                 <span role="status" className="inline-flex items-center gap-1 text-xs text-muted-foreground" data-testid="status-refreshing">
                   <Loader2 size={13} className="animate-spin" aria-hidden />
                   Atualizando…
+                </span>
+              )}
+              {!search.isPending && (
+                <span data-testid="text-index-updated" className="text-xs text-muted-foreground">
+                  {response?.meta.indexUpdatedAt
+                    ? `Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}`
+                    : 'Nenhuma coleta do PNCP registrada'}
                 </span>
               )}
 

@@ -14,8 +14,9 @@ import type {
   SearchCriteria,
   TenderRepository,
 } from "../domain/search";
+import { normalizeText, queryTokens } from "../domain/normalize";
 
-const statusLabels: Record<TenderStatus, string> = {
+export const statusLabels: Record<TenderStatus, string> = {
   open: "Aberta",
   under_review: "Em análise",
   closed: "Encerrada",
@@ -23,7 +24,7 @@ const statusLabels: Record<TenderStatus, string> = {
   cancelled: "Cancelada",
 };
 
-const modalityLabels: Record<Modality, string> = {
+export const modalityLabels: Record<Modality, string> = {
   pregao_eletronico: "Pregão Eletrônico",
   pregao_presencial: "Pregão Presencial",
   concorrencia: "Concorrência",
@@ -35,17 +36,6 @@ const modalityLabels: Record<Modality, string> = {
   dialogo_competitivo: "Diálogo Competitivo",
   other: "Outra modalidade",
 };
-
-const normalizeText = (value: string): string =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const queryTokens = (query: string | null): string[] =>
-  query ? [...new Set(normalizeText(query).split(" ").filter(Boolean))] : [];
 
 const tenderSearchFields = (tender: TenderDetail) => ({
   title: normalizeText(tender.title),
@@ -65,7 +55,7 @@ const tenderSearchFields = (tender: TenderDetail) => ({
   ),
 });
 
-const calculateScore = (tender: TenderDetail, tokens: string[]): number => {
+export const calculateScore = (tender: TenderDetail, tokens: string[]): number => {
   if (tokens.length === 0) return 0;
 
   const fields = tenderSearchFields(tender);
@@ -110,7 +100,7 @@ const highlight = (value: string, rawQuery: string): string | null => {
   return escapedValue.replace(pattern, "<mark>$1</mark>");
 };
 
-const createHighlights = (
+export const createHighlights = (
   tender: TenderDetail,
   query: string | null,
 ): TenderSummary["relevance"]["highlights"] => {
@@ -270,7 +260,7 @@ const countBuckets = (
     );
 };
 
-const createValueHistogram = (
+export const createValueHistogram = (
   values: number[],
 ): NonNullable<SearchFacets["valueRange"]["histogram"]> => {
   if (values.length === 0) return [];
@@ -447,7 +437,7 @@ const compareNullableDates = (
     direction,
   );
 
-const toSummary = (
+export const toSummary = (
   tender: TenderDetail,
   criteria: SearchCriteria,
   tokens: string[],

@@ -3,7 +3,8 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
-  | "SEARCH_UNAVAILABLE";
+  | "SEARCH_UNAVAILABLE"
+  | "INGEST_IN_PROGRESS";
 
 export interface ApiErrorDetail {
   field: string;

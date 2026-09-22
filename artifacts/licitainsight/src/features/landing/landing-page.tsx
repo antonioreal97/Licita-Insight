@@ -157,8 +157,8 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-border bg-surface p-5">
                 <Target size={19} className="text-primary" />
-                <div className="mt-10 text-2xl font-semibold tracking-display tabular-nums">96%</div>
-                <div className="mt-1 text-xs text-muted-foreground">aderência visível</div>
+                <div className="mt-10 text-2xl font-semibold tracking-display">PNCP</div>
+                <div className="mt-1 text-xs text-muted-foreground">fonte das publicações</div>
               </div>
               <div className="mt-8 rounded-xl bg-sidebar p-5 text-sidebar-strong-foreground">
                 <Clock3 size={19} className="text-sidebar-primary" />
@@ -169,7 +169,7 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-semibold">Seu próximo movimento</div>
-                    <div className="mt-1 text-xs text-muted-foreground">PE 042/2024 abre em 13 dias</div>
+                    <div className="mt-1 text-xs text-muted-foreground">Prazos e publicações lidos do banco</div>
                   </div>
                   <ArrowRight size={18} className="text-primary" />
                 </div>
@@ -180,7 +180,7 @@ export default function LandingPage() {
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2024 Licita Insight · ambiente demonstrativo</span>
+          <span>© 2026 Licita Insight · publicações do PNCP</span>
           <span>Feito para equipes que leem antes de agir.</span>
         </div>
       </footer>

@@ -1,34 +1,37 @@
 # Progress — Licita Insight
 
-## O que já funciona (protótipo com mocks)
+## O que já funciona na interface
 
-- Landing pública com hero, método e CTA.
+- Landing pública com hero, método e CTA. O preview do radar lê editais abertos da API.
 - Telas visuais de login, cadastro e recuperação de senha (sem auth real; submit cai no dashboard ou mostra “confira seu e-mail”).
 - Shell: sidebar (recolhível no desktop, drawer no mobile), topbar, tema claro/escuro, usuário demo.
-- Dashboard com métricas, lista de prioridade e atividade recente — números e atividade são estáticos.
-- Busca com texto, filtro de UF e status, chip da query, alternância lista/tabela, empty state com limpar filtros.
+- Dashboard com totais, publicações de 7 dias e prazos próximos lidos da busca. A lista mostra editais em aberto do banco.
+- Busca com texto, filtros, facets, chip da query, alternância lista/tabela, empty state e “Atualizado em”.
 - Detalhe: resumo, objeto, itens, cronologia, documentos, órgão, salvar e monitorar (estado local), link da fonte.
-- Buscas salvas, editais salvos (abas de prioridade visuais), monitoramento e configurações de perfil/notificações — conteúdo majoritariamente fixo.
-- Página `/design-system` com cores, tipo, botões, badges e três estados.
-- Seis licitações fictícias em `mock-data.ts`, com aviso de demonstração em alguns pontos.
+- Editais salvos resolvem os ids guardados no navegador pela busca. Buscas salvas e monitoramento não inventam contagens: a lista fica vazia até existir persistência.
+- Página `/design-system` com cores, tipo, botões, badges e três estados. As amostras de tipo não são editais do banco.
+
+## O que já funciona
+
+- Pesquisa, filtros, facets, detalhe e sugestões no frontend, com contrato em `docs/contracts/search-v1.md`.
+- API em `/api/v1`: busca, detalhe e sugestões leem só o PostgreSQL. Sem `DATABASE_URL`, a busca responde 503.
+- Schema `tenders` e `ingest_runs`. Coletor do PNCP com upsert por `numeroControlePNCP`, carga dia a dia, repartição por UF em timeout, e revisão de processos abertos.
+- Calendário `ingest_days` aplicado no Postgres local. A coleta pula partições seladas, retoma UFs incompletas e preserva a revisão individual. Cobertura exposta no GET de ingestão; backfills com datas explícitas continuam forçados.
+- Calendário validado com testes unitários e integração em schema isolado de PostgreSQL: segunda execução sem leitura histórica, ausência de duplicatas, virada do dia, falhas parciais, retomada das 27 UFs e revisão individual com limite.
+- Validação final do calendário: 27 testes passaram, typecheck e build da API concluídos. A tentativa real em 22 set 2026 (DF, modalidade 6, publicação em 21 set) falhou por timeout do PNCP antes da primeira página; os 19 editais foram preservados e a partição ficou pendente. A verificação de duas execuções foi concluída com respostas controladas do PNCP no Postgres real, não no serviço externo.
+- Detalhe busca itens e arquivos do PNCP na primeira abertura e grava no banco.
+- A busca mostra `Atualizado em` a partir de `meta.indexUpdatedAt` (última `fetched_at`).
+- Verificado em 22 set 2026: 19 pregões eletrônicos do DF publicados em 21 set 2026. A busca por “correios” abre o edital `34028316000103-1-000087-2026`, com link `https://pncp.gov.br/app/editais/34028316000103/2026/87`. O registro permanece depois de reiniciar a API. Uma segunda coleta não duplica a contagem.
 
 ## O que falta
 
-- Camada de services. Componentes importam `tenders` direto.
-- URL state completo (estado, status, ordenação, página). Hoje só `q`.
-- Paginação real. O controle de página não corta a lista; o total exibido é hardcoded.
-- Filtros do brief ainda ausentes: município, abrangência, órgão, datas, faixa de valor, modalidade, fonte, categoria, facets.
-- Ações sem efeito persistente: salvar busca, compartilhar, exportar, arquivar atividade, frequência de alerta, preferências de busca, aparência nas configurações (o tema mora no shell).
-- Salvos e monitoramento não compartilham estado entre páginas.
-- Estados de loading, skeleton de página, erro de API e “ainda não indexado” fora do design system.
-- Modelo `Tender` sem tipos de `TenderItem` / `TenderDocument` separados; status não cobre todas as situações do brief.
-- API de licitações, schema Drizzle, auth e notificações reais.
-- `replit.md` ainda é o template (“[Project name]”).
-- Design system visual cobre uma fração dos componentes listados na spec.
+- Carga nacional dos últimos 30 dias (o comando padrão faz isso; ainda não foi executada até o fim).
+- A API, ao subir, dispara a coleta incremental e repete todo dia às 06:00 em `America/Sao_Paulo`. `PNCP_DAILY_COLLECT=false` desliga. O endpoint `POST /api/v1/ingest/pncp` continua disponível.
+- Auth real, favoritos por usuário, alertas e outras fontes.
+- Salvar busca, compartilhar e monitorar ainda não persistem por usuário.
 
 ## Problemas conhecidos
 
 - Overrides de binários nativos no `pnpm-workspace.yaml` são para linux-x64 (Replit). Dev no macOS pode falhar ao resolver esbuild/lightningcss/rollup.
 - `Button` das páginas não é o `components/ui/button`. Dois estilos coexistem.
-- Detalhe com id desconhecido cai no primeiro mock (`tenders[0]`) em vez de 404.
-- Métricas do dashboard (“1.248”, “+12,4%”) não derivam dos mocks. Não usar esses números como fato de produto.
+- Id inexistente na API responde 404.

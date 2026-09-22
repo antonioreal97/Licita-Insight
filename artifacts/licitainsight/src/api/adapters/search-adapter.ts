@@ -2,7 +2,7 @@ import type { SuggestionsResponse, TenderDetail, TenderSearchParams, TenderSearc
 
 /**
  * The only boundary between the frontend and the backend for search.
- * Implementations: MockSearchAdapter (local fixtures) and HttpSearchAdapter (/api/v1).
+ * Implementation: HttpSearchAdapter (`/api/v1`), which reads PostgreSQL.
  * Components never import an adapter — they go through services and hooks.
  */
 export interface SearchAdapter {

@@ -3,7 +3,7 @@ import type { ApiErrorBody } from '../../types';
 
 type QueryValue = string | number | boolean | undefined | null | (string | number)[];
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
+const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001/api').replace(/\/$/, '');
 
 /** Serializes arrays as repeated params (`?status=open&status=closed`), per contract. */
 export function toQueryString(query: Record<string, QueryValue>) {

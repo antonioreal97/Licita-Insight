@@ -6,14 +6,13 @@ A experiência central é **Search → Filter → Evaluate → Save → Monitor*
 
 ## Escopo desta etapa
 
-Frontend desacoplado, com dados mockados, pronto para consumir uma API própria depois.
+Pesquisa e detalhe leem licitações coletadas do PNCP e guardadas no PostgreSQL. A coleta incremental roda ao subir a API e todo dia.
 
 Nesta etapa **não** entra:
 
-- scraping, indexação, normalização ou automações (n8n fica fora do frontend)
-- banco de dados de licitações
 - autenticação real
-- dependência de Supabase, Lovable ou qualquer backend específico
+- favoritos e alertas por usuário
+- dependência de Supabase, Lovable ou Netlify Identity
 
 ## Áreas do produto
 
@@ -33,7 +32,7 @@ Nesta etapa **não** entra:
 
 - Busca é o elemento mais importante da aplicação.
 - Visual de **enterprise search + data platform + procurement intelligence**: clean, data-driven, institucional sem parecer portal governamental.
-- Separação **UI → lógica de aplicação → services → fonte de dados**, para trocar mocks pela API com o mínimo de mudança visual.
+- Separação **UI → hooks → services → API**, para a tela não conhecer o banco.
 - Paginação no servidor no futuro. O browser não carrega todos os resultados.
 - Pesquisas e filtros representáveis na URL (`/search?q=software&state=DF&status=open&page=2`).
 - Resposta de busca futura: `results`, `total`, `page`, `pageSize`, `query`, `filters`, `facets`, `processingTime`.
@@ -41,7 +40,7 @@ Nesta etapa **não** entra:
 
 ## Entidade central
 
-`Tender` (licitação). O modelo atual em `artifacts/licitainsight/src/lib/mock-data.ts` é inicial e deve poder evoluir sem reconstruir a UI.
+`Tender` (licitação). O formato enviado ao browser está em `docs/contracts/search-v1.md`.
 
 ## Fonte da especificação
 

@@ -6,28 +6,20 @@
 UI component  →  Hook (features/*/hooks)  →  Service (services/)  →  API adapter (api/adapters/)  →  Backend /api/v1
 ```
 
-- Components never import from `api/adapters/*` or fixtures. They call hooks.
+- Components never import from `api/adapters/*`. They call hooks.
 - Hooks own React Query (cache keys in `services/query-keys.ts`) and URL state.
 - Services own request normalization and URL ⇄ params mapping. No React.
-- Adapters implement `SearchAdapter` (`api/adapters/search-adapter.ts`). Two exist:
-  - `mock/` — in-memory implementation of the contract, with QA scenarios.
-  - `http/` — `fetch` against `/api/v1`, parsing the standard error envelope into `ApiError`.
+- Adapters implement `SearchAdapter` (`api/adapters/search-adapter.ts`).
+  - `http/` — `fetch` against `/api/v1`, which reads PostgreSQL.
 - Contract types live in `api/types.ts` and mirror `docs/contracts/search-v1.md`.
 
-## Switching mock → real API
+## API
 
 | Env var | Default | Effect |
 |---|---|---|
-| `VITE_API_MODE` | `mock` | `http` selects the real backend |
-| `VITE_API_BASE_URL` | `/api` | base for the HTTP adapter |
-| `VITE_MOCK_LATENCY_MS` | `350` | simulated latency |
+| `VITE_API_BASE_URL` | `http://localhost:3001/api` | base of the search API |
 
-No component, hook or service changes when switching.
-
-## Mock QA scenarios
-
-Append to any page URL: `?mock=slow` · `?mock=error` · `?mock=unavailable` · `?mock=empty`.
-`/search` preserves the `mock` param while you change filters.
+The UI does not ship tender fixtures. Search, detail and suggestions always call this API.
 
 ## Directory map
 

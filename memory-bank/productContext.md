@@ -27,9 +27,9 @@ Confiável, preciso, organizado, inteligente, eficiente. Densidade de informaç�
 
 Evitar: portal governamental antigo, dashboards coloridos, gradientes e glassmorphism, cards dentro de cards, sombras pesadas, template SaaS genérico, copy com números que não podem ser comprovados.
 
-Dados fictícios são fixtures de desenvolvimento e não podem ser apresentados como licitações reais. A UI já marca alguns pontos como `DEMO · não oficial` e `Ambiente de demonstração`.
+Os editais exibidos vêm do banco. Número, órgão ou prazo que não esteja numa publicação coletada não entra na interface.
 
-## Usuário de referência no mock
+## Persona de demonstração
 
 Marina Almeida, Operações, Atlas Engenharia (`marina@atlasengenharia.com.br`). Persona só da demonstração.
 

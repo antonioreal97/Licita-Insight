@@ -4,35 +4,79 @@ import {
   GetTenderByIdResponse,
   SearchTendersResponse,
 } from "@workspace/api-zod";
-import { NotFoundError } from "../lib/api-error";
+import { ApiError, NotFoundError } from "../lib/api-error";
+import { logger } from "../lib/logger";
 import { parseSearchQuery, parseSuggestionsQuery } from "../lib/query-parser";
-import { InMemoryTenderRepository } from "../repositories/in-memory-tender-repository";
-import { SearchService } from "../services/search-service";
+import { getSearchBackend } from "../services/search-backend";
 
 const router: IRouter = Router();
-const searchService = new SearchService(new InMemoryTenderRepository());
 
-router.get("/v1/tenders/search", (req, res) => {
-  const criteria = parseSearchQuery(req.query);
-  const response = SearchTendersResponse.parse(searchService.search(criteria));
-  res.json(response);
-});
-
-router.get("/v1/tenders/:id", (req, res) => {
-  const tender = searchService.findById(req.params.id);
-  if (!tender) {
-    throw new NotFoundError(`Tender ${req.params.id} was not found`);
+const errorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== "object") return undefined;
+  if ("code" in error && typeof error.code === "string") return error.code;
+  if ("cause" in error) return errorCode(error.cause);
+  if ("errors" in error && Array.isArray(error.errors)) {
+    for (const nested of error.errors) {
+      const code = errorCode(nested);
+      if (code) return code;
+    }
   }
+  return undefined;
+};
 
-  res.json(GetTenderByIdResponse.parse(tender));
+const exposeSearchError = (error: unknown): unknown => {
+  if (error instanceof ApiError) return error;
+  logger.error({ err: error }, "Search failed");
+  const code = errorCode(error);
+  if (
+    code === "ECONNREFUSED" ||
+    code === "ENOTFOUND" ||
+    code === "ETIMEDOUT" ||
+    code === "57P01" ||
+    code === "28P01" ||
+    code === "3D000" ||
+    code === "42P01" ||
+    code === "08006" ||
+    code === "08001"
+  ) {
+    return new ApiError(503, "SEARCH_UNAVAILABLE", "Tender search is unavailable");
+  }
+  return error;
+};
+
+router.get("/v1/tenders/search", async (req, res, next) => {
+  try {
+    const criteria = parseSearchQuery(req.query);
+    const backend = await getSearchBackend();
+    res.json(SearchTendersResponse.parse(await backend.search(criteria)));
+  } catch (error) {
+    next(exposeSearchError(error));
+  }
 });
 
-router.get("/v1/search/suggestions", (req, res) => {
-  const { query, limit } = parseSuggestionsQuery(req.query);
-  const response = GetSearchSuggestionsResponse.parse(
-    searchService.suggestions(query, limit),
-  );
-  res.json(response);
+router.get("/v1/tenders/:id", async (req, res, next) => {
+  try {
+    const backend = await getSearchBackend();
+    const tender = await backend.findById(req.params.id);
+    if (!tender) {
+      throw new NotFoundError(`Tender ${req.params.id} was not found`);
+    }
+    res.json(GetTenderByIdResponse.parse(tender));
+  } catch (error) {
+    next(exposeSearchError(error));
+  }
+});
+
+router.get("/v1/search/suggestions", async (req, res, next) => {
+  try {
+    const { query, limit } = parseSuggestionsQuery(req.query);
+    const backend = await getSearchBackend();
+    res.json(
+      GetSearchSuggestionsResponse.parse(await backend.suggestions(query, limit)),
+    );
+  } catch (error) {
+    next(exposeSearchError(error));
+  }
 });
 
 export default router;
