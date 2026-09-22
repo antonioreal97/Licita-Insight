@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, RefreshCw, Search } from 'lucide-react';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
@@ -158,20 +158,6 @@ export default function DashboardPage() {
             <p className="text-xs leading-5 text-muted-foreground">
               A API atualiza as publicações novas todo dia e revisa os editais que ainda estão em aberto. O histórico que já entrou no banco permanece.
             </p>
-          </div>
-          <div className="rounded-xl border border-primary/20 bg-primary-subtle/50 p-5">
-            <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">
-              <Sparkles size={16} strokeWidth={1.75} />
-            </div>
-            <h3 className="text-sm font-semibold">Seu radar está aprendendo</h3>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">Salve editais relevantes para calibrar as próximas recomendações.</p>
-            <Link
-              href="/settings"
-              data-testid="link-dashboard-preferences"
-              className="mt-4 inline-block rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
-            >
-              Revisar preferências <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
-            </Link>
           </div>
         </aside>
       </div>

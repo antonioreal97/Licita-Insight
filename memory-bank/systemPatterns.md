@@ -8,8 +8,8 @@ Monorepo pnpm (template Replit) com três frentes:
 | --- | --- |
 | `artifacts/licitainsight` | App React. É o produto. |
 | `artifacts/api-server` | Express 5. Busca em `/api/v1` lendo só o PostgreSQL. Sem `DATABASE_URL`, responde 503. |
-| `lib/db` | Drizzle + Postgres. Tabelas `tenders` e `ingest_runs`. |
-| `lib/api-spec` | OpenAPI. Só `HealthStatus`. |
+| `lib/db` | Drizzle + Postgres. Tabelas `tenders`, `ingest_runs` e `ingest_days`. |
+| `lib/api-spec` | OpenAPI 1.1.0 da Search API (busca, detalhe, sugestões, health). |
 | `lib/api-client-react` / `lib/api-zod` | Client e Zod gerados pelo Orval a partir do spec. |
 | `artifacts/mockup-sandbox` | Sandbox de mockups do template. Fora do produto. |
 
@@ -25,29 +25,34 @@ Auth visual faz `history.pushState` para `/dashboard`. Não há sessão.
 
 ## Onde a UI mora
 
-Quase toda a interface de produto está em dois arquivos:
+Código em `artifacts/licitainsight/src/`, organizado por feature. Mapa completo em `artifacts/licitainsight/ARCHITECTURE.md`.
 
-- `artifacts/licitainsight/src/pages/pages.tsx` — páginas, `TenderRow`, `StatusBadge`, `Button` local, estados de salvar/monitorar.
-- `artifacts/licitainsight/src/components/app-shell.tsx` — sidebar, topbar, tema, persona de demonstração.
+- `features/<feature>/` — página, `components/`, `hooks/` e `lib/` de cada área: `search`, `tenders` (linha de resultado, tabela, detalhe), `dashboard`, `saved-tenders`, `saved-searches`, `monitoring`, `settings`, `landing`, `auth`, `design-system`.
+- `api/` — tipos do contrato (`types.ts`), `ApiError` e o adapter HTTP. `services/` — `search-service` (normalização, URL ⇄ params) e `query-keys`.
+- `components/common/` — `Button` de produto (`action-button.tsx`), `PageTitle`, estados de carregamento/erro.
+- `components/app-shell.tsx` — sidebar, topbar, tema, persona de demonstração.
+- `components/ui/*` — kit shadcn/Radix. É primitivo interno: telas de produto usam o `Button` de `components/common/action-button.tsx`, nunca `ui/button` direto.
 
-`src/components/ui/*` é o kit shadcn/Radix do template. As páginas de produto **não** usam esse kit; têm um `Button` próprio inline. Não duplicar um terceiro sistema de botões sem necessidade.
+Camadas obrigatórias: componente → hook → service → adapter → API. Componente não importa adapter.
 
 ## Design system
 
-Tokens em `artifacts/licitainsight/src/index.css` (Tailwind v4, `@theme inline`, variáveis HSL).
+Documentação em `design-system/` (raiz): `README.md`, `tokens.md`, `components.md`, `motion.md`. Tokens em `artifacts/licitainsight/src/index.css` (Tailwind v4, variáveis HSL, `@theme inline`). Referência viva em `/design-system`.
 
-- Primary: verde (“signal green”).
-- Sidebar: navy (“instrument navy”).
-- Accent: âmbar.
-- Fontes: DM Sans (UI) e Space Mono (dados, números, labels).
+- Primary: azul (`--primary: 210 78% 43%`; dark `210 82% 66%`). É a cor de ação.
+- Sidebar: navy (“instrument navy”), igual nos dois temas.
+- Status de edital: tokens `status-open`, `status-under-review`, `status-closed`, `status-suspended`, `status-cancelled` (fundo + texto, AA nos dois temas).
+- Warning (âmbar) para prazo ≤ 7 dias e busca degradada; `urgent-subtle` para prazo ≤ 48 h. `accent` fica só para contadores.
+- Tipografia por papéis `type-*` (`type-display`, `type-title`, `type-section`, `type-ui`, `type-meta`, `type-label`, `type-data`…). Fontes: DM Sans (UI) e Space Mono (dados, números, labels).
+- Motion: `duration-fast|base|slow`, `ease-standard|emphasized|exit`; respeita `prefers-reduced-motion`.
 - Dark mode: classe `dark` no `<html>`, persistida em `localStorage` (`licita-theme`).
-- Página de referência: `/design-system` (ainda enxuta).
+- Sem cor hex/paleta crua em feature; usar tokens.
 
-Status de edital usa cor **e** texto (`Aberto`, `Em análise`, `Encerrado`, `Suspenso`). Não comunicar situação só por cor.
+Status de edital usa cor **e** texto (`Aberto`, `Em análise`, `Encerrado`, `Suspenso`, `Revogado`). Não comunicar situação só por cor.
 
 ## Modelo de dados
 
-O contrato de busca está em `docs/contracts/search-v1.md` e em `artifacts/licitainsight/src/api/types.ts`. Status e modalidade são enums em inglês (`open`, `electronic_auction`, …). A UI traduz os rótulos. Os registros ficam na tabela `tenders`.
+O contrato de busca está em `docs/contracts/search-v1.md` e em `artifacts/licitainsight/src/api/types.ts`. Status e modalidade são enums `snake_case` (`open`, `under_review`, `pregao_eletronico`, `concorrencia`, …). A UI traduz os rótulos em `src/lib/tender-labels.ts`, inclusive nos facets. Os registros ficam na tabela `tenders`.
 
 ## Estado
 
@@ -59,12 +64,13 @@ Filtros, ordenação e página da busca vivem na URL. Editais salvos ficam no `l
 UI → hooks → searchService → HTTP /api/v1 → PostgreSQL
 ```
 
-A busca pagina no servidor. Sem `DATABASE_URL`, a API responde 503. Spec de health em `lib/api-spec/openapi.yaml`; o contrato de busca ainda não está nesse OpenAPI.
+A busca pagina no servidor. Sem `DATABASE_URL`, a API responde 503. O contrato está em `docs/contracts/search-v1.md` (v1 + aditivos v1.1) e em `lib/api-spec/openapi.yaml`. Handoffs entre frontend e backend ficam em `docs/handoffs/`.
 
 ## Convenções de código observadas
 
 - Copy e labels em português (Brasil).
 - `data-testid` nos controles interativos.
-- Componentes de página exportados de `pages.tsx` e roteados em `App.tsx`.
-- `AppFrame` hoje é um fragmento; o layout real é o `AppShell`.
+- Cada página é o `default export` de `features/<feature>/<feature>-page.tsx`, roteada em `App.tsx`.
+- O layout é o `AppShell`.
+- Formatação: `artifacts/licitainsight/.prettierrc.json` (aspas simples, largura 160).
 - Erros de página: `ErrorBoundary` com `resetKey` = location, shell fora do boundary.
