@@ -128,6 +128,11 @@ export interface TenderSummary {
   status: TenderStatus;
   /** @nullable */
   tenderNumber: string | null;
+  /**
+     * Source-normalized tender number without the modality prefix.
+     * @nullable
+     */
+  tenderNumberShort?: string | null;
   /** @nullable */
   estimatedValue: number | null;
   estimatedValueStatus?: EstimatedValueStatus;

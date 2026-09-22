@@ -414,6 +414,9 @@ components:
           $ref: "#/components/schemas/TenderStatus"
         tenderNumber:
           type: [string, "null"]
+        tenderNumberShort:
+          type: [string, "null"]
+          description: Source-normalized tender number without the modality prefix.
         estimatedValue:
           type: [number, "null"]
         estimatedValueStatus:

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { mapEstimatedValue, mapPublication, mapPncpStatus, mergeTimeline } from "./pncp-map";
+import {
+  mapEstimatedValue,
+  mapPublication,
+  mapPncpStatus,
+  mergeTimeline,
+  pncpTenderNumberShort,
+} from "./pncp-map";
 
 const now = new Date("2026-09-22T15:00:00-03:00");
 
@@ -50,8 +56,38 @@ describe("PNCP publication mapping", () => {
       "https://pncp.gov.br/app/editais/00394460000141/2026/123",
     );
     assert.equal(draft.tenderNumber, "Pregão - Eletrônico 00012/2026");
+    assert.equal(pncpTenderNumberShort(publication), "00012/2026");
+    assert.equal(draft.publishedAt?.toISOString(), "2026-09-20T12:00:00.000Z");
+    assert.equal(draft.openingAt?.toISOString(), "2026-09-21T12:00:00.000Z");
+    assert.equal(
+      draft.proposalDeadline?.toISOString(),
+      "2026-09-30T20:00:00.000Z",
+    );
     assert.match(draft.searchText, /equipamentos de informatica/);
     assert.match(draft.searchText, /rio de janeiro/);
+  });
+
+  it("keeps the official object as title and publishes a bounded summary", () => {
+    const officialObject = `${"Contratação de serviços especializados com requisitos técnicos. ".repeat(8)}IMPORTANTE: observar todos os anexos.`;
+    const draft = mapPublication(
+      { ...publication, objetoCompra: officialObject },
+      now,
+    );
+
+    assert.equal(draft.title, officialObject);
+    assert.ok(draft.objectSummary);
+    assert.ok(draft.objectSummary.length <= 300);
+    assert.match(draft.objectSummary, /\.\.\.$/);
+  });
+
+  it("derives the short tender number from the PNCP control year when needed", () => {
+    assert.equal(
+      pncpTenderNumberShort({
+        numeroControlePNCP: publication.numeroControlePNCP,
+        numeroCompra: publication.numeroCompra,
+      }),
+      "00012/2026",
+    );
   });
 
   it("hides a confidential estimate and derives status from the deadline", () => {

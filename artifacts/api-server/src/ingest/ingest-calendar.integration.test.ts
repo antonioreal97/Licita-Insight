@@ -30,6 +30,7 @@ test(
     const {
       startPncpIngest,
       getLatestIngest,
+      abandonStalePncpRuns,
       collectOptionsFromEnv,
       collectOptionsFromBody,
     } = await import("./collect-pncp");
@@ -100,6 +101,34 @@ test(
       await pool.query("TRUNCATE ingest_days, ingest_runs, tenders");
       calls.length = 0;
     };
+
+    await t.test(
+      "abandons a running ingest after its heartbeat expires",
+      async () => {
+        await reset();
+        const now = new Date("2026-09-22T20:30:00Z");
+        await pool.query(
+          `INSERT INTO ingest_runs
+            (id, source, status, window_from, window_to, started_at, heartbeat_at)
+           VALUES ($1, 'pncp', 'running', $2, $2, $3, $3)`,
+          ["stale-test-run", "2026-09-22T03:00:00Z", "2026-09-22T20:00:00Z"],
+        );
+
+        assert.equal(await abandonStalePncpRuns(now), 1);
+        const stale = (
+          await pool.query(
+            "SELECT status, error, finished_at FROM ingest_runs WHERE id = $1",
+            ["stale-test-run"],
+          )
+        ).rows[0];
+        assert.equal(stale.status, "failed");
+        assert.match(stale.error, /heartbeat/);
+        assert.equal(
+          new Date(stale.finished_at).toISOString(),
+          now.toISOString(),
+        );
+      },
+    );
 
     await t.test(
       "explicit dates force backfills while days/lookback remain incremental",

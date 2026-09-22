@@ -117,6 +117,34 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
 const asString = (value: unknown): string | null =>
   typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 
+export const summarizeOfficialObject = (value: string): string => {
+  if (value.length <= 300) return value;
+
+  const candidate = value.slice(0, 297).trimEnd();
+  const lastSpace = candidate.lastIndexOf(" ");
+  const summary = lastSpace >= 240 ? candidate.slice(0, lastSpace) : candidate;
+  return `${summary.trimEnd()}...`;
+};
+
+export const pncpTenderNumberShort = (
+  record: Record<string, unknown>,
+): string | null => {
+  const number = asString(record.numeroCompra);
+  const identity = asString(record.numeroControlePNCP);
+  const yearFromControl = identity
+    ? parseControlNumber(identity)?.ano
+    : undefined;
+  const rawYear = record.anoCompra;
+  const year =
+    typeof rawYear === "number" && Number.isInteger(rawYear)
+      ? rawYear
+      : typeof rawYear === "string" && /^\d{4}$/.test(rawYear.trim())
+        ? Number(rawYear)
+        : yearFromControl;
+
+  return number && year ? `${number}/${year}` : number;
+};
+
 const roundMoney = (value: number): string => value.toFixed(2);
 
 const asMoney = (value: unknown): number | null => {
@@ -248,11 +276,11 @@ export const mapPublication = (
   const state = uf && /^[A-Z]{2}$/.test(uf) ? uf : null;
   const city = asString(unidade?.municipioNome);
   const ibge = asString(unidade?.codigoIbge);
-  const year = typeof record.anoCompra === "number" ? record.anoCompra : identity?.ano;
-  const number = asString(record.numeroCompra);
+  const tenderNumberShort = pncpTenderNumberShort(record);
+  const objectSummary = summarizeOfficialObject(title);
   const search = buildSearchColumns({
     title,
-    objectSummary: title,
+    objectSummary,
     itemDescriptions: [],
     organizationName,
     purchasingUnit: asString(unidade?.nomeUnidade),
@@ -266,7 +294,7 @@ export const mapPublication = (
     id: tenderIdFromControlNumber(controlNumber),
     pncpControlNumber: controlNumber,
     title,
-    objectSummary: title.length > 300 ? title.slice(0, 300) : title,
+    objectSummary,
     description: complementary && complementary !== title ? complementary : title,
     organizationId: `pncp-${cnpj}`,
     organizationName,
@@ -274,8 +302,9 @@ export const mapPublication = (
     modality,
     modalityLabel,
     status: mapPncpStatus(asString(record.situacaoCompraNome), proposalDeadline, now),
-    tenderNumber:
-      number && year ? `${modalityLabel} ${number}/${year}` : number,
+    tenderNumber: tenderNumberShort
+      ? `${modalityLabel} ${tenderNumberShort}`
+      : null,
     processNumber: asString(record.processo),
     estimatedValue: value.estimatedValue,
     estimatedValueStatus: value.estimatedValueStatus,

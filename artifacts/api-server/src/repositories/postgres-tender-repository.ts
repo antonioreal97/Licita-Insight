@@ -22,10 +22,15 @@ import type { TenderDocumentRecord, TenderItemRecord, TenderTimelineRecord } fro
 import type { FacetGroup, SearchCriteria } from "../domain/search";
 import { normalizeText, queryTokens } from "../domain/normalize";
 import { enrichTenderById } from "../ingest/enrich-tender";
+import {
+  pncpTenderNumberShort,
+  summarizeOfficialObject,
+} from "../ingest/pncp-map";
 import { logger } from "../lib/logger";
 import {
   createValueHistogram,
   modalityLabels,
+  normalizePageRelevance,
   statusLabels,
   toSummary,
 } from "../services/search-service";
@@ -232,17 +237,26 @@ const toDetail = (row: TenderRow): TenderDetail => {
   const timeline = row.timeline as TenderTimelineRecord[];
   const estimatedValue =
     row.estimatedValue === null ? null : requireNumber(row.estimatedValue, "estimatedValue");
+  const rawPayload = row.rawPayload as {
+    publication?: Record<string, unknown>;
+  };
+  const publication = rawPayload.publication ?? rawPayload;
 
   return {
     id: row.id,
     title: row.title,
-    objectSummary: row.objectSummary,
+    objectSummary:
+      row.sourceId === "pncp"
+        ? summarizeOfficialObject(row.objectSummary ?? row.title)
+        : row.objectSummary,
     organization: { id: row.organizationId, name: row.organizationName },
     purchasingUnit: row.purchasingUnit,
     modality: asModality(row.modality),
     modalityLabel: row.modalityLabel,
     status: asStatus(row.status),
     tenderNumber: row.tenderNumber,
+    tenderNumberShort:
+      row.sourceId === "pncp" ? pncpTenderNumberShort(publication) : null,
     estimatedValue,
     estimatedValueStatus: row.estimatedValueStatus as TenderDetail["estimatedValueStatus"],
     publishedAt: row.publishedAt,
@@ -304,7 +318,9 @@ export class PostgresTenderRepository {
     ]);
 
     return {
-      data: rows.map((row) => toSummary(toDetail(row), criteria, tokens)),
+      data: normalizePageRelevance(
+        rows.map((row) => toSummary(toDetail(row), criteria, tokens)),
+      ),
       pagination: {
         page: criteria.page,
         pageSize: criteria.pageSize,
