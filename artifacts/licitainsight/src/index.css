@@ -97,7 +97,7 @@
 
   --sidebar-border: 215 23% 21%;
 
-  --sidebar-primary: 164 65% 43%;
+  --sidebar-primary: 210 80% 58%;
 
   --sidebar-primary-foreground: 216 30% 12%;
 
@@ -105,7 +105,7 @@
 
   --sidebar-accent-foreground: 214 26% 94%;
 
-  --sidebar-ring: 164 65% 43%;
+  --sidebar-ring: 210 80% 58%;
 
   --popover: 0 0% 100%;
 
@@ -113,7 +113,7 @@
 
   --popover-border: 214 20% 88%;
 
-  --primary: 164 65% 35%;
+  --primary: 210 78% 43%;
 
   --primary-foreground: 0 0% 100%;
 
@@ -134,8 +134,8 @@
   --destructive-foreground: 0 0% 100%;
 
   --input: 214 20% 82%;
-  --ring: 164 65% 35%;
-  --chart-1: 164 65% 35%;
+  --ring: 210 78% 43%;
+  --chart-1: 210 78% 43%;
   --chart-2: 40 92% 57%;
   --chart-3: 211 72% 48%;
   --chart-4: 4 74% 55%;
@@ -246,7 +246,7 @@
 
   --sidebar-border: 215 23% 17%;
 
-  --sidebar-primary: 164 65% 48%;
+  --sidebar-primary: 210 82% 66%;
 
   --sidebar-primary-foreground: 216 34% 8%;
 
@@ -254,7 +254,7 @@
 
   --sidebar-accent-foreground: 214 26% 94%;
 
-  --sidebar-ring: 164 65% 48%;
+  --sidebar-ring: 210 82% 66%;
 
   --popover: 216 27% 14%;
 
@@ -262,7 +262,7 @@
 
   --popover-border: 215 23% 22%;
 
-  --primary: 164 65% 48%;
+  --primary: 210 82% 66%;
 
   --primary-foreground: 216 34% 8%;
 
@@ -284,8 +284,8 @@
 
   /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
   --input: 215 23% 29%;
-  --ring: 164 65% 48%;
-  --chart-1: 164 65% 48%;
+  --ring: 210 82% 66%;
+  --chart-1: 210 82% 66%;
   --chart-2: 40 92% 57%;
   --chart-3: 211 72% 60%;
   --chart-4: 4 74% 58%;
@@ -479,5 +479,85 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Keep legacy landing/auth utility classes aligned with the blue brand palette. */
+  [class*="text-[#278f73]"],
+  [class*="text-[#258d72]"],
+  [class*="text-[#227d64]"],
+  [class*="text-[#14765c]"] {
+    color: #2369a8 !important;
+  }
+
+  [class*="text-[#6ad4b4]"] {
+    color: #83c2f1 !important;
+  }
+
+  [class*="text-[#172625]"],
+  [class*="text-[#273b38]"],
+  [class*="text-[#35504b]"] {
+    color: #172b44 !important;
+  }
+
+  [class*="text-[#61716f]"] {
+    color: #617287 !important;
+  }
+
+  [class*="text-[#71807d]"],
+  [class*="text-[#77988d]"],
+  [class*="text-[#81908c]"],
+  [class*="text-[#879692]"],
+  [class*="text-[#9aa8a4]"] {
+    color: #718198 !important;
+  }
+
+  [class*="text-[#b0c8c0]"] {
+    color: #b0c5d8 !important;
+  }
+
+  [class*="bg-[#172f2e]"],
+  [class*="bg-[#152c2c]"] {
+    background-color: #152f4d !important;
+  }
+
+  [class*="bg-[#234a47]"]:hover {
+    background-color: #224d76 !important;
+  }
+
+  [class*="bg-[#6ad4b4]"] {
+    background-color: #83c2f1 !important;
+  }
+
+  [class*="bg-[#39ad87]"] {
+    background-color: #4d9fe0 !important;
+  }
+
+  [class*="bg-[#e1f4ed]"],
+  [class*="bg-[#e7f4ef]"],
+  [class*="bg-[#e9f4ef]"],
+  [class*="bg-[#e4f4ee]"],
+  [class*="bg-[#e4f2ed]"],
+  [class*="bg-[#dcece6]"] {
+    background-color: #e7f1fb !important;
+  }
+
+  [class*="bg-[#f5f7f6]"] {
+    background-color: #f5f7fb !important;
+  }
+
+  [class*="border-[#b8d7cc]"] {
+    border-color: #b8d1e6 !important;
+  }
+
+  [class*="border-[#cbd8d4]"],
+  [class*="border-[#cbdcd6]"] {
+    border-color: #cbd8e5 !important;
+  }
+
+  [class*="bg-[#dce6e2]"],
+  [class*="bg-[#e4ebe8]"],
+  [class*="bg-[#edf1ef]"],
+  [class*="bg-[#f0f5f3]"] {
+    background-color: #edf2f8 !important;
   }
 }
