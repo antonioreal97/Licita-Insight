@@ -58,3 +58,9 @@ Resposta esperada: docs/handoffs/CLAUDE_HANDOFF-003-pncp-data-quality.md
 Obs.: o arquivo docs/handoffs/CLAUDE_HANDOFF-002-search-v1.1.md.prefeprefe parece ter um sufixo
 acidental no nome; renomeie para .md se concordar.
 ```
+
+## Adendo (QA do frontend, docs/reviews/cycle1-frontend-qa.md)
+
+- **QA-018 · P1 — sigilo classificado como `not_published`.** Nos pregões dos Correios (ex.: 34028316000103-1-000087-2026 e -000086-2026) o objeto diz "O valor estimado da contratação é sigiloso", mas a API devolve `estimatedValueStatus: "not_published"`. Revisar a regra em `artifacts/api-server/src/ingest/pncp-map.ts` (usar o campo de sigilo do PNCP, se existir; senão, documentar a limitação no contrato — não inferir por texto livre sem acordo).
+- **QA-019 · P2 — rótulos de facet.** Reforça o P1-2: API envia "Aberta" e "Pregão Eletrônico"; contrato/UI usam "Aberto" e "Pregão eletrônico".
+- **Observação:** `objectSummary` hoje é o objeto cortado em 300 caracteres no meio da palavra ("…será realiza"). Se mantiver o corte no servidor, cortar em limite de palavra e terminar com "…" (P2-6).
