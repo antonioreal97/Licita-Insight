@@ -31,6 +31,7 @@
   --color-border-strong: hsl(var(--border-strong));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-scrim: hsl(var(--scrim));
 
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
@@ -193,6 +194,9 @@
   --border-strong: 214 16% 72%;
   --input: 214 18% 80%;
   --ring: 210 78% 43%; /* 4.9:1 on background */
+
+  /* Scrim behind modals, sheets and the mobile nav. Always dark, so use it with alpha: bg-scrim/50 */
+  --scrim: 216 30% 8%;
 
   /* Primary — signal blue */
   --primary: 210 78% 43%;
@@ -357,6 +361,8 @@
   /* Border around inputs: more contrast than --border on a --card background */
   --input: 215 23% 29%;
   --ring: 210 82% 66%; /* 7.1:1 on background */
+
+  --scrim: 216 50% 3%;
 
   /* Primary */
   --primary: 210 82% 66%;
@@ -740,88 +746,5 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
-  }
-
-  /*
-   * DS-DEBT: legacy remap of the old green palette used as raw hex classes in landing/auth.
-   * Remove once src/features/landing and src/features/auth are migrated to tokens (see /design-system/README.md).
-   */
-  [class*='text-[#278f73]'],
-  [class*='text-[#258d72]'],
-  [class*='text-[#227d64]'],
-  [class*='text-[#14765c]'] {
-    color: #2369a8 !important;
-  }
-
-  [class*='text-[#6ad4b4]'] {
-    color: #83c2f1 !important;
-  }
-
-  [class*='text-[#172625]'],
-  [class*='text-[#273b38]'],
-  [class*='text-[#35504b]'] {
-    color: #172b44 !important;
-  }
-
-  [class*='text-[#61716f]'] {
-    color: #617287 !important;
-  }
-
-  [class*='text-[#71807d]'],
-  [class*='text-[#77988d]'],
-  [class*='text-[#81908c]'],
-  [class*='text-[#879692]'],
-  [class*='text-[#9aa8a4]'] {
-    color: #718198 !important;
-  }
-
-  [class*='text-[#b0c8c0]'] {
-    color: #b0c5d8 !important;
-  }
-
-  [class*='bg-[#172f2e]'],
-  [class*='bg-[#152c2c]'] {
-    background-color: #152f4d !important;
-  }
-
-  [class*='bg-[#234a47]']:hover {
-    background-color: #224d76 !important;
-  }
-
-  [class*='bg-[#6ad4b4]'] {
-    background-color: #83c2f1 !important;
-  }
-
-  [class*='bg-[#39ad87]'] {
-    background-color: #4d9fe0 !important;
-  }
-
-  [class*='bg-[#e1f4ed]'],
-  [class*='bg-[#e7f4ef]'],
-  [class*='bg-[#e9f4ef]'],
-  [class*='bg-[#e4f4ee]'],
-  [class*='bg-[#e4f2ed]'],
-  [class*='bg-[#dcece6]'] {
-    background-color: #e7f1fb !important;
-  }
-
-  [class*='bg-[#f5f7f6]'] {
-    background-color: #f5f7fb !important;
-  }
-
-  [class*='border-[#b8d7cc]'] {
-    border-color: #b8d1e6 !important;
-  }
-
-  [class*='border-[#cbd8d4]'],
-  [class*='border-[#cbdcd6]'] {
-    border-color: #cbd8e5 !important;
-  }
-
-  [class*='bg-[#dce6e2]'],
-  [class*='bg-[#e4ebe8]'],
-  [class*='bg-[#edf1ef]'],
-  [class*='bg-[#f0f5f3]'] {
-    background-color: #edf2f8 !important;
   }
 }

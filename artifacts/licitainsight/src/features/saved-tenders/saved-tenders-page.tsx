@@ -26,20 +26,20 @@ export default function SavedTendersPage() {
         }
       />
       <div className="mb-5 flex gap-2 overflow-x-auto">
-        <button data-testid="button-priority-all" className="rounded-full bg-sidebar px-3 py-1.5 text-xs font-semibold text-white">
-          Todos <span className="ml-1 font-mono text-[10px] text-slate-400">{saved.length}</span>
+        <button data-testid="button-priority-all" className="rounded-full bg-inverse px-3 py-1.5 text-xs font-semibold text-inverse-foreground">
+          Todos <span className="ml-1 type-data text-3xs text-inverse-foreground/70">{saved.length}</span>
         </button>
         <button
           data-testid="button-priority-high"
-          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
         >
-          Alta prioridade <span className="ml-1 font-mono text-[10px]">1</span>
+          Alta prioridade <span className="ml-1 type-data text-3xs">1</span>
         </button>
         <button
           data-testid="button-priority-review"
-          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
         >
-          Em revisão <span className="ml-1 font-mono text-[10px]">2</span>
+          Em revisão <span className="ml-1 type-data text-3xs">2</span>
         </button>
       </div>
       {results.isPending ? (
@@ -47,7 +47,7 @@ export default function SavedTendersPage() {
       ) : results.isError ? (
         <ErrorState error={results.error} onRetry={() => results.refetch()} />
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border-strong bg-card px-6 py-16 text-center type-body text-muted-foreground">
           Nenhum edital salvo ainda.
         </div>
       ) : (

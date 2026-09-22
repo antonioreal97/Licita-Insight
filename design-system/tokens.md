@@ -195,3 +195,14 @@ Design mobile-first at 375px.
 `--focus-ring-width: 2px`, `--focus-ring-offset: 2px`, color `--ring`. A base rule gives every `:focus-visible` element this outline,
 so raw buttons and links are covered by default. Components that draw their own ring (shadcn inputs) opt out with `outline-none`.
 The `focus-ring` utility reapplies it to custom controls.
+
+## Addendum: scrim token (DS-DEBT migration)
+
+| Token     | Class                        | Light                    | Dark                     | Use                                                                     |
+| --------- | ---------------------------- | ------------------------ | ------------------------ | ----------------------------------------------------------------------- |
+| `--scrim` | `bg-scrim/40`, `bg-scrim/50` | `216 30% 8%` (`#0e141c`) | `216 50% 3%` (`#04070b`) | Backdrop behind dialogs, sheets, drawers (`/50`) and mobile nav (`/40`) |
+
+Added because `bg-black/80` was a palette literal and `bg-foreground/40` flips to a light wash in dark mode. The scrim stays
+dark in both themes, so always use it with alpha. It is exposed as `--color-scrim` in `@theme inline`.
+
+The `!important` remap of the old green palette that sat at the end of `index.css` has been removed: landing and auth now use tokens.

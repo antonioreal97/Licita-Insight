@@ -18,7 +18,7 @@ export default function SavedSearchesPage() {
           </Button>
         }
       />
-      <div className="mb-5 rounded-xl border border-primary/20 bg-primary/[0.04] p-4 text-sm text-muted-foreground">
+      <div className="mb-5 rounded-xl border border-primary/20 bg-primary-subtle/50 p-4 type-body text-muted-foreground">
         <Bell size={16} className="mr-2 inline text-primary" />
         Notificações estão prontas para configuração. Conecte seu e-mail em Configurações para receber alertas.
       </div>
@@ -51,16 +51,16 @@ export default function SavedSearchesPage() {
 function SavedSearch({ name, query, filters, frequency, count }: { name: string; query: string; filters: string; frequency: string; count: string }) {
   const [active, setActive] = useState(frequency !== 'Desativado');
   return (
-    <div className="flex flex-col gap-4 border-b border-border p-5 last:border-0 sm:flex-row sm:items-center">
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary">
+    <div className="flex flex-col gap-4 border-b border-border-subtle p-5 last:border-0 sm:flex-row sm:items-center">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">
         <Search size={16} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-semibold">{name}</div>
-        <div className="mt-1 font-mono text-[11px] text-muted-foreground">{query}</div>
-        <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+        <div className="font-semibold text-foreground">{name}</div>
+        <div className="mt-1 type-data type-meta text-muted-foreground">{query}</div>
+        <div className="mt-2 flex flex-wrap gap-2 text-3xs text-muted-foreground">
           <span className="rounded bg-muted px-2 py-1">{filters}</span>
-          <span className={`rounded px-2 py-1 ${active ? 'bg-[#e1f4ed] text-[#14765c]' : 'bg-muted'}`}>{count}</span>
+          <span className={`rounded px-2 py-1 ${active ? 'bg-primary-subtle font-semibold text-primary-subtle-foreground' : 'bg-muted'}`}>{count}</span>
         </div>
       </div>
       <div className="flex items-center gap-4 sm:ml-auto">
@@ -71,13 +71,17 @@ function SavedSearch({ name, query, filters, frequency, count }: { name: string;
           onChange={(e) => {
             setActive(e.target.value !== 'Desativado');
           }}
-          className="rounded-md border border-input bg-background px-2 py-2 text-xs"
+          className="h-9 rounded-lg border border-input bg-background px-2 text-xs text-foreground transition-colors duration-fast hover:border-border-strong"
         >
           <option>Diário</option>
           <option>Semanal</option>
           <option>Desativado</option>
         </select>
-        <button aria-label={`Mais ações para ${name}`} data-testid={`button-more-${name}`} className="text-muted-foreground hover:text-foreground">
+        <button
+          aria-label={`Mais ações para ${name}`}
+          data-testid={`button-more-${name}`}
+          className="rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground"
+        >
           <MoreHorizontal size={17} />
         </button>
       </div>

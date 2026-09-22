@@ -104,3 +104,20 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
 | Table row / result row | surface                  | surface-sunken                 | ring on the row link           | —                         | —                                  | skeleton row                     |
 | StatusBadge            | status tokens            | none                           | none (not interactive)         | —                         | —                                  | —                                |
 | Link                   | primary text             | underline                      | ring                           | —                         | —                                  | —                                |
+
+## Migration notes (DS-DEBT cleanup)
+
+- **Overlays** (`ui/dialog`, `ui/sheet`, `ui/drawer`, `ui/alert-dialog`): backdrop is `bg-scrim/50` at `z-modal`, content is
+  `bg-surface-raised` (`rounded-2xl` for dialogs, `shadow-lg` dialogs / `shadow-xl` sheets and drawers). The close button uses the
+  base focus ring, not `focus:ring-*`.
+- **Close labels**: `SheetContent` and `DialogContent` accept an optional `closeLabel` prop (default `"Fechar"`), used as the
+  screen-reader text of the X button. Existing call sites need no change.
+- **`cn()`** knows the DS utilities: `type-{eyebrow,label,meta,ui,body,section,title,display-sm,display}` are in the font-size
+  group (they override each other and `text-<size>`, last wins; `type-data` is not in the group and combines freely), and
+  `z-{raised,sticky,overlay,nav,modal,popover,toast}` are in the z-index group.
+- **App shell**: skip link "Pular para o conteúdo" (`data-testid="link-skip-to-content"`) is the first focusable element and
+  targets `<main id="conteudo" tabIndex={-1}>`. Nav links set `aria-current="page"` and use `focus-visible:outline-sidebar-ring`.
+- **Avatar**: header avatar is `bg-primary-subtle text-primary-subtle-foreground`; sidebar avatar is `bg-sidebar-accent text-sidebar-strong-foreground`.
+- **Selected chip** (saved tenders "Todos"): `bg-inverse text-inverse-foreground`, count in `text-inverse-foreground/70`.
+- **Marketing** (landing/auth): the navy panels and brand tile use `bg-sidebar` + `text-sidebar-*` (same in both themes);
+  high-emphasis CTAs are `bg-inverse` like `Button variant="dark"`. Hero display sizes (48/72px) stay arbitrary on purpose.

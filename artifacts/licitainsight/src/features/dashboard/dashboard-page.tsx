@@ -9,11 +9,12 @@ import { TenderRow } from '@/features/tenders/components/tender-row';
 
 // TODO(dashboard): metrics and activity are static placeholders until an analytics endpoint exists.
 function MiniMetric({ label, value, detail, tone = 'green' }: { label: string; value: string; detail: string; tone?: 'green' | 'amber' | 'blue' }) {
-  const toneClass = tone === 'green' ? 'text-primary' : tone === 'amber' ? 'text-[#b2730a]' : 'text-[#3378ad]';
+  // 'green' and 'blue' are legacy names: both read as the signal blue. 'amber' uses the under-review tone (AA as text).
+  const toneClass = tone === 'amber' ? 'text-status-under-review-foreground' : 'text-primary';
   return (
-    <div className="border-l-2 border-primary/30 pl-4">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
-      <div className="mt-2 text-[25px] font-semibold tracking-[-0.04em]">{value}</div>
+    <div className="border-l border-primary/40 pl-4">
+      <div className="type-label text-muted-foreground">{label}</div>
+      <div className="mt-2 type-display-sm tabular-nums text-foreground">{value}</div>
       <div className={`mt-1 text-xs font-medium ${toneClass}`}>{detail}</div>
     </div>
   );
@@ -46,7 +47,7 @@ export default function DashboardPage() {
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold">Prioridade para você</h2>
+              <h2 className="type-section text-foreground">Prioridade para você</h2>
               <p className="mt-1 text-xs text-muted-foreground">Editais com maior aderência ao seu perfil</p>
             </div>
             <Link href="/search" data-testid="link-dashboard-all" className="text-xs font-semibold text-primary hover:underline">
@@ -68,8 +69,12 @@ export default function DashboardPage() {
         <aside className="space-y-6">
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Atividade recente</h2>
-              <button data-testid="button-refresh-activity" aria-label="Atualizar atividade" className="text-muted-foreground hover:text-primary">
+              <h2 className="type-section text-foreground">Atividade recente</h2>
+              <button
+                data-testid="button-refresh-activity"
+                aria-label="Atualizar atividade"
+                className="rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-primary"
+              >
                 <RefreshCw size={14} />
               </button>
             </div>
@@ -83,15 +88,15 @@ export default function DashboardPage() {
                   <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
                   <div className="min-w-0">
                     <div className="text-xs font-medium">{title}</div>
-                    <div className="truncate text-[11px] text-muted-foreground">{detail}</div>
-                    <div className="mt-1 font-mono text-[9px] text-muted-foreground">{time}</div>
+                    <div className="truncate type-meta text-muted-foreground">{detail}</div>
+                    <div className="mt-1 type-data text-3xs text-muted-foreground">{time}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-5">
-            <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+          <div className="rounded-xl border border-primary/20 bg-primary-subtle/50 p-5">
+            <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">
               <Sparkles size={16} />
             </div>
             <h3 className="text-sm font-semibold">Seu radar está aprendendo</h3>
