@@ -152,3 +152,9 @@ overrides:
   esbuild: "0.28.2"
   # orval pins js-yaml to an exact version older than the CVE fix (>=4.3.2)
   js-yaml: '4.3.2'
+
+allowBuilds:
+  esbuild: true
+
+# pnpm 11: o check de deps antes de `run` reexecuta install e falhava no preinstall/builds
+verifyDepsBeforeRun: false

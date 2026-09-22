@@ -14,14 +14,14 @@
 
 Na raiz:
 
-- `pnpm --filter @workspace/licitainsight run dev` — frontend (Vite, host `0.0.0.0`)
+- `PORT=24252 BASE_PATH=/ pnpm --filter @workspace/licitainsight run dev` — frontend (Vite, host `0.0.0.0`)
 - `pnpm --filter @workspace/api-server run dev` — API na porta 5000 (build + start)
 - `pnpm run typecheck` — typecheck de libs e artifacts
 - `pnpm run build` — typecheck + build dos pacotes
 - `pnpm --filter @workspace/api-spec run codegen` — regenera hooks e schemas
 - `pnpm --filter @workspace/db run push` — push do schema Drizzle (só dev)
 
-O frontend de licitações funciona sem `DATABASE_URL` e sem a API.
+O frontend de licitações funciona sem `DATABASE_URL` e sem a API. `PORT` e `BASE_PATH` são obrigatórios no Vite.
 
 ## Workspace
 
@@ -36,7 +36,9 @@ Overrides removem binários nativos que não são linux-x64 (herança Replit). E
 - Sem scraping no frontend.
 - Sem prender o produto a Supabase, Netlify Identity, Lovable ou outro backend até existir decisão explícita.
 - Segredos só em env. Não commitar `.env`.
-- `preinstall` recusa npm/yarn: usar pnpm.
+- `preinstall` recusa npm/yarn: usar pnpm. Em pnpm 11, `verifyDepsBeforeRun: false` no `pnpm-workspace.yaml` evita o install aninhado que quebrava o gate.
+- Frontend precisa de `PORT` e `BASE_PATH` (ex.: `PORT=24252 BASE_PATH=/`). Ver `artifacts/licitainsight/.replit-artifact/artifact.toml`.
+- `allowBuilds.esbuild: true` é obrigatório no workspace (pnpm 11 ignora o build do esbuild se não estiver aprovado).
 
 ## Arquivos de referência
 
