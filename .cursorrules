@@ -1,0 +1,34 @@
+# Licita Insight — inteligência de projeto
+
+## Produto
+
+Frontend de pesquisa e acompanhamento de licitações públicas. Fluxo: Search → Filter → Evaluate → Save → Monitor.
+
+Etapa atual: UI com mocks. Sem scraping, sem auth real, sem amarrar a Supabase/Lovable/Netlify Identity.
+
+Spec longa: `README.md`. Estado vivo: `memory-bank/`.
+
+## Onde mexer
+
+- App: `artifacts/licitainsight`
+- Páginas e peças de licitação: `src/pages/pages.tsx` (arquivo denso; preservar `data-testid`)
+- Shell e tema: `src/components/app-shell.tsx` (`localStorage` key `licita-theme`)
+- Mocks e tipo `Tender`: `src/lib/mock-data.ts`
+- Tokens: `src/index.css`
+- `src/components/ui/*` é kit shadcn do template. As telas de produto usam um `Button` local, não esse kit.
+
+API (`artifacts/api-server`), Drizzle (`lib/db`) e OpenAPI só têm health check. Não ligar a UI neles até existir contrato de busca.
+
+## Preferências
+
+- Copy em português (Brasil).
+- Entidade no código: `Tender`. Na interface: “edital”.
+- Dados fictícios sempre como demonstração, nunca como licitação real.
+- Trocar mock por API no futuro deve mexer em service, não nos componentes visuais.
+- Erros visíveis. Sem `catch` vazio e sem `null` no lugar de falha.
+- Menos código. Sem abstração até existir um segundo callsite real.
+- Não inventar endpoints, tipos ou libs. Conferir o arquivo antes de chamar.
+
+## Visual
+
+Verde primary, sidebar navy, âmbar de atenção, DM Sans + Space Mono. Densidade de desktop, bordas sutis, objeto da licitação com mais hierarquia que o resto. Status com texto e cor.
