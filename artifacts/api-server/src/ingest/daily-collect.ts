@@ -88,3 +88,51 @@ export function startDailyPncpCollect(): void {
   void run("startup");
   arm();
 }
+
+export function startDailyCultureCollect(): void {
+  if (process.env.CULTURE_DAILY_COLLECT === "false") {
+    logger.info("Daily cultural opportunities collect is disabled");
+    return;
+  }
+  if (!process.env.DATABASE_URL) {
+    logger.error("DATABASE_URL is not set; daily cultural opportunities collect will not start");
+    return;
+  }
+
+  const hour = dailyHour();
+
+  const run = async (reason: string) => {
+    try {
+      const { startCultureIngest } = await import("./collect-opportunities");
+      const started = await startCultureIngest();
+      logger.info(
+        { reason, runId: started.runId },
+        "Daily cultural opportunities collect started",
+      );
+    } catch (error) {
+      const { CultureIngestInProgressError } = await import("./collect-opportunities");
+      if (error instanceof CultureIngestInProgressError) {
+        logger.info(
+          { reason },
+          "Daily cultural opportunities collect skipped because one is already running",
+        );
+        return;
+      }
+      logger.error(
+        { err: error, reason },
+        "Daily cultural opportunities collect failed to start",
+      );
+    }
+  };
+
+  const arm = () => {
+    const delay = msUntilHour(hour);
+    logger.info({ hour, delayMs: delay }, "Next cultural opportunities collect scheduled");
+    setTimeout(() => {
+      void run("schedule").finally(arm);
+    }, delay);
+  };
+
+  void run("startup");
+  arm();
+}

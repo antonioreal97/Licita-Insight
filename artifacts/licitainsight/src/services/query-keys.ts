@@ -1,4 +1,4 @@
-import type { NotificationsParams, SavedTendersParams, TenderSearchParams } from '@/api';
+import type { NotificationsParams, OpportunitySearchParams, SavedTendersParams, TenderSearchParams } from '@/api';
 
 export const queryKeys = {
   tenders: {
@@ -7,10 +7,16 @@ export const queryKeys = {
     detail: (id: string) => ['tenders', 'detail', id] as const,
   },
   suggestions: (q: string) => ['suggestions', q] as const,
+  opportunities: {
+    all: ['opportunities'] as const,
+    search: (params: OpportunitySearchParams) => ['opportunities', 'search', params] as const,
+    detail: (id: string) => ['opportunities', 'detail', id] as const,
+  },
   session: ['session'] as const,
   /** Everything scoped to the signed-in user lives under `me`: sign-out removes it in one call. */
   me: {
     all: ['me'] as const,
+    billing: ['me', 'billing'] as const,
     savedTenders: {
       all: ['me', 'saved-tenders'] as const,
       ids: ['me', 'saved-tenders', 'ids'] as const,

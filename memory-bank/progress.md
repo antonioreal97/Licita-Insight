@@ -21,14 +21,21 @@
 - Validação final do calendário: 27 testes passaram, typecheck e build da API concluídos. A tentativa real em 22 set 2026 (DF, modalidade 6, publicação em 21 set) falhou por timeout do PNCP antes da primeira página; os 19 editais foram preservados e a partição ficou pendente. A verificação de duas execuções foi concluída com respostas controladas do PNCP no Postgres real, não no serviço externo.
 - Detalhe busca itens e arquivos do PNCP na primeira abertura e grava no banco.
 - A busca mostra `Atualizado em` a partir de `meta.indexUpdatedAt` (última `fetched_at`).
+- Chamadas de fomento audiovisual ficam fora de `tenders`. Tabela `cultural_opportunities`, coleta do Mapas Culturais (`source = mapas-culturais`) e lista em `/oportunidades`. Contrato: `docs/contracts/opportunities-v1.md`. `CULTURE_DAILY_COLLECT=false` desliga a agenda. Comando: `pnpm --filter @workspace/api-server run collect:opportunities`. A consulta por termo `linguagem` foi trocada por `@keyword` depois que as instalações responderam 500 ou HTML.
 - Verificado em 22 set 2026: 19 pregões eletrônicos do DF publicados em 21 set 2026. A busca por “correios” abre o edital `34028316000103-1-000087-2026`, com link `https://pncp.gov.br/app/editais/34028316000103/2026/87`. O registro permanece depois de reiniciar a API. Uma segunda coleta não duplica a contagem.
+
+## O que já funciona — assinatura (MVP)
+
+- Tabela `subscriptions`, gate `402 SUBSCRIPTION_REQUIRED` nas rotas `/me` de salvos/buscas/notificações.
+- Checkout/cancelamento Asaas e webhook autenticado. UI em Configurações + `RequireSubscription` nas páginas pagas.
+- 10 testes de billing passaram; typecheck da API e do frontend ok. Schema `subscriptions` no Postgres local.
 
 ## O que falta
 
-- Carga nacional dos últimos 30 dias (o comando padrão faz isso; ainda não foi executada até o fim).
-- A API, ao subir, dispara a coleta incremental e repete todo dia às 06:00 em `America/Sao_Paulo`. `PNCP_DAILY_COLLECT=false` desliga. O endpoint `POST /api/v1/ingest/pncp` continua disponível.
-- Auth real, favoritos por usuário, alertas e outras fontes.
-- Salvar busca, compartilhar e monitorar ainda não persistem por usuário.
+- Credenciais Asaas no ambiente e restart da API do Compose para as rotas de billing entrarem no processo em execução.
+- Deploy online (fora do ciclo do paywall).
+- Carga nacional dos últimos 30 dias do PNCP.
+- Outras fontes além do Mapas Culturais; e-mail de alerta (hoje só no app).
 
 ## Problemas conhecidos
 

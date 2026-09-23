@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from '@/components/ui/switch';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
-import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { useCreateSavedSearch, useSavedSearches } from '@/features/saved-searches/hooks/use-saved-searches';
 import { savedSearchQuery } from '@/services/account-service';
 import { searchParamsFromUrl } from '@/services/search-service';
@@ -17,6 +17,7 @@ import { SearchSummary } from './search-summary';
 const NAME_MAX = 80;
 
 function saveErrorMessage(error: unknown) {
+  if (isApiError(error) && error.code === 'SUBSCRIPTION_REQUIRED') return 'Assine para salvar e acompanhar editais.';
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas. Exclua uma em Buscas salvas e tente de novo.';
   if (isApiError(error) && error.code === 'INVALID_PARAMETER')
     return 'O servidor recusou o nome ou os filtros. Use um nome de 1 a 80 caracteres e revise os filtros.';
@@ -27,7 +28,7 @@ function saveErrorMessage(error: unknown) {
 /** Signed out → Google sign-in (back to this search). Signed in → dialog to name the search and turn alerts on. */
 export function SaveSearchButton() {
   const { params } = useSearchUrlState();
-  const session = useSession();
+  const requireEntitled = useRequireEntitled();
   const savedSearches = useSavedSearches();
   const create = useCreateSavedSearch();
   const [, navigate] = useLocation();
@@ -40,15 +41,7 @@ export function SaveSearchButton() {
   const existing = savedSearches.data?.data.find((search) => savedSearchQuery(searchParamsFromUrl(search.query)) === query);
 
   const start = () => {
-    if (session.status === 'anonymous') return signInWithGoogle();
-    if (session.status !== 'authenticated') {
-      toast({
-        variant: session.error ? 'destructive' : 'default',
-        title: session.error ? 'Não foi possível verificar sua sessão' : 'Verificando sua sessão',
-        description: session.error ? 'Recarregue a página e tente de novo.' : 'Aguarde um instante e tente de novo.',
-      });
-      return;
-    }
+    if (!requireEntitled()) return;
     if (existing) return navigate('/saved-searches');
     setName((params.q ?? 'Busca sem termo').slice(0, NAME_MAX));
     setAlertsEnabled(true);

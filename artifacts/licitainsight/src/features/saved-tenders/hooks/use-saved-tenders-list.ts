@@ -1,17 +1,19 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { SavedTender, SavedTendersParams } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
+import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService, MAX_SAVED_TENDERS_PAGE_SIZE } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
 /** Server-paginated saved tenders (`savedAt desc`). `monitored: true` lists only monitored ones. Disabled while signed out. */
 export function useSavedTendersList({ page, pageSize, monitored }: SavedTendersParams) {
   const { status } = useSession();
+  const billing = useBilling();
   const params: SavedTendersParams = { page, pageSize, monitored };
   return useQuery({
     queryKey: queryKeys.me.savedTenders.list(params),
     queryFn: ({ signal }) => accountService.listSavedTenders(params, signal),
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && billing.data?.entitled === true,
     placeholderData: keepPreviousData,
   });
 }

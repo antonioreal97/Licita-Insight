@@ -16,10 +16,11 @@ import {
   updateSavedSearch,
 } from "../account/account-service";
 import { asyncHandler, authContext, requireAuth, requireCsrf } from "../auth/http";
+import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 
 const router: IRouter = Router();
-router.use("/v1/me", requireAuth);
+router.use("/v1/me", requireAuth, requireSubscription);
 
 const recordBody = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {

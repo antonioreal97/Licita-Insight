@@ -19,6 +19,7 @@ Na raiz, com `.env` copiado de `.env.example` (`SESSION_SECRET` com 32+ caracter
 - `PORT=24252 BASE_PATH=/ pnpm --filter @workspace/licitainsight run dev` — frontend no host (Vite, host `0.0.0.0`). O proxy usa `API_PROXY_TARGET` ou `http://localhost:3001`.
 - `pnpm --filter @workspace/api-server run dev` — API no host. Com `PORT=3001` e `DATABASE_URL` (lido de `.env` na raiz, se existir).
 - `pnpm --filter @workspace/api-server run collect:pncp` — carga do PNCP. Janela padrão: 30 dias, todas as modalidades. `PNCP_FROM`, `PNCP_TO`, `PNCP_UF`, `PNCP_MODALITIES` e `PNCP_REFRESH_LIMIT` restringem a execução.
+- `pnpm --filter @workspace/api-server run collect:opportunities` — chamadas de audiovisual do Mapa da Cultura e das instâncias estaduais do Mapas Culturais. Janela padrão: 30 dias (`CULTURE_LOOKBACK_DAYS`). Agenda própria, mesmo horário do PNCP, desligável com `CULTURE_DAILY_COLLECT=false`. UFs sem instalação oficial ficam como lacuna.
 - Sem `PNCP_FROM`/`PNCP_TO`, a coleta usa `ingest_days` e pula dias já selados; datas explícitas forçam backfill. A cobertura usa `America/Sao_Paulo`. Configuração e testes em `docs/ingest-pncp-calendar.md`.
 - `pnpm --filter @workspace/db run push-force` — aplica o schema Drizzle no Postgres local.
 - `pnpm run typecheck` — typecheck de libs e artifacts

@@ -158,7 +158,9 @@ export type ApiErrorCode =
   // account-v1
   | 'UNAUTHENTICATED'
   | 'FORBIDDEN'
-  | 'CONFLICT';
+  | 'CONFLICT'
+  | 'SUBSCRIPTION_REQUIRED'
+  | 'BILLING_UNAVAILABLE';
 
 export type ApiErrorBody = {
   error: {
@@ -174,6 +176,18 @@ export type ApiErrorBody = {
 export type User = { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string };
 
 export type SessionResponse = { user: User };
+
+export type BillingStatus = 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
+
+export type BillingResponse = {
+  status: BillingStatus;
+  entitled: boolean;
+  currentPeriodEnd: string | null;
+  canCancel: boolean;
+  monthlyBrl: number | null;
+};
+
+export type BillingCheckoutResponse = { url: string };
 
 export type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
 
@@ -230,3 +244,54 @@ export type NotificationsResponse = { data: Notification[]; pagination: Paginati
 export type UnreadCountResponse = { unreadCount: number };
 
 export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };
+
+export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
+
+export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
+
+export type OpportunitySearchParams = {
+  q?: string;
+  state?: string[];
+  installation?: string[];
+  status?: OpportunityStatus[];
+  program?: OpportunityProgram[];
+  deadlineFrom?: string;
+  deadlineTo?: string;
+  page?: number;
+  pageSize?: number;
+  facets?: boolean;
+};
+
+export type OpportunitySummary = {
+  id: string;
+  title: string;
+  summary: string | null;
+  organizationName: string;
+  status: OpportunityStatus;
+  program: OpportunityProgram;
+  registrationFrom: string | null;
+  registrationTo: string | null;
+  state: string | null;
+  installation: { id: string; name: string; uf: string };
+  sourceUrl: string | null;
+  updatedAt: string;
+};
+
+export type OpportunitySearchResponse = {
+  data: OpportunitySummary[];
+  pagination: Pagination;
+  facets: {
+    status: FacetBucket[];
+    state: FacetBucket[];
+    installation: FacetBucket[];
+    program: FacetBucket[];
+  } | null;
+  meta: {
+    query: string | null;
+    tookMs: number;
+    indexUpdatedAt: string | null;
+    installationIssues: { installationId: string; name: string; message: string }[];
+    gaps: { uf: string; name: string }[];
+  };
+};
+

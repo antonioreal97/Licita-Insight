@@ -14,21 +14,25 @@ forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (J
 - O frontend chama a API pela **mesma origem**: o Vite (dev) faz proxy de `/api` → `http://localhost:3001`.
   `VITE_API_BASE_URL=/api`. Em produção, mesmo esquema (reverse proxy). Assim o cookie é first-party.
 - Sessão em cookie `licita_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` fora de dev,
-  validade 30 dias com renovação deslizante. Sessões guardadas no PostgreSQL (revogáveis).
+  validade de 10 minutos sem atividade, renovada a cada requisição autenticada (no máximo uma escrita por minuto). Sessões guardadas no PostgreSQL (revogáveis).
 - **CSRF:** toda requisição que muda estado (`POST|PUT|PATCH|DELETE` sob `/api/v1/me`, `/auth/logout`
   e `/auth/dev-login`)
   exige o header `X-Requested-With: licita-insight` **e** `Origin` igual à origem pública configurada.
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
+  Salvar, monitorar, buscas salvas e notificações exigem também assinatura ativa (`402`).
+  `GET/POST /api/v1/me/billing*` exige só sessão.
 
 ## Novos códigos de erro
 
 | HTTP | code | Quando |
 |---|---|---|
-| 401 | `UNAUTHENTICATED` | sem sessão / sessão expirada |
+| 401 | `UNAUTHENTICATED` | sem sessão / sessão expirada / webhook Asaas com token inválido |
+| 402 | `SUBSCRIPTION_REQUIRED` | rota paga sem assinatura ativa |
 | 403 | `FORBIDDEN` | CSRF inválido, recurso de outro usuário |
 | 404 | `NOT_FOUND` | recurso ou edital inexistente |
-| 409 | `CONFLICT` | limite atingido (`details: [{ field: 'limit', issue: 'max_saved_tenders' }]`) |
+| 409 | `CONFLICT` | limite atingido (`details: [{ field: 'limit', issue: 'max_saved_tenders' }]`) ou assinatura já ativa / não cancelável |
+| 503 | `BILLING_UNAVAILABLE` | Asaas não configurado ou recusou a cobrança |
 | 400 | `INVALID_PARAMETER` | corpo inválido (inclui `query` de busca salva inválida) |
 
 ---
@@ -158,6 +162,37 @@ Regras de geração:
 - Deduplicar: a mesma mudança não gera duas notificações para o mesmo usuário.
 - Retenção sugerida: 90 dias.
 
+## Assinatura (Asaas)
+
+Um plano mensal. O valor vem de `BILLING_MONTHLY_BRL` (não fica no código). Sem `ASAAS_API_KEY`,
+`ASAAS_API_BASE_URL` (https), `ASAAS_WEBHOOK_TOKEN` e o valor, o checkout responde `503 BILLING_UNAVAILABLE`
+e o restante do app segue no ar.
+
+Acesso (`entitled`) quando `status = active`, ou `canceled` com `currentPeriodEnd` ainda no futuro.
+Sem linha na tabela `subscriptions` = `status: none`.
+
+```ts
+type BillingResponse = {
+  status: 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
+  entitled: boolean;
+  currentPeriodEnd: string | null;
+  canCancel: boolean;
+  monthlyBrl: number | null;
+};
+```
+
+| Método | Caminho | Auth | Resposta |
+|---|---|---|---|
+| GET | `/api/v1/me/billing` | sessão | `BillingResponse` |
+| POST | `/api/v1/me/billing/checkout` | sessão + CSRF | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). 409 se já `entitled`. |
+| POST | `/api/v1/me/billing/cancel` | sessão + CSRF | `BillingResponse` — cancela no Asaas; o período já pago continua. |
+| POST | `/api/v1/billing/asaas/webhook` | header `asaas-access-token` | `{ received: true }`. Sem cookie e sem CSRF. |
+
+Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nextDueDate` da assinatura;
+`PAYMENT_OVERDUE` marca `past_due` (uma cobrança antiga não derruba um período já pago);
+`PAYMENT_REFUNDED` cancela e encerra o período. Evento desconhecido responde 200 e não altera a linha.
+O usuário é casado por `externalReference` ou pelo `paymentLink` / assinatura já gravados.
+
 ## Performance esperada
 
 `/auth/session`, `/me/saved-tenders/ids`, `/me/notifications/unread-count`: p95 < 100 ms.
@@ -181,7 +216,7 @@ E-mail/push, compartilhamento de buscas, times/organizações, papéis, exclusã
 ## Decisões do backend
 
 - Os oito esclarecimentos do frontend foram aceitos sem contraproposta e estão cobertos pelo OpenAPI e pelos testes HTTP/integrados.
-- Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 30 dias, com renovação deslizante após 24 horas de atividade.
+- Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 10 minutos sem atividade, com renovação deslizante. O token não vai para o `localStorage`.
 - Limites de salvos são serializados por usuário com advisory lock transacional, além das constraints de unicidade do PostgreSQL.
 - Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados após uma coleta PNCP concluída.
 - Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; retenção operacional é de 90 dias.

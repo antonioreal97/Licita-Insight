@@ -7,16 +7,21 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AppShell } from '@/components/app-shell';
 import AuthPage, { LoginRedirect } from '@/features/auth/auth-page';
+import { useIdleSession } from '@/features/auth/hooks/use-session';
 import { RequireAuth } from '@/features/auth/components/require-auth';
+import { RequireSubscription } from '@/features/billing/components/require-subscription';
 import DashboardPage from '@/features/dashboard/dashboard-page';
 import DesignSystemPage from '@/features/design-system/design-system-page';
 import LandingPage from '@/features/landing/landing-page';
 import MonitoringPage from '@/features/monitoring/monitoring-page';
 import SavedSearchesPage from '@/features/saved-searches/saved-searches-page';
 import SavedTendersPage from '@/features/saved-tenders/saved-tenders-page';
+import OpportunitiesPage from '@/features/opportunities/opportunities-page';
+import OpportunityDetailPage from '@/features/opportunities/opportunity-detail-page';
 import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
+import { CookieNotice } from '@/features/privacy/cookie-notice';
 import { queryKeys } from '@/services/query-keys';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
@@ -36,17 +41,18 @@ queryClient.setQueryDefaults(queryKeys.session, { retry: retryTransient });
 
 // Static routes only. Pages with dynamic titles (tender detail, 404) set document.title themselves, so this never touches them.
 const routeTitles: Record<string, string> = {
-  '/': 'Licita Insight · Editais públicos do PNCP',
-  '/login': 'Entrar · Licita Insight',
-  '/register': 'Criar conta · Licita Insight',
-  '/forgot-password': 'Recuperar acesso · Licita Insight',
-  '/dashboard': 'Visão geral · Licita Insight',
-  '/search': 'Explorar editais · Licita Insight',
-  '/saved-searches': 'Buscas salvas · Licita Insight',
-  '/saved-tenders': 'Editais salvos · Licita Insight',
-  '/monitoring': 'Monitoramento · Licita Insight',
-  '/settings': 'Configurações · Licita Insight',
-  '/design-system': 'Design system · Licita Insight',
+  '/': 'LicitAI · Editais públicos do PNCP',
+  '/login': 'Entrar · LicitAI',
+  '/register': 'Criar conta · LicitAI',
+  '/forgot-password': 'Recuperar acesso · LicitAI',
+  '/dashboard': 'Visão geral · LicitAI',
+  '/search': 'Explorar editais · LicitAI',
+  '/oportunidades': 'Chamadas culturais · LicitAI',
+  '/saved-searches': 'Buscas salvas · LicitAI',
+  '/saved-tenders': 'Editais salvos · LicitAI',
+  '/monitoring': 'Monitoramento · LicitAI',
+  '/settings': 'Configurações · LicitAI',
+  '/design-system': 'Design system · LicitAI',
 };
 
 function useRouteAnnouncement() {
@@ -64,6 +70,7 @@ function useRouteAnnouncement() {
 
 function Router() {
   useRouteAnnouncement();
+  useIdleSession();
   return (
     // Keep a shared shell (sidebar, navbar) outside the boundary so it
     // survives a page crash.
@@ -87,6 +94,20 @@ function Router() {
             </AppShell>
           )}
         </Route>
+        <Route path="/oportunidades/:id">
+          {() => (
+            <AppShell>
+              <OpportunityDetailPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/oportunidades">
+          {() => (
+            <AppShell>
+              <OpportunitiesPage />
+            </AppShell>
+          )}
+        </Route>
         <Route path="/tenders/:id">
           {() => (
             <AppShell>
@@ -98,7 +119,9 @@ function Router() {
           {() => (
             <AppShell>
               <RequireAuth>
-                <SavedSearchesPage />
+                <RequireSubscription>
+                  <SavedSearchesPage />
+                </RequireSubscription>
               </RequireAuth>
             </AppShell>
           )}
@@ -107,7 +130,9 @@ function Router() {
           {() => (
             <AppShell>
               <RequireAuth>
-                <SavedTendersPage />
+                <RequireSubscription>
+                  <SavedTendersPage />
+                </RequireSubscription>
               </RequireAuth>
             </AppShell>
           )}
@@ -116,7 +141,9 @@ function Router() {
           {() => (
             <AppShell>
               <RequireAuth>
-                <MonitoringPage />
+                <RequireSubscription>
+                  <MonitoringPage />
+                </RequireSubscription>
               </RequireAuth>
             </AppShell>
           )}
@@ -155,6 +182,7 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Router />
         </WouterRouter>
+        <CookieNotice />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

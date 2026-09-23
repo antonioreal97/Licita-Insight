@@ -1,12 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NotificationsParams, UnreadCountResponse } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
+import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
 /** In-app notifications (`createdAt desc`). The response's `unreadCount` also refreshes the badge cache. */
 export function useNotifications({ unreadOnly, page, pageSize }: NotificationsParams) {
   const { status } = useSession();
+  const billing = useBilling();
   const queryClient = useQueryClient();
   const params: NotificationsParams = { unreadOnly, page, pageSize };
   return useQuery({
@@ -16,7 +18,7 @@ export function useNotifications({ unreadOnly, page, pageSize }: NotificationsPa
       queryClient.setQueryData<UnreadCountResponse>(queryKeys.me.notifications.unreadCount, { unreadCount: response.unreadCount });
       return response;
     },
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && billing.data?.entitled === true,
     placeholderData: keepPreviousData,
   });
 }
@@ -27,11 +29,12 @@ export function useNotifications({ unreadOnly, page, pageSize }: NotificationsPa
  */
 export function useUnreadCount() {
   const { status } = useSession();
+  const billing = useBilling();
   return useQuery({
     queryKey: queryKeys.me.notifications.unreadCount,
     queryFn: ({ signal }) => accountService.getUnreadCount(signal),
     select: (response) => response.unreadCount,
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && billing.data?.entitled === true,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     staleTime: 30_000,

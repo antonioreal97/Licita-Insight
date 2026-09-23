@@ -117,7 +117,7 @@ function SwatchGrid({ label, items }: { label: string; items: Swatch[] }) {
 export default function DesignSystemPage() {
   return (
     <>
-      <PageTitle eyebrow="referência viva" title="Design system" description="A linguagem visual do Licita Insight, em tokens e componentes reais." />
+      <PageTitle eyebrow="referência viva" title="Design system" description="A linguagem visual do LicitAI, em tokens e componentes reais." />
       <div className="space-y-6">
         <Section title="Cor" description="Tokens semânticos. Alterne o tema no topo da página: cada amostra muda junto, sem exceções.">
           <div className="space-y-7">

@@ -66,11 +66,15 @@ export const requireCsrf: RequestHandler = (req, _res, next) => {
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
-    const session = await readSession(sessionToken(req));
-    if (!session) throw new UnauthenticatedError();
+    const token = sessionToken(req);
+    const session = await readSession(token);
+    if (!token || !session) {
+      if (token) clearSessionCookie(res);
+      throw new UnauthenticatedError();
+    }
     res.locals.auth = session.context;
     if (session.renewedUntil) {
-      setSessionCookie(res, sessionToken(req)!, session.renewedUntil);
+      setSessionCookie(res, token, session.renewedUntil);
     }
     next();
   } catch (error) {

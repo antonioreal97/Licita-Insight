@@ -2,13 +2,16 @@
 
 ## Foco agora
 
-Caminho PNCP → PostgreSQL → pesquisa e detalhe está implementado. A carga verificada em 22 set 2026 é um recorte: pregão eletrônico do DF em 21 set 2026 (19 registros). A coleta padrão, sem essas variáveis, percorre os últimos 30 dias e todas as modalidades.
+MVP de cobrança pronto no código: assinatura mensal via Asaas libera salvar, monitorar e alertas. Busca e detalhe continuam públicos. Falta configurar as chaves do Asaas no `.env` e reiniciar a API do Compose para carregar as rotas novas.
 
 ## O que está na mesa
 
 - Postgres local: `docker compose up -d` (container `licita-postgres`, `DATABASE_URL` em `.env` na raiz, gitignored).
-- Tabelas `tenders`, `ingest_runs` e `ingest_days` em `lib/db`. Push: `pnpm --filter @workspace/db run push-force`.
-- Coletor: `pnpm --filter @workspace/api-server run collect:pncp`. n8n pode chamar `POST /api/v1/ingest/pncp` (202) e ler `GET /api/v1/ingest/pncp`.
+- Tabelas `tenders`, `ingest_runs`, `ingest_days`, `cultural_opportunities` e `subscriptions` em `lib/db`. Push: `pnpm --filter @workspace/db run push-force` (subscriptions aplicada no Postgres local em 23 set 2026).
+- Billing: `GET/POST /api/v1/me/billing*`, webhook `POST /api/v1/billing/asaas/webhook` (header `asaas-access-token`). Env: `ASAAS_API_KEY`, `ASAAS_API_BASE_URL`, `ASAAS_WEBHOOK_TOKEN`, `BILLING_MONTHLY_BRL`. Contrato em `docs/contracts/account-v1.md`. Sem as chaves, o checkout responde `503 BILLING_UNAVAILABLE`.
+- Coletor PNCP: `pnpm --filter @workspace/api-server run collect:pncp`. n8n pode chamar `POST /api/v1/ingest/pncp` (202) e ler `GET /api/v1/ingest/pncp`.
+- Coletor cultural: `pnpm --filter @workspace/api-server run collect:opportunities`. `POST`/`GET /api/v1/ingest/opportunities`. Agenda com a API, desligável com `CULTURE_DAILY_COLLECT=false`. Contrato em `docs/contracts/opportunities-v1.md`.
+- A lista cultural só guarda audiovisual. A busca usa `@keyword` (audiovisual, cinema, filme, documentario); `term:linguagem=EQ(Audiovisual)` quebra as instalações (500 ou HTML). Instalações conhecidas: AP, CE, ES, GO, MA, MT, PA, PB, PE, PI, SE, TO, mais o federal `mapa.cultura.gov.br`. As outras 15 UFs aparecem como lacuna. Coleta de 23 set 2026 gravou 9 chamadas (CE e PE). Federal continua 403 (Cloudflare). AP, MA, MT e TO falham no certificado HTTPS. FSA/BRDE e páginas HTML ficam para o próximo ciclo.
 - API lê somente o PostgreSQL. Sem `DATABASE_URL`, a busca responde 503 `SEARCH_UNAVAILABLE`. Não há fixtures em memória.
 - Frontend sempre chama a API. A coleta diária sobe com o processo da API e repete às 06:00 em `America/Sao_Paulo` (`PNCP_DAILY_HOUR`, `PNCP_DAILY_COLLECT=false` para desligar).
 - Calendário de cobertura aplicado ao Postgres local: coleta incremental pula dias/modalidades/UFs selados, retoma lacunas e revisita hoje. Datas explícitas forçam backfill. A consulta deve começar depois da meia-noite de Brasília para selar o dia anterior.
@@ -17,9 +20,9 @@ Caminho PNCP → PostgreSQL → pesquisa e detalhe está implementado. A carga v
 
 ## Próximos passos
 
-1. Rodar a carga de 30 dias (`collect:pncp` sem `PNCP_FROM` / `PNCP_UF`) e conferir tempo e volume.
-2. Conferir, no log da API, que a coleta diária disparou e que a segunda passagem não relê dia selado.
-3. Auth real, favoritos por usuário, alertas e outras fontes ficam para depois.
+1. Preencher Asaas no `.env` (sandbox) e reiniciar a API (`docker compose restart api`) — o `dev` do Compose builda uma vez e não recarrega rotas novas.
+2. Configurar o webhook no painel Asaas apontando para a origem pública + `ASAAS_WEBHOOK_TOKEN`.
+3. Rodar a carga nacional de 30 dias do PNCP quando couber. Páginas HTML do FSA (ANCINE, BRDE) ficam para depois.
 
 ## Cuidados ativos
 

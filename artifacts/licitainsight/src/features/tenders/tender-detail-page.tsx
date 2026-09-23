@@ -122,7 +122,7 @@ function useStuck(ready: boolean) {
 export default function TenderDetailPage() {
   const { id } = useParams();
   const query = useTender(id);
-  const { isSaved, toggle, isMonitored, toggleMonitor, status: savedStatus } = useSavedTenders();
+  const { isSaved, toggle, isMonitored, toggleMonitor, status: savedStatus, entitled } = useSavedTenders();
   const [titleExpanded, setTitleExpanded] = useState(false);
   // Animate the bookmark swap only after a click, never on load.
   const [saveToggled, setSaveToggled] = useState(false);
@@ -130,7 +130,7 @@ export default function TenderDetailPage() {
   const pageTitle = query.data?.title;
   // No restore on unmount: the shell sets each route's static title on navigation.
   useEffect(() => {
-    if (pageTitle) document.title = `${shortTitle(pageTitle)} · Licita Insight`;
+    if (pageTitle) document.title = `${shortTitle(pageTitle)} · LicitAI`;
   }, [pageTitle]);
 
   if (query.isPending) return <DetailSkeleton />;
@@ -170,7 +170,7 @@ export default function TenderDetailPage() {
   };
   // Signed out, toggleMonitor starts the Google sign-in and returns here.
   const onMonitor = () => {
-    const turningOn = savedStatus === 'ready' && !monitored;
+    const turningOn = entitled && savedStatus === 'ready' && !monitored;
     toggleMonitor(tender.id);
     if (turningOn) toast({ title: 'Edital monitorado', description: MONITOR_HINT });
   };

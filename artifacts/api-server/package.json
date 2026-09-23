@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
+    "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -5,6 +5,7 @@ import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useBilling } from '@/features/billing/hooks/use-billing';
 import { useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
@@ -55,6 +56,7 @@ function countLine(query: { data?: number; isPending: boolean; isError: boolean 
 /** Signed in: unread notifications + monitored tenders, from the API. Signed out: invitation to sign in. Nothing while the session loads. */
 function MonitoringCard() {
   const session = useSession();
+  const billing = useBilling();
   const unread = useUnreadCount();
   const monitored = useSavedTendersList({ monitored: true, page: 1, pageSize: 1 });
   if (session.status === 'anonymous')
@@ -70,6 +72,22 @@ function MonitoringCard() {
       </div>
     );
   if (session.status !== 'authenticated') return null;
+  if (billing.isSuccess && !billing.data.entitled)
+    return (
+      <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-subscribe">
+        <h2 className="type-section text-foreground">Salve e monitore editais</h2>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          A busca continua aberta. Assine para salvar editais, guardar buscas e receber alertas aqui no app.
+        </p>
+        <Link
+          href="/settings?billing=required"
+          data-testid="link-dashboard-subscribe"
+          className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+        >
+          Ver assinatura <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
+        </Link>
+      </div>
+    );
   const unreadQuery = { data: unread.data, isPending: unread.isPending, isError: unread.isError };
   const monitoredQuery = { data: monitored.data?.pagination.total, isPending: monitored.isPending, isError: monitored.isError };
   return (
