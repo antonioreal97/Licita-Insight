@@ -3,9 +3,11 @@ import { Link, useLocation } from 'wouter';
 import {
   Bell,
   Bookmark,
+  CheckCheck,
   ChevronDown,
   FileSearch,
   LayoutDashboard,
+  LogOut,
   Menu,
   Moon,
   Palette,
@@ -17,9 +19,25 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
+import type { User } from '@/api';
+import { Button } from '@/components/common/action-button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { signInWithGoogle, useSession, useSignOut } from '@/features/auth/hooks/use-session';
+import { NotificationItem } from '@/features/monitoring/components/notification-item';
+import { useMarkNotificationsRead, useNotifications, useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 type NavItem = { href: string; label: string; icon: LucideIcon; testId: string };
 
@@ -113,18 +131,6 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
             </nav>
           </div>
         ))}
-      </div>
-      <div className="border-t border-sidebar-border p-3">
-        <div className={`flex items-center gap-3 rounded-lg p-2 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-strong-foreground">MA</div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-semibold text-sidebar-strong-foreground">Marina Almeida</div>
-              <div className="truncate type-meta text-sidebar-subtle-foreground">Operações · Atlas Engenharia</div>
-            </div>
-          )}
-          {!collapsed && <ChevronDown size={14} strokeWidth={1.75} className="text-sidebar-subtle-foreground" />}
-        </div>
       </div>
     </>
   );
@@ -241,24 +247,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 {dark ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
               </button>
-              {/* TODO(notifications): no notifications API yet. aria-disabled (not disabled) keeps the tooltip reachable. */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    aria-label="Notificações"
-                    aria-disabled="true"
-                    data-testid="button-notifications"
-                    onClick={() => toast({ title: 'Notificações em breve', description: 'Ainda não há alertas de editais para mostrar aqui.' })}
-                    className={`cursor-not-allowed opacity-60 ${headerIconButton}`}
-                  >
-                    <Bell size={18} strokeWidth={1.75} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Notificações em breve</TooltipContent>
-              </Tooltip>
-              <div className="ml-2 hidden h-7 w-px bg-border sm:block" />
-              <span className="hidden text-xs font-medium text-muted-foreground sm:block">Marina Almeida</span>
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-primary-subtle text-3xs font-bold text-primary-subtle-foreground">MA</div>
+              <NotificationBell />
+              <div className="ml-1 hidden h-7 w-px bg-border sm:block" />
+              <AccountMenu />
             </div>
           </header>
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
@@ -266,6 +257,214 @@ export function AppShell({ children }: { children: ReactNode }) {
           </main>
         </div>
       </Sheet>
+    </div>
+  );
+}
+
+function initials(user: User) {
+  const words = (user.name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return user.email.slice(0, 1).toUpperCase();
+  return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
+}
+
+/** Google photo with an initials fallback (also shown while the photo loads or if it fails). */
+export function UserAvatar({ user, className }: { user: User; className?: string }) {
+  return (
+    <Avatar className={cn('size-8', className)}>
+      {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
+      <AvatarFallback className="bg-primary-subtle text-3xs font-bold text-primary-subtle-foreground">{initials(user)}</AvatarFallback>
+    </Avatar>
+  );
+}
+
+const menuItem = 'cursor-pointer gap-2.5 rounded-md px-2.5 py-2 type-ui focus:bg-muted focus:text-foreground';
+
+function AccountMenu() {
+  const { user, status, error } = useSession();
+  const signOut = useSignOut();
+
+  useEffect(() => {
+    if (error) console.error('[auth] Não foi possível verificar a sessão; mostrando "Entrar".', error);
+  }, [error]);
+
+  if (status === 'loading' && !error) {
+    return (
+      <div role="status" aria-label="Carregando conta" className="flex items-center gap-2">
+        <span aria-hidden className="hidden h-3 w-24 animate-pulse rounded-sm bg-muted sm:block" />
+        <span aria-hidden className="size-8 animate-pulse rounded-full bg-muted" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Button variant="outline" size="sm" data-testid="button-header-sign-in" onClick={() => signInWithGoogle()}>
+        Entrar
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          data-testid="button-account-menu"
+          aria-label={`Conta de ${user.name ?? user.email}`}
+          className="flex items-center gap-2 rounded-lg p-1 text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground sm:pl-2"
+        >
+          <span className="hidden max-w-40 truncate type-ui font-medium sm:block">{user.name ?? user.email}</span>
+          <UserAvatar user={user} />
+          <ChevronDown size={14} strokeWidth={1.75} aria-hidden className="hidden sm:block" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="z-popover w-64 rounded-xl bg-surface-raised p-1.5 shadow-lg">
+        <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2 font-normal">
+          <UserAvatar user={user} className="size-9" />
+          <span className="min-w-0">
+            <span className="block truncate type-ui font-semibold text-foreground">{user.name ?? 'Sua conta'}</span>
+            <span className="block truncate type-meta text-muted-foreground">{user.email}</span>
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className={menuItem}>
+          <Link href="/settings" data-testid="link-account-settings">
+            <Settings strokeWidth={1.75} aria-hidden />
+            Configurações
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-testid="button-sign-out"
+          disabled={signOut.isPending}
+          // Keep the menu open so "Saindo…" is visible; success navigates away, failure shows a toast.
+          onSelect={(event) => {
+            event.preventDefault();
+            signOut.mutate();
+          }}
+          className={menuItem}
+        >
+          <LogOut strokeWidth={1.75} aria-hidden />
+          {signOut.isPending ? 'Saindo…' : 'Sair'}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function NotificationBell() {
+  const { status } = useSession();
+  const [open, setOpen] = useState(false);
+  const unread = useUnreadCount();
+  if (status !== 'authenticated') return null;
+
+  const count = unread.data ?? 0;
+  const label = count === 0 ? 'Notificações' : `Notificações, ${count} ${count === 1 ? 'não lida' : 'não lidas'}`;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button aria-label={label} data-testid="button-notifications" className={cn('relative', headerIconButton)}>
+          <Bell size={18} strokeWidth={1.75} />
+          {count > 0 && (
+            <span
+              aria-hidden
+              data-testid="badge-unread-count"
+              className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 type-data text-3xs font-bold text-accent-foreground ring-2 ring-background"
+            >
+              {count > 9 ? '9+' : count}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        aria-label="Notificações"
+        align="end"
+        sideOffset={8}
+        className="z-popover w-[min(24rem,calc(100vw-2rem))] rounded-xl bg-surface-raised p-0 shadow-lg"
+      >
+        {/* Mounted only while open, so the list is fetched on demand (the badge polls the cheap count). */}
+        <NotificationPanel unreadCount={count} onClose={() => setOpen(false)} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onClose: () => void }) {
+  const list = useNotifications({ unreadOnly: false, page: 1, pageSize: 8 });
+  const markRead = useMarkNotificationsRead();
+  const notifications = list.data?.data ?? [];
+  const markFailed = (error: unknown) => {
+    console.error('[notifications] Falha ao marcar como lida.', error);
+    toast({ variant: 'destructive', title: 'Não foi possível marcar como lida', description: 'Verifique a conexão e tente novamente.' });
+  };
+
+  return (
+    <div data-testid="popover-notifications">
+      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+        <h2 className="type-section text-foreground">Notificações</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="button-mark-all-read"
+          disabled={unreadCount === 0}
+          loading={markRead.isPending && markRead.variables?.all === true}
+          onClick={() => markRead.mutateAsync({ all: true }).catch(markFailed)}
+          className="-mr-2"
+        >
+          <CheckCheck size={14} aria-hidden />
+          Marcar todas como lidas
+        </Button>
+      </div>
+      <div className="max-h-[min(28rem,65vh)] overflow-y-auto">
+        {list.isPending ? (
+          <div role="status" aria-label="Carregando notificações" className="divide-y divide-border-subtle">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} aria-hidden className="flex gap-3 px-4 py-3">
+                <span className="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
+                <span className="flex-1 space-y-2 pt-1">
+                  <span className="block h-3 w-2/5 animate-pulse rounded-sm bg-muted" />
+                  <span className="block h-3 w-4/5 animate-pulse rounded-sm bg-muted" />
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : list.isError ? (
+          <div role="alert" className="px-4 py-8 text-center">
+            <p className="type-ui font-semibold text-destructive">Não foi possível carregar as notificações</p>
+            <Button variant="outline" size="sm" data-testid="button-notifications-retry" onClick={() => list.refetch()} className="mt-3">
+              Tentar novamente
+            </Button>
+          </div>
+        ) : notifications.length === 0 ? (
+          <p data-testid="text-notifications-empty" className="px-6 py-10 text-center type-meta text-muted-foreground">
+            Nenhuma notificação ainda. Monitore editais ou ative alertas em buscas salvas.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border-subtle">
+            {notifications.map((notification) => (
+              <li key={notification.id}>
+                <NotificationItem
+                  compact
+                  notification={notification}
+                  onSelect={(n) => {
+                    // mutateAsync: the panel unmounts on close, and a failure must still reach the toast.
+                    if (n.readAt === null) markRead.mutateAsync({ ids: [n.id] }).catch(markFailed);
+                    onClose();
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="border-t border-border-subtle p-1.5">
+        <Link
+          href="/monitoring"
+          data-testid="link-notifications-all"
+          onClick={onClose}
+          className="block rounded-md px-3 py-2 text-center type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted"
+        >
+          Ver tudo
+        </Link>
+      </div>
     </div>
   );
 }

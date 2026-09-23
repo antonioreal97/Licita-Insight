@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AppShell } from '@/components/app-shell';
-import AuthPage from '@/features/auth/auth-page';
+import AuthPage, { LoginRedirect } from '@/features/auth/auth-page';
 import { RequireAuth } from '@/features/auth/components/require-auth';
 import DashboardPage from '@/features/dashboard/dashboard-page';
 import DesignSystemPage from '@/features/design-system/design-system-page';
@@ -70,9 +70,9 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={LandingPage} />
-        <Route path="/login">{() => <AuthPage mode="login" />}</Route>
-        <Route path="/register">{() => <AuthPage mode="register" />}</Route>
-        <Route path="/forgot-password">{() => <AuthPage mode="forgot" />}</Route>
+        <Route path="/login" component={AuthPage} />
+        <Route path="/register" component={LoginRedirect} />
+        <Route path="/forgot-password" component={LoginRedirect} />
         <Route path="/dashboard">
           {() => (
             <AppShell>

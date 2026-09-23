@@ -60,6 +60,12 @@ function describe(error: unknown) {
       return { title: 'Licitação não encontrada', detail: 'Ela pode ter sido removida da fonte original.' };
     case 'INVALID_PARAMETER':
       return { title: 'Filtros inválidos', detail: 'Revise os filtros aplicados.' };
+    case 'UNAUTHENTICATED':
+      return { title: 'Sua sessão expirou', detail: 'Entre novamente com sua conta Google para continuar.' };
+    case 'FORBIDDEN':
+      return { title: 'Acesso negado', detail: 'Sua conta não tem permissão para ver este conteúdo.' };
+    case 'CONFLICT':
+      return { title: 'Os dados mudaram', detail: 'Esta informação foi alterada em outra aba ou dispositivo. Tente novamente.' };
     default:
       return { title: 'Não foi possível carregar', detail: 'Ocorreu um erro no servidor.' };
   }

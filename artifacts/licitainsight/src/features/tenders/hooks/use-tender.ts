@@ -3,7 +3,7 @@ import { isApiError } from '@/api';
 import { queryKeys } from '@/services/query-keys';
 import { searchService } from '@/services/search-service';
 
-/** Shared by the detail page and the saved-tenders list (one detail request per saved id). */
+/** Query options for one tender detail (`useTender`). Saved tenders come from `/me/saved-tenders` and no longer reuse this. */
 export const tenderQuery = (id: string) =>
   queryOptions({
     queryKey: queryKeys.tenders.detail(id),

@@ -28,7 +28,7 @@ export default function LandingPage() {
             Entrar
           </Link>
           <Link
-            href="/register"
+            href="/login"
             data-testid="link-landing-register"
             className="rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
           >
@@ -54,7 +54,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/register"
+                href="/login"
                 data-testid="link-hero-start"
                 className="inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
               >
