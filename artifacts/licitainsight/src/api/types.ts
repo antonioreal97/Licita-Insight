@@ -183,7 +183,13 @@ export type SavedTendersResponse = { data: SavedTender[]; pagination: Pagination
 
 export type SavedTenderIdsResponse = { saved: string[]; monitored: string[] };
 
-export type ImportSavedTendersResponse = { imported: number; alreadySaved: number; notFound: string[] };
+export type ImportSavedTendersResponse = {
+  imported: number;
+  alreadySaved: number;
+  notFound: string[];
+  /** Ids not imported because the account reached the 500 saved-tender limit. */
+  skippedByLimit: number;
+};
 
 export type SavedSearch = {
   id: string;
