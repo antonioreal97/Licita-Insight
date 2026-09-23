@@ -65,7 +65,7 @@ export default defineConfig({
     // untouched, which the API's CSRF check compares with PUBLIC_APP_ORIGIN.
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:3001',
         changeOrigin: false,
       },
     },

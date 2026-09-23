@@ -45,12 +45,28 @@ export const isPncpTimeout = (error: unknown): boolean => {
   return false;
 };
 
+/** Gateway and rate-limit failures should leave the partition open and move on. */
+export const isRecoverablePncpFailure = (error: unknown): boolean => {
+  if (isPncpTimeout(error)) return true;
+  return (
+    error instanceof PncpError &&
+    (error.status === 429 || error.status === 500 || error.status === 502 || error.status === 503)
+  );
+};
+
+const rateLimitDelayMs = (attempt: number): number => {
+  const raw = Number(process.env.PNCP_RATE_LIMIT_DELAY_MS ?? 15_000);
+  const base = Number.isFinite(raw) && raw >= 0 ? raw : 15_000;
+  return base * attempt;
+};
+
 async function pncpGet(url: string): Promise<unknown> {
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
     if (attempt === 1 && requestDelayMs() > 0) await sleep(requestDelayMs());
 
+    let rateLimited = false;
     try {
       const response = await fetch(url, {
         headers: {
@@ -81,15 +97,19 @@ async function pncpGet(url: string): Promise<unknown> {
         body.slice(0, 500),
       );
       if (response.status !== 429 && response.status < 500) throw error;
+      rateLimited = response.status === 429;
       lastError = error;
     } catch (error) {
       if (error instanceof PncpError && error.status < 500 && error.status !== 429) {
         throw error;
       }
       lastError = error;
+      rateLimited = error instanceof PncpError && error.status === 429;
     }
 
-    if (attempt < 5) await sleep(1_000 * 2 ** (attempt - 1));
+    const maxAttempts = rateLimited ? 8 : 5;
+    if (attempt >= maxAttempts) break;
+    await sleep(rateLimited ? rateLimitDelayMs(attempt) : 1_000 * 2 ** (attempt - 1));
   }
 
   throw lastError instanceof Error ? lastError : new Error(`PNCP request failed for ${url}`);
@@ -131,7 +151,20 @@ export async function fetchPublicationPage(input: {
   });
   if (input.uf) query.set("uf", input.uf);
   const url = `${PNCP_CONSULTA}/contratacoes/publicacao?${query}`;
-  return asPage(await pncpGet(url), url);
+  try {
+    return asPage(await pncpGet(url), url);
+  } catch (error) {
+    // PNCP answers 204 with an empty body when the day/modality has no publications.
+    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+      return {
+        data: [],
+        totalPaginas: 0,
+        numeroPagina: input.page,
+        totalRegistros: 0,
+      };
+    }
+    throw error;
+  }
 }
 
 export type PncpList = {

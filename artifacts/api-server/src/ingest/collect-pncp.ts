@@ -13,6 +13,7 @@ import {
   fetchCompra,
   fetchPublicationPage,
   isPncpTimeout,
+  isRecoverablePncpFailure,
   PNCP_UFS,
   PncpError,
 } from "./pncp-client";
@@ -377,13 +378,27 @@ async function readDay(input: {
     try {
       await readPages({ ...input, uf: undefined });
     } catch (error) {
-      if (!isPncpTimeout(error)) throw error;
+      const multiplePoints =
+        error instanceof PncpError &&
+        error.status === 400 &&
+        /multiple points/i.test(error.body);
+      if (!isPncpTimeout(error) && !multiplePoints) throw error;
       logger.warn(
         { err: error, day: input.day, modality: input.modality },
-        "PNCP timed out for the day; splitting the request by UF",
+        multiplePoints
+          ? "PNCP rejected the national page; splitting the request by UF"
+          : "PNCP timed out for the day; splitting the request by UF",
       );
       for (const uf of PNCP_UFS) {
-        await readPages({ ...input, uf });
+        try {
+          await readPages({ ...input, uf });
+        } catch (ufError) {
+          if (!isRecoverablePncpFailure(ufError)) throw ufError;
+          logger.warn(
+            { err: ufError, day: input.day, modality: input.modality, uf },
+            "PNCP unavailable for this UF; leaving it open and continuing",
+          );
+        }
       }
     }
   }
@@ -473,16 +488,25 @@ async function execute(
     for (const day of eachDay(options.from, options.to)) {
       await touchRun(runId, counters);
       for (const modality of options.modalities) {
-        await readDay({
-          runId,
-          day,
-          modality,
-          pageSize: options.pageSize,
-          counters,
-          uf: options.uf,
-          force: options.force,
-          calendar,
-        });
+        try {
+          await readDay({
+            runId,
+            day,
+            modality,
+            pageSize: options.pageSize,
+            counters,
+            uf: options.uf,
+            force: options.force,
+            calendar,
+          });
+        } catch (error) {
+          const status = error instanceof PncpError ? error.status : undefined;
+          if (!isRecoverablePncpFailure(error)) throw error;
+          logger.warn(
+            { err: error, day, modality, status },
+            "PNCP unavailable for this partition; leaving it open and continuing",
+          );
+        }
       }
     }
     if (options.refreshLimit > 0) {
