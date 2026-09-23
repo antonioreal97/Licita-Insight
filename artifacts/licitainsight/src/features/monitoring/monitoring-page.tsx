@@ -132,7 +132,9 @@ function NotificationsSection() {
               </li>
             ))}
           </ul>
-          {list.data.pagination.totalPages > 1 && <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} />}
+          {list.data.pagination.totalPages > 1 && (
+            <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} noun={['notificação', 'notificações']} />
+          )}
         </div>
       )}
     </>
@@ -191,7 +193,9 @@ function MonitoredSection() {
           </li>
         ))}
       </ul>
-      {list.data.pagination.totalPages > 1 && <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} />}
+      {list.data.pagination.totalPages > 1 && (
+        <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} noun={['edital monitorado', 'editais monitorados']} />
+      )}
     </div>
   );
 }

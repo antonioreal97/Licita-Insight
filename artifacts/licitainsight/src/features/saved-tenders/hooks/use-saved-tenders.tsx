@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError, type SavedTenderIdsResponse } from '@/api';
+import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
 import { accountService } from '@/services/account-service';
@@ -13,7 +14,7 @@ const MUTATION_KEY = ['saved-tenders', 'change'];
 
 export type SavedTendersStatus = 'anonymous' | 'loading' | 'ready' | 'error';
 
-type Change = { id: string; save: false } | { id: string; save: true; monitored?: boolean };
+type Change = { id: string; save: false; wasMonitored?: boolean } | { id: string; save: true; monitored?: boolean };
 
 function applyChange(ids: SavedTenderIdsResponse, change: Change): SavedTenderIdsResponse {
   const without = (list: string[]) => list.filter((item) => item !== change.id);
@@ -117,6 +118,8 @@ export function useSavedTenders() {
     onError: (error, change, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.previous);
       console.error('[saved-tenders] Falha ao atualizar edital salvo.', error);
+      // 401 is announced once, globally ("Sua sessão expirou").
+      if (isApiError(error) && error.status === 401) return;
       const title = !change.save
         ? 'Não foi possível remover o edital'
         : change.monitored === undefined
@@ -124,14 +127,32 @@ export function useSavedTenders() {
           : 'Não foi possível atualizar o monitoramento';
       toast({ variant: 'destructive', title, description: errorDescription(error) });
     },
+    // Unsaving a monitored tender also stops monitoring it: say so and offer to undo both.
+    onSuccess: (_data, change) => {
+      if (change.save || !change.wasMonitored) return;
+      toast({
+        title: 'Edital removido dos salvos',
+        description: 'O monitoramento deste edital também foi desligado.',
+        action: (
+          <ToastAction
+            altText="Desfazer remoção"
+            data-testid="button-undo-unsave-monitored"
+            onClick={() => mutation.mutate({ id: change.id, save: true, monitored: true })}
+          >
+            Desfazer
+          </ToastAction>
+        ),
+      });
+    },
     // Refetch the truth once the last in-flight toggle settles; earlier refetches would flash intermediate states.
     onSettled: () => {
       if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
     },
   });
 
-  const saved = ids.data?.saved ?? EMPTY;
-  const monitored = ids.data?.monitored ?? EMPTY;
+  // Only trust ids while signed in: after a 401 the observer may still hold the previous user's data.
+  const saved = (authenticated && ids.data?.saved) || EMPTY;
+  const monitored = (authenticated && ids.data?.monitored) || EMPTY;
   const isSaved = useCallback((id: string) => saved.includes(id), [saved]);
   const isMonitored = useCallback((id: string) => monitored.includes(id), [monitored]);
 
@@ -154,7 +175,14 @@ export function useSavedTenders() {
     },
     [session.status, session.error, queryClient, mutate],
   );
-  const toggle = useCallback((id: string) => change((current) => (current.saved.includes(id) ? { id, save: false } : { id, save: true })), [change]);
+  const toggle = useCallback(
+    (id: string) =>
+      change((current) => {
+        if (!current.saved.includes(id)) return { id, save: true };
+        return { id, save: false, wasMonitored: current.monitored.includes(id) };
+      }),
+    [change],
+  );
   /** Monitoring implies saving: turning it on saves the tender too; turning it off keeps it saved. */
   const toggleMonitor = useCallback((id: string) => change((current) => ({ id, save: true, monitored: !current.monitored.includes(id) })), [change]);
 
