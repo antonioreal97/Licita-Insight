@@ -68,7 +68,8 @@ export default function DashboardPage() {
     deadlineFrom: today,
     deadlineTo: weekAhead,
   });
-  const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], facets: false });
+  // deadlineFrom=today keeps "open" tenders whose deadline already passed (status lags the source) out of the top.
+  const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], deadlineFrom: today, facets: false });
   const refreshing = catalog.isFetching || recent.isFetching || soon.isFetching || priority.isFetching;
   const refresh = () => {
     void catalog.refetch();
@@ -100,15 +101,11 @@ export default function DashboardPage() {
           value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
           detail="publicações coletadas"
         />
+        <MiniMetric label="Últimos 7 dias" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="publicados até hoje" />
         <MiniMetric
-          label="Publicados em 7 dias"
-          value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)}
-          detail="contados a partir de hoje"
-        />
-        <MiniMetric
-          label="Aberturas próximas"
+          label="Prazos próximos"
           value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)}
-          detail="em aberto, prazo nos próximos 7 dias"
+          detail="em aberto, prazo de proposta em até 7 dias"
           attention
         />
       </div>
@@ -117,10 +114,10 @@ export default function DashboardPage() {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="type-section text-foreground">Prazos mais próximos</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Editais em aberto, ordenados pelo prazo de proposta</p>
+              <p className="mt-1 text-xs text-muted-foreground">Editais em aberto com prazo de proposta a partir de hoje</p>
             </div>
             <Link
-              href="/search"
+              href={`/search?status=open&sort=deadline_asc&deadlineFrom=${today}`}
               data-testid="link-dashboard-all"
               className="shrink-0 rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
             >
@@ -132,7 +129,9 @@ export default function DashboardPage() {
           ) : priority.isError ? (
             <ErrorState error={priority.error} onRetry={() => priority.refetch()} />
           ) : priority.data.data.length === 0 ? (
-            <p className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">Nenhum edital em aberto no banco.</p>
+            <p className="rounded-xl border border-border bg-card px-5 py-8 text-sm text-muted-foreground">
+              Nenhum edital em aberto com prazo a partir de hoje.
+            </p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {priority.data.data.map((tender) => (

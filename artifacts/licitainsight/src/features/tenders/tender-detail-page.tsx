@@ -29,6 +29,8 @@ import {
 import { isApiError, type TenderDetail, type TenderDocument, type TimelineEvent } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { ErrorState } from '@/components/common/query-states';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from '@/hooks/use-toast';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
@@ -66,6 +68,35 @@ const Panel = ({ title, aside, children, className }: { title: string; aside?: R
 /** Long objetos (PNCP often sends 300–600 chars) are clamped so value and deadline stay above the fold. */
 const LONG_TITLE = 140;
 
+/** Primary-button look for the external source link (the product Button has no `asChild`; see design-system/components.md). */
+const sourceLinkClass =
+  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary font-semibold text-primary-foreground shadow-xs ' +
+  'transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+/** Case/space/trailing-ellipsis-insensitive form used to tell whether one text is just a cut of another. */
+const comparable = (text: string) =>
+  text
+    .replace(/(\.\.\.|…)\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+const isCutOf = (part: string, full: string | null) => Boolean(full) && comparable(full!).startsWith(comparable(part));
+
+/** Contract: `objectSummary` is a mechanical cut of at most 300 chars. A summary that hit the limit without an ending gets "…". */
+const SUMMARY_MAX = 300;
+const withEllipsis = (summary: string) => (summary.length >= SUMMARY_MAX - 5 && !/[.!?…]$/.test(summary.trim()) ? `${summary.trimEnd()}…` : summary);
+
+/** Word-boundary cut for `document.title`. */
+function shortTitle(text: string, max = 60) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, cut.lastIndexOf(' ') > max / 2 ? cut.lastIndexOf(' ') : max).replace(/[\s,;:.–-]+$/, '')}…`;
+}
+
+const monitorSoon = () =>
+  toast({ title: 'Monitoramento em breve', description: 'Em breve você poderá acompanhar mudanças de prazo, valor e documentos deste edital.' });
+
 /** `true` while the facts strip has left its natural position right under the sentinel, i.e. it is stuck (xl only). */
 function useStuck(ready: boolean) {
   const sentinel = useRef<HTMLDivElement>(null);
@@ -93,18 +124,22 @@ export default function TenderDetailPage() {
   const { id } = useParams();
   const query = useTender(id);
   const { isSaved, toggle } = useSavedTenders();
-  // TODO(monitoring): local toggle until the monitoring API exists.
-  const [monitoring, setMonitoring] = useState(false);
   const [titleExpanded, setTitleExpanded] = useState(false);
   // Animate the bookmark swap only after a click, never on load.
   const [saveToggled, setSaveToggled] = useState(false);
   const { sentinel, stuck } = useStuck(Boolean(query.data));
+  const pageTitle = query.data?.title;
+  // No restore on unmount: the shell sets each route's static title on navigation.
+  useEffect(() => {
+    if (pageTitle) document.title = `${shortTitle(pageTitle)} · Licita Insight`;
+  }, [pageTitle]);
 
   if (query.isPending) return <DetailSkeleton />;
   if (query.isError) {
     const notFound = isApiError(query.error) && query.error.code === 'NOT_FOUND';
     return (
       <div className="space-y-4">
+        <h1 className="sr-only">{notFound ? 'Edital não encontrado' : 'Não foi possível carregar o edital'}</h1>
         <ErrorState error={query.error} onRetry={notFound ? undefined : () => query.refetch()} />
         <div className="text-center">
           <Link href="/search" className="type-meta font-semibold text-primary hover:underline">
@@ -133,7 +168,10 @@ export default function TenderDetailPage() {
     setSaveToggled(true);
     toggle(tender.id);
   };
-  const openSource = () => tender.source.url && window.open(tender.source.url, '_blank', 'noopener');
+  const summary =
+    tender.objectSummary && !isCutOf(tender.objectSummary, tender.description) && !isCutOf(tender.objectSummary, tender.title) ? tender.objectSummary : null;
+  // A description identical to a short (unclamped) title adds nothing; a long title is clamped, so the panel keeps the full text.
+  const description = tender.description && (long || comparable(tender.description) !== comparable(tender.title)) ? tender.description : null;
 
   return (
     <>
@@ -143,7 +181,7 @@ export default function TenderDetailPage() {
         </Link>
         <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-foreground-subtle" />
         <span aria-current="page" className="min-w-0 truncate">
-          {tender.tenderNumber ?? tender.id}
+          {number ? `${modality} ${number}` : tender.id}
         </span>
       </nav>
 
@@ -199,17 +237,36 @@ export default function TenderDetailPage() {
               {saveIcon}
               {saved ? 'Salvo' : 'Salvar edital'}
             </Button>
-            <Button variant="outline" aria-pressed={monitoring} data-testid="button-detail-monitor" onClick={() => setMonitoring(!monitoring)}>
-              <Target size={15} aria-hidden="true" />
-              {monitoring ? 'Monitorando' : 'Monitorar'}
-            </Button>
+            {/* TODO(monitoring): aria-disabled (not `disabled`) so the tooltip works and a click explains; no fake "Monitorando" state. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  aria-disabled="true"
+                  data-testid="button-detail-monitor"
+                  onClick={monitorSoon}
+                  className="cursor-not-allowed opacity-70"
+                >
+                  <Target size={15} aria-hidden="true" />
+                  Monitorar
+                  <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Em breve: acompanhe mudanças neste edital</TooltipContent>
+            </Tooltip>
           </div>
           <div className="ml-1 border-l border-border pl-3">
             {tender.source.url ? (
-              <Button variant="primary" data-testid="button-open-source" onClick={openSource}>
+              <a
+                href={tender.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="button-open-source"
+                className={cn(sourceLinkClass, 'h-9 px-3.5 text-[length:var(--type-ui-size)]')}
+              >
                 Abrir fonte original <ExternalLink size={14} aria-hidden="true" />
                 <span className="sr-only">(abre em nova aba)</span>
-              </Button>
+              </a>
             ) : (
               <Button variant="outline" disabled data-testid="button-open-source" title="A fonte não publicou um link direto para este edital">
                 Fonte sem link público
@@ -266,9 +323,12 @@ export default function TenderDetailPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           <Panel title="Objeto">
-            <p className="break-words type-body text-foreground/90">{tender.objectSummary ?? 'Resumo não disponível na fonte.'}</p>
-            {tender.description && tender.description !== tender.objectSummary && (
-              <p className="mt-3 break-words type-body text-muted-foreground">{tender.description}</p>
+            {summary && <p className="break-words type-body text-foreground/90">{withEllipsis(summary)}</p>}
+            {description && <p className={cn('break-words type-body', summary ? 'mt-3 text-muted-foreground' : 'text-foreground/90')}>{description}</p>}
+            {!summary && !description && (
+              <p className="type-meta text-muted-foreground">
+                {tender.objectSummary ? 'A fonte não publicou descrição além do objeto acima.' : 'Resumo não disponível na fonte.'}
+              </p>
             )}
             <dl className="mt-5 grid gap-4 border-t border-border-subtle pt-5 sm:grid-cols-3">
               <MetaItem variant="stacked" icon={Hash} label="Número do processo">
@@ -319,19 +379,25 @@ export default function TenderDetailPage() {
         <Button
           variant="outline"
           size="lg"
-          aria-pressed={monitoring}
-          aria-label={monitoring ? 'Monitorando' : 'Monitorar'}
+          aria-disabled="true"
+          aria-label="Monitorar (em breve)"
           data-testid="button-detail-monitor-mobile"
-          onClick={() => setMonitoring(!monitoring)}
-          className="w-11 px-0"
+          onClick={monitorSoon}
+          className="w-11 cursor-not-allowed px-0 opacity-70"
         >
           <Target size={15} aria-hidden="true" />
         </Button>
         {tender.source.url ? (
-          <Button variant="primary" size="lg" data-testid="button-open-source-mobile" onClick={openSource} className="flex-1">
+          <a
+            href={tender.source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="button-open-source-mobile"
+            className={cn(sourceLinkClass, 'h-11 flex-1 px-5 text-sm')}
+          >
             Abrir fonte original <ExternalLink size={14} aria-hidden="true" />
             <span className="sr-only">(abre em nova aba)</span>
-          </Button>
+          </a>
         ) : (
           <Button variant="outline" size="lg" disabled data-testid="button-open-source-mobile" className="flex-1">
             Fonte sem link público

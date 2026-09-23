@@ -31,6 +31,13 @@ function write(next: string[]) {
   listeners.forEach((listener) => listener());
 }
 
+// Another tab changed the list: re-read it so every open tab shows the same saved ids.
+window.addEventListener('storage', (event) => {
+  if (event.key !== STORAGE_KEY && event.key !== null) return;
+  snapshot = read();
+  listeners.forEach((listener) => listener());
+});
+
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -40,5 +47,10 @@ export function useSavedTenders() {
   const saved = useSyncExternalStore(subscribe, () => snapshot);
   const isSaved = useCallback((id: string) => saved.includes(id), [saved]);
   const toggle = useCallback((id: string) => write(snapshot.includes(id) ? snapshot.filter((item) => item !== id) : [...snapshot, id]), []);
-  return { saved, isSaved, toggle };
+  /** Undo for a removal: puts the id back where it was. */
+  const restore = useCallback((id: string, index: number) => {
+    if (snapshot.includes(id)) return;
+    write([...snapshot.slice(0, index), id, ...snapshot.slice(index)]);
+  }, []);
+  return { saved, isSaved, toggle, restore };
 }
