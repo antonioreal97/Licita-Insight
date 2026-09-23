@@ -19,14 +19,14 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' | 'forgo
         </Link>
         <div>
           <div className="mb-4 type-eyebrow text-sidebar-primary">Pesquisa com contexto</div>
-          <h1 className="max-w-md text-5xl font-semibold leading-[1.02] tracking-display">A decisão começa antes do lance.</h1>
+          <p className="max-w-md text-5xl font-semibold leading-[1.02] tracking-display">A decisão começa antes do lance.</p>
           <p className="mt-6 max-w-sm text-sm leading-7 text-sidebar-muted-foreground">
             Organize o mercado público em um lugar feito para leitura rápida e ação segura.
           </p>
         </div>
-        <div className="type-eyebrow text-sidebar-subtle-foreground">ambiente demonstrativo · 2024</div>
+        <div className="type-eyebrow text-sidebar-subtle-foreground">ambiente demonstrativo · {new Date().getFullYear()}</div>
       </div>
-      <div className="flex items-center justify-center p-5 sm:p-10">
+      <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[420px]">
           <Link href="/" className="mb-12 flex items-center gap-2.5 lg:hidden">
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar text-xs font-bold text-sidebar-primary">LI</span>
@@ -73,18 +73,35 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' | 'forgo
               >
                 <label className="field">
                   E-mail profissional
-                  <input data-testid="input-auth-email" type="email" required placeholder="voce@empresa.com.br" />
+                  <input data-testid="input-auth-email" type="email" autoComplete="email" required placeholder="voce@empresa.com.br" />
                 </label>
                 {!isForgot && (
-                  <label className="field">
-                    Senha
-                    <input data-testid="input-auth-password" type="password" required placeholder="••••••••" />
-                  </label>
+                  <div>
+                    <label className="field">
+                      Senha
+                      <input
+                        data-testid="input-auth-password"
+                        type="password"
+                        autoComplete={isRegister ? 'new-password' : 'current-password'}
+                        required
+                        placeholder="••••••••"
+                      />
+                    </label>
+                    {!isRegister && (
+                      <Link
+                        href="/forgot-password"
+                        data-testid="link-auth-forgot"
+                        className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
+                      >
+                        Esqueci minha senha
+                      </Link>
+                    )}
+                  </div>
                 )}
                 {isRegister && (
                   <label className="field">
                     Empresa
-                    <input data-testid="input-auth-company" required placeholder="Nome da empresa" />
+                    <input data-testid="input-auth-company" autoComplete="organization" required placeholder="Nome da empresa" />
                   </label>
                 )}
                 <Button type="submit" data-testid="button-auth-submit" className="mt-2 h-11 w-full">
@@ -119,7 +136,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' | 'forgo
             </>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

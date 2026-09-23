@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -257,7 +256,7 @@
   --sidebar-subtle-foreground: 215 14% 55%; /* 4.8:1 — eyebrows, meta; replaces text-slate-500 */
   --sidebar-strong-foreground: 0 0% 100%; /* replaces text-white / text-slate-100 */
   --sidebar-border: 215 23% 21%;
-  --sidebar-primary: 210 80% 58%;
+  --sidebar-primary: 210 82% 64%; /* 4.97:1 as active-nav text on its own 15% tint over --sidebar; 6.4:1 on --sidebar */
   --sidebar-primary-foreground: 216 30% 12%;
   --sidebar-accent: 215 24% 19%;
   --sidebar-accent-foreground: 214 26% 94%;

@@ -88,9 +88,14 @@ Ratios use the WCAG 2.x relative-luminance formula on the sRGB values above.
 | `--sidebar-foreground`        | `text-sidebar-foreground`                    | `#d2dae5`                  | 12.1:1           |                                   |
 | `--sidebar-muted-foreground`  | `text-sidebar-muted-foreground`              | `#9aa6b6`                  | 6.9:1 (7.6 dark) | `text-slate-400`                  |
 | `--sidebar-subtle-foreground` | `text-sidebar-subtle-foreground`             | `#7c8a9c`                  | 4.8:1 (5.3 dark) | `text-slate-500` (eyebrows, meta) |
-| `--sidebar-primary`           | `bg-sidebar-primary`, `text-sidebar-primary` | `#3e94ea` / `#61a8ef`      |                  | Brand mark, active nav            |
+| `--sidebar-primary`           | `bg-sidebar-primary`, `text-sidebar-primary` | `#58a3ee` / `#61a8ef`      | 6.4:1 (7.4 dark) | Brand mark, active nav            |
 | `--sidebar-accent`            | `bg-sidebar-accent`                          | `#252f3c` / `#1f2733`      |                  | Nav hover                         |
 | `--sidebar-border`            | `border-sidebar-border`                      | `#293342` / `#212a35`      |                  |                                   |
+
+The active nav item is `text-sidebar-primary` on `bg-sidebar-primary/15` over `--sidebar`. Light `--sidebar-primary` moved from
+`210 80% 58%` (`#3e94ea`) to `210 82% 64%` (`#58a3ee`): the old pair measured **4.31:1** on that tinted background (fails AA for 13px text),
+the new one is **4.97:1** (measured in the browser: `#58a3ee` on `#1f3146`). Dark is unchanged at **5.87:1**. The brand tile
+(`text-sidebar-primary-foreground` on `bg-sidebar-primary`) goes from 5.35:1 to 6.37:1.
 
 ## Color: charts
 

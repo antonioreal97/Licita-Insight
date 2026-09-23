@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -19,7 +19,36 @@ import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient();
 
+// Static routes only. Pages with dynamic titles (tender detail, 404) set document.title themselves, so this never touches them.
+const routeTitles: Record<string, string> = {
+  '/': 'Licita Insight · Editais públicos do PNCP',
+  '/login': 'Entrar · Licita Insight',
+  '/register': 'Criar conta · Licita Insight',
+  '/forgot-password': 'Recuperar acesso · Licita Insight',
+  '/dashboard': 'Visão geral · Licita Insight',
+  '/search': 'Explorar editais · Licita Insight',
+  '/saved-searches': 'Buscas salvas · Licita Insight',
+  '/saved-tenders': 'Editais salvos · Licita Insight',
+  '/monitoring': 'Monitoramento · Licita Insight',
+  '/settings': 'Configurações · Licita Insight',
+  '/design-system': 'Design system · Licita Insight',
+};
+
+function useRouteAnnouncement() {
+  const [location] = useLocation();
+  const previous = useRef(location);
+  useEffect(() => {
+    const title = routeTitles[location];
+    if (title) document.title = title;
+    // Move focus to the page on in-app navigation (not on first load), so keyboard and screen reader users start at the new content.
+    if (previous.current === location) return;
+    previous.current = location;
+    document.getElementById('conteudo')?.focus({ preventScroll: true });
+  }, [location]);
+}
+
 function Router() {
+  useRouteAnnouncement();
   return (
     // Keep a shared shell (sidebar, navbar) outside the boundary so it
     // survives a page crash.
