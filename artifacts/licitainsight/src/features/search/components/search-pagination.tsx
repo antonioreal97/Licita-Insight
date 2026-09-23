@@ -9,9 +9,15 @@ type Props = { pagination: Pagination; page: number; onPageChange: (page: number
 const base =
   'grid h-10 min-w-10 place-items-center rounded-lg border px-2 type-data text-xs transition-colors duration-fast ease-standard focus-visible:focus-ring sm:h-9 sm:min-w-9';
 
-export function SearchPagination({ pagination, page, onPageChange, pageSizeControl }: Props) {
+/**
+ * Prev/next use `aria-disabled` instead of `disabled` at the ends: a disabled button drops keyboard focus to <body>
+ * the moment the last page loads; an aria-disabled one keeps it and is announced as unavailable.
+ */
+export function SearchPagination({ pagination, page: requested, onPageChange, pageSizeControl }: Props) {
   const { total, pageSize, totalPages, totalIsEstimate } = pagination;
   if (total === 0) return null;
+  // An out-of-range `?page=` is corrected in the URL by the page; never render "Mostrando 19.961–19" meanwhile.
+  const page = Math.min(Math.max(1, requested), Math.max(1, totalPages));
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   return (
@@ -33,9 +39,9 @@ export function SearchPagination({ pagination, page, onPageChange, pageSizeContr
               type="button"
               aria-label="Página anterior"
               data-testid="button-previous-page"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className={`${base} border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-sunken disabled:pointer-events-none disabled:opacity-50`}
+              aria-disabled={page <= 1 || undefined}
+              onClick={() => !(page <= 1) && onPageChange(page - 1)}
+              className={`${base} border-border bg-surface text-foreground not-aria-disabled:hover:border-border-strong not-aria-disabled:hover:bg-surface-sunken aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
             >
               <ChevronLeft size={15} aria-hidden />
             </button>
@@ -69,9 +75,9 @@ export function SearchPagination({ pagination, page, onPageChange, pageSizeContr
               type="button"
               aria-label="Próxima página"
               data-testid="button-next-page"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className={`${base} border-border bg-surface text-foreground hover:border-border-strong hover:bg-surface-sunken disabled:pointer-events-none disabled:opacity-50`}
+              aria-disabled={page >= totalPages || undefined}
+              onClick={() => !(page >= totalPages) && onPageChange(page + 1)}
+              className={`${base} border-border bg-surface text-foreground not-aria-disabled:hover:border-border-strong not-aria-disabled:hover:bg-surface-sunken aria-disabled:cursor-not-allowed aria-disabled:opacity-50`}
             >
               <ChevronRight size={15} aria-hidden />
             </button>

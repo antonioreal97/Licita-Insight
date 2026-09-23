@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { List, Loader2, SlidersHorizontal, Table2 } from 'lucide-react';
 import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -21,36 +21,45 @@ import { SearchModeControl } from './components/search-mode-control';
 import { SearchPagination } from './components/search-pagination';
 import { SearchUnavailable } from './components/search-unavailable';
 import { useRecentSearches } from './hooks/use-recent-searches';
+import { useRelaxation } from './hooks/use-relaxation';
 import { useSearchUrlState } from './hooks/use-search-url-state';
 import { useTenderSearch } from './hooks/use-tender-search';
 import { rememberFacetLabels, rememberLabel } from './lib/facet-config';
-import { suggestRelaxation } from './lib/relaxation';
 import { relevanceVaries } from '@/features/tenders/lib/tender-display';
 
 const SORTS = Object.keys(sortLabels) as SortOption[];
 const PAGE_SIZES = [10, 20, 50];
 
 export default function SearchPage() {
-  const { params, update, replaceAll, clearFilters } = useSearchUrlState();
+  const { params, view, setView, update, replaceAll, clearFilters } = useSearchUrlState();
   const search = useTenderSearch(params);
   const { isSaved, toggle } = useSavedTenders();
   const recent = useRecentSearches();
-  const [view, setView] = useState<'list' | 'table'>('list');
   const [sheetOpen, setSheetOpen] = useState(false);
   const resultsRef = useRef<HTMLElement>(null);
+  const filtersButtonRef = useRef<HTMLButtonElement>(null);
 
   const response = search.data;
   const facets = response?.facets;
   const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
   const page = params.page ?? 1;
+  // A shared link can point past the last page (the total shrank): jump to the last page instead of an empty page.
+  // Judged on the response's own page so the skeleton stays up while the corrected page loads (no empty-state flash).
+  const pageOutOfRange = Boolean(pagination && pagination.total > 0 && pagination.page > pagination.totalPages);
   const activeFilters = countActiveFilters(params);
   const unavailable = search.isError && isApiError(search.error) && search.error.code === 'SEARCH_UNAVAILABLE';
   const refreshing = search.isFetching && !search.isPending;
 
   // Keep human labels for chips even when a value drops out of the current buckets.
   useMemo(() => rememberFacetLabels(facets), [facets]);
-  const relaxation = useMemo(() => (response?.data.length === 0 ? suggestRelaxation(params, facets) : null), [response, params, facets]);
+  const relaxation = useRelaxation(params, facets, response?.data.length === 0 && !pageOutOfRange && !search.isPlaceholderData, activeFilters > 0);
+  // Without a query the backend orders by publication date even when sort is "relevance" (contract §1): show that.
+  const effectiveSort: SortOption = params.sort ?? (params.q ? 'relevance' : 'published_desc');
+
+  useEffect(() => {
+    if (pageOutOfRange && pagination && page > pagination.totalPages) update({ page: pagination.totalPages }, { replace: true });
+  }, [pageOutOfRange, pagination, page, update]);
 
   const submitQuery = (q: string) => {
     if (q) recent.add(q);
@@ -76,6 +85,11 @@ export default function SearchPage() {
       : pagination
         ? `${pagination.totalIsEstimate ? 'Aprox. ' : ''}${formatNumber(pagination.total)} ${pagination.total === 1 ? 'resultado' : 'resultados'}`
         : '';
+  // Announced with the count (same live region) so paging is audible, not just the "Mostrando 8–14" line.
+  const pageAnnouncement =
+    pagination && pagination.totalPages > 1 && !search.isPending && !search.isError && !pageOutOfRange
+      ? `Página ${formatNumber(Math.min(page, pagination.totalPages))} de ${formatNumber(pagination.totalPages)} · `
+      : '';
 
   return (
     <>
@@ -91,8 +105,9 @@ export default function SearchPage() {
         <SearchCombobox value={params.q ?? ''} onSubmitQuery={submitQuery} onSelectFilter={selectFilter} />
         <SearchModeControl
           mode={params.mode}
-          appliedMode={search.isPlaceholderData ? undefined : response?.meta.searchMode}
-          fallbackReason={search.isPlaceholderData ? undefined : response?.meta.searchModeFallbackReason}
+          // No fallback note before there is a query to fall back from ("precisa de ao menos 3 caracteres" on an empty box).
+          appliedMode={search.isPlaceholderData || !params.q ? undefined : response?.meta.searchMode}
+          fallbackReason={search.isPlaceholderData || !params.q ? undefined : response?.meta.searchModeFallbackReason}
           onChange={(mode) => update({ mode })}
         />
       </div>
@@ -122,10 +137,14 @@ export default function SearchPage() {
             </div>
           </aside>
 
-          <section ref={resultsRef} aria-label="Resultados da busca" className="@container/results min-w-0 scroll-mt-24">
+          <section ref={resultsRef} aria-labelledby="results-title" className="@container/results min-w-0 scroll-mt-24">
+            <h2 id="results-title" className="sr-only">
+              Resultados
+            </h2>
             {/* Phones: Filtros · sort on one 40px row, the count wraps under it. */}
             <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
               <Button
+                ref={filtersButtonRef}
                 variant="outline"
                 aria-haspopup="dialog"
                 aria-expanded={sheetOpen}
@@ -143,6 +162,7 @@ export default function SearchPage() {
               </Button>
               <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:order-none sm:basis-auto">
                 <p aria-live="polite" aria-atomic="true" data-testid="text-result-count" className="min-w-0 text-sm text-muted-foreground">
+                  {pageAnnouncement && <span className="sr-only">{pageAnnouncement}</span>}
                   <span className={search.isError ? 'font-medium' : 'font-semibold text-foreground'}>{resultCount}</span>
                   {params.q && pagination && !search.isPending && !search.isError && <span className="hidden sm:inline"> para “{params.q}”</span>}
                 </p>
@@ -164,7 +184,7 @@ export default function SearchPage() {
                   <span aria-hidden className="hidden text-xs text-muted-foreground sm:inline">
                     Ordenar por
                   </span>
-                  <Select value={params.sort ?? 'relevance'} onValueChange={(sort) => update({ sort: sort as SortOption })} disabled={search.isError}>
+                  <Select value={effectiveSort} onValueChange={(sort) => update({ sort: sort as SortOption })} disabled={search.isError}>
                     <SelectTrigger
                       aria-label="Ordenar por"
                       data-testid="select-sort"
@@ -174,8 +194,8 @@ export default function SearchPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {SORTS.map((sort) => (
-                        <SelectItem key={sort} value={sort} className="text-xs">
-                          {sortLabels[sort]}
+                        <SelectItem key={sort} value={sort} disabled={sort === 'relevance' && !params.q} className="text-xs">
+                          {sort === 'relevance' && !params.q ? 'Relevância (requer busca)' : sortLabels[sort]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -216,7 +236,7 @@ export default function SearchPage() {
               className={`transition-opacity duration-base ease-standard ${search.isPlaceholderData ? 'pointer-events-none opacity-50 delay-120' : ''}`}
               data-testid="search-results"
             >
-              {search.isPending ? (
+              {search.isPending || pageOutOfRange ? (
                 <RowsSkeleton rows={6} />
               ) : unavailable ? (
                 <SearchUnavailable
@@ -225,7 +245,7 @@ export default function SearchPage() {
                   requestId={isApiError(search.error) ? search.error.requestId : undefined}
                 />
               ) : search.isError ? (
-                <ErrorState error={search.error} onRetry={() => search.refetch()} />
+                <ErrorState error={search.error} onRetry={() => search.refetch()} onClearFilters={clearFilters} />
               ) : response!.data.length === 0 ? (
                 <EmptySearch
                   query={params.q}
@@ -252,7 +272,7 @@ export default function SearchPage() {
               )}
             </div>
 
-            {pagination && !search.isError && (
+            {pagination && !search.isError && !pageOutOfRange && (
               <SearchPagination
                 pagination={pagination}
                 page={page}
@@ -279,7 +299,13 @@ export default function SearchPage() {
         </div>
       </div>
 
-      <FiltersSheet open={sheetOpen} onOpenChange={setSheetOpen} params={params} onApply={(next: TenderSearchParams) => replaceAll({ ...next, page: 1 })} />
+      <FiltersSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        params={params}
+        triggerRef={filtersButtonRef}
+        onApply={(next: TenderSearchParams) => replaceAll({ ...next, page: 1 })}
+      />
     </>
   );
 }

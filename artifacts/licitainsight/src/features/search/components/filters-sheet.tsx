@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Loader2, X } from 'lucide-react';
 import type { TenderSearchParams } from '@/api';
@@ -14,6 +14,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   params: TenderSearchParams;
   onApply: (next: TenderSearchParams) => void;
+  /** The "Filtros" button. The sheet is opened from state, not a Radix Trigger, so focus is returned here by hand. */
+  triggerRef: RefObject<HTMLButtonElement | null>;
 };
 
 const FILTER_KEYS = [
@@ -43,7 +45,7 @@ const withoutFilters = (params: TenderSearchParams): TenderSearchParams => {
  * tweak several facets without the list re-rendering underneath. The draft is previewed with a live
  * count; the preview request uses page 1 with the same page size, so applying hits the cache.
  */
-export function FiltersSheet({ open, onOpenChange, params, onApply }: Props) {
+export function FiltersSheet({ open, onOpenChange, params, onApply, triggerRef }: Props) {
   const [draft, setDraft] = useState<TenderSearchParams>(params);
   useEffect(() => {
     if (open) setDraft({ ...params, page: 1 });
@@ -59,6 +61,10 @@ export function FiltersSheet({ open, onOpenChange, params, onApply }: Props) {
         <SheetOverlay />
         <DialogPrimitive.Content
           data-testid="sheet-filters"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            triggerRef.current?.focus();
+          }}
           className="fixed inset-y-0 right-0 z-modal flex h-full w-full flex-col border-l border-border bg-background shadow-xl duration-slow ease-emphasized data-[state=closed]:duration-base data-[state=closed]:ease-exit data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">

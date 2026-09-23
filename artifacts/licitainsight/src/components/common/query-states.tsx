@@ -1,4 +1,4 @@
-import { CircleAlert, RefreshCw } from 'lucide-react';
+import { CircleAlert, FilterX, RefreshCw } from 'lucide-react';
 import { isApiError } from '@/api';
 import { Button } from './action-button';
 
@@ -65,9 +65,11 @@ function describe(error: unknown) {
   }
 }
 
-export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+/** `onClearFilters`: a rejected parameter (400 `INVALID_PARAMETER`) won't pass on retry, so offer clearing the filters instead. */
+export function ErrorState({ error, onRetry, onClearFilters }: { error: unknown; onRetry?: () => void; onClearFilters?: () => void }) {
   const { title, detail } = describe(error);
   const requestId = isApiError(error) ? error.requestId : undefined;
+  const clearInstead = Boolean(onClearFilters) && isApiError(error) && error.code === 'INVALID_PARAMETER';
   return (
     <div
       role="alert"
@@ -76,12 +78,17 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       <CircleAlert size={20} aria-hidden className="mx-auto" />
       <h2 className="mt-3 type-ui font-semibold">{title}</h2>
       <p className="mx-auto mt-1 max-w-sm type-meta">{detail}</p>
-      {onRetry && (
+      {clearInstead ? (
+        <Button variant="outline" data-testid="button-error-clear-filters" onClick={onClearFilters} className="mt-4">
+          <FilterX size={14} aria-hidden />
+          Limpar filtros
+        </Button>
+      ) : onRetry ? (
         <Button variant="outline" data-testid="button-retry" onClick={onRetry} className="mt-4">
           <RefreshCw size={14} aria-hidden />
           Tentar novamente
         </Button>
-      )}
+      ) : null}
       {requestId && <div className="mt-3 type-data text-3xs opacity-80">ref. {requestId}</div>}
     </div>
   );

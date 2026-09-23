@@ -1,8 +1,8 @@
 import type { SearchFacets, TenderSearchParams } from '@/api';
 import { FACET_GROUPS, labelFor, selectedValues } from './facet-config';
 
-/** `exact` = `estimate` came from `groupTotals`, not from summing buckets. */
-export type Relaxation = { label: string; estimate: number | null; exact?: boolean; patch: Partial<TenderSearchParams> };
+/** `exact` = `estimate` is a real total (`groupTotals` or a count request), not a bucket sum. `query` = the suggestion drops the text query. */
+export type Relaxation = { label: string; estimate: number | null; exact?: boolean; query?: boolean; patch: Partial<TenderSearchParams> };
 
 /**
  * Picks the filter whose removal would bring back the most results.
@@ -32,6 +32,7 @@ export function suggestRelaxation(params: TenderSearchParams, facets: SearchFace
   }
   if (best) return best;
   // No facet-based estimate: fall back to the ranges, which are usually the tightest constraints.
+  // These have no count; callers must confirm the removal actually brings results back (see useRelaxation).
   if (params.valueMin !== undefined || params.valueMax !== undefined)
     return { label: 'Faixa de valor', estimate: null, patch: { valueMin: undefined, valueMax: undefined } };
   if (params.deadlineFrom || params.deadlineTo)

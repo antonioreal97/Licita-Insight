@@ -17,6 +17,51 @@ const MODALITIES: Modality[] = [
   'other',
 ];
 
+// The 27 federative units (26 states + DF).
+const UFS = [
+  'AC',
+  'AL',
+  'AM',
+  'AP',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MG',
+  'MS',
+  'MT',
+  'PA',
+  'PB',
+  'PE',
+  'PI',
+  'PR',
+  'RJ',
+  'RN',
+  'RO',
+  'RR',
+  'RS',
+  'SC',
+  'SE',
+  'SP',
+  'TO',
+];
+
+/** Upper bound for value filters (R$ 999.999.999.999): larger inputs are typos and would serialize as `1e+23`. */
+export const MAX_MONEY = 999_999_999_999;
+
+/** `YYYY-MM-DD` that exists on the calendar (rejects `2026-13-40`, `2026-02-30`). */
+export function isCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+/** Results layout. Lives in the URL next to the filters (`view=table`); list is the default and is omitted. */
+export type ResultsView = 'list' | 'table';
+export const resultsViewFromUrl = (search: string): ResultsView => (new URLSearchParams(search).get('view') === 'table' ? 'table' : 'list');
+
 const ARRAY_KEYS = ['status', 'modality', 'state', 'city', 'organizationId', 'sourceId', 'category'] as const;
 const NUMBER_KEYS = ['valueMin', 'valueMax'] as const;
 const DATE_KEYS = ['publishedFrom', 'publishedTo', 'deadlineFrom', 'deadlineTo'] as const;
@@ -52,13 +97,14 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
   }
   params.status = params.status?.filter((s): s is TenderStatus => STATUSES.includes(s));
   params.modality = params.modality?.filter((m): m is Modality => MODALITIES.includes(m));
+  params.state = params.state?.map((uf) => uf.toUpperCase()).filter((uf) => UFS.includes(uf));
   for (const key of NUMBER_KEYS) {
     const value = Number(url.get(key));
-    if (url.get(key) && Number.isFinite(value)) params[key] = value;
+    if (url.get(key) && Number.isFinite(value) && value >= 0 && value <= MAX_MONEY) params[key] = value;
   }
   for (const key of DATE_KEYS) {
     const value = url.get(key);
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) params[key] = value;
+    if (value && isCalendarDate(value)) params[key] = value;
   }
   const sort = url.get('sort') as SortOption | null;
   if (sort && SORTS.includes(sort)) params.sort = sort;
@@ -71,7 +117,7 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
   return normalizeSearchParams(params);
 }
 
-export function searchParamsToUrl(params: TenderSearchParams): string {
+export function searchParamsToUrl(params: TenderSearchParams, view: ResultsView = 'list'): string {
   const { pageSize, facets: _facets, ...rest } = normalizeSearchParams(params);
   const url = new URLSearchParams();
   for (const [key, value] of Object.entries(rest)) {
@@ -79,6 +125,7 @@ export function searchParamsToUrl(params: TenderSearchParams): string {
     else if (value !== undefined) url.set(key, String(value));
   }
   if (pageSize !== DEFAULT_PAGE_SIZE) url.set('pageSize', String(pageSize));
+  if (view === 'table') url.set('view', 'table');
   const text = url.toString();
   return text ? `?${text}` : '';
 }

@@ -6,7 +6,7 @@ import type { Relaxation } from '../lib/relaxation';
 type Props = {
   query?: string;
   hasFilters: boolean;
-  /** The filter whose removal brings back the most results (see lib/relaxation). */
+  /** The filter (or query) whose removal brings back the most results (see hooks/use-relaxation). */
   relaxation: Relaxation | null;
   onRelax: () => void;
   onClearFilters: () => void;
@@ -27,7 +27,7 @@ export function EmptySearch({ query, hasFilters, relaxation, onRelax, onClearFil
 
       {relaxation && (
         <div className="mx-auto mt-5 max-w-md rounded-lg border border-border bg-surface px-4 py-3 text-left type-ui">
-          <div className="type-label text-muted-foreground">Filtro mais restritivo</div>
+          <div className="type-label text-muted-foreground">{relaxation.query ? 'Termo mais restritivo' : 'Filtro mais restritivo'}</div>
           <div className="mt-0.5 font-medium">{relaxation.label}</div>
           {relaxation.estimate !== null && (
             <div className="mt-0.5 type-meta text-muted-foreground">
@@ -36,7 +36,7 @@ export function EmptySearch({ query, hasFilters, relaxation, onRelax, onClearFil
             </div>
           )}
           <Button data-testid="button-empty-relax" onClick={onRelax} className="mt-3 w-full sm:w-auto">
-            Remover este filtro
+            {relaxation.query ? 'Buscar sem este termo' : 'Remover este filtro'}
           </Button>
         </div>
       )}
@@ -47,7 +47,7 @@ export function EmptySearch({ query, hasFilters, relaxation, onRelax, onClearFil
             Limpar todos os filtros
           </Button>
         )}
-        {query && (
+        {query && !relaxation?.query && (
           <Button variant="outline" data-testid="button-empty-clear-query" onClick={onClearQuery}>
             Buscar sem “{query.length > 24 ? `${query.slice(0, 24)}…` : query}”
           </Button>

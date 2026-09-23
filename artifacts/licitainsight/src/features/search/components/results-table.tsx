@@ -13,7 +13,8 @@ import { highlightFor, relevanceVaries, shortTenderNumber } from '@/features/ten
 type Props = { tenders: TenderSummary[]; isSaved: (id: string) => boolean; onToggleSave: (id: string) => void };
 
 // Sticky header needs its own scroll container: the wrapper scrolls on both axes, so horizontal overflow
-// stays inside the table (never the page) and the header sticks while scrolling rows.
+// stays inside the table (never the page) and the header sticks while scrolling rows. `relative` makes it the containing
+// block of the cells' absolutely positioned sr-only text, which would otherwise widen the page (QA-001).
 const th =
   'sticky top-0 z-[2] whitespace-nowrap border-b border-border bg-muted px-3 py-2.5 text-left align-bottom type-label font-medium text-muted-foreground';
 const td = 'border-b border-border-subtle px-3 py-2.5 align-top';
@@ -33,7 +34,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
       aria-label="Resultados em tabela"
       tabIndex={0}
       data-testid="results-table"
-      className="max-h-[calc(100dvh-9rem)] overflow-auto overscroll-x-contain rounded-xl border border-border bg-card"
+      className="relative max-h-[calc(100dvh-9rem)] overflow-auto overscroll-x-contain rounded-xl border border-border bg-card"
     >
       <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0 text-left type-ui">
         <caption className="sr-only">Licitações encontradas. Role horizontalmente para ver todas as colunas.</caption>

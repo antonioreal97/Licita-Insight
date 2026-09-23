@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { Building2, History, Loader2, Search, Tag, X, type LucideIcon } from 'lucide-react';
 import type { SearchSuggestion } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -57,6 +57,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   const recent = useRecentSearches();
   const suggestions = useSearchSuggestions(draft);
@@ -89,6 +90,13 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
   const close = () => {
     setOpen(false);
     setActive(-1);
+  };
+
+  // Tab from the input moves into the popup when it has a control ("Limpar histórico"); leaving both closes it.
+  const closeUnlessInside = (event: FocusEvent) => {
+    const next = event.relatedTarget as Node | null;
+    if (next && (next === inputRef.current || popupRef.current?.contains(next))) return;
+    close();
   };
 
   const submitText = (text: string) => {
@@ -138,9 +146,6 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
           setDraft('');
         }
         break;
-      case 'Tab':
-        close();
-        break;
     }
   };
 
@@ -171,7 +176,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={close}
+          onBlur={closeUnlessInside}
           onKeyDown={onKeyDown}
           placeholder="Ex.: tecnologia educacional, prefeitura de Recife…"
           className="h-11 w-full rounded-lg border border-input bg-background pr-20 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 sm:text-sm"
@@ -205,8 +210,16 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
 
         {expanded && (
           <div
+            ref={popupRef}
             // Keep focus in the input while clicking inside the popup.
             onMouseDown={(event) => event.preventDefault()}
+            onBlur={closeUnlessInside}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              inputRef.current?.focus(); // before close(): the input's onFocus reopens the popup
+              close();
+            }}
             className="absolute inset-x-0 top-[calc(100%+6px)] z-popover overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-base ease-emphasized"
           >
             <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">

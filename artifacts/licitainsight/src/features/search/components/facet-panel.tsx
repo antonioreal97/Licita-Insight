@@ -1,8 +1,9 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import type { FacetBucket, SearchFacets, TenderSearchParams } from '@/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatNumber } from '@/lib/format';
+import { isCalendarDate, MAX_MONEY } from '@/services/search-service';
 import { FACET_GROUPS, labelFor, selectedValues, type FacetGroupConfig } from '../lib/facet-config';
 import { formatCompactCurrency } from '../lib/filter-chips';
 import { formatBRLInput, parseBRL } from '../lib/money-input';
@@ -163,9 +164,12 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
 
   const minValue = parseBRL(min);
   const maxValue = parseBRL(max);
-  const invalid = minValue !== undefined && maxValue !== undefined && minValue > maxValue;
+  const tooLarge = (minValue ?? 0) > MAX_MONEY || (maxValue ?? 0) > MAX_MONEY;
+  const reversed = minValue !== undefined && maxValue !== undefined && minValue > maxValue;
+  const invalid = tooLarge || reversed;
 
   const commit = () => {
+    if (tooLarge) return; // keep the typed text next to its error; reformatting a 1e23 float would change the digits
     setMin(formatBRLInput(minValue));
     setMax(formatBRLInput(maxValue));
     if (invalid || (minValue === params.valueMin && maxValue === params.valueMax)) return;
@@ -173,7 +177,7 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
   };
 
   const bounds = facets?.valueRange;
-  const field = (label: string, value: string, set: (v: string) => void, placeholder: number | null | undefined, testId: string) => (
+  const field = (label: string, value: string, set: (v: string) => void, placeholder: number | null | undefined, testId: string, fieldInvalid: boolean) => (
     <label className="min-w-0 flex-1">
       <span className="mb-1 block type-meta font-medium text-muted-foreground">{label}</span>
       <span className="relative block">
@@ -192,8 +196,8 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
             }
           }}
           placeholder={placeholder != null ? formatBRLInput(Math.round(placeholder)) : '0'}
-          aria-invalid={invalid}
-          aria-describedby={invalid ? errorId : undefined}
+          aria-invalid={fieldInvalid}
+          aria-describedby={fieldInvalid ? errorId : undefined}
           data-testid={testId}
           className={`${inputBase} pr-2 pl-8 type-data ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
         />
@@ -204,12 +208,12 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
   return (
     <Section title="Valor estimado" badge={params.valueMin !== undefined || params.valueMax !== undefined ? 1 : 0}>
       <div className="flex gap-2">
-        {field('Mínimo', min, setMin, bounds?.min, 'input-value-min')}
-        {field('Máximo', max, setMax, bounds?.max, 'input-value-max')}
+        {field('Mínimo', min, setMin, bounds?.min, 'input-value-min', reversed || (minValue ?? 0) > MAX_MONEY)}
+        {field('Máximo', max, setMax, bounds?.max, 'input-value-max', reversed || (maxValue ?? 0) > MAX_MONEY)}
       </div>
       {invalid ? (
         <p id={errorId} role="alert" className="mt-1.5 type-meta text-destructive">
-          O valor mínimo deve ser menor que o máximo.
+          {tooLarge ? `O valor máximo aceito é R$ ${formatBRLInput(MAX_MONEY)}.` : 'O valor mínimo deve ser menor que o máximo.'}
         </p>
       ) : bounds?.min != null && bounds.max != null ? (
         <p className="mt-1.5 type-meta text-muted-foreground">
@@ -217,6 +221,40 @@ function ValueRange({ params, facets, onChange, density }: Pick<PanelProps, 'par
         </p>
       ) : null}
     </Section>
+  );
+}
+
+/**
+ * Date field that commits on blur/Enter, or right away once the value is a plausible full date (calendar picks).
+ * Typing the year digit by digit produces "0002-…", "0020-…"; committing those would navigate and fetch on every key.
+ */
+function DateInput({
+  value,
+  onCommit,
+  ...props
+}: Omit<ComponentProps<'input'>, 'value' | 'onChange' | 'type'> & { value: string | undefined; onCommit: (value: string | undefined) => void }) {
+  const [draft, setDraft] = useState(value ?? '');
+  useEffect(() => setDraft(value ?? ''), [value]);
+  const commit = (next: string) => {
+    if ((next || undefined) !== value) onCommit(next || undefined);
+  };
+  return (
+    <input
+      {...props}
+      type="date"
+      value={draft}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        if (isCalendarDate(event.target.value) && event.target.value >= '1900') commit(event.target.value);
+      }}
+      onBlur={() => commit(draft)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit(draft);
+        }
+      }}
+    />
   );
 }
 
@@ -260,11 +298,10 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
       <div className="flex gap-2">
         <label className="min-w-0 flex-1">
           <span className="mb-1 block type-meta font-medium text-muted-foreground">De</span>
-          <input
-            type="date"
-            value={params.deadlineFrom ?? ''}
+          <DateInput
+            value={params.deadlineFrom}
             max={params.deadlineTo}
-            onChange={(event) => onChange({ deadlineFrom: event.target.value || undefined })}
+            onCommit={(value) => onChange({ deadlineFrom: value })}
             aria-invalid={invalid}
             data-testid="input-deadline-from"
             className={input}
@@ -272,11 +309,10 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
         </label>
         <label className="min-w-0 flex-1">
           <span className="mb-1 block type-meta font-medium text-muted-foreground">Até</span>
-          <input
-            type="date"
-            value={params.deadlineTo ?? ''}
+          <DateInput
+            value={params.deadlineTo}
             min={params.deadlineFrom}
-            onChange={(event) => onChange({ deadlineTo: event.target.value || undefined })}
+            onCommit={(value) => onChange({ deadlineTo: value })}
             aria-invalid={invalid}
             data-testid="input-deadline-to"
             className={input}
