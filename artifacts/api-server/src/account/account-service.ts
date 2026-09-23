@@ -6,6 +6,7 @@ import {
   eq,
   inArray,
   isNull,
+  ne,
   sql,
 } from "drizzle-orm";
 import type {
@@ -34,6 +35,9 @@ import { canonicalSearchQuery } from "./saved-search-query";
 
 const MAX_SAVED_TENDERS = 500;
 const MAX_SAVED_SEARCHES = 50;
+const SAVED_SEARCH_RESTORE_WINDOW_MS = 30_000;
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const summaryCriteria: SearchCriteria = {
   query: null,
@@ -82,7 +86,7 @@ const toSavedSearch = (
   newMatchesCount: row.newMatchesCount,
 });
 
-const lockUser = async (tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string) => {
+const lockUser = async (tx: Transaction, userId: string) => {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
 };
 
@@ -259,14 +263,48 @@ export const importSavedTenders = async (userId: string, ids: string[]) => {
   });
 };
 
-const assertSavedSearchOwner = async (userId: string, id: string) => {
-  const [row] = await db
+const savedSearchConflict = (existingId: string): ConflictError =>
+  new ConflictError("A saved search with this query already exists", [
+    { field: "query", issue: "duplicate", existingId },
+  ]);
+
+const findDuplicateSavedSearch = async (
+  tx: Transaction,
+  userId: string,
+  query: string,
+  exceptId?: string,
+) => {
+  const [row] = await tx
+    .select({ id: savedSearchesTable.id })
+    .from(savedSearchesTable)
+    .where(
+      and(
+        eq(savedSearchesTable.userId, userId),
+        eq(savedSearchesTable.query, query),
+        isNull(savedSearchesTable.deletedAt),
+        exceptId ? ne(savedSearchesTable.id, exceptId) : undefined,
+      ),
+    )
+    .limit(1);
+  return row;
+};
+
+const assertSavedSearchOwner = async (
+  tx: Transaction,
+  userId: string,
+  id: string,
+  includeDeleted = false,
+) => {
+  const [row] = await tx
     .select()
     .from(savedSearchesTable)
     .where(eq(savedSearchesTable.id, id))
     .limit(1);
   if (!row) throw new NotFoundError(`Saved search ${id} was not found`);
   if (row.userId !== userId) throw new ForbiddenError();
+  if (!includeDeleted && row.deletedAt) {
+    throw new NotFoundError(`Saved search ${id} was not found`);
+  }
   return row;
 };
 
@@ -275,7 +313,12 @@ export const listSavedSearches = async (userId: string) => ({
     await db
       .select()
       .from(savedSearchesTable)
-      .where(eq(savedSearchesTable.userId, userId))
+      .where(
+        and(
+          eq(savedSearchesTable.userId, userId),
+          isNull(savedSearchesTable.deletedAt),
+        ),
+      )
       .orderBy(desc(savedSearchesTable.updatedAt))
   ).map(toSavedSearch),
 });
@@ -289,10 +332,21 @@ export const createSavedSearch = async (input: {
   const canonical = canonicalSearchQuery(input.query).query;
   return db.transaction(async (tx) => {
     await lockUser(tx, input.userId);
+    const duplicate = await findDuplicateSavedSearch(
+      tx,
+      input.userId,
+      canonical,
+    );
+    if (duplicate) throw savedSearchConflict(duplicate.id);
     const [totalRow] = await tx
       .select({ value: count() })
       .from(savedSearchesTable)
-      .where(eq(savedSearchesTable.userId, input.userId));
+      .where(
+        and(
+          eq(savedSearchesTable.userId, input.userId),
+          isNull(savedSearchesTable.deletedAt),
+        ),
+      );
     if (Number(totalRow?.value ?? 0) >= MAX_SAVED_SEARCHES) {
       throw new ConflictError("Saved search limit reached", [
         { field: "limit", issue: "max_saved_searches" },
@@ -324,55 +378,132 @@ export const updateSavedSearch = async (input: {
   query?: string;
   alertsEnabled?: boolean;
 }): Promise<SavedSearch> => {
-  const existing = await assertSavedSearchOwner(input.userId, input.id);
-  const query = input.query === undefined
-    ? existing.query
-    : canonicalSearchQuery(input.query).query;
-  const alertsEnabled = input.alertsEnabled ?? existing.alertsEnabled;
-  const resetCheckpoint =
-    query !== existing.query || (!existing.alertsEnabled && alertsEnabled);
-  const [row] = await db
-    .update(savedSearchesTable)
-    .set({
-      name: input.name ?? existing.name,
+  const requestedQuery =
+    input.query === undefined ? undefined : canonicalSearchQuery(input.query).query;
+  return db.transaction(async (tx) => {
+    await lockUser(tx, input.userId);
+    const existing = await assertSavedSearchOwner(
+      tx,
+      input.userId,
+      input.id,
+    );
+    const query = requestedQuery ?? existing.query;
+    const duplicate = await findDuplicateSavedSearch(
+      tx,
+      input.userId,
       query,
-      alertsEnabled,
-      updatedAt: new Date(),
-      ...(resetCheckpoint
-        ? { lastCheckedAt: new Date(), newMatchesCount: 0 }
-        : {}),
-    })
-    .where(
-      and(
-        eq(savedSearchesTable.id, input.id),
-        eq(savedSearchesTable.userId, input.userId),
-      ),
-    )
-    .returning();
-  if (!row) throw new ForbiddenError();
-  return toSavedSearch(row);
+      input.id,
+    );
+    if (duplicate) throw savedSearchConflict(duplicate.id);
+    const alertsEnabled = input.alertsEnabled ?? existing.alertsEnabled;
+    const resetCheckpoint =
+      query !== existing.query || (!existing.alertsEnabled && alertsEnabled);
+    const [row] = await tx
+      .update(savedSearchesTable)
+      .set({
+        name: input.name ?? existing.name,
+        query,
+        alertsEnabled,
+        updatedAt: new Date(),
+        ...(resetCheckpoint
+          ? { lastCheckedAt: new Date(), newMatchesCount: 0 }
+          : {}),
+      })
+      .where(
+        and(
+          eq(savedSearchesTable.id, input.id),
+          eq(savedSearchesTable.userId, input.userId),
+          isNull(savedSearchesTable.deletedAt),
+        ),
+      )
+      .returning();
+    if (!row) throw new ForbiddenError();
+    return toSavedSearch(row);
+  });
 };
 
 export const deleteSavedSearch = async (userId: string, id: string): Promise<void> => {
-  await assertSavedSearchOwner(userId, id);
-  await db
-    .delete(savedSearchesTable)
-    .where(and(eq(savedSearchesTable.id, id), eq(savedSearchesTable.userId, userId)));
+  await db.transaction(async (tx) => {
+    await lockUser(tx, userId);
+    await assertSavedSearchOwner(tx, userId, id);
+    const now = new Date();
+    await tx
+      .update(savedSearchesTable)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(savedSearchesTable.id, id),
+          eq(savedSearchesTable.userId, userId),
+          isNull(savedSearchesTable.deletedAt),
+        ),
+      );
+  });
 };
+
+export const restoreSavedSearch = async (
+  userId: string,
+  id: string,
+): Promise<SavedSearch> =>
+  db.transaction(async (tx) => {
+    await lockUser(tx, userId);
+    const existing = await assertSavedSearchOwner(tx, userId, id, true);
+    if (!existing.deletedAt) return toSavedSearch(existing);
+    const now = new Date();
+    if (
+      existing.deletedAt.getTime() <
+      now.getTime() - SAVED_SEARCH_RESTORE_WINDOW_MS
+    ) {
+      throw new ConflictError("Saved search restore window expired", [
+        { field: "id", issue: "restore_expired" },
+      ]);
+    }
+    const duplicate = await findDuplicateSavedSearch(
+      tx,
+      userId,
+      existing.query,
+      id,
+    );
+    if (duplicate) throw savedSearchConflict(duplicate.id);
+    const [row] = await tx
+      .update(savedSearchesTable)
+      .set({
+        deletedAt: null,
+        updatedAt: now,
+        newMatchesCount: 0,
+        lastCheckedAt: existing.alertsEnabled ? now : null,
+      })
+      .where(
+        and(
+          eq(savedSearchesTable.id, id),
+          eq(savedSearchesTable.userId, userId),
+        ),
+      )
+      .returning();
+    if (!row) throw new NotFoundError(`Saved search ${id} was not found`);
+    return toSavedSearch(row);
+  });
 
 export const markSavedSearchSeen = async (
   userId: string,
   id: string,
-): Promise<SavedSearch> => {
-  await assertSavedSearchOwner(userId, id);
-  const [row] = await db
-    .update(savedSearchesTable)
-    .set({ newMatchesCount: 0, updatedAt: new Date() })
-    .where(and(eq(savedSearchesTable.id, id), eq(savedSearchesTable.userId, userId)))
-    .returning();
-  if (!row) throw new ForbiddenError();
-  return toSavedSearch(row);
-};
+): Promise<SavedSearch> =>
+  db.transaction(async (tx) => {
+    await lockUser(tx, userId);
+    await assertSavedSearchOwner(tx, userId, id);
+    const [row] = await tx
+      .update(savedSearchesTable)
+      .set({ newMatchesCount: 0, updatedAt: new Date() })
+      .where(
+        and(
+          eq(savedSearchesTable.id, id),
+          eq(savedSearchesTable.userId, userId),
+          isNull(savedSearchesTable.deletedAt),
+        ),
+      )
+      .returning();
+    if (!row) throw new ForbiddenError();
+    return toSavedSearch(row);
+  });
 
 const toNotification = (
   row: typeof notificationsTable.$inferSelect,

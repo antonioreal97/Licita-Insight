@@ -494,6 +494,7 @@ export interface SuggestionsResponse {
 export interface ErrorDetail {
   field: string;
   issue: string;
+  existingId?: string;
 }
 
 export type ApiErrorCode = typeof ApiErrorCode[keyof typeof ApiErrorCode];

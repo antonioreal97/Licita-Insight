@@ -12,6 +12,7 @@ export type ApiErrorCode =
 export interface ApiErrorDetail {
   field: string;
   issue: string;
+  existingId?: string;
 }
 
 export class ApiError extends Error {

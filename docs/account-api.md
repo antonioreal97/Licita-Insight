@@ -31,16 +31,24 @@ pnpm --filter @workspace/db run migrate
 PORT=3001 PNCP_DAILY_COLLECT=false pnpm --filter @workspace/api-server run dev
 ```
 
-A migration `0001_account` pressupõe o schema canônico de busca já instalado pelos ciclos anteriores e adiciona `users`, `sessions`, `saved_tenders`, `saved_searches` e `notifications`.
+As migrations `0001_account` e `0002_account_followups` pressupõem o schema canônico de busca já instalado pelos ciclos anteriores. A segunda adiciona soft delete/restore e unicidade parcial das queries de buscas salvas ativas.
 
 ## Segurança
 
 - O cookie `licita_session` é `HttpOnly`, `SameSite=Lax`, `Path=/` e `Secure` fora de desenvolvimento.
 - O token de sessão nunca é persistido em claro; o banco guarda seu hash SHA-256.
-- Mutações pessoais e logout exigem `X-Requested-With: licita-insight` e `Origin` exatamente igual a `PUBLIC_APP_ORIGIN`.
+- Mutações pessoais, logout e dev-login exigem `X-Requested-With: licita-insight` e `Origin` exatamente igual a `PUBLIC_APP_ORIGIN`.
 - O fluxo Google usa authorization code, PKCE S256, `state` assinado, `nonce`, validação RS256 via JWKS, issuer, audience, expiração e `email_verified`.
 - `returnTo` aceita somente caminhos relativos seguros; redirecionamentos externos caem em `/dashboard`.
 - CORS aberto foi removido. O frontend usa proxy/reverse proxy de mesma origem.
+- Sem credenciais Google, `/auth/google/start` redireciona para `/login?error=oauth_unavailable` e registra um aviso estruturado.
+
+## Buscas salvas
+
+- Cada usuário pode ter somente uma busca ativa por query canônica; duplicatas respondem 409 com o `existingId`.
+- `DELETE` oculta a busca imediatamente e inicia uma janela de restore de 30 segundos.
+- `POST /api/v1/me/saved-searches/{id}/restore` preserva o ID original, zera `newMatchesCount` e reinicia o checkpoint quando alertas estiverem ativos.
+- Restore expirado ou bloqueado por uma nova busca equivalente responde 409.
 
 ## Alertas
 

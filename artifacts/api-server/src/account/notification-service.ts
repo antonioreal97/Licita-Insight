@@ -5,6 +5,7 @@ import {
   count,
   eq,
   gt,
+  isNull,
   lt,
   lte,
   sql,
@@ -134,7 +135,7 @@ const evaluateSavedSearch = async (
       .from(savedSearchesTable)
       .where(eq(savedSearchesTable.id, id))
       .limit(1);
-    if (!savedSearch?.alertsEnabled) return;
+    if (!savedSearch?.alertsEnabled || savedSearch.deletedAt) return;
     const since = savedSearch.lastCheckedAt ?? savedSearch.createdAt;
     if (since >= completedAt) return;
     const { criteria } = canonicalSearchQuery(savedSearch.query);
@@ -192,7 +193,12 @@ export const evaluateSavedSearchNotifications = async (
   const searches = await db
     .select({ id: savedSearchesTable.id })
     .from(savedSearchesTable)
-    .where(eq(savedSearchesTable.alertsEnabled, true));
+    .where(
+      and(
+        eq(savedSearchesTable.alertsEnabled, true),
+        isNull(savedSearchesTable.deletedAt),
+      ),
+    );
   for (const { id } of searches) {
     try {
       await evaluateSavedSearch(id, completedAt);

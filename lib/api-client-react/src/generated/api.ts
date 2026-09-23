@@ -769,7 +769,7 @@ return customFetch<void>(getDevLoginUrl(),
 
 export const getDevLoginMutationKey = () => ['devLogin'] as const;
 
-export const getDevLoginMutationOptions = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse>,
+export const getDevLoginMutationOptions = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext> => {
 
@@ -798,13 +798,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DevLoginMutationResult = NonNullable<Awaited<ReturnType<typeof devLogin>>>
     export type DevLoginMutationBody = BodyType<DevLoginRequest>
-    export type DevLoginMutationError = ErrorType<InvalidParameterResponse | NotFoundResponse>
+    export type DevLoginMutationError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse>
     export type DevLoginMutationVariables = {data: BodyType<DevLoginRequest>}
 
     /**
  * @summary Create a development-only session
  */
-export const useDevLogin = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse>,
+export const useDevLogin = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof devLogin>>,
@@ -1406,7 +1406,7 @@ return customFetch<SavedSearch>(getUpdateSavedSearchUrl(id),
 
 export const getUpdateSavedSearchMutationKey = () => ['updateSavedSearch'] as const;
 
-export const getUpdateSavedSearchMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+export const getUpdateSavedSearchMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext> => {
 
@@ -1435,10 +1435,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof updateSavedSearch>>>
     export type UpdateSavedSearchMutationBody = BodyType<UpdateSavedSearchRequest>
-    export type UpdateSavedSearchMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>
+    export type UpdateSavedSearchMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
     export type UpdateSavedSearchMutationVariables = {id: string;data: BodyType<UpdateSavedSearchRequest>}
 
-    export const useUpdateSavedSearch = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    export const useUpdateSavedSearch = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateSavedSearch>>,
@@ -1583,6 +1583,80 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getMarkSavedSearchSeenMutationOptions(options));
+    }
+
+export const getRestoreSavedSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-searches/${id}/restore`
+}
+
+/**
+ * @summary Restore a saved search deleted within the last 30 seconds
+ */
+export const restoreSavedSearch = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+  return customFetch<SavedSearch>(getRestoreSavedSearchUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreSavedSearchMutationKey = () => ['restoreSavedSearch'] as const;
+
+export const getRestoreSavedSearchMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreSavedSearch>>, TError,RestoreSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreSavedSearch>>, TError,RestoreSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getRestoreSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreSavedSearch>>, RestoreSavedSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreSavedSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof restoreSavedSearch>>>
+
+    export type RestoreSavedSearchMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
+    export type RestoreSavedSearchMutationVariables = {id: string}
+
+    /**
+ * @summary Restore a saved search deleted within the last 30 seconds
+ */
+export const useRestoreSavedSearch = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreSavedSearch>>, TError,RestoreSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreSavedSearch>>,
+        TError,
+        RestoreSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreSavedSearchMutationOptions(options));
     }
 
 export const getListNotificationsUrl = (params?: ListNotificationsParams,) => {
