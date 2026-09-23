@@ -29,12 +29,12 @@ Evitar: portal governamental antigo, dashboards coloridos, gradientes e glassmor
 
 Os editais exibidos vêm do banco. Número, órgão ou prazo que não esteja numa publicação coletada não entra na interface.
 
-## Persona de demonstração
+## Conta e identidade
 
-Marina Almeida, Operações, Atlas Engenharia (`marina@atlasengenharia.com.br`). Persona só da demonstração.
+Login com Google (OAuth). Não há persona de demonstração: nome, e-mail e foto vêm da conta Google do usuário. Busca e detalhe são públicos; salvar, monitorar, buscas salvas e notificações exigem login.
 
 ## O que o usuário sente ao entrar
 
 Landing: **Encontre o edital certo. Antes do prazo.** CTAs para explorar o radar e ver a demonstração.
 
-App autenticado (ainda só visual): visão do radar, busca imediata, shortlist e sinais do que mudou.
+App autenticado: visão do radar, busca imediata, editais salvos e monitorados, buscas salvas com alertas e notificações dentro do app (sino e página Monitoramento) quando prazo, status, valor ou documentos mudam, ou quando entram editais novos numa busca salva. Sem e-mail neste ciclo.
