@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError, type SavedSearch, type SavedSearchesResponse, type TenderSearchParams } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
+import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
@@ -9,10 +10,11 @@ import { queryKeys } from '@/services/query-keys';
 /** Saved searches of the signed-in user (`updatedAt desc`). Disabled while signed out. */
 export function useSavedSearches() {
   const { status } = useSession();
+  const billing = useBilling();
   return useQuery({
     queryKey: queryKeys.me.savedSearches,
     queryFn: ({ signal }) => accountService.listSavedSearches(signal),
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && billing.data?.entitled === true,
   });
 }
 

@@ -123,6 +123,7 @@ export const ingestRunsTable = pgTable(
     refreshed: integer("refreshed").notNull().default(0),
     refreshErrors: integer("refresh_errors").notNull().default(0),
     error: text("error"),
+    details: jsonb("details"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
     heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }).notNull(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),

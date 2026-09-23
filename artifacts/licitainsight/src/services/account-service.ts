@@ -39,6 +39,10 @@ export const accountService = {
   googleSignInUrl: (returnTo: string) => accountAdapter.googleStartUrl(returnTo),
   logout: () => accountAdapter.logout(),
 
+  getBilling: (signal?: AbortSignal) => accountAdapter.getBilling(signal),
+  startCheckout: () => accountAdapter.startCheckout(),
+  cancelBilling: () => accountAdapter.cancelBilling(),
+
   listSavedTenders: (params: SavedTendersParams, signal?: AbortSignal) =>
     accountAdapter.listSavedTenders({ ...params, pageSize: clampPageSize(params.pageSize, MAX_SAVED_TENDERS_PAGE_SIZE) }, signal),
   getSavedTenderIds: (signal?: AbortSignal) => accountAdapter.getSavedTenderIds(signal),

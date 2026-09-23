@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError, type SavedTenderIdsResponse } from '@/api';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
-import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useSession } from '@/features/auth/hooks/use-session';
+import { useBilling, useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
@@ -25,6 +26,7 @@ function applyChange(ids: SavedTenderIdsResponse, change: Change): SavedTenderId
 }
 
 function errorDescription(error: unknown) {
+  if (isApiError(error) && error.code === 'SUBSCRIPTION_REQUIRED') return 'Assine para salvar e acompanhar editais.';
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 500 editais salvos. Remova alguns e tente de novo.';
   if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
   return isApiError(error) && error.requestId ? `Tente de novo. ref. ${error.requestId}` : 'Tente de novo.';
@@ -46,10 +48,10 @@ function readLegacyIds(): string[] {
 // Once per page load: every useSavedTenders caller mounts this effect, only the first one imports.
 let importStarted = false;
 
-function useImportLegacySaved(authenticated: boolean) {
+function useImportLegacySaved(entitled: boolean) {
   const queryClient = useQueryClient();
   useEffect(() => {
-    if (!authenticated || importStarted) return;
+    if (!entitled || importStarted) return;
     importStarted = true;
     const ids = readLegacyIds();
     if (ids.length === 0) return;
@@ -83,7 +85,7 @@ function useImportLegacySaved(authenticated: boolean) {
         toast({ variant: 'destructive', title: 'Não foi possível trazer os editais salvos neste navegador', description: errorDescription(error) });
       },
     );
-  }, [authenticated, queryClient]);
+  }, [entitled, queryClient]);
 }
 
 /**
@@ -92,14 +94,17 @@ function useImportLegacySaved(authenticated: boolean) {
  */
 export function useSavedTenders() {
   const session = useSession();
+  const billing = useBilling();
+  const requireEntitled = useRequireEntitled();
+  const entitled = billing.data?.entitled === true;
   const authenticated = session.status === 'authenticated';
   const queryClient = useQueryClient();
-  useImportLegacySaved(authenticated);
+  useImportLegacySaved(entitled);
 
   const ids = useQuery({
     queryKey: queryKeys.me.savedTenders.ids,
     queryFn: ({ signal }) => accountService.getSavedTenderIds(signal),
-    enabled: authenticated,
+    enabled: entitled,
     staleTime: 60_000,
   });
 
@@ -160,10 +165,10 @@ export function useSavedTenders() {
   // Reads the cache at call time (not the render closure), so an Undo in a toast sees the current state.
   const change = useCallback(
     (build: (current: SavedTenderIdsResponse) => Change) => {
-      if (session.status === 'anonymous') return signInWithGoogle();
+      if (!requireEntitled()) return;
       const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
-      if (session.status !== 'authenticated' || !current) {
-        const failed = session.error || queryClient.getQueryState(queryKeys.me.savedTenders.ids)?.status === 'error';
+      if (!current) {
+        const failed = queryClient.getQueryState(queryKeys.me.savedTenders.ids)?.status === 'error';
         toast({
           variant: 'destructive',
           title: failed ? 'Não foi possível carregar seus editais salvos' : 'Seus editais salvos ainda não carregaram',
@@ -173,7 +178,7 @@ export function useSavedTenders() {
       }
       mutate(build(current));
     },
-    [session.status, session.error, queryClient, mutate],
+    [queryClient, mutate, requireEntitled],
   );
   const toggle = useCallback(
     (id: string) =>
@@ -187,7 +192,17 @@ export function useSavedTenders() {
   const toggleMonitor = useCallback((id: string) => change((current) => ({ id, save: true, monitored: !current.monitored.includes(id) })), [change]);
 
   const status: SavedTendersStatus =
-    session.status === 'anonymous' ? 'anonymous' : ids.data ? 'ready' : ids.isError || (session.status === 'loading' && session.error) ? 'error' : 'loading';
+    session.status === 'anonymous'
+      ? 'anonymous'
+      : ids.data
+        ? 'ready'
+        : !authenticated
+          ? 'loading'
+          : billing.isError || ids.isError
+            ? 'error'
+            : billing.isSuccess && !entitled
+              ? 'ready'
+              : 'loading';
 
-  return { saved, isSaved, toggle, isMonitored, toggleMonitor, status };
+  return { saved, isSaved, toggle, isMonitored, toggleMonitor, status, entitled };
 }

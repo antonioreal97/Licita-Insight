@@ -1,5 +1,7 @@
 import type { AccountAdapter } from '../account-adapter';
 import type {
+  BillingCheckoutResponse,
+  BillingResponse,
   ImportSavedTendersResponse,
   NotificationsResponse,
   SavedSearch,
@@ -19,6 +21,10 @@ export const httpAccountAdapter: AccountAdapter = {
   getSession: (signal) => getJson<SessionResponse>('/v1/auth/session', {}, signal),
   googleStartUrl: (returnTo) => `${apiBaseUrl}/v1/auth/google/start${toQueryString({ returnTo })}`,
   logout: () => sendJson<void>('POST', '/v1/auth/logout'),
+
+  getBilling: (signal) => getJson<BillingResponse>('/v1/me/billing', {}, signal),
+  startCheckout: () => sendJson<BillingCheckoutResponse>('POST', '/v1/me/billing/checkout'),
+  cancelBilling: () => sendJson<BillingResponse>('POST', '/v1/me/billing/cancel'),
 
   listSavedTenders: (params, signal) => getJson<SavedTendersResponse>('/v1/me/saved-tenders', params, signal),
   getSavedTenderIds: (signal) => getJson<SavedTenderIdsResponse>('/v1/me/saved-tenders/ids', {}, signal),

@@ -1,4 +1,6 @@
 import type {
+  BillingCheckoutResponse,
+  BillingResponse,
   CreateSavedSearchBody,
   ImportSavedTendersResponse,
   MarkNotificationsReadBody,
@@ -24,6 +26,10 @@ export interface AccountAdapter {
   /** Full-page URL that starts the Google OAuth flow; the API redirects back to `returnTo`. */
   googleStartUrl(returnTo: string): string;
   logout(): Promise<void>;
+
+  getBilling(signal?: AbortSignal): Promise<BillingResponse>;
+  startCheckout(): Promise<BillingCheckoutResponse>;
+  cancelBilling(): Promise<BillingResponse>;
 
   listSavedTenders(params: SavedTendersParams, signal?: AbortSignal): Promise<SavedTendersResponse>;
   getSavedTenderIds(signal?: AbortSignal): Promise<SavedTenderIdsResponse>;

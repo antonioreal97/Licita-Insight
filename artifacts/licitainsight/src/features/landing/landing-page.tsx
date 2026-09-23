@@ -1,8 +1,59 @@
 import { Link } from 'wouter';
 import { ArrowRight, Check, Clock3, Search, Target } from 'lucide-react';
+import { useSession } from '@/features/auth/hooks/use-session';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { formatCurrency } from '@/lib/format';
 import { statusLabels } from '@/lib/tender-labels';
+
+const navLink = 'font-semibold text-primary hover:underline';
+const primaryCta =
+  'rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
+const heroCta =
+  'inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
+
+function SessionPlaceholder() {
+  return <span role="status" aria-label="Carregando conta" className="inline-block h-9 w-28 animate-pulse rounded-lg bg-muted" />;
+}
+
+function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
+  const { status } = useSession();
+  if (status === 'loading') return <SessionPlaceholder />;
+  if (status === 'authenticated') {
+    return (
+      <Link href="/dashboard" data-testid={mobile ? 'link-landing-dashboard-mobile' : 'link-landing-dashboard'} className={mobile ? 'text-sm font-semibold text-primary' : primaryCta}>
+        Visão geral
+      </Link>
+    );
+  }
+  if (mobile) {
+    return (
+      <Link href="/login" data-testid="link-landing-login-mobile" className="text-sm font-semibold text-primary">
+        Entrar
+      </Link>
+    );
+  }
+  return (
+    <>
+      <Link href="/login" data-testid="link-landing-login" className={navLink}>
+        Entrar
+      </Link>
+      <Link href="/login" data-testid="link-landing-register" className={primaryCta}>
+        Começar agora
+      </Link>
+    </>
+  );
+}
+
+function LandingHeroStart() {
+  const { status } = useSession();
+  if (status === 'loading') return <SessionPlaceholder />;
+  const signedIn = status === 'authenticated';
+  return (
+    <Link href={signedIn ? '/dashboard' : '/login'} data-testid="link-hero-start" className={heroCta}>
+      {signedIn ? 'Ir para a visão geral' : 'Explorar o radar'} <ArrowRight size={16} />
+    </Link>
+  );
+}
 
 // Marketing page. Hero sizes (48/72px) sit above the product type scale on purpose; every color is a token.
 export default function LandingPage() {
@@ -12,9 +63,9 @@ export default function LandingPage() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-8">
         <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar text-xs font-bold text-sidebar-primary">LI</span>
+          <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
           <span className="font-semibold tracking-heading">
-            Licita <span className="text-primary">Insight</span>
+            Licit<span className="text-primary">AI</span>
           </span>
         </Link>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
@@ -24,20 +75,11 @@ export default function LandingPage() {
           <a href="#instrumento" className="transition-colors duration-fast hover:text-foreground">
             O instrumento
           </a>
-          <Link href="/login" data-testid="link-landing-login" className="font-semibold text-primary hover:underline">
-            Entrar
-          </Link>
-          <Link
-            href="/login"
-            data-testid="link-landing-register"
-            className="rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
-          >
-            Começar agora
-          </Link>
+          <LandingNavActions />
         </nav>
-        <Link href="/login" className="text-sm font-semibold text-primary md:hidden">
-          Entrar
-        </Link>
+        <div className="md:hidden">
+          <LandingNavActions mobile />
+        </div>
       </header>
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <section className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pb-32 lg:pt-24">
@@ -53,13 +95,7 @@ export default function LandingPage() {
               Uma forma mais clara de descobrir, avaliar e acompanhar oportunidades públicas que fazem sentido para a sua empresa.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/login"
-                data-testid="link-hero-start"
-                className="inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
-              >
-                Explorar o radar <ArrowRight size={16} />
-              </Link>
+              <LandingHeroStart />
               <Link
                 href="/search"
                 data-testid="link-hero-demo"
@@ -84,7 +120,7 @@ export default function LandingPage() {
             <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
               <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
                 <div className="flex items-center gap-2 text-xs font-semibold">
-                  <span className="grid h-6 w-6 place-items-center rounded bg-primary-subtle text-3xs font-bold text-primary-subtle-foreground">LI</span>Seu
+                  <img src="/LicitAI_logo.png" alt="" width={24} height={24} className="h-6 w-6" />Seu
                   radar
                 </div>
                 <span className="type-label text-muted-foreground">dados do PNCP</span>
@@ -186,7 +222,7 @@ export default function LandingPage() {
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 Licita Insight · publicações do PNCP</span>
+          <span>© 2026 LicitAI · publicações do PNCP</span>
           <span>Feito para equipes que leem antes de agir.</span>
         </div>
       </footer>

@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
 
 const STORAGE_KEY = 'licita-recent-searches';
 const MAX_ITEMS = 8;
@@ -21,10 +22,12 @@ function read(): string[] {
 
 function write(next: string[]) {
   cache = next;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Private mode / quota exceeded: keep the in-memory list for this session.
+  if (optionalStorageAllowed()) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+      console.error('[search] Não foi possível salvar as buscas recentes.', error);
+    }
   }
   listeners.forEach((listener) => listener());
 }

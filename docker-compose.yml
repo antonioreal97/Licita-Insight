@@ -1,3 +1,16 @@
+x-app: &app
+  image: licita-insight:dev
+  platform: linux/amd64
+  build:
+    context: .
+    dockerfile: Dockerfile
+  volumes:
+    - ./artifacts:/app/artifacts
+    - ./lib:/app/lib
+    - ./scripts:/app/scripts
+    - ./tsconfig.json:/app/tsconfig.json:ro
+    - ./tsconfig.base.json:/app/tsconfig.base.json:ro
+
 services:
   postgres:
     image: postgres:16
@@ -9,6 +22,89 @@ services:
       - "5432:5432"
     volumes:
       - licita_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U licita -d licita"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  db-setup:
+    <<: *app
+    environment:
+      DATABASE_URL: postgres://licita:licita@postgres:5432/licita
+    command: pnpm --filter @workspace/db run push-force
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *app
+    env_file: .env
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgres://licita:licita@postgres:5432/licita
+      PUBLIC_APP_ORIGIN: http://localhost:24252
+      PNCP_DAILY_COLLECT: "false"
+      NODE_ENV: development
+    ports:
+      - "3001:3001"
+    command: pnpm --filter @workspace/api-server run dev
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  web:
+    <<: *app
+    environment:
+      PORT: "24252"
+      BASE_PATH: /
+      API_PROXY_TARGET: http://api:3001
+      # Overrides artifacts/licitainsight/.env so the browser stays same-origin.
+      VITE_API_BASE_URL: /api
+    ports:
+      - "24252:24252"
+    command: pnpm --filter @workspace/licitainsight run dev
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:24252/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  collect:
+    <<: *app
+    profiles: ["collect"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://licita:licita@postgres:5432/licita
+      PNCP_DAILY_COLLECT: "false"
+    command: pnpm --filter @workspace/api-server run collect:pncp
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   licita_pg:

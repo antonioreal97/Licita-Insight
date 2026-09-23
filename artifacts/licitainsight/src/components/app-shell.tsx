@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import {
   Bell,
   Bookmark,
   CheckCheck,
   ChevronDown,
+  Clapperboard,
   FileSearch,
   LayoutDashboard,
   LogOut,
@@ -34,6 +36,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { signInWithGoogle, useSession, useSignOut } from '@/features/auth/hooks/use-session';
+import { useBilling } from '@/features/billing/hooks/use-billing';
+import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
+import { queryKeys } from '@/services/query-keys';
 import { NotificationItem } from '@/features/monitoring/components/notification-item';
 import { useMarkNotificationsRead, useNotifications, useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
 import { toast } from '@/hooks/use-toast';
@@ -47,6 +52,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard, testId: 'link-nav-visão-geral' },
       { href: '/search', label: 'Explorar editais', icon: Search, testId: 'link-nav-explorar-editais' },
+      { href: '/oportunidades', label: 'Chamadas culturais', icon: Clapperboard, testId: 'link-nav-chamadas-culturais' },
       { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark, testId: 'link-nav-buscas-salvas' },
       { href: '/saved-tenders', label: 'Editais salvos', icon: FileSearch, testId: 'link-nav-editais-salvos' },
       { href: '/monitoring', label: 'Monitoramento', icon: Target, testId: 'link-nav-monitoramento' },
@@ -79,13 +85,11 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary type-section font-bold tracking-normal text-sidebar-primary-foreground">
-          LI
-        </div>
+        <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
         {!collapsed && (
           <div className="min-w-0">
             <div className="font-semibold tracking-heading text-sidebar-strong-foreground">
-              Licita <span className="text-sidebar-primary">Insight</span>
+              Licit<span className="text-sidebar-primary">AI</span>
             </div>
             <div className="truncate type-label text-sidebar-muted-foreground">procurement intelligence</div>
           </div>
@@ -101,7 +105,10 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
             )}
             <nav aria-label={group.label} className="space-y-1">
               {group.items.map(({ href, label, icon: Icon, testId }) => {
-                const active = location === href || (href === '/search' && location.startsWith('/tenders/'));
+                const active =
+                  location === href ||
+                  (href === '/search' && location.startsWith('/tenders/')) ||
+                  (href === '/oportunidades' && location.startsWith('/oportunidades/'));
                 const link = (
                   <Link
                     key={href}
@@ -147,19 +154,31 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
-    try {
-      localStorage.setItem('licita-theme', dark ? 'dark' : 'light');
-    } catch (error) {
-      console.error('Não foi possível salvar o tema.', error);
-    }
+    const persist = () => {
+      if (!optionalStorageAllowed()) return;
+      try {
+        localStorage.setItem('licita-theme', dark ? 'dark' : 'light');
+      } catch (error) {
+        console.error('Não foi possível salvar o tema.', error);
+      }
+    };
+    persist();
+    window.addEventListener('licita-cookie-consent', persist);
+    return () => window.removeEventListener('licita-cookie-consent', persist);
   }, [dark]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-    } catch (error) {
-      console.error('Não foi possível salvar o estado da barra lateral.', error);
-    }
+    const persist = () => {
+      if (!optionalStorageAllowed()) return;
+      try {
+        localStorage.setItem(COLLAPSED_KEY, String(collapsed));
+      } catch (error) {
+        console.error('Não foi possível salvar o estado da barra lateral.', error);
+      }
+    };
+    persist();
+    window.addEventListener('licita-cookie-consent', persist);
+    return () => window.removeEventListener('licita-cookie-consent', persist);
   }, [collapsed]);
 
   // The drawer only exists below lg. If the window grows past lg while it is open, close it so the modal doesn't keep the page inert.
@@ -219,12 +238,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Menu size={20} strokeWidth={1.75} />
                 </button>
               </SheetTrigger>
-              <Link
-                href="/dashboard"
-                aria-label="Licita Insight — Visão geral"
-                className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground lg:hidden"
-              >
-                LI
+              <Link href="/dashboard" aria-label="LicitAI — Visão geral" className="lg:hidden">
+                <img src="/LicitAI_logo.png" alt="" width={28} height={28} className="size-7" />
               </Link>
               <button
                 aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
@@ -282,9 +297,10 @@ const menuItem = 'cursor-pointer gap-2.5 rounded-md px-2.5 py-2 type-ui';
 function AccountMenu() {
   const { user, status, error } = useSession();
   const signOut = useSignOut();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (error) console.error('[auth] Não foi possível verificar a sessão; mostrando "Entrar".', error);
+    if (error) console.error('[auth] Não foi possível verificar a sessão.', error);
   }, [error]);
 
   if (status === 'loading' && !error) {
@@ -293,6 +309,19 @@ function AccountMenu() {
         <span aria-hidden className="hidden h-3 w-24 animate-pulse rounded-sm bg-muted sm:block" />
         <span aria-hidden className="size-8 animate-pulse rounded-full bg-muted" />
       </div>
+    );
+  }
+
+  if (error && !user) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        data-testid="button-header-session-retry"
+        onClick={() => queryClient.refetchQueries({ queryKey: queryKeys.session })}
+      >
+        Tentar de novo
+      </Button>
     );
   }
 
@@ -388,6 +417,7 @@ function NotificationBell() {
 }
 
 function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onClose: () => void }) {
+  const billing = useBilling();
   const list = useNotifications({ unreadOnly: false, page: 1, pageSize: 8 });
   const markRead = useMarkNotificationsRead();
   const notifications = list.data?.data ?? [];
@@ -395,6 +425,23 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
     console.error('[notifications] Falha ao marcar como lida.', error);
     toast({ variant: 'destructive', title: 'Não foi possível marcar como lida', description: 'Verifique a conexão e tente novamente.' });
   };
+
+  if (billing.isSuccess && !billing.data.entitled) {
+    return (
+      <div data-testid="popover-notifications" className="px-6 py-10 text-center">
+        <p className="type-ui font-semibold text-foreground">Assine para acompanhar editais</p>
+        <p className="mt-1 type-meta text-muted-foreground">Alertas de prazo, status, valor e documentos entram com a assinatura.</p>
+        <Link
+          href="/settings?billing=required"
+          data-testid="link-notifications-subscribe"
+          onClick={onClose}
+          className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+        >
+          Ver assinatura
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div data-testid="popover-notifications">

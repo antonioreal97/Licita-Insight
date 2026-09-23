@@ -25,6 +25,7 @@ test(
       notificationsTable,
       savedSearchesTable,
       sessionsTable,
+      subscriptionsTable,
       usersTable,
     } = await import("@workspace/db");
     const { eq } = await import("drizzle-orm");
@@ -43,6 +44,7 @@ test(
       "saved_tenders",
       "saved_searches",
       "notifications",
+      "subscriptions",
     ]) {
       await pool.query(
         `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
@@ -78,7 +80,19 @@ test(
       assert.equal(response.status, 204);
       const setCookie = response.headers.get("set-cookie");
       assert.ok(setCookie);
-      return setCookie.split(";", 1)[0]!;
+      const cookie = setCookie.split(";", 1)[0]!;
+      const session = await request("/v1/auth/session", {}, cookie);
+      assert.equal(session.status, 200);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      await db
+        .insert(subscriptionsTable)
+        .values({
+          userId,
+          status: "active",
+          currentPeriodEnd: new Date("2099-01-01T00:00:00.000Z"),
+        })
+        .onConflictDoNothing();
+      return cookie;
     };
     const publication = (
       sequence: number,
@@ -131,6 +145,27 @@ test(
 
     const userACookie = await login("user-a@example.test");
     const userBCookie = await login("user-b@example.test");
+
+    await t.test("paid account routes require an active subscription", async () => {
+      const cookie = await login("billing-gate@example.test");
+      const session = await request("/v1/auth/session", {}, cookie);
+      assert.equal(session.status, 200);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      await db.delete(subscriptionsTable).where(eq(subscriptionsTable.userId, userId));
+
+      const denied = await request("/v1/me/saved-tenders/ids", {}, cookie);
+      assert.equal(denied.status, 402);
+      assert.equal(
+        ((await denied.json()) as { error: { code: string } }).error.code,
+        "SUBSCRIPTION_REQUIRED",
+      );
+
+      const billing = await request("/v1/me/billing", {}, cookie);
+      assert.equal(billing.status, 200);
+      const view = (await billing.json()) as { entitled: boolean; status: string };
+      assert.equal(view.entitled, false);
+      assert.equal(view.status, "none");
+    });
 
     await t.test("expires and revokes sessions", async () => {
       const active = await request("/v1/auth/session", {}, userACookie);

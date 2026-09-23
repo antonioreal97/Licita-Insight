@@ -7,7 +7,9 @@ export type ApiErrorCode =
   | "INGEST_IN_PROGRESS"
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
-  | "CONFLICT";
+  | "CONFLICT"
+  | "SUBSCRIPTION_REQUIRED"
+  | "BILLING_UNAVAILABLE";
 
 export interface ApiErrorDetail {
   field: string;
@@ -54,5 +56,17 @@ export class ForbiddenError extends ApiError {
 export class ConflictError extends ApiError {
   constructor(message: string, details: ApiErrorDetail[]) {
     super(409, "CONFLICT", message, details);
+  }
+}
+
+export class SubscriptionRequiredError extends ApiError {
+  constructor(message = "An active subscription is required") {
+    super(402, "SUBSCRIPTION_REQUIRED", message);
+  }
+}
+
+export class BillingUnavailableError extends ApiError {
+  constructor(message: string) {
+    super(503, "BILLING_UNAVAILABLE", message);
   }
 }

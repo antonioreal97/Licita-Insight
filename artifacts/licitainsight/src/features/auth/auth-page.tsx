@@ -77,9 +77,9 @@ export default function AuthPage() {
     <div className="grid min-h-[100dvh] bg-background text-foreground lg:grid-cols-[.9fr_1.1fr]">
       <div className="hidden bg-sidebar p-10 text-sidebar-strong-foreground lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">LI</span>
+          <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
           <span className="font-semibold">
-            Licita <span className="text-sidebar-primary">Insight</span>
+            Licit<span className="text-sidebar-primary">AI</span>
           </span>
         </Link>
         <div>
@@ -94,9 +94,9 @@ export default function AuthPage() {
       <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[400px]">
           <Link href="/" className="mb-12 flex items-center gap-2.5 lg:hidden">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar text-xs font-bold text-sidebar-primary">LI</span>
+            <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
             <span className="font-semibold">
-              Licita <span className="text-primary">Insight</span>
+              Licit<span className="text-primary">AI</span>
             </span>
           </Link>
           <div className="mb-8">

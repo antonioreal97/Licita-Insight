@@ -29,4 +29,33 @@ router.get("/v1/ingest/pncp", async (_req, res, next) => {
   }
 });
 
+router.post("/v1/ingest/opportunities", async (_req, res, next) => {
+  try {
+    const { CultureIngestInProgressError, startCultureIngest } = await import(
+      "../ingest/collect-opportunities"
+    );
+    try {
+      const run = await startCultureIngest();
+      res.status(202).json(run);
+    } catch (error) {
+      if (error instanceof CultureIngestInProgressError) {
+        next(new ApiError(409, "INGEST_IN_PROGRESS", error.message));
+        return;
+      }
+      throw error;
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/v1/ingest/opportunities", async (_req, res, next) => {
+  try {
+    const { getLatestCultureIngest } = await import("../ingest/collect-opportunities");
+    res.json(await getLatestCultureIngest());
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

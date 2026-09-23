@@ -66,6 +66,10 @@ function describe(error: unknown) {
       return { title: 'Acesso negado', detail: 'Sua conta não tem permissão para ver este conteúdo.' };
     case 'CONFLICT':
       return { title: 'Os dados mudaram', detail: 'Esta informação foi alterada em outra aba ou dispositivo. Tente novamente.' };
+    case 'SUBSCRIPTION_REQUIRED':
+      return { title: 'Assinatura necessária', detail: 'Assine para salvar e acompanhar editais.' };
+    case 'BILLING_UNAVAILABLE':
+      return { title: 'Pagamento indisponível', detail: error.message };
     default:
       return { title: 'Não foi possível carregar', detail: 'Ocorreu um erro no servidor.' };
   }

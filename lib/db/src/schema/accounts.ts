@@ -161,3 +161,30 @@ export const notificationsTable = pgTable(
       .where(sql`${table.readAt} is null`),
   ],
 );
+
+export const subscriptionsTable = pgTable(
+  "subscriptions",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    status: text("status").notNull(),
+    asaasCustomerId: text("asaas_customer_id"),
+    asaasPaymentLinkId: text("asaas_payment_link_id"),
+    asaasCheckoutUrl: text("asaas_checkout_url"),
+    asaasSubscriptionId: text("asaas_subscription_id"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("subscriptions_payment_link_uidx")
+      .on(table.asaasPaymentLinkId)
+      .where(sql`${table.asaasPaymentLinkId} is not null`),
+    uniqueIndex("subscriptions_asaas_subscription_uidx")
+      .on(table.asaasSubscriptionId)
+      .where(sql`${table.asaasSubscriptionId} is not null`),
+    index("subscriptions_asaas_customer_idx").on(table.asaasCustomerId),
+  ],
+);

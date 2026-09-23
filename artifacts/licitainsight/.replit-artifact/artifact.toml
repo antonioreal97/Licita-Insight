@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Licita Insight"
+title = "LicitAI"
 description = "Uma plataforma de inteligência para pesquisar, avaliar, salvar e acompanhar oportunidades de licitação pública com uma experiência clara, rápida e orientada a dados."
 version = "1.0.0"
 id = "artifacts/licitainsight"

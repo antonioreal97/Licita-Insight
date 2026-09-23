@@ -1,13 +1,22 @@
+import { useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Info, LogOut } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
+import { isApiError, type BillingResponse } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
+import { ErrorState } from '@/components/common/query-states';
 import { UserAvatar } from '@/components/app-shell';
+import { useBilling } from '@/features/billing/hooks/use-billing';
 import { useSession, useSignOut } from '@/features/auth/hooks/use-session';
-import { formatDate } from '@/lib/format';
+import { toast } from '@/hooks/use-toast';
+import { formatCurrencyPrecise, formatDate } from '@/lib/format';
+import { accountService } from '@/services/account-service';
+import { queryKeys } from '@/services/query-keys';
 
 // TODO(settings): no preferences API yet. Profile comes from the Google session (read-only); nothing here pretends to persist.
 const sections = [
+  { name: 'Assinatura', soon: false },
   { name: 'Perfil e conta', soon: false },
   { name: 'Notificações', soon: false },
   { name: 'Preferências de busca', soon: true },
@@ -36,7 +45,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageTitle eyebrow="workspace" title="Configurações" description="Sua conta e como o Licita Insight avisa você." />
+      <PageTitle eyebrow="workspace" title="Configurações" description="Sua conta e como o LicitAI avisa você." />
       <p
         role="note"
         data-testid="text-settings-readonly"
@@ -60,6 +69,7 @@ export default function SettingsPage() {
           ))}
         </ul>
         <div className="space-y-6">
+          <BillingSection />
           <section aria-labelledby="settings-profile" className="rounded-xl border border-border bg-card p-5 sm:p-7">
             <h2 id="settings-profile" className="type-section">
               Perfil e conta
@@ -111,5 +121,137 @@ export default function SettingsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function billingCopy(billing: BillingResponse): string {
+  const until = billing.currentPeriodEnd ? formatDate(billing.currentPeriodEnd) : null;
+  switch (billing.status) {
+    case 'active':
+      return until ? `Assinatura ativa até ${until}.` : 'Assinatura ativa.';
+    case 'pending':
+      return 'Pagamento pendente. Conclua no Asaas para liberar salvar e monitorar.';
+    case 'past_due':
+      return 'Pagamento em atraso. A assinatura está pausada até a regularização.';
+    case 'canceled':
+      return billing.entitled && until ? `Cancelada. O acesso segue até ${until}.` : 'Assinatura encerrada.';
+    default:
+      return 'Você ainda não assinou. A busca e o detalhe do edital continuam abertos.';
+  }
+}
+
+function checkoutLabel(billing: BillingResponse): string {
+  if (billing.status === 'pending') return 'Continuar pagamento';
+  if (billing.status === 'past_due') return 'Regularizar pagamento';
+  return 'Assinar';
+}
+
+function billingErrorMessage(error: unknown, fallback: string) {
+  if (isApiError(error) && error.code === 'BILLING_UNAVAILABLE') return error.message;
+  return fallback;
+}
+
+function BillingSection() {
+  const search = useSearch();
+  const billingFlag = new URLSearchParams(search).get('billing');
+  const billing = useBilling();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (billingFlag !== 'return' || billing.data?.entitled) return;
+    const timer = window.setInterval(() => {
+      void billing.refetch();
+    }, 2000);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 20_000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [billing.data?.entitled, billing.refetch, billingFlag]);
+
+  const checkout = useMutation({
+    mutationFn: () => accountService.startCheckout(),
+    onSuccess: ({ url }) => {
+      if (!url.startsWith('https://')) {
+        console.error('[billing] Checkout URL rejeitada.');
+        toast({ variant: 'destructive', title: 'Pagamento indisponível', description: 'O link de pagamento não é válido.' });
+        return;
+      }
+      window.location.assign(url);
+    },
+    onError: (error) => {
+      console.error('[billing] Falha ao abrir o checkout.', error);
+      toast({
+        variant: 'destructive',
+        title: 'Pagamento indisponível',
+        description: billingErrorMessage(error, 'Não foi possível abrir o pagamento. Tente de novo.'),
+      });
+    },
+  });
+
+  const cancel = useMutation({
+    mutationFn: () => accountService.cancelBilling(),
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKeys.me.billing, next);
+      toast({
+        title: 'Assinatura cancelada',
+        description: next.entitled ? 'O acesso segue até o fim do período já pago.' : 'A assinatura foi encerrada.',
+      });
+    },
+    onError: (error) => {
+      console.error('[billing] Falha ao cancelar a assinatura.', error);
+      toast({
+        variant: 'destructive',
+        title: 'Não foi possível cancelar',
+        description: billingErrorMessage(error, 'Tente de novo.'),
+      });
+    },
+  });
+
+  return (
+    <section aria-labelledby="settings-billing" className="rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="section-billing">
+      <h2 id="settings-billing" className="type-section">
+        Assinatura
+      </h2>
+      <p className="mt-1 type-meta text-muted-foreground">
+        Um plano mensal libera salvar editais, guardar buscas e receber alertas no app.
+        {billing.data?.monthlyBrl != null ? ` ${formatCurrencyPrecise(billing.data.monthlyBrl)} por mês.` : ''}
+      </p>
+      {billingFlag === 'required' && (
+        <p role="status" data-testid="text-billing-required" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground">
+          Assine para salvar e acompanhar editais.
+        </p>
+      )}
+      {billingFlag === 'return' && (
+        <p role="status" data-testid="text-billing-return" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground">
+          {billing.data?.entitled ? 'Pagamento confirmado.' : 'Confirmando o pagamento…'}
+        </p>
+      )}
+      {billing.isError ? (
+        <div className="mt-5">
+          <ErrorState error={billing.error} onRetry={() => billing.refetch()} />
+        </div>
+      ) : !billing.data ? (
+        <p className="mt-5 type-meta text-muted-foreground">Carregando assinatura…</p>
+      ) : (
+        <>
+          <p data-testid="text-billing-status" className="mt-5 type-ui text-foreground">
+            {billingCopy(billing.data)}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {!billing.data.entitled && (
+              <Button data-testid="button-billing-checkout" loading={checkout.isPending} onClick={() => checkout.mutate()}>
+                {checkoutLabel(billing.data)}
+              </Button>
+            )}
+            {billing.data.canCancel && (
+              <Button variant="outline" data-testid="button-billing-cancel" loading={cancel.isPending} onClick={() => cancel.mutate()}>
+                Cancelar assinatura
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+    </section>
   );
 }

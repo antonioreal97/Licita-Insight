@@ -1,6 +1,7 @@
 import app from "./app";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
-import { startDailyPncpCollect } from "./ingest/daily-collect";
+import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
+import { startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
 import { logger } from "./lib/logger";
 
 const rawPort = process.env["PORT"];
@@ -20,6 +21,7 @@ if (Number.isNaN(port) || port <= 0) {
 const start = async (): Promise<void> => {
   try {
     await abandonStalePncpRuns();
+    await abandonStaleCultureRuns();
   } catch (error) {
     logger.error({ err: error }, "Failed to reconcile stale PNCP ingest runs");
   }
@@ -32,6 +34,7 @@ const start = async (): Promise<void> => {
 
     logger.info({ port }, "Server listening");
     startDailyPncpCollect();
+    startDailyCultureCollect();
   });
 };
 

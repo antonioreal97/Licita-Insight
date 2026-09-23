@@ -4,8 +4,14 @@ import { db, sessionsTable, usersTable } from "@workspace/db";
 import type { User } from "@workspace/api-zod";
 import { randomToken, sha256, type GoogleIdentity } from "./tokens";
 
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
-const SESSION_REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
+export const SESSION_IDLE_MS = 10 * 60 * 1000;
+const SESSION_TOUCH_AFTER_MS = 60 * 1000;
+
+/** Extends the session by one idle window, at most once a minute. */
+export const renewedExpiry = (lastSeenAt: Date, now: Date): Date | null => {
+  if (now.getTime() - lastSeenAt.getTime() < SESSION_TOUCH_AFTER_MS) return null;
+  return new Date(now.getTime() + SESSION_IDLE_MS);
+};
 
 type UserRow = typeof usersTable.$inferSelect;
 
@@ -108,7 +114,7 @@ export const createSession = async (
   now = new Date(),
 ): Promise<AuthSession> => {
   const token = randomToken();
-  const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
+  const expiresAt = new Date(now.getTime() + SESSION_IDLE_MS);
   await db.insert(sessionsTable).values({
     id: sha256(token),
     userId,
@@ -139,11 +145,15 @@ export const readSession = async (
     .limit(1);
   if (!row) return null;
 
-  const shouldRenew =
-    row.session.lastSeenAt.getTime() <= now.getTime() - SESSION_REFRESH_AFTER_MS;
-  const renewedUntil = shouldRenew
-    ? new Date(now.getTime() + SESSION_DURATION_MS)
-    : null;
+  if (now.getTime() - row.session.lastSeenAt.getTime() >= SESSION_IDLE_MS) {
+    await db
+      .update(sessionsTable)
+      .set({ revokedAt: now })
+      .where(and(eq(sessionsTable.id, sessionId), isNull(sessionsTable.revokedAt)));
+    return null;
+  }
+
+  const renewedUntil = renewedExpiry(row.session.lastSeenAt, now);
   if (renewedUntil) {
     await db
       .update(sessionsTable)
