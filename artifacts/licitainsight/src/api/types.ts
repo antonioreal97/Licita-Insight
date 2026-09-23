@@ -69,6 +69,8 @@ export type TenderSummary = {
   modalityLabel: string;
   status: TenderStatus;
   tenderNumber: string | null;
+  /** v1.1: number without the modality prefix (e.g. "26000415/2026"). */
+  tenderNumberShort?: string | null;
   estimatedValue: number | null;
   /** v1.1: why the value is null. */
   estimatedValueStatus?: 'disclosed' | 'confidential' | 'not_published';

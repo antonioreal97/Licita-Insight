@@ -25,7 +25,9 @@ const fold = (text: string) =>
  * `tenderNumber` without the leading modality phrase: "Pregão - Eletrônico 26000415/2026" → "26000415/2026".
  * Accent-, case- and punctuation-insensitive; checks the source label and our normalized label. Returns the original when nothing matches.
  */
-export function shortTenderNumber(tender: Pick<TenderSummary, 'tenderNumber' | 'modalityLabel'>, modalityLabel?: string): string | null {
+export function shortTenderNumber(tender: Pick<TenderSummary, 'tenderNumber' | 'tenderNumberShort' | 'modalityLabel'>, modalityLabel?: string): string | null {
+  // Servers ≥ CLAUDE_HANDOFF-003 send it; the prefix-stripping below is the fallback for older ones.
+  if (tender.tenderNumberShort) return tender.tenderNumberShort;
   const number = tender.tenderNumber;
   if (!number) return null;
   const folded = fold(number);
