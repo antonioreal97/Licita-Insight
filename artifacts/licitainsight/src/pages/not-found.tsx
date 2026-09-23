@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Compass } from 'lucide-react';
 
 export default function NotFound() {
+  useEffect(() => {
+    document.title = 'Página não encontrada · Licita Insight';
+  }, []);
   return (
-    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 text-foreground">
+    <main id="conteudo" tabIndex={-1} className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 text-foreground outline-none">
       <div className="w-full max-w-md rounded-xl border border-border bg-surface p-7">
         <div className="mb-5 grid h-10 w-10 place-items-center rounded-lg bg-primary-subtle text-primary-subtle-foreground">
           <Compass size={20} aria-hidden="true" />
@@ -29,6 +33,6 @@ export default function NotFound() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

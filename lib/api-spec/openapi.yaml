@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: search
     description: Tender discovery operations
+  - name: account
+    description: Authentication and personal account operations
 paths:
   /healthz:
     get:
@@ -122,7 +124,353 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/SearchUnavailable"
+  /v1/auth/google/start:
+    get:
+      operationId: startGoogleAuth
+      tags: [account]
+      summary: Start Google OAuth with PKCE
+      parameters:
+        - name: returnTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to Google authorization
+  /v1/auth/google/callback:
+    get:
+      operationId: completeGoogleAuth
+      tags: [account]
+      summary: Complete Google OAuth
+      responses:
+        "302":
+          description: Redirect to the application
+  /v1/auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [account]
+      summary: Get the authenticated user
+      responses:
+        "200":
+          description: Active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [account]
+      summary: Revoke the current session
+      responses:
+        "204":
+          description: Session revoked or already absent
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/auth/dev-login:
+    post:
+      operationId: devLogin
+      tags: [account]
+      summary: Create a development-only session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DevLoginRequest"
+      responses:
+        "204":
+          description: Development session created
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/me/saved-tenders:
+    get:
+      operationId: listSavedTenders
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: monitored
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Saved tender page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedTenderPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/saved-tenders/ids:
+    get:
+      operationId: getSavedTenderIds
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Saved and monitored tender ids
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedTenderIds"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/saved-tenders/import:
+    post:
+      operationId: importSavedTenders
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportSavedTendersRequest"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedTenderImportResult"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/saved-tenders/{tenderId}:
+    parameters:
+      - name: tenderId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    put:
+      operationId: putSavedTender
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutSavedTenderRequest"
+      responses:
+        "200":
+          description: Saved tender
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedTender"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: deleteSavedTender
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204":
+          description: Saved tender deleted or already absent
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/saved-searches:
+    get:
+      operationId: listSavedSearches
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Saved searches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearchList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createSavedSearch
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSavedSearchRequest"
+      responses:
+        "201":
+          description: Saved search created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearch"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/me/saved-searches/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    patch:
+      operationId: updateSavedSearch
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSavedSearchRequest"
+      responses:
+        "200":
+          description: Saved search updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearch"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteSavedSearch
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204":
+          description: Saved search deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/me/saved-searches/{id}/seen:
+    post:
+      operationId: markSavedSearchSeen
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Saved search counters cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearch"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/me/notifications:
+    get:
+      operationId: listNotifications
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/Page"
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Notification page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Unread notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationCount"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkNotificationsReadRequest"
+      responses:
+        "200":
+          description: Remaining unread notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationCount"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: licita_session
   parameters:
     Query:
       name: q
@@ -301,6 +649,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    Unauthenticated:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The request is forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Resource limit or state conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -308,6 +674,41 @@ components:
         status:
           type: string
       required: [status]
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: [string, "null"]
+        avatarUrl:
+          type: [string, "null"]
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, name, avatarUrl, createdAt]
+    AuthSessionResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+      required: [user]
+    DevLoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required: [email]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -414,6 +815,9 @@ components:
           $ref: "#/components/schemas/TenderStatus"
         tenderNumber:
           type: [string, "null"]
+        tenderNumberShort:
+          type: [string, "null"]
+          description: Source-normalized tender number without the modality prefix.
         estimatedValue:
           type: [number, "null"]
         estimatedValueStatus:
@@ -546,6 +950,190 @@ components:
               format: date-time
           required:
             [description, processNumber, items, documents, timeline, createdAt]
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        totalIsEstimate:
+          type: boolean
+      required: [page, pageSize, total, totalPages, totalIsEstimate]
+    SavedTender:
+      type: object
+      properties:
+        tender:
+          $ref: "#/components/schemas/TenderSummary"
+        savedAt:
+          type: string
+          format: date-time
+        monitored:
+          type: boolean
+        monitoredAt:
+          type: [string, "null"]
+          format: date-time
+      required: [tender, savedAt, monitored, monitoredAt]
+    SavedTenderPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedTender"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required: [data, pagination]
+    SavedTenderIds:
+      type: object
+      properties:
+        saved:
+          type: array
+          items: { type: string }
+        monitored:
+          type: array
+          items: { type: string }
+      required: [saved, monitored]
+    PutSavedTenderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        monitored:
+          type: boolean
+    ImportSavedTendersRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          maxItems: 500
+          items:
+            type: string
+            minLength: 1
+      required: [ids]
+    SavedTenderImportResult:
+      type: object
+      properties:
+        imported: { type: integer, minimum: 0 }
+        alreadySaved: { type: integer, minimum: 0 }
+        notFound:
+          type: array
+          items: { type: string }
+        skippedByLimit: { type: integer, minimum: 0 }
+      required: [imported, alreadySaved, notFound, skippedByLimit]
+    SavedSearch:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        query: { type: string }
+        alertsEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lastCheckedAt: { type: [string, "null"], format: date-time }
+        newMatchesCount: { type: integer, minimum: 0 }
+      required:
+        [id, name, query, alertsEnabled, createdAt, updatedAt, lastCheckedAt, newMatchesCount]
+    SavedSearchList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedSearch"
+      required: [data]
+    CreateSavedSearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        query: { type: string, maxLength: 2000 }
+        alertsEnabled: { type: boolean }
+      required: [name, query, alertsEnabled]
+    UpdateSavedSearchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        query: { type: string, maxLength: 2000 }
+        alertsEnabled: { type: boolean }
+    NotificationType:
+      type: string
+      enum:
+        [tender_deadline_changed, tender_status_changed, tender_document_added, tender_value_changed, saved_search_new_matches]
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+        tender:
+          anyOf:
+            - type: object
+              properties:
+                id: { type: string }
+                title: { type: string }
+                tenderNumberShort: { type: [string, "null"] }
+              required: [id, title, tenderNumberShort]
+            - type: "null"
+        change:
+          anyOf:
+            - type: object
+              properties:
+                field: { type: string }
+                from:
+                  type: [string, number, "null"]
+                to:
+                  type: [string, number, "null"]
+              required: [field, from, to]
+            - type: "null"
+        savedSearch:
+          anyOf:
+            - type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                query: { type: string }
+              required: [id, name, query]
+            - type: "null"
+        matchCount: { type: [integer, "null"] }
+        tenderIds:
+          type: array
+          maxItems: 20
+          items: { type: string }
+      required: [id, type, createdAt, readAt, tender, change, savedSearch, matchCount, tenderIds]
+    NotificationPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        unreadCount: { type: integer, minimum: 0 }
+      required: [data, pagination, unreadCount]
+    UnreadNotificationCount:
+      type: object
+      properties:
+        unreadCount: { type: integer, minimum: 0 }
+      required: [unreadCount]
+    MarkNotificationsReadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          maxItems: 100
+          items: { type: string, minLength: 1 }
+        all: { type: boolean }
     FacetBucket:
       type: object
       properties:
@@ -736,6 +1324,9 @@ components:
               RATE_LIMITED,
               INTERNAL_ERROR,
               SEARCH_UNAVAILABLE,
+              UNAUTHENTICATED,
+              FORBIDDEN,
+              CONFLICT,
             ]
         message:
           type: string

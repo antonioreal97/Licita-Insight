@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Licita Insight</title>
-    <meta name="description" content="Licita Insight — built on Replit. Update this description to reflect the app." />
+    <meta name="description" content="Licita Insight: pesquise, avalie e acompanhe editais de licitações públicas publicados no PNCP." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Licita Insight" />
-    <meta property="og:description" content="Licita Insight — built on Replit. Update this description to reflect the app." />
+    <meta property="og:description" content="Licita Insight: pesquise, avalie e acompanhe editais de licitações públicas publicados no PNCP." />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Licita Insight" />
-    <meta name="twitter:description" content="Licita Insight — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:description" content="Licita Insight: pesquise, avalie e acompanhe editais de licitações públicas publicados no PNCP." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      // Applies the saved theme before first paint, on every route (the AppShell toggle writes this key).
+      try {
+        if (localStorage.getItem('licita-theme') === 'dark') document.documentElement.classList.add('dark');
+      } catch (error) {
+        console.error('Não foi possível ler o tema salvo (licita-theme).', error);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

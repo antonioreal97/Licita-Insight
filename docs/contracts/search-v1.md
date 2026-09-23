@@ -115,7 +115,7 @@ type FacetBucket = { value: string; label: string; count: number };
 
 type TenderSummary = {
   id: string;                        // estável, URL-safe
-  title: string;                     // objeto resumido
+  title: string;                     // objeto oficial, preservado sem reescrita
   objectSummary: string | null;      // até ~300 chars
   organization: { id: string; name: string };
   purchasingUnit: string | null;
@@ -123,6 +123,7 @@ type TenderSummary = {
   modalityLabel: string;             // rótulo original da fonte
   status: TenderStatus;
   tenderNumber: string | null;       // ex. "Pregão Eletrônico 042/2024"
+  tenderNumberShort?: string | null; // ex. "042/2024", sem prefixo da modalidade
   estimatedValue: number | null;
   publishedAt: string | null;
   openingAt: string | null;
@@ -208,6 +209,14 @@ type ValueHistogramBucket = {
 valor é `null`, diferencia sigilo (`confidential`) de ausência de publicação
 (`not_published`).
 
+Para registros PNCP, a classificação usa exclusivamente os campos estruturados
+`orcamentoSigilosoCodigo` e `orcamentoSigilosoDescricao`: código `1` significa compra sem sigilo;
+códigos `2` e `3` significam compra parcial ou totalmente sigilosa e resultam em
+`estimatedValue: null` com `estimatedValueStatus: confidential`. O backend não infere sigilo a
+partir de `objetoCompra` ou outro texto livre.
+
+Referência de domínio: [Manual de Integração do PNCP](https://pncp.gov.br/manual/pt-br/latest/singlehtml/).
+
 Quando `facets` é `true`, o objeto passa a incluir:
 
 ```ts
@@ -255,6 +264,55 @@ caracteres e `not_available` nos demais casos.
 Em `/api/v1/search/suggestions`, `count` representa o número de licitações que a sugestão
 retornaria e é preenchido para sugestões de termo, organização e categoria enquanto esse
 cálculo permanecer barato.
+
+---
+
+## Aditivo — qualidade dos dados PNCP
+
+Esta revisão é aditiva e explicita a proveniência dos campos PNCP já expostos. Não existe
+mudança de rota ou de parâmetro.
+
+### Datas do PNCP
+
+| Campo público | Campo PNCP | Semântica |
+|---|---|---|
+| `publishedAt` | `dataPublicacaoPncp` | publicação do registro no PNCP |
+| `openingAt` | `dataAberturaProposta` | início do recebimento de propostas; não representa sessão pública |
+| `proposalDeadline` | `dataEncerramentoProposta` | encerramento do recebimento de propostas |
+
+O payload de publicação atualmente consumido não fornece uma data de sessão pública separada.
+Por isso, clientes devem rotular `openingAt` como **Início das propostas**. O adapter não infere
+uma sessão a partir de outros campos.
+
+### Campos derivados
+
+`TenderSummary` e, por herança, `TenderDetail` passam a incluir:
+
+```ts
+{
+  tenderNumberShort?: string | null;
+}
+```
+
+Para o PNCP, `tenderNumberShort` é formado por `numeroCompra/anoCompra`, usando o ano de
+`numeroControlePNCP` somente como fallback. `tenderNumber` permanece com o rótulo original da
+modalidade para preservar compatibilidade. `title` preserva integralmente `objetoCompra`, enquanto
+`objectSummary` é uma síntese mecânica de no máximo 300 caracteres, cortada no limite de palavra e
+finalizada com `…`, sem reescrever o texto oficial.
+
+### Facets e relevância
+
+Os labels canônicos de facets são:
+
+- status: `Aberto`, `Em análise`, `Encerrado`, `Suspenso`, `Revogado`;
+- modalidades: `Pregão eletrônico`, `Pregão presencial`, `Concorrência`,
+  `Concorrência eletrônica`, `Dispensa`, `Inexigibilidade`, `Credenciamento`, `Leilão`,
+  `Diálogo competitivo`, `Outra`.
+
+Quando `sort=relevance` e existe consulta, o score é normalizado entre o menor e o maior score
+da página retornada. Se todos os resultados da página tiverem a mesma pontuação, `score` é `null`
+para não comunicar uma diferença inexistente. A ordenação continua usando a pontuação bruta e os
+highlights permanecem disponíveis.
 
 ---
 

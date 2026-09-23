@@ -1,4 +1,5 @@
 import app from "./app";
+import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { startDailyPncpCollect } from "./ingest/daily-collect";
 import { logger } from "./lib/logger";
 
@@ -16,12 +17,22 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
+const start = async (): Promise<void> => {
+  try {
+    await abandonStalePncpRuns();
+  } catch (error) {
+    logger.error({ err: error }, "Failed to reconcile stale PNCP ingest runs");
   }
 
-  logger.info({ port }, "Server listening");
-  startDailyPncpCollect();
-});
+  app.listen(port, (err) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
+
+    logger.info({ port }, "Server listening");
+    startDailyPncpCollect();
+  });
+};
+
+void start();

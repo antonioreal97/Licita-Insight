@@ -17,24 +17,24 @@ import type {
 import { normalizeText, queryTokens } from "../domain/normalize";
 
 export const statusLabels: Record<TenderStatus, string> = {
-  open: "Aberta",
+  open: "Aberto",
   under_review: "Em análise",
-  closed: "Encerrada",
-  suspended: "Suspensa",
-  cancelled: "Cancelada",
+  closed: "Encerrado",
+  suspended: "Suspenso",
+  cancelled: "Revogado",
 };
 
 export const modalityLabels: Record<Modality, string> = {
-  pregao_eletronico: "Pregão Eletrônico",
-  pregao_presencial: "Pregão Presencial",
+  pregao_eletronico: "Pregão eletrônico",
+  pregao_presencial: "Pregão presencial",
   concorrencia: "Concorrência",
-  concorrencia_eletronica: "Concorrência Eletrônica",
-  dispensa: "Dispensa de Licitação",
+  concorrencia_eletronica: "Concorrência eletrônica",
+  dispensa: "Dispensa",
   inexigibilidade: "Inexigibilidade",
   credenciamento: "Credenciamento",
   leilao: "Leilão",
-  dialogo_competitivo: "Diálogo Competitivo",
-  other: "Outra modalidade",
+  dialogo_competitivo: "Diálogo competitivo",
+  other: "Outra",
 };
 
 const tenderSearchFields = (tender: TenderDetail) => ({
@@ -462,6 +462,33 @@ export const toSummary = (
   };
 };
 
+export const normalizePageRelevance = (
+  summaries: TenderSummary[],
+): TenderSummary[] => {
+  const scores = summaries
+    .map((summary) => summary.relevance.score)
+    .filter((score): score is number => score !== null);
+  if (scores.length === 0) return summaries;
+
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const hasDiscrimination = max - min > Number.EPSILON;
+
+  return summaries.map((summary) => {
+    const score = summary.relevance.score;
+    return {
+      ...summary,
+      relevance: {
+        ...summary.relevance,
+        score:
+          score === null || !hasDiscrimination
+            ? null
+            : Number(((score - min) / (max - min)).toFixed(4)),
+      },
+    };
+  });
+};
+
 export class SearchService {
   constructor(private readonly repository: TenderRepository) {}
 
@@ -515,7 +542,9 @@ export class SearchService {
     const offset = (criteria.page - 1) * criteria.pageSize;
 
     return {
-      data: summaries.slice(offset, offset + criteria.pageSize),
+      data: normalizePageRelevance(
+        summaries.slice(offset, offset + criteria.pageSize),
+      ),
       pagination: {
         page: criteria.page,
         pageSize: criteria.pageSize,

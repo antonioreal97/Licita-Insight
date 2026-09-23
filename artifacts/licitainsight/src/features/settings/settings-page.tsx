@@ -1,69 +1,110 @@
-import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Info, LogOut } from 'lucide-react';
+import { Link } from 'wouter';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
+import { UserAvatar } from '@/components/app-shell';
+import { useSession, useSignOut } from '@/features/auth/hooks/use-session';
+import { formatDate } from '@/lib/format';
+
+// TODO(settings): no preferences API yet. Profile comes from the Google session (read-only); nothing here pretends to persist.
+const sections = [
+  { name: 'Perfil e conta', soon: false },
+  { name: 'Notificações', soon: false },
+  { name: 'Preferências de busca', soon: true },
+  { name: 'Aparência', soon: true },
+];
+
+const alertRows = [
+  {
+    name: 'Novos resultados',
+    desc: 'Ative alertas em uma busca salva para saber quando surgirem editais novos.',
+    href: '/saved-searches',
+    cta: 'Buscas salvas',
+  },
+  {
+    name: 'Mudanças em editais',
+    desc: 'Monitore um edital para ser avisado quando prazo, status, valor ou documentos mudarem.',
+    href: '/monitoring',
+    cta: 'Monitoramento',
+  },
+];
 
 export default function SettingsPage() {
-  const [saved, setSaved] = useState(false);
+  // Rendered inside <RequireAuth>, so the session is known here.
+  const { user } = useSession();
+  const signOut = useSignOut();
+
   return (
     <>
-      <PageTitle eyebrow="workspace" title="Configurações" description="Ajuste como o Licita Insight trabalha para você." />
+      <PageTitle eyebrow="workspace" title="Configurações" description="Sua conta e como o Licita Insight avisa você." />
+      <p
+        role="note"
+        data-testid="text-settings-readonly"
+        className="mb-6 flex items-start gap-2 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-muted-foreground"
+      >
+        <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
+        Nome, e-mail e foto vêm da sua conta Google e não são editados aqui. Preferências de busca e aparência ainda não são configuráveis.
+      </p>
       <div className="grid gap-6 xl:grid-cols-[220px_1fr]">
-        <nav className="flex gap-2 overflow-x-auto xl:block xl:space-y-1">
-          {['Perfil e conta', 'Preferências de busca', 'Notificações', 'Aparência'].map((item, index) => (
-            <button
-              key={item}
+        {/* Section list, not tabs: the page is short enough to scroll; later sections are labelled as coming later. */}
+        <ul aria-label="Seções" className="flex gap-2 overflow-x-auto xl:block xl:space-y-1">
+          {sections.map(({ name, soon }, index) => (
+            <li
+              key={name}
               data-testid={`button-settings-${index}`}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-left text-xs font-semibold ${index === 0 ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+              className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${soon ? 'text-muted-foreground' : 'text-foreground'}`}
             >
-              {item}
-            </button>
+              {name}
+              {soon && <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>}
+            </li>
           ))}
-        </nav>
+        </ul>
         <div className="space-y-6">
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-7">
-            <h2 className="text-base font-semibold">Perfil e conta</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Informações usadas para personalizar seu workspace.</p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <label className="field">
-                Nome completo
-                <input data-testid="input-settings-name" defaultValue="Marina Almeida" />
-              </label>
-              <label className="field">
-                E-mail profissional
-                <input data-testid="input-settings-email" defaultValue="marina@atlasengenharia.com.br" />
-              </label>
-              <label className="field sm:col-span-2">
-                Empresa
-                <input data-testid="input-settings-company" defaultValue="Atlas Engenharia e Projetos" />
-              </label>
-            </div>
-            <Button data-testid="button-save-settings" onClick={() => setSaved(true)} className="mt-5">
-              {saved ? <Check size={14} /> : null}
-              {saved ? 'Alterações salvas' : 'Salvar alterações'}
-            </Button>
+          <section aria-labelledby="settings-profile" className="rounded-xl border border-border bg-card p-5 sm:p-7">
+            <h2 id="settings-profile" className="type-section">
+              Perfil e conta
+            </h2>
+            {user && (
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <UserAvatar user={user} className="size-14" />
+                <div className="min-w-0 flex-1">
+                  <div data-testid="text-settings-name" className="truncate type-body font-semibold">
+                    {user.name ?? 'Nome não informado'}
+                  </div>
+                  <div data-testid="text-settings-email" className="truncate type-ui text-muted-foreground">
+                    {user.email}
+                  </div>
+                  <div className="mt-1 type-meta text-muted-foreground">
+                    Conta Google · desde <span className="type-data">{formatDate(user.createdAt)}</span>
+                  </div>
+                </div>
+                <Button variant="outline" data-testid="button-settings-sign-out" loading={signOut.isPending} onClick={() => signOut.mutate()}>
+                  <LogOut size={14} aria-hidden />
+                  Sair
+                </Button>
+              </div>
+            )}
           </section>
-          <section className="rounded-xl border border-border bg-card p-5 sm:p-7">
-            <h2 className="text-base font-semibold">Notificações</h2>
+          <section aria-labelledby="settings-notifications" className="rounded-xl border border-border bg-card p-5 sm:p-7">
+            <h2 id="settings-notifications" className="type-section">
+              Notificações
+            </h2>
+            <p className="mt-1 type-meta text-muted-foreground">Os avisos aparecem no sino, no topo da página. Não enviamos e-mails.</p>
             <div className="mt-5 divide-y divide-border">
-              {[
-                ['Novos resultados', 'Receba oportunidades que combinam com suas buscas salvas.'],
-                ['Mudanças em editais', 'Seja avisada quando prazos, valores ou documentos mudarem.'],
-                ['Resumo semanal', 'Uma visão compacta do que aconteceu no seu radar.'],
-              ].map(([name, desc], index) => (
-                <label key={name} className="flex cursor-pointer items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
-                  <span>
-                    <span className="block text-sm font-medium">{name}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">{desc}</span>
+              {alertRows.map(({ name, desc, href, cta }, index) => (
+                <div
+                  key={name}
+                  data-testid={`row-notification-${index}`}
+                  className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block type-ui font-medium">{name}</span>
+                    <span className="mt-0.5 block type-meta text-muted-foreground">{desc}</span>
                   </span>
-                  <input
-                    aria-label={name}
-                    data-testid={`checkbox-notification-${index}`}
-                    type="checkbox"
-                    defaultChecked={index < 2}
-                    className="h-4 w-4 accent-[hsl(var(--primary))]"
-                  />
-                </label>
+                  <Link href={href} className="type-ui font-semibold text-primary hover:underline">
+                    {cta}
+                  </Link>
+                </div>
               ))}
             </div>
           </section>

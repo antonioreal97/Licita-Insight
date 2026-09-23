@@ -1,14 +1,13 @@
-import { AlarmClock, Ban, CalendarClock, CalendarOff, CalendarX2, Hourglass, type LucideIcon } from 'lucide-react';
+import { AlarmClock, Ban, CalendarOff, CalendarX2, Clock3, Hourglass, type LucideIcon } from 'lucide-react';
 import type { TenderStatus } from '@/api/types';
 import { formatDate, formatDateNumeric, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { getDeadlineInfo, type DeadlineUrgency } from '../lib/deadline';
 
 // Urgency is always conveyed by text + icon; color is reinforcement only.
-// DS-DEBT: `soon` uses accent (amber) as a stand-in for a dedicated --warning token.
 const tones: Record<DeadlineUrgency, string> = {
-  critical: 'bg-destructive/10 text-destructive',
-  soon: 'bg-accent/25 text-foreground',
+  critical: 'bg-urgent-subtle text-urgent-subtle-foreground',
+  soon: 'bg-warning-subtle text-warning-subtle-foreground',
   normal: 'text-foreground',
   expired: 'text-muted-foreground',
   inactive: 'text-muted-foreground',
@@ -18,7 +17,7 @@ const tones: Record<DeadlineUrgency, string> = {
 const icons: Record<DeadlineUrgency, LucideIcon> = {
   critical: AlarmClock,
   soon: Hourglass,
-  normal: CalendarClock,
+  normal: Clock3,
   expired: CalendarX2,
   inactive: Ban,
   unknown: CalendarOff,
@@ -48,7 +47,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
     return (
       <span data-urgency={info.urgency} className={cn('flex flex-col items-start gap-0.5', className)}>
         {deadline ? (
-          <time dateTime={deadline} title={formatDateTime(deadline)} className="tabular-nums text-foreground">
+          <time dateTime={deadline} title={formatDateTime(deadline)} className="type-data text-foreground">
             {formatDateNumeric(deadline)}
           </time>
         ) : (
@@ -56,7 +55,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         )}
         <span
           className={cn(
-            'inline-flex items-center gap-1 whitespace-nowrap rounded px-1 text-[10px] font-semibold',
+            'inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-1 text-3xs font-semibold',
             tone,
             !pill(info.urgency) && 'px-0 font-medium',
           )}
@@ -72,7 +71,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
     return (
       <span data-urgency={info.urgency} className={cn('flex flex-col items-start gap-1.5', className)}>
         {deadline ? (
-          <time dateTime={deadline} className="text-sm font-semibold tabular-nums text-foreground">
+          <time dateTime={deadline} className="text-sm font-semibold tabular-nums text-foreground xl:whitespace-nowrap">
             {formatDateTime(deadline)}
           </time>
         ) : (
@@ -80,9 +79,10 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         )}
         {info.urgency !== 'unknown' && (
           <span
-            className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold', tone, !pill(info.urgency) && 'px-0 font-medium')}
+            className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 type-meta font-semibold', tone, !pill(info.urgency) && 'px-0 font-medium')}
           >
-            <Icon size={12} aria-hidden="true" />
+            {/* The fact label above already carries a clock icon; repeat an icon only when it adds urgency. */}
+            {info.urgency !== 'normal' && <Icon size={12} aria-hidden="true" />}
             {info.label}
           </span>
         )}
@@ -103,7 +103,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         {info.label}
       </span>
       {deadline && info.urgency !== 'unknown' && (
-        <time dateTime={deadline} title={formatDateTime(deadline)} className="whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">
+        <time dateTime={deadline} title={formatDateTime(deadline)} className="whitespace-nowrap type-meta tabular-nums text-muted-foreground">
           {formatDate(deadline)}
         </time>
       )}

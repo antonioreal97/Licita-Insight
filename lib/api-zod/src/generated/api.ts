@@ -114,6 +114,7 @@ export const SearchTendersResponse = zod.object({
   "modalityLabel": zod.string(),
   "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
   "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
   "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
   "publishedAt": zod.coerce.date().nullable(),
@@ -241,6 +242,7 @@ export const GetTenderByIdResponse = zod.object({
   "modalityLabel": zod.string(),
   "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
   "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
   "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
   "publishedAt": zod.coerce.date().nullable(),
@@ -318,4 +320,431 @@ export const GetSearchSuggestionsResponse = zod.object({
   "label": zod.string(),
   "count": zod.number().int().nullable().describe('Number of matching tenders; null only when counting is too expensive.')
 }))
+})
+
+
+/**
+ * @summary Start Google OAuth with PKCE
+ */
+export const StartGoogleAuthQueryParams = zod.object({
+  "returnTo": zod.coerce.string().optional()
+})
+
+export const StartGoogleAuthResponse = zod.void()
+
+
+/**
+ * @summary Complete Google OAuth
+ */
+export const CompleteGoogleAuthResponse = zod.void()
+
+
+/**
+ * @summary Get the authenticated user
+ */
+export const GetAuthSessionResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "name": zod.string().nullable(),
+  "avatarUrl": zod.string().url().nullable(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Revoke the current session
+ */
+export const LogoutResponse = zod.void()
+
+
+/**
+ * @summary Create a development-only session
+ */
+export const devLoginBodyNameMax = 120;
+
+
+
+export const DevLoginBody = zod.object({
+  "email": zod.string().email(),
+  "name": zod.string().min(1).max(devLoginBodyNameMax).optional()
+})
+
+export const DevLoginResponse = zod.void()
+
+
+export const listSavedTendersQueryPageDefault = 1;
+
+export const listSavedTendersQueryPageSizeDefault = 20;
+export const listSavedTendersQueryPageSizeMax = 100;
+
+
+
+export const ListSavedTendersQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listSavedTendersQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listSavedTendersQueryPageSizeMax).default(listSavedTendersQueryPageSizeDefault),
+  "monitored": zod.coerce.boolean().optional()
+})
+
+export const listSavedTendersResponseDataItemTenderRelevanceScoreMin = 0;
+export const listSavedTendersResponseDataItemTenderRelevanceScoreMax = 1;
+
+
+
+export const ListSavedTendersResponse = zod.object({
+  "data": zod.array(zod.object({
+  "tender": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "objectSummary": zod.string().nullable(),
+  "organization": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}),
+  "purchasingUnit": zod.string().nullable(),
+  "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
+  "modalityLabel": zod.string(),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
+  "estimatedValue": zod.number().nullable(),
+  "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "openingAt": zod.coerce.date().nullable(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "cityIbgeCode": zod.string().nullable()
+}),
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().url().nullable()
+}),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "relevance": zod.object({
+  "score": zod.number().min(listSavedTendersResponseDataItemTenderRelevanceScoreMin).max(listSavedTendersResponseDataItemTenderRelevanceScoreMax).nullable(),
+  "highlights": zod.array(zod.object({
+  "field": zod.enum(['title', 'objectSummary', 'items']),
+  "fragments": zod.array(zod.string())
+}))
+}),
+  "updatedAt": zod.coerce.date()
+}),
+  "savedAt": zod.coerce.date(),
+  "monitored": zod.boolean(),
+  "monitoredAt": zod.coerce.date().nullable()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+})
+})
+
+
+export const GetSavedTenderIdsResponse = zod.object({
+  "saved": zod.array(zod.string()),
+  "monitored": zod.array(zod.string())
+})
+
+
+
+export const importSavedTendersBodyIdsMax = 500;
+
+
+
+export const ImportSavedTendersBody = zod.object({
+  "ids": zod.array(zod.string().min(1)).max(importSavedTendersBodyIdsMax)
+})
+
+export const importSavedTendersResponseImportedMin = 0;
+
+export const importSavedTendersResponseAlreadySavedMin = 0;
+
+export const importSavedTendersResponseSkippedByLimitMin = 0;
+
+
+
+export const ImportSavedTendersResponse = zod.object({
+  "imported": zod.number().int().min(importSavedTendersResponseImportedMin),
+  "alreadySaved": zod.number().int().min(importSavedTendersResponseAlreadySavedMin),
+  "notFound": zod.array(zod.string()),
+  "skippedByLimit": zod.number().int().min(importSavedTendersResponseSkippedByLimitMin)
+})
+
+
+
+
+
+export const PutSavedTenderParams = zod.object({
+  "tenderId": zod.coerce.string().min(1)
+})
+
+export const PutSavedTenderBody = zod.object({
+  "monitored": zod.boolean().optional()
+})
+
+export const putSavedTenderResponseTenderRelevanceScoreMin = 0;
+export const putSavedTenderResponseTenderRelevanceScoreMax = 1;
+
+
+
+export const PutSavedTenderResponse = zod.object({
+  "tender": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "objectSummary": zod.string().nullable(),
+  "organization": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}),
+  "purchasingUnit": zod.string().nullable(),
+  "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
+  "modalityLabel": zod.string(),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
+  "estimatedValue": zod.number().nullable(),
+  "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "openingAt": zod.coerce.date().nullable(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "cityIbgeCode": zod.string().nullable()
+}),
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().url().nullable()
+}),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "relevance": zod.object({
+  "score": zod.number().min(putSavedTenderResponseTenderRelevanceScoreMin).max(putSavedTenderResponseTenderRelevanceScoreMax).nullable(),
+  "highlights": zod.array(zod.object({
+  "field": zod.enum(['title', 'objectSummary', 'items']),
+  "fragments": zod.array(zod.string())
+}))
+}),
+  "updatedAt": zod.coerce.date()
+}),
+  "savedAt": zod.coerce.date(),
+  "monitored": zod.boolean(),
+  "monitoredAt": zod.coerce.date().nullable()
+})
+
+
+
+
+
+export const DeleteSavedTenderParams = zod.object({
+  "tenderId": zod.coerce.string().min(1)
+})
+
+export const DeleteSavedTenderResponse = zod.void()
+
+
+export const listSavedSearchesResponseDataItemNewMatchesCountMin = 0;
+
+
+
+export const ListSavedSearchesResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(listSavedSearchesResponseDataItemNewMatchesCountMin)
+}))
+})
+
+
+export const createSavedSearchBodyNameMax = 80;
+
+export const createSavedSearchBodyQueryMax = 2000;
+
+
+
+export const CreateSavedSearchBody = zod.object({
+  "name": zod.string().min(1).max(createSavedSearchBodyNameMax),
+  "query": zod.string().max(createSavedSearchBodyQueryMax),
+  "alertsEnabled": zod.boolean()
+})
+
+export const createSavedSearchResponseNewMatchesCountMin = 0;
+
+
+
+export const CreateSavedSearchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(createSavedSearchResponseNewMatchesCountMin)
+})
+
+
+
+
+
+export const UpdateSavedSearchParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const updateSavedSearchBodyNameMax = 80;
+
+export const updateSavedSearchBodyQueryMax = 2000;
+
+
+
+export const UpdateSavedSearchBody = zod.object({
+  "name": zod.string().min(1).max(updateSavedSearchBodyNameMax).optional(),
+  "query": zod.string().max(updateSavedSearchBodyQueryMax).optional(),
+  "alertsEnabled": zod.boolean().optional()
+})
+
+export const updateSavedSearchResponseNewMatchesCountMin = 0;
+
+
+
+export const UpdateSavedSearchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(updateSavedSearchResponseNewMatchesCountMin)
+})
+
+
+
+
+
+export const DeleteSavedSearchParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const DeleteSavedSearchResponse = zod.void()
+
+
+export const MarkSavedSearchSeenParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const markSavedSearchSeenResponseNewMatchesCountMin = 0;
+
+
+
+export const MarkSavedSearchSeenResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(markSavedSearchSeenResponseNewMatchesCountMin)
+})
+
+
+export const listNotificationsQueryUnreadOnlyDefault = false;
+export const listNotificationsQueryPageDefault = 1;
+
+export const listNotificationsQueryPageSizeDefault = 20;
+export const listNotificationsQueryPageSizeMax = 50;
+
+
+
+export const ListNotificationsQueryParams = zod.object({
+  "unreadOnly": zod.coerce.boolean().default(listNotificationsQueryUnreadOnlyDefault),
+  "page": zod.coerce.number().int().min(1).default(listNotificationsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listNotificationsQueryPageSizeMax).default(listNotificationsQueryPageSizeDefault)
+})
+
+export const listNotificationsResponseDataItemTenderIdsMax = 20;
+
+export const listNotificationsResponseUnreadCountMin = 0;
+
+
+
+export const ListNotificationsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches']),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable(),
+  "tender": zod.union([zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "tenderNumberShort": zod.string().nullable()
+}),zod.null()]),
+  "change": zod.union([zod.object({
+  "field": zod.string(),
+  "from": zod.union([zod.string(),zod.number()]).nullable(),
+  "to": zod.union([zod.string(),zod.number()]).nullable()
+}),zod.null()]),
+  "savedSearch": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string()
+}),zod.null()]),
+  "matchCount": zod.number().int().nullable(),
+  "tenderIds": zod.array(zod.string()).max(listNotificationsResponseDataItemTenderIdsMax)
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+}),
+  "unreadCount": zod.number().int().min(listNotificationsResponseUnreadCountMin)
+})
+
+
+export const getUnreadNotificationCountResponseUnreadCountMin = 0;
+
+
+
+export const GetUnreadNotificationCountResponse = zod.object({
+  "unreadCount": zod.number().int().min(getUnreadNotificationCountResponseUnreadCountMin)
+})
+
+
+
+export const markNotificationsReadBodyIdsMax = 100;
+
+
+
+export const MarkNotificationsReadBody = zod.object({
+  "ids": zod.array(zod.string().min(1)).max(markNotificationsReadBodyIdsMax).optional(),
+  "all": zod.boolean().optional()
+})
+
+export const markNotificationsReadResponseUnreadCountMin = 0;
+
+
+
+export const MarkNotificationsReadResponse = zod.object({
+  "unreadCount": zod.number().int().min(markNotificationsReadResponseUnreadCountMin)
 })

@@ -10,12 +10,13 @@ Spec longa: `README.md`. Estado vivo: `memory-bank/`.
 
 ## Onde mexer
 
-- App: `artifacts/licitainsight`
-- Páginas e peças de licitação: `src/pages/pages.tsx` (arquivo denso; preservar `data-testid`)
-- Shell e tema: `src/components/app-shell.tsx` (`localStorage` key `licita-theme`)
-- Tipo `Tender` no contrato de busca (`src/api/types.ts`). Os editais vêm da API.
-- Tokens: `src/index.css`
-- `src/components/ui/*` é kit shadcn do template. As telas de produto usam um `Button` local, não esse kit.
+- App: `artifacts/licitainsight` — mapa em `artifacts/licitainsight/ARCHITECTURE.md`.
+- Páginas e peças por feature: `src/features/<feature>/` (ex.: `search`, `tenders`, `dashboard`). Preservar `data-testid`.
+- Camadas: componente → hook → service (`src/services/`) → adapter (`src/api/`) → API. Componente não importa adapter.
+- Shell e tema: `src/components/app-shell.tsx` (`localStorage` key `licita-theme`).
+- Tipo `Tender*` no contrato de busca (`src/api/types.ts`, espelha `docs/contracts/search-v1.md`). Os editais vêm da API.
+- Tokens: `src/index.css`; documentação em `design-system/` (raiz).
+- `Button` de produto: `src/components/common/action-button.tsx`. `src/components/ui/*` é kit shadcn interno; não usar `ui/button` nas telas.
 
 API (`artifacts/api-server`) lê os editais no Postgres. A UI chama essa API; não há adapter de fixtures.
 
@@ -30,4 +31,4 @@ API (`artifacts/api-server`) lê os editais no Postgres. A UI chama essa API; n�
 
 ## Visual
 
-Verde primary, sidebar navy, âmbar de atenção, DM Sans + Space Mono. Densidade de desktop, bordas sutis, objeto da licitação com mais hierarquia que o resto. Status com texto e cor.
+Primary azul (cor de ação), sidebar navy, âmbar (`warning`) para atenção, DM Sans + Space Mono. Densidade de desktop, bordas sutis, objeto da licitação com mais hierarquia que o resto. Status com texto e cor (tokens `status-*`). Sem cor crua: usar tokens e papéis `type-*` de `design-system/`.

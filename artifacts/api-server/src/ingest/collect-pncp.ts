@@ -17,6 +17,7 @@ import {
   PncpError,
 } from "./pncp-client";
 import { parseControlNumber } from "./pncp-map";
+import { evaluateSavedSearchNotifications } from "../account/notification-service";
 import { upsertPublications } from "./upsert-tenders";
 import {
   addDays,
@@ -492,6 +493,7 @@ async function execute(
         counters,
       );
     }
+    await evaluateSavedSearchNotifications(new Date());
     await db
       .update(ingestRunsTable)
       .set({
@@ -521,21 +523,7 @@ async function execute(
 export async function startPncpIngest(
   options: CollectOptions,
 ): Promise<{ runId: string; status: "running" }> {
-  const staleBefore = new Date(Date.now() - STALE_AFTER_MS);
-  await db
-    .update(ingestRunsTable)
-    .set({
-      status: "failed",
-      error: "Interrompida: a coleta parou de responder",
-      finishedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(ingestRunsTable.source, SOURCE),
-        eq(ingestRunsTable.status, "running"),
-        lt(ingestRunsTable.heartbeatAt, staleBefore),
-      ),
-    );
+  await abandonStalePncpRuns();
 
   const runId = crypto.randomUUID();
   const startedAt = new Date();
@@ -567,6 +555,34 @@ export async function startPncpIngest(
   return { runId, status: "running" };
 }
 
+export async function abandonStalePncpRuns(now = new Date()): Promise<number> {
+  const staleBefore = new Date(now.getTime() - STALE_AFTER_MS);
+  const abandoned = await db
+    .update(ingestRunsTable)
+    .set({
+      status: "failed",
+      error: "Abandonada: heartbeat da coleta expirou",
+      finishedAt: now,
+      heartbeatAt: now,
+    })
+    .where(
+      and(
+        eq(ingestRunsTable.source, SOURCE),
+        eq(ingestRunsTable.status, "running"),
+        lt(ingestRunsTable.heartbeatAt, staleBefore),
+      ),
+    )
+    .returning({ id: ingestRunsTable.id });
+
+  if (abandoned.length > 0) {
+    logger.warn(
+      { runIds: abandoned.map(({ id }) => id), staleBefore },
+      "Stale PNCP ingest runs marked as failed",
+    );
+  }
+  return abandoned.length;
+}
+
 const serializeRun = (run: typeof ingestRunsTable.$inferSelect) => ({
   id: run.id,
   status: run.status,
@@ -582,6 +598,7 @@ const serializeRun = (run: typeof ingestRunsTable.$inferSelect) => ({
 });
 
 export async function getLatestIngest() {
+  await abandonStalePncpRuns();
   const [run] = await db
     .select()
     .from(ingestRunsTable)

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { Building2, History, Loader2, Search, Tag, X, type LucideIcon } from 'lucide-react';
 import type { SearchSuggestion } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -26,16 +26,24 @@ const suggestionMeta: Record<SearchSuggestion['type'], { icon: LucideIcon; label
 
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-/** Bolds the part of `label` that matches `query`, accent/case-insensitively. */
+/**
+ * Bolds the part of `label` that matches `query`, accent/case-insensitively.
+ * Long labels start the visible window ~28 characters before the match, so truncation never hides it.
+ */
 function MatchedText({ label, query }: { label: string; query: string }) {
   const q = fold(query.trim());
-  const index = q ? fold(label).indexOf(q) : -1;
-  if (index < 0) return <>{label}</>;
+  let text = label;
+  let index = q ? fold(label).indexOf(q) : -1;
+  if (label.length > 60 && index > 28) {
+    text = `…${label.slice(index - 28)}`;
+    index = 29;
+  }
+  if (index < 0) return <>{text}</>;
   return (
     <>
-      {label.slice(0, index)}
-      <strong className="font-semibold text-foreground">{label.slice(index, index + q.length)}</strong>
-      {label.slice(index + q.length)}
+      {text.slice(0, index)}
+      <strong className="font-semibold text-foreground">{text.slice(index, index + q.length)}</strong>
+      {text.slice(index + q.length)}
     </>
   );
 }
@@ -49,6 +57,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   const recent = useRecentSearches();
   const suggestions = useSearchSuggestions(draft);
@@ -81,6 +90,13 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
   const close = () => {
     setOpen(false);
     setActive(-1);
+  };
+
+  // Tab from the input moves into the popup when it has a control ("Limpar histórico"); leaving both closes it.
+  const closeUnlessInside = (event: FocusEvent) => {
+    const next = event.relatedTarget as Node | null;
+    if (next && (next === inputRef.current || popupRef.current?.contains(next))) return;
+    close();
   };
 
   const submitText = (text: string) => {
@@ -130,9 +146,6 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
           setDraft('');
         }
         break;
-      case 'Tab':
-        close();
-        break;
     }
   };
 
@@ -163,10 +176,10 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={close}
+          onBlur={closeUnlessInside}
           onKeyDown={onKeyDown}
           placeholder="Ex.: tecnologia educacional, prefeitura de Recife…"
-          className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-20 text-base outline-none ring-primary/25 transition-shadow placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 sm:text-sm"
+          className="h-11 w-full rounded-lg border border-input bg-background pr-20 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 sm:text-sm"
         />
         <span id={`${listboxId}-hint`} className="sr-only">
           Use as setas para navegar pelas sugestões e Enter para escolher. Atalho: barra (/) para focar a busca.
@@ -184,9 +197,9 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                 setOpen(true);
                 inputRef.current?.focus();
               }}
-              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
             >
-              <X size={15} />
+              <X size={15} aria-hidden />
             </button>
           ) : (
             <Kbd aria-hidden className="hidden border border-border sm:inline-flex">
@@ -197,12 +210,20 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
 
         {expanded && (
           <div
+            ref={popupRef}
             // Keep focus in the input while clicking inside the popup.
             onMouseDown={(event) => event.preventDefault()}
-            className="absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg"
+            onBlur={closeUnlessInside}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              inputRef.current?.focus(); // before close(): the input's onFocus reopens the popup
+              close();
+            }}
+            className="absolute inset-x-0 top-[calc(100%+6px)] z-popover overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-base ease-emphasized"
           >
-            <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground" id={`${listboxId}-label`}>
+            <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+              <span className="type-eyebrow font-bold text-muted-foreground" id={`${listboxId}-label`}>
                 {showRecent ? 'Buscas recentes' : 'Sugestões'}
               </span>
               {showRecent && (
@@ -213,14 +234,14 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                     recent.clear();
                     inputRef.current?.focus();
                   }}
-                  className="rounded px-1.5 py-1 text-[11px] font-semibold text-primary hover:bg-muted"
+                  className="rounded-sm px-1.5 py-1 type-meta font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
                 >
                   Limpar histórico
                 </button>
               )}
             </div>
             {loading ? (
-              <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 px-3 py-4 type-meta text-muted-foreground">
                 <Loader2 size={14} className="animate-spin" aria-hidden /> Buscando sugestões…
               </div>
             ) : (
@@ -240,16 +261,17 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                       onClick={() => choose(option)}
                       className={`flex min-h-10 cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm ${isActive ? 'bg-muted text-foreground' : 'text-muted-foreground'}`}
                     >
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-secondary text-muted-foreground">
+                      <span className="grid h-7 w-5 shrink-0 place-items-center text-foreground-subtle">
                         <Icon size={14} aria-hidden />
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-foreground/90">
+                      <span className="min-w-0 flex-1 truncate text-foreground/90" title={option.label.length > 60 ? option.label : undefined}>
                         <MatchedText label={option.label} query={trimmed} />
                       </span>
-                      {option.kind === 'suggestion' && option.count !== null && (
-                        <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{formatNumber(option.count)}</span>
-                      )}
-                      <span className="hidden shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground sm:inline">
+                      {/* Always reserve the count slot so the right edge lines up. */}
+                      <span className="w-10 shrink-0 text-right type-data text-2xs text-muted-foreground">
+                        {option.kind === 'suggestion' && option.count !== null ? formatNumber(option.count) : ''}
+                      </span>
+                      <span className="hidden w-[4.5rem] shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 text-center text-3xs font-medium text-secondary-foreground sm:inline">
                         {meta.label}
                       </span>
                     </li>
@@ -257,6 +279,18 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                 })}
               </ul>
             )}
+            <div aria-hidden className="hidden items-center gap-3 border-t border-border-subtle px-3 py-2 type-meta text-muted-foreground sm:flex">
+              <span className="inline-flex items-center gap-1">
+                <Kbd>↑</Kbd>
+                <Kbd>↓</Kbd> navegar
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Kbd>↵</Kbd> selecionar
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Kbd>Esc</Kbd> fechar
+              </span>
+            </div>
           </div>
         )}
         <span className="sr-only" aria-live="polite">

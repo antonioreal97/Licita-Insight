@@ -28,7 +28,7 @@ export default function LandingPage() {
             Entrar
           </Link>
           <Link
-            href="/register"
+            href="/login"
             data-testid="link-landing-register"
             className="rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
           >
@@ -39,7 +39,7 @@ export default function LandingPage() {
           Entrar
         </Link>
       </header>
-      <main>
+      <main id="conteudo" tabIndex={-1} className="outline-none">
         <section className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pb-32 lg:pt-24">
           <div>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary-subtle px-3 py-1.5 type-eyebrow font-bold text-primary-subtle-foreground">
@@ -54,7 +54,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/register"
+                href="/login"
                 data-testid="link-hero-start"
                 className="inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover"
               >
@@ -80,24 +80,30 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="relative">
-            <div className="absolute -inset-6 rounded-[30px] bg-primary-subtle/70" />
+            <div className="absolute -inset-3 rounded-[30px] bg-primary-subtle/70 sm:-inset-6" />
             <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
               <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <span className="grid h-6 w-6 place-items-center rounded bg-primary-subtle text-3xs font-bold text-primary-subtle-foreground">LI</span>Seu
                   radar
                 </div>
-                <span className="type-label text-muted-foreground">atualizado agora</span>
+                <span className="type-label text-muted-foreground">dados do PNCP</span>
               </div>
               <div className="p-5">
-                <div className="mb-4 flex gap-2">
-                  <div className="h-9 flex-1 rounded-md bg-surface-sunken px-3 py-2 text-xs text-muted-foreground">tecnologia educacional</div>
-                  <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
-                    <Search size={15} />
-                  </div>
+                {/* Caption states exactly what the list below is: the query has no search term. */}
+                <div className="mb-4 flex h-9 items-center gap-2 rounded-md bg-surface-sunken px-3 text-xs text-muted-foreground">
+                  <Search size={14} aria-hidden="true" className="shrink-0" />
+                  Editais abertos mais recentes
                 </div>
+                {preview.isPending && <p className="py-4 text-xs text-muted-foreground">Carregando editais…</p>}
+                {preview.isError && (
+                  <p role="alert" className="py-4 text-xs text-destructive">
+                    Não foi possível carregar os editais agora.
+                  </p>
+                )}
+                {preview.isSuccess && previewTenders.length === 0 && <p className="py-4 text-xs text-muted-foreground">Nenhum edital aberto no momento.</p>}
                 {previewTenders.map((t, i) => (
-                  <div key={t.id} className={`border-b border-border-subtle py-4 ${i === 2 ? 'border-0 pb-1' : ''}`}>
+                  <div key={t.id} className={`border-b border-border-subtle py-4 ${i === previewTenders.length - 1 ? 'border-0 pb-1' : ''}`}>
                     <div className="mb-1 flex items-center gap-2">
                       <span className="rounded-full bg-status-open px-2 py-0.5 text-3xs font-bold text-status-open-foreground">{statusLabels[t.status]}</span>
                       <span className="type-data text-3xs text-muted-foreground">{t.location.state}</span>

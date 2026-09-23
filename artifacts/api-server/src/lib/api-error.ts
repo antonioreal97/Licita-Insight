@@ -4,7 +4,10 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
   | "SEARCH_UNAVAILABLE"
-  | "INGEST_IN_PROGRESS";
+  | "INGEST_IN_PROGRESS"
+  | "UNAUTHENTICATED"
+  | "FORBIDDEN"
+  | "CONFLICT";
 
 export interface ApiErrorDetail {
   field: string;
@@ -32,5 +35,23 @@ export class InvalidParameterError extends ApiError {
 export class NotFoundError extends ApiError {
   constructor(message: string) {
     super(404, "NOT_FOUND", message);
+  }
+}
+
+export class UnauthenticatedError extends ApiError {
+  constructor(message = "Authentication is required") {
+    super(401, "UNAUTHENTICATED", message);
+  }
+}
+
+export class ForbiddenError extends ApiError {
+  constructor(message = "The request is not allowed") {
+    super(403, "FORBIDDEN", message);
+  }
+}
+
+export class ConflictError extends ApiError {
+  constructor(message: string, details: ApiErrorDetail[]) {
+    super(409, "CONFLICT", message, details);
   }
 }

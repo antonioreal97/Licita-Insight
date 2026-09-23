@@ -48,14 +48,22 @@ const sheetVariants = cva(
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>, VariantProps<typeof sheetVariants> {
   /** Accessible label for the close button. Defaults to PT-BR "Fechar". */
   closeLabel?: string;
+  /** Extra props for the close button (classes are merged), e.g. a test id or colors for the navy sidebar drawer. */
+  closeProps?: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Close> & { 'data-testid'?: string };
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = 'right', className, children, closeLabel = 'Fechar', ...props }, ref) => (
+  ({ side = 'right', className, children, closeLabel = 'Fechar', closeProps, ...props }, ref) => (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground disabled:pointer-events-none">
+        <SheetPrimitive.Close
+          {...closeProps}
+          className={cn(
+            'absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground disabled:pointer-events-none',
+            closeProps?.className,
+          )}
+        >
           <X className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">{closeLabel}</span>
         </SheetPrimitive.Close>

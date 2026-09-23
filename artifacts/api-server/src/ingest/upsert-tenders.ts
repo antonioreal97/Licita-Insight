@@ -1,12 +1,22 @@
 import { inArray } from "drizzle-orm";
 import { db, tendersTable } from "@workspace/db";
 import type { TenderTimelineRecord } from "@workspace/db/schema";
-import { mapPublication, mergeTimeline, type PublicationDraft } from "./pncp-map";
+import {
+  mapPublication,
+  mergeTimeline,
+  parsePncpDate,
+  pncpTenderNumberShort,
+  type PublicationDraft,
+} from "./pncp-map";
+import { createTenderChangeNotifications } from "../account/notification-service";
 
 export type ExistingTender = {
   pncpControlNumber: string;
   status: string;
   proposalDeadline: Date | null;
+  title: string;
+  estimatedValue: string | null;
+  estimatedValueStatus: string;
   timeline: TenderTimelineRecord[];
   itemsNorm: string;
 };
@@ -36,6 +46,9 @@ export async function upsertPublications(
       pncpControlNumber: tendersTable.pncpControlNumber,
       status: tendersTable.status,
       proposalDeadline: tendersTable.proposalDeadline,
+      title: tendersTable.title,
+      estimatedValue: tendersTable.estimatedValue,
+      estimatedValueStatus: tendersTable.estimatedValueStatus,
       timeline: tendersTable.timeline,
       itemsNorm: tendersTable.itemsNorm,
     })
@@ -97,47 +110,76 @@ export async function upsertPublications(
       updatedAt: now,
     };
 
-    await db
-      .insert(tendersTable)
-      .values(values)
-      .onConflictDoUpdate({
-        target: tendersTable.pncpControlNumber,
-        set: {
-          title: values.title,
-          objectSummary: values.objectSummary,
-          description: values.description,
-          organizationId: values.organizationId,
-          organizationName: values.organizationName,
-          purchasingUnit: values.purchasingUnit,
-          modality: values.modality,
-          modalityLabel: values.modalityLabel,
-          status: values.status,
-          tenderNumber: values.tenderNumber,
-          processNumber: values.processNumber,
-          estimatedValue: values.estimatedValue,
-          estimatedValueStatus: values.estimatedValueStatus,
-          publishedAt: values.publishedAt,
-          openingAt: values.openingAt,
-          proposalDeadline: values.proposalDeadline,
-          state: values.state,
-          city: values.city,
-          cityIbgeCode: values.cityIbgeCode,
-          sourceId: values.sourceId,
-          sourceName: values.sourceName,
-          sourceUrl: values.sourceUrl,
-          searchText: values.searchText,
-          titleNorm: values.titleNorm,
-          objectNorm: values.objectNorm,
-          organizationNorm: values.organizationNorm,
-          otherNorm: values.otherNorm,
-          cityNorm: values.cityNorm,
-          rawPayload: values.rawPayload,
-          timeline: values.timeline,
-          fetchedAt: values.fetchedAt,
-          updatedAt: values.updatedAt,
-          ...(changed ? { detailsFetchedAt: null } : {}),
-        },
-      });
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(tendersTable)
+        .values(values)
+        .onConflictDoUpdate({
+          target: tendersTable.pncpControlNumber,
+          set: {
+            title: values.title,
+            objectSummary: values.objectSummary,
+            description: values.description,
+            organizationId: values.organizationId,
+            organizationName: values.organizationName,
+            purchasingUnit: values.purchasingUnit,
+            modality: values.modality,
+            modalityLabel: values.modalityLabel,
+            status: values.status,
+            tenderNumber: values.tenderNumber,
+            processNumber: values.processNumber,
+            estimatedValue: values.estimatedValue,
+            estimatedValueStatus: values.estimatedValueStatus,
+            publishedAt: values.publishedAt,
+            openingAt: values.openingAt,
+            proposalDeadline: values.proposalDeadline,
+            state: values.state,
+            city: values.city,
+            cityIbgeCode: values.cityIbgeCode,
+            sourceId: values.sourceId,
+            sourceName: values.sourceName,
+            sourceUrl: values.sourceUrl,
+            searchText: values.searchText,
+            titleNorm: values.titleNorm,
+            objectNorm: values.objectNorm,
+            organizationNorm: values.organizationNorm,
+            otherNorm: values.otherNorm,
+            cityNorm: values.cityNorm,
+            rawPayload: values.rawPayload,
+            timeline: values.timeline,
+            fetchedAt: values.fetchedAt,
+            updatedAt: values.updatedAt,
+            ...(changed ? { detailsFetchedAt: null } : {}),
+          },
+        });
+      if (existing) {
+        await createTenderChangeNotifications(tx, {
+          previous: {
+            id: draft.id,
+            title: existing.title,
+            tenderNumberShort: pncpTenderNumberShort(record),
+            status: existing.status,
+            proposalDeadline: existing.proposalDeadline,
+            estimatedValue: existing.estimatedValue,
+            estimatedValueStatus: existing.estimatedValueStatus,
+          },
+          next: {
+            id: draft.id,
+            title: draft.title,
+            tenderNumberShort: pncpTenderNumberShort(record),
+            status: draft.status,
+            proposalDeadline: draft.proposalDeadline,
+            estimatedValue: draft.estimatedValue,
+            estimatedValueStatus: draft.estimatedValueStatus,
+          },
+          sourceVersion:
+            parsePncpDate(record.dataAtualizacao)?.toISOString() ??
+            parsePncpDate(record.dataAtualizacaoGlobal)?.toISOString() ??
+            now.toISOString(),
+          detectedAt: now,
+        });
+      }
+    });
   }
 
   return drafts.length;

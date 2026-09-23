@@ -121,3 +121,18 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
 - **Selected chip** (saved tenders "Todos"): `bg-inverse text-inverse-foreground`, count in `text-inverse-foreground/70`.
 - **Marketing** (landing/auth): the navy panels and brand tile use `bg-sidebar` + `text-sidebar-*` (same in both themes);
   high-emphasis CTAs are `bg-inverse` like `Button variant="dark"`. Hero display sizes (48/72px) stay arbitrary on purpose.
+
+## App shell navigation (cycle 1 QA)
+
+- **lg and up:** fixed `<aside>` sidebar, collapsible to 76px. The collapsed state persists in `localStorage` (`licita-sidebar-collapsed`).
+- **Below lg:** the `<aside>` is `display: none` (out of the tab order and the accessibility tree). "Abrir menu" is a `SheetTrigger` for a
+  left `Sheet` (`ui/sheet`, Radix Dialog) with the same sidebar content: focus moves in, is trapped, Escape and the overlay close it, and
+  focus returns to "Abrir menu" (which exposes `aria-expanded`, `aria-controls`, `aria-haspopup="dialog"`). Following a link closes the
+  drawer and focus goes to `<main id="conteudo">` instead. The drawer closes itself if the window grows past lg.
+- `SheetContent` accepts `closeProps` (merged into the X button, e.g. `data-testid` or navy colors).
+- **Theme toggle:** fixed label "Tema escuro" with `aria-pressed`. `index.html` applies `dark` from `licita-theme` before first paint,
+  on every route (public pages included).
+- **Notifications bell:** `aria-disabled` + tooltip/toast "Notificações em breve" (same pattern as `SaveSearchButton`); no unread dot.
+- **Routes:** `App.tsx` maps static routes to `document.title` ("Explorar editais · Licita Insight"…). Pages with dynamic titles (tender
+  detail, 404) set their own. On in-app route changes (pathname, not query) focus moves to `#conteudo`; landing, auth and 404 also render
+  `<main id="conteudo" tabIndex={-1}>`.
