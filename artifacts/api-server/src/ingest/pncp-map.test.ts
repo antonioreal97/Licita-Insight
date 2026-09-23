@@ -24,7 +24,7 @@ const publication = {
   dataAberturaProposta: "2026-09-21T09:00:00",
   dataEncerramentoProposta: "2026-09-30T17:00:00",
   valorTotalEstimado: 1847000.5,
-  orcamentoSigilosoCodigo: 2,
+  orcamentoSigilosoCodigo: 1,
   orcamentoSigilosoDescricao: "Não sigiloso",
   orgaoEntidade: {
     cnpj: "00394460000141",
@@ -77,7 +77,12 @@ describe("PNCP publication mapping", () => {
     assert.equal(draft.title, officialObject);
     assert.ok(draft.objectSummary);
     assert.ok(draft.objectSummary.length <= 300);
-    assert.match(draft.objectSummary, /\.\.\.$/);
+    assert.match(draft.objectSummary, /…$/);
+    assert.doesNotMatch(draft.objectSummary, /\s…$/);
+    assert.equal(
+      officialObject.at(draft.objectSummary.length - 1),
+      " ",
+    );
   });
 
   it("derives the short tender number from the PNCP control year when needed", () => {
@@ -92,8 +97,16 @@ describe("PNCP publication mapping", () => {
 
   it("hides a confidential estimate and derives status from the deadline", () => {
     assert.deepEqual(
-      mapEstimatedValue(10, 1, "Sigiloso"),
+      mapEstimatedValue(10, 2, "COMPRA_PARCIALMENTE_SIGILOSA"),
       { estimatedValue: null, estimatedValueStatus: "confidential" },
+    );
+    assert.deepEqual(
+      mapEstimatedValue(0, 3, "COMPRA_TOTALMENTE_SIGILOSA"),
+      { estimatedValue: null, estimatedValueStatus: "confidential" },
+    );
+    assert.deepEqual(
+      mapEstimatedValue(10, 1, "COMPRA_SEM_SIGILO"),
+      { estimatedValue: "10.00", estimatedValueStatus: "disclosed" },
     );
     assert.equal(
       mapPncpStatus(

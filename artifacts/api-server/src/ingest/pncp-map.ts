@@ -120,10 +120,10 @@ const asString = (value: unknown): string | null =>
 export const summarizeOfficialObject = (value: string): string => {
   if (value.length <= 300) return value;
 
-  const candidate = value.slice(0, 297).trimEnd();
+  const candidate = value.slice(0, 299).trimEnd();
   const lastSpace = candidate.lastIndexOf(" ");
   const summary = lastSpace >= 240 ? candidate.slice(0, lastSpace) : candidate;
-  return `${summary.trimEnd()}...`;
+  return `${summary.trimEnd()}…`;
 };
 
 export const pncpTenderNumberShort = (
@@ -161,10 +161,12 @@ export const mapEstimatedValue = (
   sigiloDescription: unknown,
 ): { estimatedValue: string | null; estimatedValueStatus: PublicationDraft["estimatedValueStatus"] } => {
   const description = normalizeText(asString(sigiloDescription) ?? "");
-  const saysNotSecret = description.includes("nao");
-  const saysSecret = description.includes("sigilos") && !saysNotSecret;
   const code = typeof sigiloCode === "number" ? sigiloCode : Number(sigiloCode);
-  const confidential = saysSecret || (code === 1 && !saysNotSecret);
+  const confidential =
+    code === 2 ||
+    code === 3 ||
+    description.includes("parcialmente sigilos") ||
+    description.includes("totalmente sigilos");
   if (confidential) {
     return { estimatedValue: null, estimatedValueStatus: "confidential" };
   }

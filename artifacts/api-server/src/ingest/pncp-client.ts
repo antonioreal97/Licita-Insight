@@ -1,5 +1,4 @@
 const PNCP_CONSULTA = "https://pncp.gov.br/api/consulta/v1";
-const PNCP_API = "https://pncp.gov.br/api/pncp/v1";
 
 export const PNCP_UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
@@ -178,7 +177,9 @@ export async function fetchCompra(
   sequencial: number,
 ): Promise<Record<string, unknown> | null> {
   try {
-    const body = await pncpGet(`${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}`);
+    const body = await pncpGet(
+      `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}`,
+    );
     return body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
   } catch (error) {
     if (error instanceof PncpNotFoundError) return null;
@@ -196,7 +197,7 @@ export async function fetchCompraItens(
   let totalPages = 1;
   while (page <= totalPages) {
     const list = await fetchList(
-      `${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}/itens?pagina=${page}&tamanhoPagina=50`,
+      `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}/itens?pagina=${page}&tamanhoPagina=50`,
     );
     rows.push(...list.rows);
     totalPages = list.totalPages;
@@ -211,7 +212,7 @@ export async function fetchCompraArquivos(
   sequencial: number,
 ): Promise<Record<string, unknown>[]> {
   const list = await fetchList(
-    `${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}/arquivos`,
+    `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}/arquivos`,
   );
   return list.rows;
 }

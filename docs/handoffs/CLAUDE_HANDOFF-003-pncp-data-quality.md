@@ -92,3 +92,36 @@ Database changes: NONE
 
 N8N changes: NONE
 ```
+
+## Adendo QA-018/QA-019
+
+```text
+Status: READY_FOR_CLAUDE
+
+QA-018: CORRIGIDO
+  A enumeração oficial PNCP foi corrigida: 1=sem sigilo, 2=parcialmente sigilosa e
+  3=totalmente sigilosa. Códigos 2/3 agora retornam estimatedValue=null e
+  estimatedValueStatus=confidential. Não existe inferência por objetoCompra/texto livre.
+
+QA-019: CONFIRMADO
+  Os labels canônicos continuam cobertos por teste: "Aberto" e "Pregão eletrônico", entre os
+  demais labels acordados. Se a API em execução ainda devolver os labels antigos, reiniciar o
+  processo para carregar o commit atualizado.
+
+objectSummary: CORRIGIDO
+  O corte permanece no limite de palavra, com no máximo 300 caracteres, e agora termina em `…`.
+
+PNCP source compatibility:
+  As consultas de compra, itens e arquivos passaram de /api/pncp/v1 para /api/consulta/v1,
+  conforme a resposta de migração do próprio PNCP para endpoints de consulta.
+
+Validation:
+  PASS  pnpm --config.verify-deps-before-run=false run typecheck
+  PASS  pnpm --config.verify-deps-before-run=false --dir artifacts/api-server run build
+  PASS  pnpm --config.verify-deps-before-run=false --dir artifacts/api-server run test
+        16 testes passaram; 1 integração PostgreSQL opt-in foi pulada.
+  PASS  git diff --check
+
+Breaking changes: NO
+Migration required: NO
+```

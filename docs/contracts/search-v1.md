@@ -209,6 +209,14 @@ type ValueHistogramBucket = {
 valor é `null`, diferencia sigilo (`confidential`) de ausência de publicação
 (`not_published`).
 
+Para registros PNCP, a classificação usa exclusivamente os campos estruturados
+`orcamentoSigilosoCodigo` e `orcamentoSigilosoDescricao`: código `1` significa compra sem sigilo;
+códigos `2` e `3` significam compra parcial ou totalmente sigilosa e resultam em
+`estimatedValue: null` com `estimatedValueStatus: confidential`. O backend não infere sigilo a
+partir de `objetoCompra` ou outro texto livre.
+
+Referência de domínio: [Manual de Integração do PNCP](https://pncp.gov.br/manual/pt-br/latest/singlehtml/).
+
 Quando `facets` é `true`, o objeto passa a incluir:
 
 ```ts
@@ -289,7 +297,8 @@ uma sessão a partir de outros campos.
 Para o PNCP, `tenderNumberShort` é formado por `numeroCompra/anoCompra`, usando o ano de
 `numeroControlePNCP` somente como fallback. `tenderNumber` permanece com o rótulo original da
 modalidade para preservar compatibilidade. `title` preserva integralmente `objetoCompra`, enquanto
-`objectSummary` é uma síntese mecânica de no máximo 300 caracteres, sem reescrever o texto oficial.
+`objectSummary` é uma síntese mecânica de no máximo 300 caracteres, cortada no limite de palavra e
+finalizada com `…`, sem reescrever o texto oficial.
 
 ### Facets e relevância
 
