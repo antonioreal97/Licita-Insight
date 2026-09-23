@@ -124,7 +124,9 @@ export default function SavedTendersPage() {
               <TenderRow key={tender.id} tender={tender} saved onSave={() => remove(tender.id)} />
             ))}
           </div>
-          {totalPages > 1 && <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} />}
+          {totalPages > 1 && (
+            <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} noun={['edital salvo', 'editais salvos']} />
+          )}
         </div>
       )}
     </>

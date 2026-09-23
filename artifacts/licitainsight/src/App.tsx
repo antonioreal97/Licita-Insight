@@ -18,11 +18,19 @@ import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
 import { queryKeys } from '@/services/query-keys';
+import { toast } from '@/hooks/use-toast';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
-// A 401 from any /me call means the session ended: re-check it so RequireAuth redirects and buttons show the signed-out state.
+// A 401 from any /me call means the session ended: drop the user's data (bookmarks must not stay filled), re-check the
+// session so RequireAuth redirects, and say why — once, even if several requests fail together.
+let lastExpiredNotice = 0;
 const onUnauthenticated = (error: unknown) => {
-  if (isApiError(error) && error.status === 401) queryClient.invalidateQueries({ queryKey: queryKeys.session });
+  if (!isApiError(error) || error.status !== 401) return;
+  queryClient.removeQueries({ queryKey: queryKeys.me.all });
+  queryClient.invalidateQueries({ queryKey: queryKeys.session });
+  if (Date.now() - lastExpiredNotice < 10_000) return;
+  lastExpiredNotice = Date.now();
+  toast({ variant: 'destructive', title: 'Sua sessão expirou', description: 'Entre de novo com o Google para continuar.' });
 };
 
 const queryClient = new QueryClient({
