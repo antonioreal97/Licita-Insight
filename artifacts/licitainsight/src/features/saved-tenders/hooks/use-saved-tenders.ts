@@ -61,16 +61,19 @@ function useImportLegacySaved(authenticated: boolean) {
         }
         queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
         const missing = result.notFound.length;
-        if (result.imported === 0 && missing === 0) return;
+        const skipped = result.skippedByLimit;
+        if (result.imported === 0 && missing === 0 && skipped === 0) return;
+        const notes = [
+          missing > 0 ? `${missing} ${missing === 1 ? 'edital não existe mais na base e ficou' : 'editais não existem mais na base e ficaram'} de fora.` : null,
+          skipped > 0 ? `${skipped} ${skipped === 1 ? 'edital não coube' : 'editais não couberam'} no limite de 500 salvos.` : null,
+        ].filter(Boolean);
         toast({
+          variant: skipped > 0 ? 'destructive' : 'default',
           title:
             result.imported === 1
               ? '1 edital salvo neste navegador foi adicionado à sua conta'
               : `${result.imported} editais salvos neste navegador foram adicionados à sua conta`,
-          description:
-            missing > 0
-              ? `${missing} ${missing === 1 ? 'edital não existe mais na base e ficou' : 'editais não existem mais na base e ficaram'} de fora.`
-              : undefined,
+          description: notes.length ? notes.join(' ') : undefined,
         });
       },
       (error) => {
