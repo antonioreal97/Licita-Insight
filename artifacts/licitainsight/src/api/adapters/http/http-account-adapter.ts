@@ -36,6 +36,7 @@ export const httpAccountAdapter: AccountAdapter = {
   createSavedSearch: (body) => sendJson<SavedSearch>('POST', '/v1/me/saved-searches', body),
   updateSavedSearch: (id, body) => sendJson<SavedSearch>('PATCH', `/v1/me/saved-searches/${enc(id)}`, body),
   deleteSavedSearch: (id) => sendJson<void>('DELETE', `/v1/me/saved-searches/${enc(id)}`),
+  restoreSavedSearch: (id) => sendJson<SavedSearch>('POST', `/v1/me/saved-searches/${enc(id)}/restore`),
   markSavedSearchSeen: (id) => sendJson<SavedSearch>('POST', `/v1/me/saved-searches/${enc(id)}/seen`),
 
   listNotifications: (params, signal) => getJson<NotificationsResponse>('/v1/me/notifications', params, signal),

@@ -84,7 +84,7 @@ function readCollapsed() {
 function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolean; location: string; onNavigate?: () => void }) {
   return (
     <>
-      <div className={`flex h-14 items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
+      <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
         <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
         {!collapsed && (
           <div className="min-w-0">
@@ -231,7 +231,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         </SheetContent>
         <div className={`min-h-[100dvh] transition-[padding] duration-slow ease-emphasized ${collapsed ? 'lg:pl-sidebar-collapsed' : 'lg:pl-sidebar'}`}>
-          <header className="sticky top-0 z-sticky flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-8 lg:h-header">
+          <header className="sticky top-0 z-sticky flex h-header-mobile items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur-sm sm:px-8 lg:h-header">
             <div className="flex items-center gap-3">
               <SheetTrigger asChild>
                 <button aria-label="Abrir menu" data-testid="button-open-menu" className={`-ml-2 lg:hidden ${headerIconButton}`}>
@@ -292,7 +292,7 @@ export function UserAvatar({ user, className }: { user: User; className?: string
   );
 }
 
-const menuItem = 'cursor-pointer gap-2.5 rounded-md px-2.5 py-2 type-ui focus:bg-muted focus:text-foreground';
+const menuItem = 'cursor-pointer gap-2.5 rounded-md px-2.5 py-2 type-ui';
 
 function AccountMenu() {
   const { user, status, error } = useSession();
@@ -346,7 +346,7 @@ function AccountMenu() {
           <ChevronDown size={14} strokeWidth={1.75} aria-hidden className="hidden sm:block" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="z-popover w-64 rounded-xl bg-surface-raised p-1.5 shadow-lg">
+      <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-xl bg-surface-raised p-1.5 shadow-lg">
         <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2 font-normal">
           <UserAvatar user={user} className="size-9" />
           <span className="min-w-0">
@@ -407,7 +407,7 @@ function NotificationBell() {
         aria-label="Notificações"
         align="end"
         sideOffset={8}
-        className="z-popover w-[min(24rem,calc(100vw-2rem))] rounded-xl bg-surface-raised p-0 shadow-lg"
+        className="w-[min(24rem,calc(100vw-2rem))] rounded-xl bg-surface-raised p-0 shadow-lg"
       >
         {/* Mounted only while open, so the list is fetched on demand (the badge polls the cheap count). */}
         <NotificationPanel unreadCount={count} onClose={() => setOpen(false)} />

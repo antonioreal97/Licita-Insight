@@ -1,18 +1,25 @@
-import type { ApiErrorBody, ApiErrorCode } from './types';
+import type { ApiErrorBody, ApiErrorCode, ApiErrorDetail } from './types';
 
 export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly status: number;
   readonly requestId?: string;
   readonly retryAfterSeconds?: number;
+  readonly details: ApiErrorDetail[];
 
-  constructor(code: ApiErrorCode, message: string, status: number, opts: { requestId?: string; retryAfterSeconds?: number } = {}) {
+  constructor(code: ApiErrorCode, message: string, status: number, opts: { requestId?: string; retryAfterSeconds?: number; details?: ApiErrorDetail[] } = {}) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
     this.requestId = opts.requestId;
     this.retryAfterSeconds = opts.retryAfterSeconds;
+    this.details = opts.details ?? [];
+  }
+
+  /** First detail with this `issue` (e.g. 409 `duplicate`, `restore_expired`). */
+  detail(issue: string) {
+    return this.details.find((d) => d.issue === issue);
   }
 
   /** Errors worth retrying automatically (transient on the server or network). */
@@ -25,6 +32,7 @@ export class ApiError extends Error {
     return new ApiError(body.error.code, body.error.message, status, {
       requestId: body.error.requestId,
       retryAfterSeconds: Number.isFinite(seconds) ? seconds : undefined,
+      details: body.error.details,
     });
   }
 }

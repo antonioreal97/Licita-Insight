@@ -41,6 +41,8 @@ export interface AccountAdapter {
   createSavedSearch(body: CreateSavedSearchBody): Promise<SavedSearch>;
   updateSavedSearch(id: string, body: UpdateSavedSearchBody): Promise<SavedSearch>;
   deleteSavedSearch(id: string): Promise<void>;
+  /** Undoes a delete within 30 s (same id). 409 `restore_expired` after that. */
+  restoreSavedSearch(id: string): Promise<SavedSearch>;
   markSavedSearchSeen(id: string): Promise<SavedSearch>;
 
   listNotifications(params: NotificationsParams, signal?: AbortSignal): Promise<NotificationsResponse>;

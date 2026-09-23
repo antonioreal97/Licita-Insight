@@ -155,6 +155,7 @@
 
   /* Layout. Breakpoints are Tailwind defaults (sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536). */
   --spacing-header: 76px;
+  --spacing-header-mobile: 3.5rem;
   --spacing-sidebar: 248px;
   --spacing-sidebar-collapsed: 76px;
   --container-page: 1440px;

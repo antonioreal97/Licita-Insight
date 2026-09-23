@@ -20,6 +20,11 @@ const errorCopy: Record<string, { title: string; detail: string }> = {
     title: 'E-mail não verificado',
     detail: 'Seu e-mail ainda não foi verificado no Google. Verifique-o na sua conta Google e tente novamente.',
   },
+  // Sent by /auth/google/start when Google credentials aren't set: retrying can't work, so the button is hidden.
+  oauth_unavailable: {
+    title: 'Login com Google indisponível',
+    detail: 'Login com Google ainda não está configurado neste ambiente. Fale com o administrador.',
+  },
   oauth_failed: { title: 'Não foi possível entrar com o Google', detail: 'Houve uma falha ao concluir o login. Tente novamente em instantes.' },
 };
 const unknownError = { title: 'Não foi possível entrar', detail: 'Ocorreu um erro inesperado no login. Tente novamente.' };
@@ -112,21 +117,33 @@ export default function AuthPage() {
               </div>
             </div>
           )}
-          <Button
-            variant="outline"
-            size="lg"
-            data-testid="button-auth-google"
-            loading={redirecting}
-            onClick={() => {
-              setRedirecting(true);
-              signInWithGoogle(returnTo);
-            }}
-            className="w-full gap-3"
-          >
-            <GoogleMark />
-            Entrar com Google
-          </Button>
-          <p className="mt-3 text-center type-meta text-muted-foreground">Primeiro acesso? A conta é criada automaticamente.</p>
+          {errorCode === 'oauth_unavailable' ? (
+            <Link
+              href="/search"
+              data-testid="link-auth-public-search"
+              className="flex h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
+            >
+              Pesquisar editais sem entrar
+            </Link>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="lg"
+                data-testid="button-auth-google"
+                loading={redirecting}
+                onClick={() => {
+                  setRedirecting(true);
+                  signInWithGoogle(returnTo);
+                }}
+                className="w-full gap-3"
+              >
+                <GoogleMark />
+                Entrar com Google
+              </Button>
+              <p className="mt-3 text-center type-meta text-muted-foreground">Primeiro acesso? A conta é criada automaticamente.</p>
+            </>
+          )}
           <p className="mt-8 flex items-start justify-center gap-2 text-balance text-center type-meta text-muted-foreground">
             <LockKeyhole size={12} aria-hidden className="mt-0.5 shrink-0" />
             Usamos seu nome, e-mail e foto do Google apenas para identificar sua conta.

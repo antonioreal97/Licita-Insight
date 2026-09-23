@@ -4,7 +4,14 @@ import type { Pagination } from '@/api';
 import { formatNumber } from '@/lib/format';
 import { pageItems } from '../lib/pagination';
 
-type Props = { pagination: Pagination; page: number; onPageChange: (page: number) => void; pageSizeControl?: ReactNode };
+type Props = {
+  pagination: Pagination;
+  page: number;
+  onPageChange: (page: number) => void;
+  pageSizeControl?: ReactNode;
+  /** Singular and plural of what is being paginated. */
+  noun?: [singular: string, plural: string];
+};
 
 const base =
   'grid h-10 min-w-10 place-items-center rounded-lg border px-2 type-data text-xs transition-colors duration-fast ease-standard focus-visible:focus-ring sm:h-9 sm:min-w-9';
@@ -13,7 +20,7 @@ const base =
  * Prev/next use `aria-disabled` instead of `disabled` at the ends: a disabled button drops keyboard focus to <body>
  * the moment the last page loads; an aria-disabled one keeps it and is announced as unavailable.
  */
-export function SearchPagination({ pagination, page: requested, onPageChange, pageSizeControl }: Props) {
+export function SearchPagination({ pagination, page: requested, onPageChange, pageSizeControl, noun = ['oportunidade', 'oportunidades'] }: Props) {
   const { total, pageSize, totalPages, totalIsEstimate } = pagination;
   if (total === 0) return null;
   // An out-of-range `?page=` is corrected in the URL by the page; never render "Mostrando 19.961–19" meanwhile.
@@ -29,7 +36,7 @@ export function SearchPagination({ pagination, page: requested, onPageChange, pa
         {pageSizeControl}
         <span>
           Mostrando {formatNumber(first)}–{formatNumber(last)} de {totalIsEstimate ? 'aprox. ' : ''}
-          {formatNumber(total)} {total === 1 ? 'oportunidade' : 'oportunidades'}
+          {formatNumber(total)} {total === 1 ? noun[0] : noun[1]}
         </span>
       </div>
       {totalPages > 1 && (

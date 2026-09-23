@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  * (pagination, alert-dialog, calendar, carousel, sidebar, input-group) import. Do not use it in features.
  * Spec: /design-system/components.md#button
  */
-export type ActionButtonVariant = 'primary' | 'outline' | 'ghost' | 'dark';
+export type ActionButtonVariant = 'primary' | 'outline' | 'ghost' | 'dark' | 'destructive';
 export type ActionButtonSize = 'sm' | 'md' | 'lg';
 
 export type ActionButtonProps = ComponentPropsWithRef<'button'> & {
@@ -32,6 +32,7 @@ const variants: Record<ActionButtonVariant, string> = {
   outline:
     'border border-border bg-surface text-foreground shadow-2xs enabled:hover:border-border-strong enabled:hover:bg-surface-sunken aria-pressed:border-primary/40 aria-pressed:bg-primary-subtle aria-pressed:text-primary-subtle-foreground',
   ghost: 'text-muted-foreground enabled:hover:bg-muted enabled:hover:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground',
+  destructive: 'bg-destructive text-destructive-foreground shadow-xs enabled:hover:bg-destructive/90 enabled:active:bg-destructive',
 };
 
 const sizes: Record<ActionButtonSize, string> = {

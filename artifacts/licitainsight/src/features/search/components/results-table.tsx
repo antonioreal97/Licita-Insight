@@ -21,6 +21,8 @@ const td = 'border-b border-border-subtle px-3 py-2.5 align-top';
 // ≥sm the Objeto column stays pinned while the other columns scroll horizontally (needs an opaque background).
 // Local z-indexes (1–3) stay below the app header (z-sticky) — the table container does not create a stacking context.
 const pinned = 'sm:sticky sm:left-0 sm:border-r sm:border-r-border';
+// The save action is pinned on the right so it stays reachable when the table scrolls horizontally.
+const pinnedEnd = 'sm:sticky sm:right-0 sm:border-l sm:border-l-border';
 
 /**
  * Dense power-user view. Decision columns (valor, prazo, status) come right after the objeto so they are visible
@@ -69,7 +71,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                 UF / Mun.
               </abbr>
             </th>
-            <th scope="col" className={cn(th, 'pr-4')}>
+            <th scope="col" className={cn(th, pinnedEnd, 'pr-4 sm:z-[3]')}>
               <span className="sr-only">Salvar</span>
             </th>
           </tr>
@@ -139,7 +141,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                     {city ?? 'não informado'}
                   </span>
                 </td>
-                <td className={cn(td, 'pr-4 text-right')}>
+                <td className={cn(td, pinnedEnd, 'z-[1] bg-card pr-4 text-right transition-colors duration-fast ease-standard group-hover:bg-surface-sunken')}>
                   <SaveButton
                     saved={isSaved(t.id)}
                     onToggle={() => onToggleSave(t.id)}

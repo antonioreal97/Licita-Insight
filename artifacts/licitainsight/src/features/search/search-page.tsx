@@ -117,7 +117,7 @@ export default function SearchPage() {
         <div className="grid gap-6 @min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]">
           <aside aria-labelledby="facets-title" className="hidden @min-[52rem]/page:block">
             {/* A flat rail, not a card. Offsets follow the header token. */}
-            <div className="sticky top-[calc(3.5rem+1rem)] max-h-[calc(100dvh-3.5rem-2rem)] lg:top-[calc(var(--spacing-header)+1rem)] lg:max-h-[calc(100dvh-var(--spacing-header)-2rem)] overflow-y-auto overscroll-contain border-r border-border-subtle pr-4 pb-2 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]">
+            <div className="sticky top-[calc(var(--spacing-header-mobile)+1rem)] max-h-[calc(100dvh-var(--spacing-header-mobile)-2rem)] lg:top-[calc(var(--spacing-header)+1rem)] lg:max-h-[calc(100dvh-var(--spacing-header)-2rem)] overflow-y-auto overscroll-contain border-r border-border-subtle pr-4 pb-2 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]">
               <div className="sticky top-0 z-raised flex items-center justify-between border-b border-border-subtle bg-background pb-3">
                 <h2 id="facets-title" className="type-section">
                   Filtros

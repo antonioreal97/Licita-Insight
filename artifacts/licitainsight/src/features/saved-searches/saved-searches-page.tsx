@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, BookmarkPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { isApiError, type SavedSearch } from '@/api';
@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { SearchSummary } from '@/features/search/components/search-summary';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { searchParamsFromUrl } from '@/services/search-service';
-import { useCreateSavedSearch, useDeleteSavedSearch, useMarkSavedSearchSeen, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
+import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
 
 const primaryLinkClass =
   'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-primary px-3.5 type-ui font-semibold text-primary-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active focus-visible:focus-ring';
@@ -22,6 +22,12 @@ function errorDescription(error: unknown) {
   if (isApiError(error) && error.code === 'INVALID_PARAMETER') return 'Use um nome de 1 a 80 caracteres.';
   if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
   return isApiError(error) && error.requestId ? `Tente de novo. ref. ${error.requestId}` : 'Tente de novo.';
+}
+
+function restoreErrorToast(error: unknown) {
+  if (isApiError(error) && error.detail('restore_expired')) return { title: 'Não é mais possível desfazer (o prazo de 30 s passou)' };
+  const description = isApiError(error) && error.detail('duplicate') ? 'Já existe outra busca salva com os mesmos filtros.' : errorDescription(error);
+  return { title: 'Não foi possível restaurar a busca', description };
 }
 
 function ListSkeleton() {
@@ -46,9 +52,15 @@ function ListSkeleton() {
 
 export default function SavedSearchesPage() {
   const list = useSavedSearches();
-  const create = useCreateSavedSearch();
+  const restore = useRestoreSavedSearch();
   const remove = useDeleteSavedSearch();
   const [toDelete, setToDelete] = useState<SavedSearch | null>(null);
+  // `/saved-searches#saved-search-<id>` (from "Você já salvou esta busca"): scroll to that row and highlight it once the list loads.
+  const [targetId] = useState(() => window.location.hash.slice(1));
+  const loaded = list.data !== undefined;
+  useEffect(() => {
+    if (loaded && targetId) document.getElementById(targetId)?.scrollIntoView({ block: 'center' });
+  }, [loaded, targetId]);
 
   const confirmDelete = () => {
     if (!toDelete) return;
@@ -59,20 +71,17 @@ export default function SavedSearchesPage() {
         toast({
           title: `“${search.name}” excluída`,
           action: (
-            // Undo recreates it (new id; the "novos" count starts from zero again).
+            // Restore keeps the id and history; the API allows it for 30 s after the delete.
             <ToastAction
               altText="Desfazer exclusão"
               data-testid="button-undo-delete-saved-search"
               onClick={() =>
-                create.mutate(
-                  { name: search.name, params: searchParamsFromUrl(search.query), alertsEnabled: search.alertsEnabled },
-                  {
-                    onError: (error) => {
-                      console.error('[saved-searches] Falha ao desfazer exclusão.', error);
-                      toast({ variant: 'destructive', title: 'Não foi possível restaurar a busca', description: errorDescription(error) });
-                    },
+                restore.mutate(search.id, {
+                  onError: (error) => {
+                    console.error('[saved-searches] Falha ao desfazer exclusão.', error);
+                    toast({ variant: 'destructive', ...restoreErrorToast(error) });
                   },
-                )
+                })
               }
             >
               Desfazer
@@ -125,6 +134,7 @@ export default function SavedSearchesPage() {
               <SavedSearchRow
                 key={search.id}
                 search={search}
+                highlighted={targetId === `saved-search-${search.id}`}
                 onDelete={() => {
                   remove.reset();
                   setToDelete(search);
@@ -155,12 +165,7 @@ export default function SavedSearchesPage() {
             <Button variant="outline" onClick={() => setToDelete(null)} disabled={remove.isPending} data-testid="button-cancel-delete-saved-search">
               Cancelar
             </Button>
-            <Button
-              loading={remove.isPending}
-              onClick={confirmDelete}
-              data-testid="button-confirm-delete-saved-search"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive"
-            >
+            <Button variant="destructive" loading={remove.isPending} onClick={confirmDelete} data-testid="button-confirm-delete-saved-search">
               Excluir busca
             </Button>
           </AlertDialogFooter>
@@ -170,7 +175,7 @@ export default function SavedSearchesPage() {
   );
 }
 
-function SavedSearchRow({ search, onDelete }: { search: SavedSearch; onDelete: () => void }) {
+function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch; highlighted: boolean; onDelete: () => void }) {
   const [, navigate] = useLocation();
   const update = useUpdateSavedSearch();
   const markSeen = useMarkSavedSearchSeen();
@@ -214,9 +219,11 @@ function SavedSearchRow({ search, onDelete }: { search: SavedSearch; onDelete: (
 
   return (
     <li
+      id={`saved-search-${search.id}`}
       aria-labelledby={nameId}
       data-testid={`row-saved-search-${search.id}`}
-      className="flex flex-col gap-4 border-b border-border-subtle px-4 py-4 last:border-0 sm:flex-row sm:items-start sm:justify-between sm:px-5"
+      data-highlighted={highlighted || undefined}
+      className="flex flex-col gap-4 border-b border-border-subtle px-4 py-4 last:border-0 data-highlighted:bg-primary-subtle sm:flex-row sm:items-start sm:justify-between sm:px-5"
     >
       <div className="min-w-0 flex-1">
         {editing ? (
