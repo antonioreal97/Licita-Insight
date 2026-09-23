@@ -9,6 +9,29 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  createdAt: string;
+}
+
+export interface AuthSessionResponse {
+  user: User;
+}
+
+export interface DevLoginRequest {
+  email: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name?: string;
+}
+
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -201,6 +224,161 @@ export type TenderDetail = TenderSummary & ({
   createdAt: string;
 });
 
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  totalIsEstimate: boolean;
+}
+
+export interface SavedTender {
+  tender: TenderSummary;
+  savedAt: string;
+  monitored: boolean;
+  /** @nullable */
+  monitoredAt: string | null;
+}
+
+export interface SavedTenderPage {
+  data: SavedTender[];
+  pagination: Pagination;
+}
+
+export interface SavedTenderIds {
+  saved: string[];
+  monitored: string[];
+}
+
+export interface PutSavedTenderRequest {
+  monitored?: boolean;
+}
+
+export interface ImportSavedTendersRequest {
+  /**
+     * @maxItems 500
+     * @items.minLength 1
+     */
+  ids: string[];
+}
+
+export interface SavedTenderImportResult {
+  /** @minimum 0 */
+  imported: number;
+  /** @minimum 0 */
+  alreadySaved: number;
+  notFound: string[];
+  /** @minimum 0 */
+  skippedByLimit: number;
+}
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  alertsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  lastCheckedAt: string | null;
+  /** @minimum 0 */
+  newMatchesCount: number;
+}
+
+export interface SavedSearchList {
+  data: SavedSearch[];
+}
+
+export interface CreateSavedSearchRequest {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  /** @maxLength 2000 */
+  query: string;
+  alertsEnabled: boolean;
+}
+
+export interface UpdateSavedSearchRequest {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name?: string;
+  /** @maxLength 2000 */
+  query?: string;
+  alertsEnabled?: boolean;
+}
+
+export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
+
+
+export const NotificationType = {
+  tender_deadline_changed: 'tender_deadline_changed',
+  tender_status_changed: 'tender_status_changed',
+  tender_document_added: 'tender_document_added',
+  tender_value_changed: 'tender_value_changed',
+  saved_search_new_matches: 'saved_search_new_matches',
+} as const;
+
+export type NotificationTender = {
+  id: string;
+  title: string;
+  /** @nullable */
+  tenderNumberShort: string | null;
+} | null;
+
+export type NotificationChange = {
+  field: string;
+  /** @nullable */
+  from: string | number | null;
+  /** @nullable */
+  to: string | number | null;
+} | null;
+
+export type NotificationSavedSearch = {
+  id: string;
+  name: string;
+  query: string;
+} | null;
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  createdAt: string;
+  /** @nullable */
+  readAt: string | null;
+  tender: NotificationTender;
+  change: NotificationChange;
+  savedSearch: NotificationSavedSearch;
+  /** @nullable */
+  matchCount: number | null;
+  /** @maxItems 20 */
+  tenderIds: string[];
+}
+
+export interface NotificationPage {
+  data: Notification[];
+  pagination: Pagination;
+  /** @minimum 0 */
+  unreadCount: number;
+}
+
+export interface UnreadNotificationCount {
+  /** @minimum 0 */
+  unreadCount: number;
+}
+
+export interface MarkNotificationsReadRequest {
+  /**
+     * @maxItems 100
+     * @items.minLength 1
+     */
+  ids?: string[];
+  all?: boolean;
+}
+
 export interface FacetBucket {
   value: string;
   label: string;
@@ -327,6 +505,9 @@ export const ApiErrorCode = {
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   SEARCH_UNAVAILABLE: 'SEARCH_UNAVAILABLE',
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  FORBIDDEN: 'FORBIDDEN',
+  CONFLICT: 'CONFLICT',
 } as const;
 
 export interface ApiError {
@@ -365,6 +546,21 @@ export type InternalErrorResponse = ErrorResponse;
  * Search subsystem unavailable
  */
 export type SearchUnavailableResponse = ErrorResponse;
+
+/**
+ * Authentication is required
+ */
+export type UnauthenticatedResponse = ErrorResponse;
+
+/**
+ * The request is forbidden
+ */
+export type ForbiddenResponse = ErrorResponse;
+
+/**
+ * Resource limit or state conflict
+ */
+export type ConflictResponse = ErrorResponse;
 
 export type QueryParameter = string;
 
@@ -464,4 +660,34 @@ q: string;
  * @maximum 20
  */
 limit?: number;
+};
+
+export type StartGoogleAuthParams = {
+returnTo?: string;
+};
+
+export type ListSavedTendersParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: PageSizeParameter;
+monitored?: boolean;
+};
+
+export type ListNotificationsParams = {
+unreadOnly?: boolean;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+pageSize?: number;
 };

@@ -1,0 +1,159 @@
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { tendersTable } from "./tenders";
+
+export type NotificationChangeRecord = {
+  field: string;
+  from: string | number | null;
+  to: string | number | null;
+};
+
+export const usersTable = pgTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    googleSub: text("google_sub"),
+    email: text("email").notNull(),
+    name: text("name"),
+    avatarUrl: text("avatar_url"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("users_google_sub_uidx")
+      .on(table.googleSub)
+      .where(sql`${table.googleSub} is not null`),
+    uniqueIndex("users_email_uidx").on(table.email),
+  ],
+);
+
+export const sessionsTable = pgTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("sessions_user_id_idx").on(table.userId),
+    index("sessions_expires_at_idx").on(table.expiresAt),
+  ],
+);
+
+export const savedTendersTable = pgTable(
+  "saved_tenders",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    tenderId: text("tender_id")
+      .notNull()
+      .references(() => tendersTable.id, { onDelete: "cascade" }),
+    savedAt: timestamp("saved_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    monitored: boolean("monitored").notNull().default(false),
+    monitoredAt: timestamp("monitored_at", { withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.tenderId] }),
+    index("saved_tenders_user_saved_at_idx").on(table.userId, table.savedAt),
+    index("saved_tenders_monitored_tender_idx")
+      .on(table.tenderId)
+      .where(sql`${table.monitored} = true`),
+  ],
+);
+
+export const savedSearchesTable = pgTable(
+  "saved_searches",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    query: text("query").notNull(),
+    alertsEnabled: boolean("alerts_enabled").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    newMatchesCount: integer("new_matches_count").notNull().default(0),
+  },
+  (table) => [
+    index("saved_searches_user_updated_at_idx").on(
+      table.userId,
+      table.updatedAt,
+    ),
+    index("saved_searches_alerts_idx")
+      .on(table.alertsEnabled, table.lastCheckedAt)
+      .where(sql`${table.alertsEnabled} = true`),
+  ],
+);
+
+export const notificationsTable = pgTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    dedupeKey: text("dedupe_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    tenderId: text("tender_id"),
+    tenderTitle: text("tender_title"),
+    tenderNumberShort: text("tender_number_short"),
+    change: jsonb("change").$type<NotificationChangeRecord>(),
+    savedSearchId: text("saved_search_id"),
+    savedSearchName: text("saved_search_name"),
+    savedSearchQuery: text("saved_search_query"),
+    matchCount: integer("match_count"),
+    tenderIds: jsonb("tender_ids")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+  },
+  (table) => [
+    uniqueIndex("notifications_user_dedupe_uidx").on(
+      table.userId,
+      table.dedupeKey,
+    ),
+    index("notifications_user_created_at_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    index("notifications_user_unread_idx")
+      .on(table.userId, table.createdAt)
+      .where(sql`${table.readAt} is null`),
+  ],
+);

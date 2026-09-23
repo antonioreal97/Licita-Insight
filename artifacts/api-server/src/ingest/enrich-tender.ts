@@ -7,7 +7,9 @@ import {
   mapPncpDocuments,
   mapPncpItems,
   parseControlNumber,
+  pncpTenderNumberShort,
 } from "./pncp-map";
+import { createDocumentAddedNotifications } from "../account/notification-service";
 
 export async function enrichTenderById(id: string): Promise<void> {
   const [row] = await db
@@ -41,6 +43,10 @@ export async function enrichTenderById(id: string): Promise<void> {
     modalityLabel: row.modalityLabel,
   });
   const previousDocuments = row.documents;
+  const previousDocumentIds = new Set(previousDocuments.map(({ id }) => id));
+  const addedDocumentIds = documents
+    .filter(({ id }) => !previousDocumentIds.has(id))
+    .map(({ id }) => id);
   const timeline = [...row.timeline];
   if (documents.length > previousDocuments.length) {
     timeline.push({
@@ -55,19 +61,41 @@ export async function enrichTenderById(id: string): Promise<void> {
     raw !== null && typeof raw === "object" && "publication" in raw
       ? (raw as { publication: unknown }).publication
       : raw;
+  const publicationRecord =
+    publication !== null && typeof publication === "object"
+      ? (publication as Record<string, unknown>)
+      : {};
 
-  await db
-    .update(tendersTable)
-    .set({
-      items,
-      documents,
-      timeline,
-      ...search,
-      rawPayload: { publication, items: itemRows, arquivos: fileRows },
-      detailsFetchedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(tendersTable.id, id));
+  const detectedAt = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(tendersTable)
+      .set({
+        items,
+        documents,
+        timeline,
+        ...search,
+        rawPayload: { publication, items: itemRows, arquivos: fileRows },
+        detailsFetchedAt: detectedAt,
+        updatedAt: detectedAt,
+      })
+      .where(eq(tendersTable.id, id));
+    const isFirstEnrichment =
+      row.detailsFetchedAt === null && previousDocuments.length === 0;
+    if (!isFirstEnrichment && addedDocumentIds.length > 0) {
+      await createDocumentAddedNotifications(tx, {
+        tender: {
+          id: row.id,
+          title: row.title,
+          tenderNumberShort: pncpTenderNumberShort(publicationRecord),
+        },
+        previousCount: previousDocuments.length,
+        nextCount: documents.length,
+        addedDocumentIds,
+        detectedAt,
+      });
+    }
+  });
 
   logger.info(
     { tenderId: id, items: items.length, documents: documents.length },

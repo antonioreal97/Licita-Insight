@@ -17,6 +17,7 @@ import {
   PncpError,
 } from "./pncp-client";
 import { parseControlNumber } from "./pncp-map";
+import { evaluateSavedSearchNotifications } from "../account/notification-service";
 import { upsertPublications } from "./upsert-tenders";
 import {
   addDays,
@@ -492,6 +493,7 @@ async function execute(
         counters,
       );
     }
+    await evaluateSavedSearchNotifications(new Date());
     await db
       .update(ingestRunsTable)
       .set({

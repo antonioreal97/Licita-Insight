@@ -6,31 +6,56 @@
  * OpenAPI spec version: 1.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  AuthSessionResponse,
+  ConflictResponse,
+  CreateSavedSearchRequest,
+  DevLoginRequest,
+  ForbiddenResponse,
   GetSearchSuggestionsParams,
   HealthStatus,
+  ImportSavedTendersRequest,
   InternalErrorResponse,
   InvalidParameterResponse,
+  ListNotificationsParams,
+  ListSavedTendersParams,
+  MarkNotificationsReadRequest,
   NotFoundResponse,
+  NotificationPage,
+  PutSavedTenderRequest,
   RateLimitedResponse,
+  SavedSearch,
+  SavedSearchList,
+  SavedTender,
+  SavedTenderIds,
+  SavedTenderImportResult,
+  SavedTenderPage,
   SearchResponse,
   SearchTendersParams,
   SearchUnavailableResponse,
+  StartGoogleAuthParams,
   SuggestionsResponse,
-  TenderDetail
+  TenderDetail,
+  UnauthenticatedResponse,
+  UnreadNotificationCount,
+  UpdateSavedSearchRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -126,6 +151,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getSearchTendersUrl = (params?: SearchTendersParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -212,6 +244,12 @@ export function useSearchTenders<TData = Awaited<ReturnType<typeof searchTenders
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
+
 export const getGetTenderByIdUrl = (id: string,) => {
 
 
@@ -282,6 +320,11 @@ export function useGetTenderById<TData = Awaited<ReturnType<typeof getTenderById
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetSearchSuggestionsUrl = (params: GetSearchSuggestionsParams,) => {
@@ -361,3 +404,1418 @@ export function useGetSearchSuggestions<TData = Awaited<ReturnType<typeof getSea
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export const getStartGoogleAuthUrl = (params?: StartGoogleAuthParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/auth/google/start?${stringifiedParams}` : `/api/v1/auth/google/start`
+}
+
+/**
+ * @summary Start Google OAuth with PKCE
+ */
+export const startGoogleAuth = async (params?: StartGoogleAuthParams, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getStartGoogleAuthUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartGoogleAuthQueryKey = (params?: StartGoogleAuthParams,) => {
+    return [
+    `/api/v1/auth/google/start`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getStartGoogleAuthQueryOptions = <TData = Awaited<ReturnType<typeof startGoogleAuth>>, TError = ErrorType<void>>(params?: StartGoogleAuthParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof startGoogleAuth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStartGoogleAuthQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof startGoogleAuth>>> = ({ signal }) => startGoogleAuth(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof startGoogleAuth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type StartGoogleAuthQueryResult = NonNullable<Awaited<ReturnType<typeof startGoogleAuth>>>
+export type StartGoogleAuthQueryError = ErrorType<void>
+
+
+/**
+ * @summary Start Google OAuth with PKCE
+ */
+
+export function useStartGoogleAuth<TData = Awaited<ReturnType<typeof startGoogleAuth>>, TError = ErrorType<void>>(
+ params?: StartGoogleAuthParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof startGoogleAuth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getStartGoogleAuthQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCompleteGoogleAuthUrl = () => {
+
+
+
+
+  return `/api/v1/auth/google/callback`
+}
+
+/**
+ * @summary Complete Google OAuth
+ */
+export const completeGoogleAuth = async ( options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getCompleteGoogleAuthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteGoogleAuthQueryKey = () => {
+    return [
+    `/api/v1/auth/google/callback`
+    ] as const;
+    }
+
+
+export const getCompleteGoogleAuthQueryOptions = <TData = Awaited<ReturnType<typeof completeGoogleAuth>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof completeGoogleAuth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCompleteGoogleAuthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof completeGoogleAuth>>> = ({ signal }) => completeGoogleAuth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof completeGoogleAuth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CompleteGoogleAuthQueryResult = NonNullable<Awaited<ReturnType<typeof completeGoogleAuth>>>
+export type CompleteGoogleAuthQueryError = ErrorType<void>
+
+
+/**
+ * @summary Complete Google OAuth
+ */
+
+export function useCompleteGoogleAuth<TData = Awaited<ReturnType<typeof completeGoogleAuth>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof completeGoogleAuth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCompleteGoogleAuthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAuthSessionUrl = () => {
+
+
+
+
+  return `/api/v1/auth/session`
+}
+
+/**
+ * @summary Get the authenticated user
+ */
+export const getAuthSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<AuthSessionResponse> => {
+
+  return customFetch<AuthSessionResponse>(getGetAuthSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthSessionQueryKey = () => {
+    return [
+    `/api/v1/auth/session`
+    ] as const;
+    }
+
+
+export const getGetAuthSessionQueryOptions = <TData = Awaited<ReturnType<typeof getAuthSession>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthSession>>> = ({ signal }) => getAuthSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthSession>>>
+export type GetAuthSessionQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Get the authenticated user
+ */
+
+export function useGetAuthSession<TData = Awaited<ReturnType<typeof getAuthSession>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/v1/auth/logout`
+}
+
+/**
+ * @summary Revoke the current session
+ */
+export const logout = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMutationKey = () => ['logout'] as const;
+
+export const getLogoutMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<ForbiddenResponse>
+
+
+    /**
+ * @summary Revoke the current session
+ */
+export const useLogout = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options));
+    }
+
+export const getDevLoginUrl = () => {
+
+
+
+
+  return `/api/v1/auth/dev-login`
+}
+
+/**
+ * @summary Create a development-only session
+ */
+export const devLogin = async (devLoginRequest: DevLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDevLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(devLoginRequest)
+  }
+);}
+
+
+
+
+
+export const getDevLoginMutationKey = () => ['devLogin'] as const;
+
+export const getDevLoginMutationOptions = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext> => {
+
+const mutationKey = getDevLoginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devLogin>>, DevLoginMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  devLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevLoginMutationResult = NonNullable<Awaited<ReturnType<typeof devLogin>>>
+    export type DevLoginMutationBody = BodyType<DevLoginRequest>
+    export type DevLoginMutationError = ErrorType<InvalidParameterResponse | NotFoundResponse>
+    export type DevLoginMutationVariables = {data: BodyType<DevLoginRequest>}
+
+    /**
+ * @summary Create a development-only session
+ */
+export const useDevLogin = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devLogin>>, TError,DevLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof devLogin>>,
+        TError,
+        DevLoginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDevLoginMutationOptions(options));
+    }
+
+export const getListSavedTendersUrl = (params?: ListSavedTendersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/saved-tenders?${stringifiedParams}` : `/api/v1/me/saved-tenders`
+}
+
+export const listSavedTenders = async (params?: ListSavedTendersParams, options?: Parameters<typeof customFetch>[1]): Promise<SavedTenderPage> => {
+
+  return customFetch<SavedTenderPage>(getListSavedTendersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSavedTendersQueryKey = (params?: ListSavedTendersParams,) => {
+    return [
+    `/api/v1/me/saved-tenders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSavedTendersQueryOptions = <TData = Awaited<ReturnType<typeof listSavedTenders>>, TError = ErrorType<UnauthenticatedResponse>>(params?: ListSavedTendersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedTenders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSavedTendersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedTenders>>> = ({ signal }) => listSavedTenders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedTenders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSavedTendersQueryResult = NonNullable<Awaited<ReturnType<typeof listSavedTenders>>>
+export type ListSavedTendersQueryError = ErrorType<UnauthenticatedResponse>
+
+
+
+export function useListSavedTenders<TData = Awaited<ReturnType<typeof listSavedTenders>>, TError = ErrorType<UnauthenticatedResponse>>(
+ params?: ListSavedTendersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedTenders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSavedTendersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSavedTenderIdsUrl = () => {
+
+
+
+
+  return `/api/v1/me/saved-tenders/ids`
+}
+
+export const getSavedTenderIds = async ( options?: Parameters<typeof customFetch>[1]): Promise<SavedTenderIds> => {
+
+  return customFetch<SavedTenderIds>(getGetSavedTenderIdsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSavedTenderIdsQueryKey = () => {
+    return [
+    `/api/v1/me/saved-tenders/ids`
+    ] as const;
+    }
+
+
+export const getGetSavedTenderIdsQueryOptions = <TData = Awaited<ReturnType<typeof getSavedTenderIds>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedTenderIds>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSavedTenderIdsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSavedTenderIds>>> = ({ signal }) => getSavedTenderIds({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSavedTenderIds>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSavedTenderIdsQueryResult = NonNullable<Awaited<ReturnType<typeof getSavedTenderIds>>>
+export type GetSavedTenderIdsQueryError = ErrorType<UnauthenticatedResponse>
+
+
+
+export function useGetSavedTenderIds<TData = Awaited<ReturnType<typeof getSavedTenderIds>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedTenderIds>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSavedTenderIdsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportSavedTendersUrl = () => {
+
+
+
+
+  return `/api/v1/me/saved-tenders/import`
+}
+
+export const importSavedTenders = async (importSavedTendersRequest: ImportSavedTendersRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedTenderImportResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedTenderImportResult>(getImportSavedTendersUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importSavedTendersRequest)
+  }
+);}
+
+
+
+
+
+export const getImportSavedTendersMutationKey = () => ['importSavedTenders'] as const;
+
+export const getImportSavedTendersMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importSavedTenders>>, TError,ImportSavedTendersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importSavedTenders>>, TError,ImportSavedTendersMutationVariables, TContext> => {
+
+const mutationKey = getImportSavedTendersMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importSavedTenders>>, ImportSavedTendersMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  importSavedTenders(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportSavedTendersMutationResult = NonNullable<Awaited<ReturnType<typeof importSavedTenders>>>
+    export type ImportSavedTendersMutationBody = BodyType<ImportSavedTendersRequest>
+    export type ImportSavedTendersMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type ImportSavedTendersMutationVariables = {data: BodyType<ImportSavedTendersRequest>}
+
+    export const useImportSavedTenders = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importSavedTenders>>, TError,ImportSavedTendersMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importSavedTenders>>,
+        TError,
+        ImportSavedTendersMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportSavedTendersMutationOptions(options));
+    }
+
+export const getPutSavedTenderUrl = (tenderId: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-tenders/${tenderId}`
+}
+
+export const putSavedTender = async (tenderId: string,
+    putSavedTenderRequest: PutSavedTenderRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedTender> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedTender>(getPutSavedTenderUrl(tenderId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(putSavedTenderRequest)
+  }
+);}
+
+
+
+
+
+export const getPutSavedTenderMutationKey = () => ['putSavedTender'] as const;
+
+export const getPutSavedTenderMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putSavedTender>>, TError,PutSavedTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putSavedTender>>, TError,PutSavedTenderMutationVariables, TContext> => {
+
+const mutationKey = getPutSavedTenderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putSavedTender>>, PutSavedTenderMutationVariables> = (props) => {
+          const {tenderId,data} = props ?? {};
+
+          return  putSavedTender(tenderId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutSavedTenderMutationResult = NonNullable<Awaited<ReturnType<typeof putSavedTender>>>
+    export type PutSavedTenderMutationBody = BodyType<PutSavedTenderRequest>
+    export type PutSavedTenderMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
+    export type PutSavedTenderMutationVariables = {tenderId: string;data: BodyType<PutSavedTenderRequest>}
+
+    export const usePutSavedTender = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putSavedTender>>, TError,PutSavedTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putSavedTender>>,
+        TError,
+        PutSavedTenderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutSavedTenderMutationOptions(options));
+    }
+
+export const getDeleteSavedTenderUrl = (tenderId: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-tenders/${tenderId}`
+}
+
+export const deleteSavedTender = async (tenderId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSavedTenderUrl(tenderId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSavedTenderMutationKey = () => ['deleteSavedTender'] as const;
+
+export const getDeleteSavedTenderMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedTender>>, TError,DeleteSavedTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSavedTender>>, TError,DeleteSavedTenderMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSavedTenderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSavedTender>>, DeleteSavedTenderMutationVariables> = (props) => {
+          const {tenderId} = props ?? {};
+
+          return  deleteSavedTender(tenderId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSavedTenderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSavedTender>>>
+
+    export type DeleteSavedTenderMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>
+    export type DeleteSavedTenderMutationVariables = {tenderId: string}
+
+    export const useDeleteSavedTender = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedTender>>, TError,DeleteSavedTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSavedTender>>,
+        TError,
+        DeleteSavedTenderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSavedTenderMutationOptions(options));
+    }
+
+export const getListSavedSearchesUrl = () => {
+
+
+
+
+  return `/api/v1/me/saved-searches`
+}
+
+export const listSavedSearches = async ( options?: Parameters<typeof customFetch>[1]): Promise<SavedSearchList> => {
+
+  return customFetch<SavedSearchList>(getListSavedSearchesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSavedSearchesQueryKey = () => {
+    return [
+    `/api/v1/me/saved-searches`
+    ] as const;
+    }
+
+
+export const getListSavedSearchesQueryOptions = <TData = Awaited<ReturnType<typeof listSavedSearches>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSavedSearchesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedSearches>>> = ({ signal }) => listSavedSearches({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedSearches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSavedSearchesQueryResult = NonNullable<Awaited<ReturnType<typeof listSavedSearches>>>
+export type ListSavedSearchesQueryError = ErrorType<UnauthenticatedResponse>
+
+
+
+export function useListSavedSearches<TData = Awaited<ReturnType<typeof listSavedSearches>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSavedSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSavedSearchesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSavedSearchUrl = () => {
+
+
+
+
+  return `/api/v1/me/saved-searches`
+}
+
+export const createSavedSearch = async (createSavedSearchRequest: CreateSavedSearchRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedSearch>(getCreateSavedSearchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createSavedSearchRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateSavedSearchMutationKey = () => ['createSavedSearch'] as const;
+
+export const getCreateSavedSearchMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedSearch>>, TError,CreateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSavedSearch>>, TError,CreateSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getCreateSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSavedSearch>>, CreateSavedSearchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSavedSearch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof createSavedSearch>>>
+    export type CreateSavedSearchMutationBody = BodyType<CreateSavedSearchRequest>
+    export type CreateSavedSearchMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | ConflictResponse>
+    export type CreateSavedSearchMutationVariables = {data: BodyType<CreateSavedSearchRequest>}
+
+    export const useCreateSavedSearch = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSavedSearch>>, TError,CreateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSavedSearch>>,
+        TError,
+        CreateSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSavedSearchMutationOptions(options));
+    }
+
+export const getUpdateSavedSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-searches/${id}`
+}
+
+export const updateSavedSearch = async (id: string,
+    updateSavedSearchRequest: UpdateSavedSearchRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedSearch>(getUpdateSavedSearchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateSavedSearchRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateSavedSearchMutationKey = () => ['updateSavedSearch'] as const;
+
+export const getUpdateSavedSearchMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSavedSearch>>, UpdateSavedSearchMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSavedSearch(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof updateSavedSearch>>>
+    export type UpdateSavedSearchMutationBody = BodyType<UpdateSavedSearchRequest>
+    export type UpdateSavedSearchMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>
+    export type UpdateSavedSearchMutationVariables = {id: string;data: BodyType<UpdateSavedSearchRequest>}
+
+    export const useUpdateSavedSearch = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSavedSearch>>, TError,UpdateSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSavedSearch>>,
+        TError,
+        UpdateSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSavedSearchMutationOptions(options));
+    }
+
+export const getDeleteSavedSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-searches/${id}`
+}
+
+export const deleteSavedSearch = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSavedSearchUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSavedSearchMutationKey = () => ['deleteSavedSearch'] as const;
+
+export const getDeleteSavedSearchMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedSearch>>, TError,DeleteSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSavedSearch>>, TError,DeleteSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSavedSearch>>, DeleteSavedSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSavedSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSavedSearch>>>
+
+    export type DeleteSavedSearchMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>
+    export type DeleteSavedSearchMutationVariables = {id: string}
+
+    export const useDeleteSavedSearch = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSavedSearch>>, TError,DeleteSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSavedSearch>>,
+        TError,
+        DeleteSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSavedSearchMutationOptions(options));
+    }
+
+export const getMarkSavedSearchSeenUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-searches/${id}/seen`
+}
+
+export const markSavedSearchSeen = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+  return customFetch<SavedSearch>(getMarkSavedSearchSeenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkSavedSearchSeenMutationKey = () => ['markSavedSearchSeen'] as const;
+
+export const getMarkSavedSearchSeenMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSavedSearchSeen>>, TError,MarkSavedSearchSeenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markSavedSearchSeen>>, TError,MarkSavedSearchSeenMutationVariables, TContext> => {
+
+const mutationKey = getMarkSavedSearchSeenMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markSavedSearchSeen>>, MarkSavedSearchSeenMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  markSavedSearchSeen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkSavedSearchSeenMutationResult = NonNullable<Awaited<ReturnType<typeof markSavedSearchSeen>>>
+
+    export type MarkSavedSearchSeenMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>
+    export type MarkSavedSearchSeenMutationVariables = {id: string}
+
+    export const useMarkSavedSearchSeen = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSavedSearchSeen>>, TError,MarkSavedSearchSeenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markSavedSearchSeen>>,
+        TError,
+        MarkSavedSearchSeenMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkSavedSearchSeenMutationOptions(options));
+    }
+
+export const getListNotificationsUrl = (params?: ListNotificationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/notifications?${stringifiedParams}` : `/api/v1/me/notifications`
+}
+
+export const listNotifications = async (params?: ListNotificationsParams, options?: Parameters<typeof customFetch>[1]): Promise<NotificationPage> => {
+
+  return customFetch<NotificationPage>(getListNotificationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNotificationsQueryKey = (params?: ListNotificationsParams,) => {
+    return [
+    `/api/v1/me/notifications`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<UnauthenticatedResponse>>(params?: ListNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNotificationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) => listNotifications(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
+export type ListNotificationsQueryError = ErrorType<UnauthenticatedResponse>
+
+
+
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<UnauthenticatedResponse>>(
+ params?: ListNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNotificationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetUnreadNotificationCountUrl = () => {
+
+
+
+
+  return `/api/v1/me/notifications/unread-count`
+}
+
+export const getUnreadNotificationCount = async ( options?: Parameters<typeof customFetch>[1]): Promise<UnreadNotificationCount> => {
+
+  return customFetch<UnreadNotificationCount>(getGetUnreadNotificationCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnreadNotificationCountQueryKey = () => {
+    return [
+    `/api/v1/me/notifications/unread-count`
+    ] as const;
+    }
+
+
+export const getGetUnreadNotificationCountQueryOptions = <TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnreadNotificationCountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnreadNotificationCount>>> = ({ signal }) => getUnreadNotificationCount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnreadNotificationCountQueryResult = NonNullable<Awaited<ReturnType<typeof getUnreadNotificationCount>>>
+export type GetUnreadNotificationCountQueryError = ErrorType<UnauthenticatedResponse>
+
+
+
+export function useGetUnreadNotificationCount<TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnreadNotificationCountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/v1/me/notifications/read`
+}
+
+export const markNotificationsRead = async (markNotificationsReadRequest: MarkNotificationsReadRequest, options?: Parameters<typeof customFetch>[1]): Promise<UnreadNotificationCount> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UnreadNotificationCount>(getMarkNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(markNotificationsReadRequest)
+  }
+);}
+
+
+
+
+
+export const getMarkNotificationsReadMutationKey = () => ['markNotificationsRead'] as const;
+
+export const getMarkNotificationsReadMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext> => {
+
+const mutationKey = getMarkNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markNotificationsRead>>, MarkNotificationsReadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  markNotificationsRead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markNotificationsRead>>>
+    export type MarkNotificationsReadMutationBody = BodyType<MarkNotificationsReadRequest>
+    export type MarkNotificationsReadMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type MarkNotificationsReadMutationVariables = {data: BodyType<MarkNotificationsReadRequest>}
+
+    export const useMarkNotificationsRead = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationsRead>>, TError,MarkNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markNotificationsRead>>,
+        TError,
+        MarkNotificationsReadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkNotificationsReadMutationOptions(options));
+    }

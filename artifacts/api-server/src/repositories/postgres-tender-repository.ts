@@ -86,7 +86,10 @@ const asModality = (value: string): Modality => {
   return value as Modality;
 };
 
-const whereFor = (criteria: SearchCriteria, skip?: FacetGroup): SQL | undefined => {
+export const searchWhereFor = (
+  criteria: SearchCriteria,
+  skip?: FacetGroup,
+): SQL | undefined => {
   const filters: SQL[] = [];
   const tokens = queryTokens(criteria.query);
 
@@ -231,7 +234,7 @@ const buckets = async (
   });
 };
 
-const toDetail = (row: TenderRow): TenderDetail => {
+export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
   const items = row.items as TenderItemRecord[];
   const documents = row.documents as TenderDocumentRecord[];
   const timeline = row.timeline as TenderTimelineRecord[];
@@ -302,7 +305,7 @@ export class PostgresTenderRepository {
   async search(criteria: SearchCriteria): Promise<SearchResponse> {
     const startedAt = performance.now();
     const tokens = queryTokens(criteria.query);
-    const where = whereFor(criteria);
+    const where = searchWhereFor(criteria);
     const total = await countRows(where);
     const rows = await db
       .select()
@@ -319,7 +322,7 @@ export class PostgresTenderRepository {
 
     return {
       data: normalizePageRelevance(
-        rows.map((row) => toSummary(toDetail(row), criteria, tokens)),
+        rows.map((row) => toSummary(tenderRowToDetail(row), criteria, tokens)),
       ),
       pagination: {
         page: criteria.page,
@@ -357,7 +360,7 @@ export class PostgresTenderRepository {
       }
     }
 
-    const detail = toDetail(row);
+    const detail = tenderRowToDetail(row);
     return {
       ...detail,
       relevance: {
@@ -394,7 +397,7 @@ export class PostgresTenderRepository {
         order by count desc
         limit ${limit}
       `),
-      countRows(whereFor({ ...emptyCriteria(), query })),
+      countRows(searchWhereFor({ ...emptyCriteria(), query })),
     ]);
 
     const categoryRows = "rows" in categories ? categories.rows : [];
@@ -456,27 +459,27 @@ export class PostgresTenderRepository {
       organizationTotal,
       valueRows,
     ] = await Promise.all([
-      buckets(tendersTable.status, sql<string>`${tendersTable.status}`, whereFor(criteria, "status")),
-      buckets(tendersTable.modality, sql<string>`${tendersTable.modality}`, whereFor(criteria, "modality")),
+      buckets(tendersTable.status, sql<string>`${tendersTable.status}`, searchWhereFor(criteria, "status")),
+      buckets(tendersTable.modality, sql<string>`${tendersTable.modality}`, searchWhereFor(criteria, "modality")),
       buckets(
         tendersTable.state,
         sql<string>`${tendersTable.state}`,
-        and(whereFor(criteria, "state"), sql`${tendersTable.state} is not null`),
+        and(searchWhereFor(criteria, "state"), sql`${tendersTable.state} is not null`),
       ),
-      buckets(tendersTable.sourceId, sql<string>`${tendersTable.sourceName}`, whereFor(criteria, "source")),
+      buckets(tendersTable.sourceId, sql<string>`${tendersTable.sourceName}`, searchWhereFor(criteria, "source")),
       this.cityFacet(criteria),
       this.organizationFacet(criteria),
       this.categoryFacet(criteria),
-      countRows(whereFor(criteria, "status")),
-      countRows(whereFor(criteria, "modality")),
-      countRows(whereFor(criteria, "state")),
-      countRows(whereFor(criteria, "source")),
-      countRows(whereFor(criteria, "category")),
-      countRows(whereFor(criteria, "organization")),
+      countRows(searchWhereFor(criteria, "status")),
+      countRows(searchWhereFor(criteria, "modality")),
+      countRows(searchWhereFor(criteria, "state")),
+      countRows(searchWhereFor(criteria, "source")),
+      countRows(searchWhereFor(criteria, "category")),
+      countRows(searchWhereFor(criteria, "organization")),
       db
         .select({ value: tendersTable.estimatedValue })
         .from(tendersTable)
-        .where(whereFor(criteria, "valueRange")),
+        .where(searchWhereFor(criteria, "valueRange")),
     ]);
 
     const values = valueRows
@@ -524,7 +527,7 @@ export class PostgresTenderRepository {
       .from(tendersTable)
       .where(
         and(
-          whereFor(criteria, "city"),
+          searchWhereFor(criteria, "city"),
           sql`${tendersTable.cityIbgeCode} is not null`,
           sql`${tendersTable.city} is not null`,
           sql`${tendersTable.state} is not null`,
@@ -545,7 +548,7 @@ export class PostgresTenderRepository {
   }
 
   private async organizationFacet(criteria: SearchCriteria): Promise<FacetBucket[]> {
-    const where = whereFor(criteria, "organization");
+    const where = searchWhereFor(criteria, "organization");
     const top = await db
       .select({
         value: tendersTable.organizationId,
@@ -586,7 +589,7 @@ export class PostgresTenderRepository {
   }
 
   private async categoryFacet(criteria: SearchCriteria): Promise<FacetBucket[]> {
-    const where = whereFor(criteria, "category");
+    const where = searchWhereFor(criteria, "category");
     const result = await db.execute<{ value: string; label: string; count: number }>(sql`
       select cat->>'slug' as value,
              cat->>'label' as label,

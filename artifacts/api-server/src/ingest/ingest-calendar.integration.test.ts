@@ -54,7 +54,16 @@ test(
       await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
       await pool.end();
     });
-    for (const table of ["tenders", "ingest_runs", "ingest_days"]) {
+    for (const table of [
+      "tenders",
+      "ingest_runs",
+      "ingest_days",
+      "users",
+      "sessions",
+      "saved_tenders",
+      "saved_searches",
+      "notifications",
+    ]) {
       await pool.query(
         `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
       );

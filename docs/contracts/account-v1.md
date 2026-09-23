@@ -1,6 +1,6 @@
 # Contrato — Account API v1 (login, salvos, monitoramento, notificações)
 
-Status: **PROPOSTO** pelo Claude Orchestrator · aguardando `CODEX_BACKEND_AGENT` (`docs/handoffs/CODEX_HANDOFF-004-account.md`)
+Status: **ACEITO E IMPLEMENTADO** pelo `CODEX_BACKEND_AGENT` · integração liberada em `docs/handoffs/CLAUDE_HANDOFF-004-account.md`
 
 Decisões do owner (23 set 2026): login **Google OAuth**; alertas **só dentro do app** (sem e-mail neste ciclo);
 monitoramento de **editais específicos** e de **buscas salvas**.
@@ -168,3 +168,12 @@ E-mail/push, compartilhamento de buscas, times/organizações, papéis, exclusã
 6. `POST /auth/logout` exige o header `X-Requested-With`, mas é aceito sem sessão (204 idempotente); a checagem de `Origin` vale como nas demais mutações.
 7. `POST /me/notifications/read` sem `ids` nem `all` → 400 `INVALID_PARAMETER`.
 8. Origem pública única: `PUBLIC_APP_ORIGIN=http://localhost:24252` em dev (usar `localhost`, não `127.0.0.1`, inclusive na redirect URI do Google).
+
+## Decisões do backend
+
+- Os oito esclarecimentos do frontend foram aceitos sem contraproposta e estão cobertos pelo OpenAPI e pelos testes HTTP/integrados.
+- Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 30 dias, com renovação deslizante após 24 horas de atividade.
+- Limites de salvos são serializados por usuário com advisory lock transacional, além das constraints de unicidade do PostgreSQL.
+- Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados após uma coleta PNCP concluída.
+- Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; retenção operacional é de 90 dias.
+- O índice de busca continua reconstruível a partir do banco canônico; nenhuma tabela de conta passa a ser fonte de verdade para os dados públicos do edital.
