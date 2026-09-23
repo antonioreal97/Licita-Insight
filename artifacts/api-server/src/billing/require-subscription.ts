@@ -7,6 +7,10 @@ import { isEntitled } from "./billing-access";
 
 export const requireSubscription: RequestHandler = async (_req, res, next) => {
   try {
+    if (isEntitled(null, new Date())) {
+      next();
+      return;
+    }
     const userId = authContext(res).user.id;
     const [row] = await db
       .select({

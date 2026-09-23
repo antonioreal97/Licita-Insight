@@ -12,18 +12,37 @@ export type SubscriptionSnapshot = {
   currentPeriodEnd: Date | null;
 };
 
+export type EntitlementSource = "subscription" | "dev" | null;
+
+export function devEntitlementEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.NODE_ENV !== "production" && env.BILLING_DEV_ENTITLED === "true";
+}
+
 /** Active, or canceled with the already-paid period still open. */
 export function isEntitled(
   row: SubscriptionSnapshot | null,
   now: Date,
+  env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  if (!row) return false;
-  if (row.status === "active") return true;
-  return (
-    row.status === "canceled" &&
-    row.currentPeriodEnd !== null &&
-    row.currentPeriodEnd > now
-  );
+  return entitlementSource(row, now, env) !== null;
+}
+
+export function entitlementSource(
+  row: SubscriptionSnapshot | null,
+  now: Date,
+  env: NodeJS.ProcessEnv = process.env,
+): EntitlementSource {
+  if (
+    row?.status === "active" ||
+    (row?.status === "canceled" &&
+      row.currentPeriodEnd !== null &&
+      row.currentPeriodEnd > now)
+  ) {
+    return "subscription";
+  }
+  return devEntitlementEnabled(env) ? "dev" : null;
 }
 
 /** Asaas dates are calendar days. The paid period ends at midnight in São Paulo on `nextDueDate`. */

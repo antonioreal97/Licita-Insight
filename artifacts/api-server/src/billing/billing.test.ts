@@ -1,35 +1,67 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isEntitled, periodEndFromAsaasDate } from "./billing-access";
+import {
+  devEntitlementEnabled,
+  entitlementSource,
+  isEntitled,
+  periodEndFromAsaasDate,
+} from "./billing-access";
 import { webhookPatch } from "./asaas-webhook";
 
 const now = new Date("2026-10-01T12:00:00.000Z");
 
 describe("subscription access", () => {
   it("denies access when there is no subscription", () => {
-    assert.equal(isEntitled(null, now), false);
+    assert.equal(isEntitled(null, now, {}), false);
   });
 
   it("allows an active subscription and a canceled one still inside the paid period", () => {
-    assert.equal(isEntitled({ status: "active", currentPeriodEnd: null }, now), true);
+    assert.equal(isEntitled({ status: "active", currentPeriodEnd: null }, now, {}), true);
     assert.equal(
       isEntitled(
         { status: "canceled", currentPeriodEnd: new Date("2026-10-23T03:00:00.000Z") },
         now,
+        {},
       ),
       true,
     );
   });
 
   it("denies pending, overdue, and canceled subscriptions after the period", () => {
-    assert.equal(isEntitled({ status: "pending", currentPeriodEnd: null }, now), false);
-    assert.equal(isEntitled({ status: "past_due", currentPeriodEnd: null }, now), false);
+    assert.equal(isEntitled({ status: "pending", currentPeriodEnd: null }, now, {}), false);
+    assert.equal(isEntitled({ status: "past_due", currentPeriodEnd: null }, now, {}), false);
     assert.equal(
       isEntitled(
         { status: "canceled", currentPeriodEnd: new Date("2026-09-01T03:00:00.000Z") },
         now,
+        {},
       ),
       false,
+    );
+  });
+
+  it("allows development entitlement and identifies its source", () => {
+    const env = { NODE_ENV: "development", BILLING_DEV_ENTITLED: "true" };
+    assert.equal(devEntitlementEnabled(env), true);
+    assert.equal(isEntitled(null, now, env), true);
+    assert.equal(entitlementSource(null, now, env), "dev");
+  });
+
+  it("ignores development entitlement in production", () => {
+    const env = { NODE_ENV: "production", BILLING_DEV_ENTITLED: "true" };
+    assert.equal(devEntitlementEnabled(env), false);
+    assert.equal(isEntitled(null, now, env), false);
+    assert.equal(entitlementSource(null, now, env), null);
+  });
+
+  it("reports a paid subscription instead of the development fallback", () => {
+    assert.equal(
+      entitlementSource(
+        { status: "active", currentPeriodEnd: null },
+        now,
+        { NODE_ENV: "development", BILLING_DEV_ENTITLED: "true" },
+      ),
+      "subscription",
     );
   });
 });

@@ -20,9 +20,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountExport,
+  ApplyAsaasBillingWebhook200,
   AuthSessionResponse,
+  BillingCheckoutResponse,
+  BillingResponse,
+  BillingUnavailableResponse,
   ConflictResponse,
   CreateSavedSearchRequest,
+  DeleteAccountRequest,
   DevLoginRequest,
   ForbiddenResponse,
   GetSearchSuggestionsParams,
@@ -813,6 +819,474 @@ export const useDevLogin = <TError = ErrorType<InvalidParameterResponse | Forbid
         TContext
       > => {
       return useMutation(getDevLoginMutationOptions(options));
+    }
+
+export const getDeleteAccountUrl = () => {
+
+
+
+
+  return `/api/v1/me`
+}
+
+/**
+ * @summary Permanently delete the authenticated account and its personal data
+ */
+export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const headers: Record<string, string> = {};
+      h.forEach((value, name) => { headers[name] = value; });
+      return headers;
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDeleteAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(deleteAccountRequest)
+  }
+);}
+
+
+
+
+
+export const getDeleteAccountMutationKey = () => ['deleteAccount'] as const;
+
+export const getDeleteAccountMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAccountMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAccount>>, DeleteAccountMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAccount>>>
+    export type DeleteAccountMutationBody = BodyType<DeleteAccountRequest>
+    export type DeleteAccountMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | BillingUnavailableResponse>
+    export type DeleteAccountMutationVariables = {data: BodyType<DeleteAccountRequest>}
+
+    /**
+ * @summary Permanently delete the authenticated account and its personal data
+ */
+export const useDeleteAccount = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAccount>>, TError,DeleteAccountMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAccount>>,
+        TError,
+        DeleteAccountMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAccountMutationOptions(options));
+    }
+
+export const getExportAccountDataUrl = () => {
+
+
+
+
+  return `/api/v1/me/export`
+}
+
+/**
+ * @summary Export the authenticated user's retained personal data
+ */
+export const exportAccountData = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccountExport> => {
+
+  return customFetch<AccountExport>(getExportAccountDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportAccountDataQueryKey = () => {
+    return [
+    `/api/v1/me/export`
+    ] as const;
+    }
+
+
+export const getExportAccountDataQueryOptions = <TData = Awaited<ReturnType<typeof exportAccountData>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAccountData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportAccountDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAccountData>>> = ({ signal }) => exportAccountData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportAccountData>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportAccountDataQueryResult = NonNullable<Awaited<ReturnType<typeof exportAccountData>>>
+export type ExportAccountDataQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Export the authenticated user's retained personal data
+ */
+
+export function useExportAccountData<TData = Awaited<ReturnType<typeof exportAccountData>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAccountData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportAccountDataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetBillingUrl = () => {
+
+
+
+
+  return `/api/v1/me/billing`
+}
+
+/**
+ * @summary Get subscription and entitlement state
+ */
+export const getBilling = async ( options?: Parameters<typeof customFetch>[1]): Promise<BillingResponse> => {
+
+  return customFetch<BillingResponse>(getGetBillingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBillingQueryKey = () => {
+    return [
+    `/api/v1/me/billing`
+    ] as const;
+    }
+
+
+export const getGetBillingQueryOptions = <TData = Awaited<ReturnType<typeof getBilling>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBilling>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBillingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBilling>>> = ({ signal }) => getBilling({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBilling>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBillingQueryResult = NonNullable<Awaited<ReturnType<typeof getBilling>>>
+export type GetBillingQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Get subscription and entitlement state
+ */
+
+export function useGetBilling<TData = Awaited<ReturnType<typeof getBilling>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBilling>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBillingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartBillingCheckoutUrl = () => {
+
+
+
+
+  return `/api/v1/me/billing/checkout`
+}
+
+/**
+ * @summary Start or resume recurring subscription checkout
+ */
+export const startBillingCheckout = async ( options?: Parameters<typeof customFetch>[1]): Promise<BillingCheckoutResponse> => {
+
+  return customFetch<BillingCheckoutResponse>(getStartBillingCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartBillingCheckoutMutationKey = () => ['startBillingCheckout'] as const;
+
+export const getStartBillingCheckoutMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startBillingCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startBillingCheckout>>, TError,void, TContext> => {
+
+const mutationKey = getStartBillingCheckoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startBillingCheckout>>, void> = () => {
+
+
+          return  startBillingCheckout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartBillingCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof startBillingCheckout>>>
+
+    export type StartBillingCheckoutMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>
+
+
+    /**
+ * @summary Start or resume recurring subscription checkout
+ */
+export const useStartBillingCheckout = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startBillingCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startBillingCheckout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartBillingCheckoutMutationOptions(options));
+    }
+
+export const getCancelBillingSubscriptionUrl = () => {
+
+
+
+
+  return `/api/v1/me/billing/cancel`
+}
+
+/**
+ * @summary Cancel the recurring subscription
+ */
+export const cancelBillingSubscription = async ( options?: Parameters<typeof customFetch>[1]): Promise<BillingResponse> => {
+
+  return customFetch<BillingResponse>(getCancelBillingSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelBillingSubscriptionMutationKey = () => ['cancelBillingSubscription'] as const;
+
+export const getCancelBillingSubscriptionMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,void, TContext> => {
+
+const mutationKey = getCancelBillingSubscriptionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelBillingSubscription>>, void> = () => {
+
+
+          return  cancelBillingSubscription(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelBillingSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof cancelBillingSubscription>>>
+
+    export type CancelBillingSubscriptionMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>
+
+
+    /**
+ * @summary Cancel the recurring subscription
+ */
+export const useCancelBillingSubscription = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse | ConflictResponse | BillingUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelBillingSubscription>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelBillingSubscriptionMutationOptions(options));
+    }
+
+export const getApplyAsaasBillingWebhookUrl = () => {
+
+
+
+
+  return `/api/v1/billing/asaas/webhook`
+}
+
+/**
+ * @summary Apply an authenticated Asaas payment event
+ */
+export const applyAsaasBillingWebhook = async ( options?: Parameters<typeof customFetch>[1]): Promise<ApplyAsaasBillingWebhook200> => {
+
+  return customFetch<ApplyAsaasBillingWebhook200>(getApplyAsaasBillingWebhookUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplyAsaasBillingWebhookMutationKey = () => ['applyAsaasBillingWebhook'] as const;
+
+export const getApplyAsaasBillingWebhookMutationOptions = <TError = ErrorType<UnauthenticatedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyAsaasBillingWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyAsaasBillingWebhook>>, TError,void, TContext> => {
+
+const mutationKey = getApplyAsaasBillingWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyAsaasBillingWebhook>>, void> = () => {
+
+
+          return  applyAsaasBillingWebhook(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyAsaasBillingWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof applyAsaasBillingWebhook>>>
+
+    export type ApplyAsaasBillingWebhookMutationError = ErrorType<UnauthenticatedResponse>
+
+
+    /**
+ * @summary Apply an authenticated Asaas payment event
+ */
+export const useApplyAsaasBillingWebhook = <TError = ErrorType<UnauthenticatedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyAsaasBillingWebhook>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyAsaasBillingWebhook>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getApplyAsaasBillingWebhookMutationOptions(options));
     }
 
 export const getListSavedTendersUrl = (params?: ListSavedTendersParams,) => {

@@ -24,12 +24,15 @@ test(
       pool,
       notificationsTable,
       savedSearchesTable,
+      savedTendersTable,
       sessionsTable,
       subscriptionsTable,
       usersTable,
     } = await import("@workspace/db");
     const { eq } = await import("drizzle-orm");
     const { default: app } = await import("../app");
+    const { deleteAccount } = await import("./account-privacy-service");
+    const { BillingUnavailableError } = await import("../lib/api-error");
     const { upsertPublications } = await import("../ingest/upsert-tenders");
     const {
       createDocumentAddedNotifications,
@@ -146,7 +149,7 @@ test(
     const userACookie = await login("user-a@example.test");
     const userBCookie = await login("user-b@example.test");
 
-    await t.test("paid account routes require an active subscription", async () => {
+    await t.test("development entitlement bypasses paid routes only outside production", async () => {
       const cookie = await login("billing-gate@example.test");
       const session = await request("/v1/auth/session", {}, cookie);
       assert.equal(session.status, 200);
@@ -162,9 +165,35 @@ test(
 
       const billing = await request("/v1/me/billing", {}, cookie);
       assert.equal(billing.status, 200);
-      const view = (await billing.json()) as { entitled: boolean; status: string };
+      const view = (await billing.json()) as {
+        entitled: boolean;
+        source: string | null;
+        status: string;
+      };
       assert.equal(view.entitled, false);
+      assert.equal(view.source, null);
       assert.equal(view.status, "none");
+
+      process.env.BILLING_DEV_ENTITLED = "true";
+      const allowed = await request("/v1/me/saved-tenders/ids", {}, cookie);
+      assert.equal(allowed.status, 200);
+      const developmentBilling = (await (
+        await request("/v1/me/billing", {}, cookie)
+      ).json()) as { entitled: boolean; source: string; status: string };
+      assert.equal(developmentBilling.entitled, true);
+      assert.equal(developmentBilling.source, "dev");
+      assert.equal(developmentBilling.status, "none");
+
+      process.env.NODE_ENV = "production";
+      assert.equal(
+        (await request("/v1/me/saved-tenders/ids", {}, cookie)).status,
+        402,
+      );
+      process.env.NODE_ENV = "test";
+      delete process.env.BILLING_DEV_ENTITLED;
+
+      const exportWithoutSubscription = await request("/v1/me/export", {}, cookie);
+      assert.equal(exportWithoutSubscription.status, 200);
     });
 
     await t.test("expires and revokes sessions", async () => {
@@ -544,6 +573,183 @@ test(
           )
         ).status,
         409,
+      );
+    });
+
+    await t.test("exports only the authenticated user's retained data without secrets", async () => {
+      const response = await request("/v1/me/export", {}, authenticatedCookie);
+      assert.equal(response.status, 200);
+      assert.match(
+        response.headers.get("content-disposition") ?? "",
+        /^attachment; filename="licitai-dados-\d{4}-\d{2}-\d{2}\.json"$/,
+      );
+      assert.equal(response.headers.get("cache-control"), "no-store");
+
+      const body = (await response.json()) as {
+        user: { email: string };
+        sessions: unknown[];
+        savedTenders: { tenderId: string }[];
+        savedSearches: { deletedAt: string | null }[];
+      };
+      assert.equal(body.user.email, "user-a@example.test");
+      assert.ok(body.sessions.length > 0);
+      assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
+      assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
+
+      const serialized = JSON.stringify(body);
+      const sessionToken = authenticatedCookie.split("=", 2)[1]!;
+      const { sha256 } = await import("../auth/tokens");
+      assert.equal(serialized.includes(sessionToken), false);
+      assert.equal(serialized.includes(sha256(sessionToken)), false);
+      assert.equal(serialized.includes("user-b@example.test"), false);
+      assert.equal(serialized.includes("asaasSubscriptionId"), false);
+      assert.equal(serialized.includes("dedupeKey"), false);
+    });
+
+    await t.test("deletes the account atomically, cascades personal data, and clears the cookie", async () => {
+      const cookie = await login("delete-route@example.test");
+      const [user] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, "delete-route@example.test"));
+      assert.ok(user);
+      await db
+        .delete(subscriptionsTable)
+        .where(eq(subscriptionsTable.userId, user.id));
+      await db.insert(savedSearchesTable).values({
+        id: "delete-route-search",
+        userId: user.id,
+        name: "TEST DELETE",
+        query: "q=delete",
+      });
+      await db.insert(savedTendersTable).values({ userId: user.id, tenderId });
+      await db.insert(notificationsTable).values({
+        id: "delete-route-notification",
+        userId: user.id,
+        type: "tender_status_changed",
+        dedupeKey: "delete-route-dedupe",
+      });
+
+      const missingConfirmation = await request(
+        "/v1/me",
+        { method: "DELETE", headers: csrf, body: "{}" },
+        cookie,
+      );
+      assert.equal(missingConfirmation.status, 400);
+      assert.equal(
+        ((await missingConfirmation.json()) as { error: { code: string } }).error.code,
+        "INVALID_PARAMETER",
+      );
+      assert.equal(
+        (
+          await request(
+            "/v1/me",
+            { method: "DELETE", body: JSON.stringify({ confirm: "EXCLUIR" }) },
+            cookie,
+          )
+        ).status,
+        403,
+      );
+
+      const deleted = await request(
+        "/v1/me",
+        {
+          method: "DELETE",
+          headers: csrf,
+          body: JSON.stringify({ confirm: "EXCLUIR" }),
+        },
+        cookie,
+      );
+      assert.equal(deleted.status, 204);
+      assert.match(deleted.headers.get("set-cookie") ?? "", /^licita_session=;/);
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 401);
+
+      for (const table of [
+        "users",
+        "sessions",
+        "saved_tenders",
+        "saved_searches",
+        "notifications",
+        "subscriptions",
+      ]) {
+        const result = await pool.query(
+          `SELECT count(*) AS count FROM ${table} WHERE ${
+            table === "users" ? "id" : "user_id"
+          } = $1`,
+          [user.id],
+        );
+        assert.equal(Number(result.rows[0].count), 0, `${table} should cascade`);
+      }
+    });
+
+    await t.test("keeps the local account intact when Asaas cancellation fails", async () => {
+      const cookie = await login("delete-asaas@example.test");
+      const [user] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, "delete-asaas@example.test"));
+      assert.ok(user);
+      await db
+        .update(subscriptionsTable)
+        .set({ asaasSubscriptionId: "sub_delete_test" })
+        .where(eq(subscriptionsTable.userId, user.id));
+
+      let cancellationCalls = 0;
+      await assert.rejects(
+        deleteAccount(user.id, {
+          cancelAsaasSubscription: async (subscriptionId) => {
+            cancellationCalls += 1;
+            assert.equal(subscriptionId, "sub_delete_test");
+            throw new BillingUnavailableError("TEST Asaas outage");
+          },
+        }),
+        (error: unknown) =>
+          error instanceof BillingUnavailableError && error.status === 503,
+      );
+      assert.equal(cancellationCalls, 1);
+      assert.equal(
+        (
+          await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.id, user.id))
+        ).length,
+        1,
+      );
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+
+      await assert.rejects(
+        deleteAccount(user.id, {
+          cancelAsaasSubscription: async () => {
+            cancellationCalls += 1;
+          },
+          deleteLocalAccount: async () => {
+            throw new Error("TEST database outage");
+          },
+        }),
+        /TEST database outage/,
+      );
+      const [compensated] = await db
+        .select({ status: subscriptionsTable.status })
+        .from(subscriptionsTable)
+        .where(eq(subscriptionsTable.userId, user.id));
+      assert.equal(compensated?.status, "canceled");
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+
+      await deleteAccount(user.id, {
+        cancelAsaasSubscription: async () => {
+          cancellationCalls += 1;
+        },
+      });
+      assert.equal(cancellationCalls, 2);
+      assert.equal(
+        (
+          await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.id, user.id))
+        ).length,
+        0,
       );
     });
   },

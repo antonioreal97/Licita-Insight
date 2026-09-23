@@ -15,7 +15,12 @@ import {
   listSubscriptionPayments,
   monthlyAmountBrl,
 } from "./asaas-client";
-import { isEntitled, type SubscriptionStatus } from "./billing-access";
+import {
+  entitlementSource,
+  isEntitled,
+  type EntitlementSource,
+  type SubscriptionStatus,
+} from "./billing-access";
 import { webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
 
 const HANDLED = new Set([
@@ -28,6 +33,7 @@ const HANDLED = new Set([
 export type BillingView = {
   status: "none" | SubscriptionStatus;
   entitled: boolean;
+  source: EntitlementSource;
   currentPeriodEnd: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
@@ -264,9 +270,11 @@ function optionalString(value: unknown): string | null {
 function toView(row: SubscriptionRow | null | undefined): BillingView {
   const now = new Date();
   const status = isStatus(row?.status) ? row.status : "none";
+  const source = entitlementSource(row ?? null, now);
   return {
     status,
-    entitled: isEntitled(row ?? null, now),
+    entitled: source !== null,
+    source,
     currentPeriodEnd: row?.currentPeriodEnd?.toISOString() ?? null,
     canCancel: status === "active" || status === "past_due",
     monthlyBrl: monthlyAmountBrl(),

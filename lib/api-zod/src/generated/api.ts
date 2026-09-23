@@ -374,6 +374,120 @@ export const DevLoginBody = zod.object({
 export const DevLoginResponse = zod.void()
 
 
+/**
+ * @summary Permanently delete the authenticated account and its personal data
+ */
+export const DeleteAccountBody = zod.object({
+  "confirm": zod.enum(['EXCLUIR'])
+})
+
+export const DeleteAccountResponse = zod.void()
+
+
+/**
+ * @summary Export the authenticated user's retained personal data
+ */
+export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
+
+
+
+export const ExportAccountDataResponse = zod.object({
+  "exportedAt": zod.coerce.date(),
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "name": zod.string().nullable(),
+  "avatarUrl": zod.string().url().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "sessions": zod.array(zod.object({
+  "createdAt": zod.coerce.date(),
+  "lastSeenAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})),
+  "savedTenders": zod.array(zod.object({
+  "tenderId": zod.string(),
+  "savedAt": zod.coerce.date(),
+  "monitored": zod.boolean(),
+  "monitoredAt": zod.coerce.date().nullable()
+})),
+  "savedSearches": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(exportAccountDataResponseSavedSearchesItemNewMatchesCountMin)
+})),
+  "notifications": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable(),
+  "tenderId": zod.string().nullable(),
+  "tenderTitle": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullable(),
+  "change": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
+  "savedSearchId": zod.string().nullable(),
+  "savedSearchName": zod.string().nullable(),
+  "savedSearchQuery": zod.string().nullable(),
+  "matchCount": zod.number().int().nullable(),
+  "tenderIds": zod.array(zod.string())
+})),
+  "subscription": zod.union([zod.object({
+  "status": zod.string(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Get subscription and entitlement state
+ */
+export const GetBillingResponse = zod.object({
+  "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
+  "entitled": zod.boolean(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "canCancel": zod.boolean(),
+  "monthlyBrl": zod.number().nullable()
+})
+
+
+/**
+ * @summary Start or resume recurring subscription checkout
+ */
+export const StartBillingCheckoutResponse = zod.object({
+  "url": zod.string().url()
+})
+
+
+/**
+ * @summary Cancel the recurring subscription
+ */
+export const CancelBillingSubscriptionResponse = zod.object({
+  "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
+  "entitled": zod.boolean(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "canCancel": zod.boolean(),
+  "monthlyBrl": zod.number().nullable()
+})
+
+
+/**
+ * @summary Apply an authenticated Asaas payment event
+ */
+export const ApplyAsaasBillingWebhookResponse = zod.object({
+  "received": zod.boolean()
+})
+
+
 export const listSavedTendersQueryPageDefault = 1;
 
 export const listSavedTendersQueryPageSizeDefault = 20;

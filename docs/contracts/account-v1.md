@@ -21,7 +21,7 @@ forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (J
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
   Salvar, monitorar, buscas salvas e notificações exigem também assinatura ativa (`402`).
-  `GET/POST /api/v1/me/billing*` exige só sessão.
+  Billing e LGPD (`GET /me/export`, `DELETE /me`) exigem só sessão; a exclusão também exige CSRF.
 
 ## Novos códigos de erro
 
@@ -175,11 +175,17 @@ Sem linha na tabela `subscriptions` = `status: none`.
 type BillingResponse = {
   status: 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
   entitled: boolean;
+  source: 'subscription' | 'dev' | null;
   currentPeriodEnd: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
 };
 ```
+
+Em desenvolvimento, `BILLING_DEV_ENTITLED=true` libera o gate para qualquer usuário autenticado
+somente quando `NODE_ENV !== 'production'`. Nessa situação, `source: 'dev'` distingue o acesso de uma
+assinatura paga. Se houver uma assinatura realmente ativa, `source` continua `subscription`. Em
+produção a variável é sempre ignorada, mesmo se definida como `true`.
 
 | Método | Caminho | Auth | Resposta |
 |---|---|---|---|
@@ -193,6 +199,44 @@ Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nex
 `PAYMENT_REFUNDED` cancela e encerra o período. Evento desconhecido responde 200 e não altera a linha.
 O usuário é casado por `externalReference` ou pelo `paymentLink` / assinatura já gravados.
 
+## LGPD — exportação e exclusão da conta
+
+Estas rotas ficam deliberadamente fora do gate de assinatura para garantir acesso aos direitos do
+titular mesmo sem plano ativo.
+
+### `GET /api/v1/me/export`
+
+Responde `200 application/json` com `Content-Disposition: attachment;
+filename="licitai-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
+
+```ts
+type AccountExport = {
+  exportedAt: string;
+  user: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string; updatedAt: string };
+  sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string }>;
+  savedTenders: Array<{ tenderId: string; savedAt: string; monitored: boolean; monitoredAt: string | null }>;
+  savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
+  notifications: Array<Record<string, unknown>>;
+  subscription: { status: string; currentPeriodEnd: string | null; updatedAt: string } | null;
+};
+```
+
+Somente sessões ativas são exportadas. Tokens, hashes de sessão, `googleSub`, chaves do Asaas,
+identificadores internos de cobrança e `dedupeKey` de notificações não são incluídos. Buscas ainda
+retidas por soft delete são incluídas.
+
+### `DELETE /api/v1/me`
+
+Exige sessão, CSRF e corpo exato `{ "confirm": "EXCLUIR" }`; confirmação ausente ou diferente
+responde `400 INVALID_PARAMETER`. Sucesso responde `204`, remove `users` e todos os dados pessoais
+por cascata, invalida todas as sessões e limpa o cookie.
+
+Quando existe assinatura remota não cancelada, a API cancela primeiro no Asaas. Falha remota responde
+`503 BILLING_UNAVAILABLE` sem iniciar a exclusão local. Depois do sucesso remoto, a exclusão local
+ocorre em uma única transação. Se essa transação falhar, os dados permanecem íntegros e a compensação
+marca localmente a assinatura como `canceled`, permitindo repetir a exclusão sem cobrar/cancelar de
+novo.
+
 ## Performance esperada
 
 `/auth/session`, `/me/saved-tenders/ids`, `/me/notifications/unread-count`: p95 < 100 ms.
@@ -200,7 +244,7 @@ Demais rotas `/me/*`: p95 < 300 ms.
 
 ## Fora de escopo v1
 
-E-mail/push, compartilhamento de buscas, times/organizações, papéis, exclusão de conta (LGPD — Ciclo 3).
+E-mail/push, compartilhamento de buscas, times/organizações e papéis.
 
 ## Esclarecimentos propostos pelo frontend (Codex: confirme ou contraponha no CLAUDE_HANDOFF-004)
 

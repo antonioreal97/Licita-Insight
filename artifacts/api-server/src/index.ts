@@ -1,4 +1,5 @@
 import app from "./app";
+import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
@@ -13,6 +14,13 @@ if (!rawPort) {
 }
 
 const port = Number(rawPort);
+
+if (devEntitlementEnabled()) {
+  logger.warn(
+    { entitlementSource: "dev" },
+    "BILLING_DEV_ENTITLED is active; authenticated users bypass the subscription gate",
+  );
+}
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);

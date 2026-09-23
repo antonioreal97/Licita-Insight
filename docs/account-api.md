@@ -23,6 +23,10 @@ http://localhost:24252/api/v1/auth/google/callback
 
 `AUTH_DEV_LOGIN=true` registra a rota de QA `POST /api/v1/auth/dev-login` somente quando `NODE_ENV !== production`. Em produção, a rota não é registrada mesmo que a variável seja definida.
 
+`BILLING_DEV_ENTITLED=true` libera as rotas pagas para qualquer sessão somente fora de produção. O
+boot registra um warning e `GET /api/v1/me/billing` devolve `source: "dev"`. Em produção a flag é
+ignorada. Ela não cria nem simula uma assinatura no banco.
+
 ## Subir localmente
 
 ```bash
@@ -42,6 +46,16 @@ As migrations `0001_account` e `0002_account_followups` pressupõem o schema can
 - `returnTo` aceita somente caminhos relativos seguros; redirecionamentos externos caem em `/dashboard`.
 - CORS aberto foi removido. O frontend usa proxy/reverse proxy de mesma origem.
 - Sem credenciais Google, `/auth/google/start` redireciona para `/login?error=oauth_unavailable` e registra um aviso estruturado.
+- `GET /api/v1/me/export` e `DELETE /api/v1/me` exigem autenticação, mas nunca assinatura ativa.
+
+## LGPD
+
+- `GET /api/v1/me/export` baixa os dados pessoais retidos, incluindo buscas em soft delete, sem
+  tokens, hashes de sessão, `googleSub`, ids internos do Asaas ou chaves de deduplicação.
+- `DELETE /api/v1/me` exige CSRF e `{ "confirm": "EXCLUIR" }`, cancela primeiro a assinatura remota
+  quando houver e só então exclui localmente o usuário em uma transação com cascata.
+- Se o Asaas falhar, nenhum dado local é apagado. Se o banco falhar depois do cancelamento remoto,
+  os dados pessoais permanecem intactos e a assinatura local é compensada para `canceled`.
 
 ## Buscas salvas
 

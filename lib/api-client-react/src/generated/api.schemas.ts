@@ -32,6 +32,137 @@ export interface DevLoginRequest {
   name?: string;
 }
 
+export type BillingStatus = typeof BillingStatus[keyof typeof BillingStatus];
+
+
+export const BillingStatus = {
+  none: 'none',
+  pending: 'pending',
+  active: 'active',
+  past_due: 'past_due',
+  canceled: 'canceled',
+} as const;
+
+/**
+ * @nullable
+ */
+export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typeof BillingEntitlementSource] | null;
+
+
+export const BillingEntitlementSource = {
+  subscription: 'subscription',
+  dev: 'dev',
+} as const;
+
+export interface BillingResponse {
+  status: BillingStatus;
+  entitled: boolean;
+  source: BillingEntitlementSource | null;
+  /** @nullable */
+  currentPeriodEnd: string | null;
+  canCancel: boolean;
+  /** @nullable */
+  monthlyBrl: number | null;
+}
+
+export interface BillingCheckoutResponse {
+  url: string;
+}
+
+export type DeleteAccountRequestConfirm = typeof DeleteAccountRequestConfirm[keyof typeof DeleteAccountRequestConfirm];
+
+
+export const DeleteAccountRequestConfirm = {
+  EXCLUIR: 'EXCLUIR',
+} as const;
+
+export interface DeleteAccountRequest {
+  confirm: DeleteAccountRequestConfirm;
+}
+
+export interface AccountExportUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountExportSession {
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+}
+
+export interface AccountExportSavedTender {
+  tenderId: string;
+  savedAt: string;
+  monitored: boolean;
+  /** @nullable */
+  monitoredAt: string | null;
+}
+
+export interface AccountExportSavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  alertsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  deletedAt: string | null;
+  /** @nullable */
+  lastCheckedAt: string | null;
+  /** @minimum 0 */
+  newMatchesCount: number;
+}
+
+export type AccountExportNotificationChange = { [key: string]: unknown } | null;
+
+export interface AccountExportNotification {
+  id: string;
+  type: string;
+  createdAt: string;
+  /** @nullable */
+  readAt: string | null;
+  /** @nullable */
+  tenderId: string | null;
+  /** @nullable */
+  tenderTitle: string | null;
+  /** @nullable */
+  tenderNumberShort: string | null;
+  change: AccountExportNotificationChange;
+  /** @nullable */
+  savedSearchId: string | null;
+  /** @nullable */
+  savedSearchName: string | null;
+  /** @nullable */
+  savedSearchQuery: string | null;
+  /** @nullable */
+  matchCount: number | null;
+  tenderIds: string[];
+}
+
+export interface AccountExportSubscription {
+  status: string;
+  /** @nullable */
+  currentPeriodEnd: string | null;
+  updatedAt: string;
+}
+
+export interface AccountExport {
+  exportedAt: string;
+  user: AccountExportUser;
+  sessions: AccountExportSession[];
+  savedTenders: AccountExportSavedTender[];
+  savedSearches: AccountExportSavedSearch[];
+  notifications: AccountExportNotification[];
+  subscription: AccountExportSubscription | null;
+}
+
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -509,6 +640,8 @@ export const ApiErrorCode = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   FORBIDDEN: 'FORBIDDEN',
   CONFLICT: 'CONFLICT',
+  SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
+  BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
 } as const;
 
 export interface ApiError {
@@ -562,6 +695,16 @@ export type ForbiddenResponse = ErrorResponse;
  * Resource limit or state conflict
  */
 export type ConflictResponse = ErrorResponse;
+
+/**
+ * Billing provider is unavailable or rejected the operation
+ */
+export type BillingUnavailableResponse = ErrorResponse;
+
+/**
+ * An active subscription or development entitlement is required
+ */
+export type SubscriptionRequiredResponse = ErrorResponse;
 
 export type QueryParameter = string;
 
@@ -665,6 +808,10 @@ limit?: number;
 
 export type StartGoogleAuthParams = {
 returnTo?: string;
+};
+
+export type ApplyAsaasBillingWebhook200 = {
+  received: boolean;
 };
 
 export type ListSavedTendersParams = {

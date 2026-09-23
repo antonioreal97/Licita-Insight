@@ -189,6 +189,123 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/me:
+    delete:
+      operationId: deleteAccount
+      tags: [account]
+      summary: Permanently delete the authenticated account and its personal data
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+      responses:
+        "204":
+          description: Account deleted and session cookie cleared
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/BillingUnavailable"
+  /v1/me/export:
+    get:
+      operationId: exportAccountData
+      tags: [account]
+      summary: Export the authenticated user's retained personal data
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Personal data export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename in the form licitai-dados-YYYY-MM-DD.json
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/billing:
+    get:
+      operationId: getBilling
+      tags: [account]
+      summary: Get subscription and entitlement state
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Billing state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/billing/checkout:
+    post:
+      operationId: startBillingCheckout
+      tags: [account]
+      summary: Start or resume recurring subscription checkout
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Hosted Asaas checkout URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingCheckoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/BillingUnavailable"
+  /v1/me/billing/cancel:
+    post:
+      operationId: cancelBillingSubscription
+      tags: [account]
+      summary: Cancel the recurring subscription
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Updated billing state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/BillingUnavailable"
+  /v1/billing/asaas/webhook:
+    post:
+      operationId: applyAsaasBillingWebhook
+      tags: [account]
+      summary: Apply an authenticated Asaas payment event
+      responses:
+        "200":
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean }
+                required: [received]
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
   /v1/me/saved-tenders:
     get:
       operationId: listSavedTenders
@@ -698,6 +815,18 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    BillingUnavailable:
+      description: Billing provider is unavailable or rejected the operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    SubscriptionRequired:
+      description: An active subscription or development entitlement is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -740,6 +869,132 @@ components:
           minLength: 1
           maxLength: 120
       required: [email]
+    BillingStatus:
+      type: string
+      enum: [none, pending, active, past_due, canceled]
+    BillingEntitlementSource:
+      type: [string, "null"]
+      enum: [subscription, dev, null]
+    BillingResponse:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/BillingStatus"
+        entitled: { type: boolean }
+        source:
+          $ref: "#/components/schemas/BillingEntitlementSource"
+        currentPeriodEnd: { type: [string, "null"], format: date-time }
+        canCancel: { type: boolean }
+        monthlyBrl: { type: [number, "null"] }
+      required: [status, entitled, source, currentPeriodEnd, canCancel, monthlyBrl]
+    BillingCheckoutResponse:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+      required: [url]
+    DeleteAccountRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        confirm:
+          type: string
+          enum: [EXCLUIR]
+      required: [confirm]
+    AccountExportUser:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        name: { type: [string, "null"] }
+        avatarUrl: { type: [string, "null"], format: uri }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, email, name, avatarUrl, createdAt, updatedAt]
+    AccountExportSession:
+      type: object
+      properties:
+        createdAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+      required: [createdAt, lastSeenAt, expiresAt]
+    AccountExportSavedTender:
+      type: object
+      properties:
+        tenderId: { type: string }
+        savedAt: { type: string, format: date-time }
+        monitored: { type: boolean }
+        monitoredAt: { type: [string, "null"], format: date-time }
+      required: [tenderId, savedAt, monitored, monitoredAt]
+    AccountExportSavedSearch:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        query: { type: string }
+        alertsEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: [string, "null"], format: date-time }
+        lastCheckedAt: { type: [string, "null"], format: date-time }
+        newMatchesCount: { type: integer, minimum: 0 }
+      required: [id, name, query, alertsEnabled, createdAt, updatedAt, deletedAt, lastCheckedAt, newMatchesCount]
+    AccountExportNotification:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+        tenderId: { type: [string, "null"] }
+        tenderTitle: { type: [string, "null"] }
+        tenderNumberShort: { type: [string, "null"] }
+        change:
+          anyOf:
+            - type: object
+              additionalProperties: true
+            - type: "null"
+        savedSearchId: { type: [string, "null"] }
+        savedSearchName: { type: [string, "null"] }
+        savedSearchQuery: { type: [string, "null"] }
+        matchCount: { type: [integer, "null"] }
+        tenderIds:
+          type: array
+          items: { type: string }
+      required: [id, type, createdAt, readAt, tenderId, tenderTitle, tenderNumberShort, change, savedSearchId, savedSearchName, savedSearchQuery, matchCount, tenderIds]
+    AccountExportSubscription:
+      type: object
+      properties:
+        status: { type: string }
+        currentPeriodEnd: { type: [string, "null"], format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [status, currentPeriodEnd, updatedAt]
+    AccountExport:
+      type: object
+      properties:
+        exportedAt: { type: string, format: date-time }
+        user:
+          $ref: "#/components/schemas/AccountExportUser"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportSession"
+        savedTenders:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportSavedTender"
+        savedSearches:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportSavedSearch"
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportNotification"
+        subscription:
+          anyOf:
+            - $ref: "#/components/schemas/AccountExportSubscription"
+            - type: "null"
+      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, subscription]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -1360,6 +1615,8 @@ components:
               UNAUTHENTICATED,
               FORBIDDEN,
               CONFLICT,
+              SUBSCRIPTION_REQUIRED,
+              BILLING_UNAVAILABLE,
             ]
         message:
           type: string
