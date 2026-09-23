@@ -146,7 +146,7 @@ The 4px base is `--spacing: 0.25rem`, so `p-1` = 4px, `p-4` = 16px, `gap-6` = 24
 | `10`      | 40      | Page horizontal padding at `lg` |
 
 Named layout sizes (`@theme --spacing-*`, so they work with `h-`, `w-`, `pl-`, `top-`…):
-`header` 76px, `sidebar` 248px, `sidebar-collapsed` 76px. Containers: `max-w-page` 1440px, `max-w-prose` 68ch.
+`header` 76px, `header-mobile` 3.5rem (56px), `sidebar` 248px, `sidebar-collapsed` 76px. Containers: `max-w-page` 1440px, `max-w-prose` 68ch.
 
 ## Radius
 

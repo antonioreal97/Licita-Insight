@@ -14,21 +14,22 @@ import { Button } from '@/components/common/action-button';
 <Button variant="outline" aria-pressed={saved}>Salvar</Button>
 ```
 
-| Prop      | Type                                          | Default     | Notes                                                                              |
-| --------- | --------------------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
-| `variant` | `'primary' \| 'outline' \| 'ghost' \| 'dark'` | `'primary'` |                                                                                    |
-| `size`    | `'sm' \| 'md' \| 'lg'`                        | `'md'`      | 32 / 36 / 44px tall                                                                |
-| `loading` | `boolean`                                     | `false`     | Spinner over an invisible label (no width jump), `aria-busy`, disabled             |
-| …rest     | every `<button>` prop, including `ref`        |             | `className` is merged with `cn()`, so `h-11`, `w-full` and `mt-4` override cleanly |
+| Prop      | Type                                                         | Default     | Notes                                                                              |
+| --------- | ------------------------------------------------------------ | ----------- | ---------------------------------------------------------------------------------- |
+| `variant` | `'primary' \| 'outline' \| 'ghost' \| 'dark' \| 'destructive'` | `'primary'` |                                                                                    |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                       | `'md'`      | 32 / 36 / 44px tall                                                                |
+| `loading` | `boolean`                                                    | `false`     | Spinner over an invisible label (no width jump), `aria-busy`, disabled             |
+| …rest     | every `<button>` prop, including `ref`                       |             | `className` is merged with `cn()`, so `h-11`, `w-full` and `mt-4` override cleanly |
 
 The button sets no default `type`, same as before. Pass `type="submit"` or `type="button"` inside forms.
 
-| Variant   | Use                                                                       | Rest                                        | Hover                                       | Active                         |
-| --------- | ------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------- | ------------------------------ |
-| `primary` | The single main action of an area                                         | `bg-primary`, `shadow-xs`                   | `bg-primary-hover`                          | `bg-primary-active`, scale .98 |
-| `outline` | Secondary actions, toolbars                                               | `bg-surface`, `border-border`, `shadow-2xs` | `bg-surface-sunken`, `border-border-strong` | scale .98                      |
-| `dark`    | High-emphasis neutral: "Instrument navy" in light, flips to light in dark | `bg-inverse`                                | `bg-inverse-hover`                          | scale .98                      |
-| `ghost`   | Tertiary, inline, icon-adjacent                                           | transparent, `text-muted-foreground`        | `bg-muted`, `text-foreground`               | scale .98                      |
+| Variant       | Use                                                                       | Rest                                                    | Hover                                       | Active                                  |
+| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------- | --------------------------------------- |
+| `primary`     | The single main action of an area                                         | `bg-primary`, `shadow-xs`                               | `bg-primary-hover`                          | `bg-primary-active`, scale .98          |
+| `outline`     | Secondary actions, toolbars                                               | `bg-surface`, `border-border`, `shadow-2xs`             | `bg-surface-sunken`, `border-border-strong` | scale .98                               |
+| `dark`        | High-emphasis neutral: "Instrument navy" in light, flips to light in dark | `bg-inverse`                                            | `bg-inverse-hover`                          | scale .98                               |
+| `ghost`       | Tertiary, inline, icon-adjacent                                           | transparent, `text-muted-foreground`                    | `bg-muted`, `text-foreground`               | scale .98                               |
+| `destructive` | Irreversible or destructive actions (delete, revoke)                      | `bg-destructive`, `text-destructive-foreground`, `shadow-xs` | `bg-destructive/90`                         | `bg-destructive`, scale .98             |
 
 `aria-pressed="true"` gives `outline` a `primary-subtle` fill and `ghost` a `muted` fill, for toggles such as "Salvar" and "Monitorar".
 
@@ -98,6 +99,7 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
 | Button outline         | surface + border         | surface-sunken + border-strong | ring                           | scale .98                 | 50%                                | spinner                          |
 | Button dark            | inverse                  | inverse-hover                  | ring                           | scale .98                 | 50%                                | spinner                          |
 | Button ghost           | transparent, muted text  | muted fill, foreground text    | ring                           | scale .98                 | 50%                                | spinner                          |
+| Button destructive     | destructive fill         | destructive/90                 | ring 2px +2                    | destructive, scale .98    | 50% opacity, not-allowed, no hover | spinner, label hidden, aria-busy |
 | Toggle (aria-pressed)  | as variant               | as variant                     | ring                           | scale .98                 | 50%                                | —                                |
 | Input / select         | input border             | border-strong                  | border-ring + 3px ring/20 halo | —                         | 50%                                | trailing spinner (search)        |
 | Nav item (sidebar)     | sidebar-muted-foreground | sidebar-accent fill, strong fg | sidebar-ring                   | —                         | —                                  | —                                |

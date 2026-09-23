@@ -80,9 +80,16 @@ Run through this before you open a PR that touches UI.
 
 `// DS-DEBT:` marks code outside the system. Known debt, to migrate with tokens above:
 
-- `src/components/app-shell.tsx`: `text-slate-400/500/100`, `text-white`, `bg-slate-950/40`, avatar `bg-[#d3b18c] text-[#3e2c20]`, `w-[248px]`, `lg:w-[76px]`, `h-[76px]`, `z-40/30/20`, `max-w-[1440px]`
-- `src/features/landing/landing-page.tsx`, `src/features/auth/auth-page.tsx`: old green hex palette, currently remapped by `!important` selectors at the end of `index.css` (remove the remap after migration)
-- `src/features/dashboard`, `monitoring`, `saved-searches`, `saved-tenders`: raw hex/palette colors
-- `src/components/error-boundary.tsx`, `src/pages/not-found.tsx`: palette colors
-- `src/components/common/page-title.tsx`: `text-[10px] tracking-[0.16em]`, `text-[28px]/[32px]` → `type-eyebrow`, `type-display-sm`
-- `src/lib/utils.ts`: optionally extend tailwind-merge with the `type-*` and `z-*` groups
+- `src/features/saved-searches/saved-searches-page.tsx`: adotar `Button variant="destructive"` no diálogo de exclusão (`AlertDialogAction` / `Button`) assim que o orquestrador liberar a edição do arquivo.
+- `src/components/ui/navigation-menu.tsx`: primitivo shadcn não utilizado que ainda contém classes padrão (`hover:bg-accent focus:bg-accent` em vez de `muted`).
+- `src/components/ui/command.tsx`: primitivo shadcn com `data-[selected=true]:bg-accent` (atualmente não consumido em features de produto).
+
+### Itens resolvidos recentemente
+- `src/components/app-shell.tsx`: migrado de classes slate/hex/literais para tokens do DS (`bg-sidebar`, `text-sidebar-*`, `h-header`, `h-header-mobile`, `w-sidebar`, `z-sticky`, `z-nav`).
+- `src/features/landing/landing-page.tsx` e `src/features/auth/auth-page.tsx`: paleta verde legada removida; páginas utilizam tokens sem remap no CSS.
+- `src/features/{dashboard,monitoring,saved-searches,saved-tenders}`: cores manuais/hex migradas para tokens do DS (`bg-status-*`, etc.).
+- `src/components/error-boundary.tsx` e `src/pages/not-found.tsx`: migrados para tokens do DS.
+- `src/components/common/page-title.tsx`: migrado para `type-eyebrow` e `type-display-sm`.
+- `src/lib/utils.ts`: `tailwind-merge` estendido com os grupos `type-*` e `z-*`.
+- `src/components/ui/{popover,dropdown-menu,tooltip,select,hover-card,context-menu,menubar}.tsx`: migrados de `z-50` para `z-popover`, foco em menus para `focus:bg-muted focus:text-foreground` e tooltip para `bg-inverse text-inverse-foreground`.
+- `src/components/common/action-button.tsx`: adicionada variante `destructive` com tokens do DS.
