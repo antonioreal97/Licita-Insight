@@ -8,6 +8,8 @@ process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? "postgres://test:test@127.0.0.1:1/test";
 process.env.PUBLIC_APP_ORIGIN = "http://localhost:24252";
 delete process.env.AUTH_DEV_LOGIN;
+delete process.env.GOOGLE_CLIENT_ID;
+delete process.env.GOOGLE_CLIENT_SECRET;
 
 let server: Server;
 let baseUrl: string;
@@ -37,6 +39,14 @@ describe("account HTTP security", () => {
     assert.equal(response.status, 401);
     assert.equal(body.error.code, "UNAUTHENTICATED");
     assert.ok(body.error.requestId);
+  });
+
+  it("redirects when Google OAuth credentials are unavailable", async () => {
+    const response = await fetch(`${baseUrl}/api/v1/auth/google/start`, {
+      redirect: "manual",
+    });
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get("location"), "/login?error=oauth_unavailable");
   });
 
   it("rejects logout without CSRF headers", async () => {

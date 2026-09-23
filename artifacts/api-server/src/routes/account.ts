@@ -10,6 +10,7 @@ import {
   markNotificationsRead,
   markSavedSearchSeen,
   putSavedTender,
+  restoreSavedSearch,
   savedTenderIds,
   unreadNotificationCount,
   updateSavedSearch,
@@ -226,6 +227,19 @@ router.delete(
       pathParam(req.params.id, "id"),
     );
     res.status(204).end();
+  }),
+);
+
+router.post(
+  "/v1/me/saved-searches/:id/restore",
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    res.json(
+      await restoreSavedSearch(
+        authContext(res).user.id,
+        pathParam(req.params.id, "id"),
+      ),
+    );
   }),
 );
 

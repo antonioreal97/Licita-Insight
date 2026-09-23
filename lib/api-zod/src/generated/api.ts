@@ -667,6 +667,29 @@ export const MarkSavedSearchSeenResponse = zod.object({
 })
 
 
+/**
+ * @summary Restore a saved search deleted within the last 30 seconds
+ */
+export const RestoreSavedSearchParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const restoreSavedSearchResponseNewMatchesCountMin = 0;
+
+
+
+export const RestoreSavedSearchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(restoreSavedSearchResponseNewMatchesCountMin)
+})
+
+
 export const listNotificationsQueryUnreadOnlyDefault = false;
 export const listNotificationsQueryPageDefault = 1;
 

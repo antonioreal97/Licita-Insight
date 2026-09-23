@@ -1,7 +1,13 @@
 import { Router, type IRouter } from "express";
 import { GetAuthSessionResponse } from "@workspace/api-zod";
 import { InvalidParameterError } from "../lib/api-error";
-import { devLoginEnabled, publicAppOrigin, sessionSecret } from "../auth/config";
+import {
+  devLoginEnabled,
+  googleOAuthConfigured,
+  publicAppOrigin,
+  sessionSecret,
+} from "../auth/config";
+import { logger } from "../lib/logger";
 import {
   asyncHandler,
   authContext,
@@ -34,13 +40,19 @@ import {
 
 const router: IRouter = Router();
 
-const loginRedirect = (code: string): string => {
-  const target = new URL("/login", publicAppOrigin());
-  target.searchParams.set("error", code);
-  return target.toString();
-};
+const loginRedirect = (code: string): string =>
+  `/login?${new URLSearchParams({ error: code })}`;
 
-router.get("/v1/auth/google/start", (req, res, next) => {
+router.get("/v1/auth/google/start", (req, res) => {
+  if (!googleOAuthConfigured()) {
+    clearOAuthCookie(res);
+    logger.warn(
+      { operation: "google_oauth_start" },
+      "Google OAuth is unavailable because credentials are not configured",
+    );
+    res.redirect(302, loginRedirect("oauth_unavailable"));
+    return;
+  }
   try {
     const verifier = randomToken(48);
     const state = randomToken();
@@ -63,7 +75,12 @@ router.get("/v1/auth/google/start", (req, res, next) => {
       googleAuthorizationUrl({ state, nonce, challenge: codeChallenge(verifier) }),
     );
   } catch (error) {
-    next(error);
+    clearOAuthCookie(res);
+    logger.error(
+      { err: error, operation: "google_oauth_start" },
+      "Google OAuth could not be initialized",
+    );
+    res.redirect(302, loginRedirect("oauth_unavailable"));
   }
 });
 
@@ -131,6 +148,7 @@ router.post(
 if (devLoginEnabled()) {
   router.post(
     "/v1/auth/dev-login",
+    requireCsrf,
     asyncHandler(async (req, res) => {
       const body =
         req.body !== null && typeof req.body === "object" && !Array.isArray(req.body)

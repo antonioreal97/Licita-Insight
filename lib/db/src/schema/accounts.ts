@@ -103,6 +103,7 @@ export const savedSearchesTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     newMatchesCount: integer("new_matches_count").notNull().default(0),
   },
@@ -113,7 +114,10 @@ export const savedSearchesTable = pgTable(
     ),
     index("saved_searches_alerts_idx")
       .on(table.alertsEnabled, table.lastCheckedAt)
-      .where(sql`${table.alertsEnabled} = true`),
+      .where(sql`${table.alertsEnabled} = true and ${table.deletedAt} is null`),
+    uniqueIndex("saved_searches_user_query_active_uidx")
+      .on(table.userId, table.query)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

@@ -9,4 +9,5 @@
 export interface ErrorDetail {
   field: string;
   issue: string;
+  existingId?: string;
 }

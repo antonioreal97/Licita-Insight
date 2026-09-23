@@ -15,7 +15,8 @@ forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (J
   `VITE_API_BASE_URL=/api`. Em produção, mesmo esquema (reverse proxy). Assim o cookie é first-party.
 - Sessão em cookie `licita_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` fora de dev,
   validade 30 dias com renovação deslizante. Sessões guardadas no PostgreSQL (revogáveis).
-- **CSRF:** toda requisição que muda estado (`POST|PUT|PATCH|DELETE` sob `/api/v1/me` e `/auth/logout`)
+- **CSRF:** toda requisição que muda estado (`POST|PUT|PATCH|DELETE` sob `/api/v1/me`, `/auth/logout`
+  e `/auth/dev-login`)
   exige o header `X-Requested-With: licita-insight` **e** `Origin` igual à origem pública configurada.
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
@@ -37,6 +38,8 @@ forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (J
 ### `GET /api/v1/auth/google/start?returnTo=/caminho`
 302 para o Google. `returnTo` aceita apenas caminhos relativos do app (começa com `/`, sem `//`);
 qualquer outro valor vira `/dashboard`. `state` + PKCE guardados em cookie temporário assinado.
+Se as credenciais Google não estiverem configuradas, responde 302 para
+`/login?error=oauth_unavailable` e registra aviso operacional, sem expor erro interno.
 
 ### `GET /api/v1/auth/google/callback`
 Troca o code, valida `state`/PKCE/`id_token`, cria ou atualiza o usuário (chave: `sub` do Google;
@@ -103,9 +106,15 @@ type SavedSearch = {
 | POST | `/api/v1/me/saved-searches` | `{ name, query, alertsEnabled }` | 201 `SavedSearch` |
 | PATCH | `/api/v1/me/saved-searches/{id}` | `{ name?, query?, alertsEnabled? }` | 200 `SavedSearch` |
 | DELETE | `/api/v1/me/saved-searches/{id}` | — | 204 |
+| POST | `/api/v1/me/saved-searches/{id}/restore` | — | 200 `SavedSearch` restaurada, preservando o `id` |
 | POST | `/api/v1/me/saved-searches/{id}/seen` | — | 200 `SavedSearch` com `newMatchesCount = 0` |
 
 Limite: 50 buscas salvas por usuário (409 `CONFLICT`).
+Uma segunda busca ativa com a mesma query canônica responde 409 `CONFLICT` com
+`details: [{ field: 'query', issue: 'duplicate', existingId }]`, inclusive em alterações de query.
+Exclusões são reversíveis por 30 segundos; o restore zera `newMatchesCount`, reinicia o checkpoint
+de alertas e responde 409 `restore_expired` após a janela. Se outra busca ativa já ocupar a mesma
+query, o restore responde o conflito `duplicate`.
 
 ## 4. Notificações (dentro do app)
 
@@ -177,3 +186,4 @@ E-mail/push, compartilhamento de buscas, times/organizações, papéis, exclusã
 - Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados após uma coleta PNCP concluída.
 - Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; retenção operacional é de 90 dias.
 - O índice de busca continua reconstruível a partir do banco canônico; nenhuma tabela de conta passa a ser fonte de verdade para os dados públicos do edital.
+- Follow-up 005: OAuth indisponível redireciona com `oauth_unavailable`; dev-login exige CSRF; queries canônicas ativas são únicas por usuário; exclusão de busca usa soft delete com restore de 30 segundos.

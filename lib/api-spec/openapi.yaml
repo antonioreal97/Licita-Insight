@@ -136,7 +136,7 @@ paths:
             type: string
       responses:
         "302":
-          description: Redirect to Google authorization
+          description: Redirect to Google authorization, or to /login?error=oauth_unavailable when credentials are absent
   /v1/auth/google/callback:
     get:
       operationId: completeGoogleAuth
@@ -185,6 +185,8 @@ paths:
           description: Development session created
         "400":
           $ref: "#/components/responses/InvalidParameter"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
   /v1/me/saved-tenders:
@@ -362,6 +364,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     delete:
       operationId: deleteSavedSearch
       tags: [account]
@@ -399,6 +403,33 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/me/saved-searches/{id}/restore:
+    post:
+      operationId: restoreSavedSearch
+      tags: [account]
+      summary: Restore a saved search deleted within the last 30 seconds
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Saved search restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedSearch"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /v1/me/notifications:
     get:
       operationId: listNotifications
@@ -1310,6 +1341,8 @@ components:
         field:
           type: string
         issue:
+          type: string
+        existingId:
           type: string
       required: [field, issue]
     ApiError:

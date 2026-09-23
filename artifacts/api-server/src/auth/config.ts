@@ -18,6 +18,11 @@ export const publicAppOrigin = (): string => {
 
 export const googleClientId = (): string => required("GOOGLE_CLIENT_ID");
 export const googleClientSecret = (): string => required("GOOGLE_CLIENT_SECRET");
+export const googleOAuthConfigured = (): boolean =>
+  Boolean(
+    process.env.GOOGLE_CLIENT_ID?.trim() &&
+      process.env.GOOGLE_CLIENT_SECRET?.trim(),
+  );
 export const sessionSecret = (): string => {
   const secret = required("SESSION_SECRET");
   if (secret.length < 32) throw new Error("SESSION_SECRET must contain at least 32 characters");

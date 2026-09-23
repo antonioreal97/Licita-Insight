@@ -72,6 +72,7 @@ test(
     const login = async (email: string): Promise<string> => {
       const response = await request("/v1/auth/dev-login", {
         method: "POST",
+        headers: csrf,
         body: JSON.stringify({ email, name: "TEST USER" }),
       });
       assert.equal(response.status, 204);
@@ -113,6 +114,20 @@ test(
       await pool.query(`DROP SCHEMA "${schema}" CASCADE`);
       await pool.end();
     });
+
+    assert.equal(
+      (
+        await request("/v1/auth/dev-login", {
+          method: "POST",
+          headers: {
+            Origin: "http://127.0.0.1:24252",
+            "X-Requested-With": "licita-insight",
+          },
+          body: JSON.stringify({ email: "csrf@example.test" }),
+        })
+      ).status,
+      403,
+    );
 
     const userACookie = await login("user-a@example.test");
     const userBCookie = await login("user-b@example.test");
@@ -291,6 +306,24 @@ test(
       assert.equal(savedResponse.status, 201);
       const saved = (await savedResponse.json()) as { id: string; query: string };
       assert.equal(saved.query, "q=computadores");
+      const duplicate = await request(
+        "/v1/me/saved-searches",
+        {
+          method: "POST",
+          headers: csrf,
+          body: JSON.stringify({
+            name: "Duplicada",
+            query: "q=computadores&page=99",
+            alertsEnabled: false,
+          }),
+        },
+        authenticatedCookie,
+      );
+      assert.equal(duplicate.status, 409);
+      assert.deepEqual(
+        ((await duplicate.json()) as { error: { details: unknown } }).error.details,
+        [{ field: "query", issue: "duplicate", existingId: saved.id }],
+      );
       assert.equal(
         (
           await request(
@@ -330,6 +363,54 @@ test(
       assert.equal(rows.length, 1);
       assert.equal(rows[0]!.userId, updated!.userId);
       assert.deepEqual(rows[0]!.tenderIds, ["00394460000141-1-000124-2026"]);
+
+      assert.equal(
+        (
+          await request(
+            `/v1/me/saved-searches/${saved.id}`,
+            { method: "DELETE", headers: csrf },
+            authenticatedCookie,
+          )
+        ).status,
+        204,
+      );
+      const restored = await request(
+        `/v1/me/saved-searches/${saved.id}/restore`,
+        { method: "POST", headers: csrf },
+        authenticatedCookie,
+      );
+      assert.equal(restored.status, 200);
+      const restoredBody = (await restored.json()) as {
+        id: string;
+        newMatchesCount: number;
+      };
+      assert.equal(restoredBody.id, saved.id);
+      assert.equal(restoredBody.newMatchesCount, 0);
+
+      assert.equal(
+        (
+          await request(
+            `/v1/me/saved-searches/${saved.id}`,
+            { method: "DELETE", headers: csrf },
+            authenticatedCookie,
+          )
+        ).status,
+        204,
+      );
+      await db
+        .update(savedSearchesTable)
+        .set({ deletedAt: new Date(Date.now() - 31_000) })
+        .where(eq(savedSearchesTable.id, saved.id));
+      assert.equal(
+        (
+          await request(
+            `/v1/me/saved-searches/${saved.id}/restore`,
+            { method: "POST", headers: csrf },
+            authenticatedCookie,
+          )
+        ).status,
+        409,
+      );
     });
 
     await t.test("enforces limits and reports partial imports", async () => {
@@ -408,7 +489,7 @@ test(
           id: `limit-search-${index}`,
           userId: userB!.id,
           name: `TEST SEARCH ${index}`,
-          query: "q=test",
+          query: `q=test-${index}`,
         })),
       );
       assert.equal(
