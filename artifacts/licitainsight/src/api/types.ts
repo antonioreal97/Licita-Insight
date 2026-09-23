@@ -1,5 +1,5 @@
-// Public shapes of the Search API v1.
-// Source of truth: docs/contracts/search-v1.md — keep this file in lockstep with it.
+// Public shapes of the Search API v1 and the Account API v1.
+// Source of truth: docs/contracts/search-v1.md and docs/contracts/account-v1.md — keep this file in lockstep with them.
 // When the backend publishes the OpenAPI spec, the HTTP adapter maps generated types onto these.
 
 export type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled';
@@ -148,7 +148,17 @@ export type SearchSuggestion = {
 
 export type SuggestionsResponse = { suggestions: SearchSuggestion[] };
 
-export type ApiErrorCode = 'INVALID_PARAMETER' | 'NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SEARCH_UNAVAILABLE' | 'NETWORK_ERROR';
+export type ApiErrorCode =
+  | 'INVALID_PARAMETER'
+  | 'NOT_FOUND'
+  | 'RATE_LIMITED'
+  | 'INTERNAL_ERROR'
+  | 'SEARCH_UNAVAILABLE'
+  | 'NETWORK_ERROR'
+  // account-v1
+  | 'UNAUTHENTICATED'
+  | 'FORBIDDEN'
+  | 'CONFLICT';
 
 export type ApiErrorBody = {
   error: {
@@ -158,3 +168,65 @@ export type ApiErrorBody = {
     requestId?: string;
   };
 };
+
+// Account API v1 — source of truth: docs/contracts/account-v1.md.
+
+export type User = { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string };
+
+export type SessionResponse = { user: User };
+
+export type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
+
+export type SavedTendersParams = { page?: number; pageSize?: number; monitored?: boolean };
+
+export type SavedTendersResponse = { data: SavedTender[]; pagination: Pagination };
+
+export type SavedTenderIdsResponse = { saved: string[]; monitored: string[] };
+
+export type ImportSavedTendersResponse = { imported: number; alreadySaved: number; notFound: string[] };
+
+export type SavedSearch = {
+  id: string;
+  /** 1–80 chars. */
+  name: string;
+  /** Canonical query string (`searchParamsToUrl` without `page`, `pageSize`, `view` and the leading `?`). */
+  query: string;
+  alertsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastCheckedAt: string | null;
+  /** New tenders since the last visit; reset by `/seen`. */
+  newMatchesCount: number;
+};
+
+export type SavedSearchesResponse = { data: SavedSearch[] };
+
+export type CreateSavedSearchBody = { name: string; query: string; alertsEnabled: boolean };
+
+export type UpdateSavedSearchBody = { name?: string; query?: string; alertsEnabled?: boolean };
+
+export type NotificationType =
+  'tender_deadline_changed' | 'tender_status_changed' | 'tender_document_added' | 'tender_value_changed' | 'saved_search_new_matches';
+
+export type Notification = {
+  id: string;
+  type: NotificationType;
+  createdAt: string;
+  readAt: string | null;
+  /** tender_* types. */
+  tender: { id: string; title: string; tenderNumberShort: string | null } | null;
+  change: { field: string; from: string | number | null; to: string | number | null } | null;
+  /** saved_search_* types. */
+  savedSearch: { id: string; name: string; query: string } | null;
+  matchCount: number | null;
+  /** Up to 20 ids of the new tenders (saved_search_new_matches). */
+  tenderIds: string[];
+};
+
+export type NotificationsParams = { unreadOnly?: boolean; page?: number; pageSize?: number };
+
+export type NotificationsResponse = { data: Notification[]; pagination: Pagination; unreadCount: number };
+
+export type UnreadCountResponse = { unreadCount: number };
+
+export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };

@@ -1,56 +1,162 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isApiError, type SavedTenderIdsResponse } from '@/api';
+import { toast } from '@/hooks/use-toast';
+import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { accountService } from '@/services/account-service';
+import { queryKeys } from '@/services/query-keys';
 
-// Saved tender ids live in this browser until a per-user saved-tenders API exists.
+/** Before accounts, saved ids lived in this browser. They are imported once into the account, then the key is removed. */
+const LEGACY_STORAGE_KEY = 'licita-saved-tenders';
+const EMPTY: string[] = [];
+const MUTATION_KEY = ['saved-tenders', 'change'];
 
-const STORAGE_KEY = 'licita-saved-tenders';
-const listeners = new Set<() => void>();
+export type SavedTendersStatus = 'anonymous' | 'loading' | 'ready' | 'error';
 
-function read(): string[] {
+type Change = { id: string; save: false } | { id: string; save: true; monitored?: boolean };
+
+function applyChange(ids: SavedTenderIdsResponse, change: Change): SavedTenderIdsResponse {
+  const without = (list: string[]) => list.filter((item) => item !== change.id);
+  if (!change.save) return { saved: without(ids.saved), monitored: without(ids.monitored) };
+  const saved = ids.saved.includes(change.id) ? ids.saved : [change.id, ...ids.saved];
+  if (change.monitored === undefined) return { saved, monitored: ids.monitored };
+  return { saved, monitored: change.monitored ? [...without(ids.monitored), change.id] : without(ids.monitored) };
+}
+
+function errorDescription(error: unknown) {
+  if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 500 editais salvos. Remova alguns e tente de novo.';
+  if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
+  return isApiError(error) && error.requestId ? `Tente de novo. ref. ${error.requestId}` : 'Tente de novo.';
+}
+
+function readLegacyIds(): string[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) return parsed;
-    console.error(`[saved-tenders] Ignoring invalid value in localStorage "${STORAGE_KEY}".`);
+    console.error(`[saved-tenders] Valor inválido em localStorage "${LEGACY_STORAGE_KEY}"; nada a importar.`);
   } catch (error) {
-    console.error(`[saved-tenders] Could not read localStorage "${STORAGE_KEY}".`, error);
+    console.error(`[saved-tenders] Não foi possível ler localStorage "${LEGACY_STORAGE_KEY}".`, error);
   }
   return [];
 }
 
-let snapshot = read();
+// Once per page load: every useSavedTenders caller mounts this effect, only the first one imports.
+let importStarted = false;
 
-function write(next: string[]) {
-  snapshot = next;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch (error) {
-    // Private mode / quota: the change still applies for this session, but won't persist.
-    console.error('[saved-tenders] Could not persist saved tenders; changes will be lost on reload.', error);
-  }
-  listeners.forEach((listener) => listener());
+function useImportLegacySaved(authenticated: boolean) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!authenticated || importStarted) return;
+    importStarted = true;
+    const ids = readLegacyIds();
+    if (ids.length === 0) return;
+    accountService.importSavedTenders(ids).then(
+      (result) => {
+        try {
+          localStorage.removeItem(LEGACY_STORAGE_KEY);
+        } catch (error) {
+          console.error(`[saved-tenders] Importado, mas não foi possível apagar localStorage "${LEGACY_STORAGE_KEY}".`, error);
+        }
+        queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+        const missing = result.notFound.length;
+        if (result.imported === 0 && missing === 0) return;
+        toast({
+          title:
+            result.imported === 1
+              ? '1 edital salvo neste navegador foi adicionado à sua conta'
+              : `${result.imported} editais salvos neste navegador foram adicionados à sua conta`,
+          description:
+            missing > 0
+              ? `${missing} ${missing === 1 ? 'edital não existe mais na base e ficou' : 'editais não existem mais na base e ficaram'} de fora.`
+              : undefined,
+        });
+      },
+      (error) => {
+        // The key stays: the next page load tries again.
+        console.error('[saved-tenders] Falha ao importar os editais salvos neste navegador.', error);
+        toast({ variant: 'destructive', title: 'Não foi possível trazer os editais salvos neste navegador', description: errorDescription(error) });
+      },
+    );
+  }, [authenticated, queryClient]);
 }
 
-// Another tab changed the list: re-read it so every open tab shows the same saved ids.
-window.addEventListener('storage', (event) => {
-  if (event.key !== STORAGE_KEY && event.key !== null) return;
-  snapshot = read();
-  listeners.forEach((listener) => listener());
-});
-
-const subscribe = (listener: () => void) => {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-};
-
+/**
+ * Saved / monitored tender ids of the signed-in user (`/me/saved-tenders/ids`), with optimistic toggles.
+ * Signed out, `toggle` and `toggleMonitor` start the Google sign-in and come back to this page.
+ */
 export function useSavedTenders() {
-  const saved = useSyncExternalStore(subscribe, () => snapshot);
+  const session = useSession();
+  const authenticated = session.status === 'authenticated';
+  const queryClient = useQueryClient();
+  useImportLegacySaved(authenticated);
+
+  const ids = useQuery({
+    queryKey: queryKeys.me.savedTenders.ids,
+    queryFn: ({ signal }) => accountService.getSavedTenderIds(signal),
+    enabled: authenticated,
+    staleTime: 60_000,
+  });
+
+  const mutation = useMutation({
+    mutationKey: MUTATION_KEY,
+    mutationFn: async (change: Change) => {
+      if (change.save) await accountService.saveTender(change.id, change.monitored);
+      else await accountService.removeSavedTender(change.id);
+    },
+    onMutate: async (change) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.me.savedTenders.ids });
+      const previous = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      if (previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, applyChange(previous, change));
+      return { previous };
+    },
+    onError: (error, change, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.previous);
+      console.error('[saved-tenders] Falha ao atualizar edital salvo.', error);
+      const title = !change.save
+        ? 'Não foi possível remover o edital'
+        : change.monitored === undefined
+          ? 'Não foi possível salvar o edital'
+          : 'Não foi possível atualizar o monitoramento';
+      toast({ variant: 'destructive', title, description: errorDescription(error) });
+    },
+    // Refetch the truth once the last in-flight toggle settles; earlier refetches would flash intermediate states.
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+    },
+  });
+
+  const saved = ids.data?.saved ?? EMPTY;
+  const monitored = ids.data?.monitored ?? EMPTY;
   const isSaved = useCallback((id: string) => saved.includes(id), [saved]);
-  const toggle = useCallback((id: string) => write(snapshot.includes(id) ? snapshot.filter((item) => item !== id) : [...snapshot, id]), []);
-  /** Undo for a removal: puts the id back where it was. */
-  const restore = useCallback((id: string, index: number) => {
-    if (snapshot.includes(id)) return;
-    write([...snapshot.slice(0, index), id, ...snapshot.slice(index)]);
-  }, []);
-  return { saved, isSaved, toggle, restore };
+  const isMonitored = useCallback((id: string) => monitored.includes(id), [monitored]);
+
+  const { mutate } = mutation;
+  // Reads the cache at call time (not the render closure), so an Undo in a toast sees the current state.
+  const change = useCallback(
+    (build: (current: SavedTenderIdsResponse) => Change) => {
+      if (session.status === 'anonymous') return signInWithGoogle();
+      const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      if (session.status !== 'authenticated' || !current) {
+        const failed = session.error || queryClient.getQueryState(queryKeys.me.savedTenders.ids)?.status === 'error';
+        toast({
+          variant: 'destructive',
+          title: failed ? 'Não foi possível carregar seus editais salvos' : 'Seus editais salvos ainda não carregaram',
+          description: failed ? 'Recarregue a página e tente de novo.' : 'Aguarde um instante e tente de novo.',
+        });
+        return;
+      }
+      mutate(build(current));
+    },
+    [session.status, session.error, queryClient, mutate],
+  );
+  const toggle = useCallback((id: string) => change((current) => (current.saved.includes(id) ? { id, save: false } : { id, save: true })), [change]);
+  /** Monitoring implies saving: turning it on saves the tender too; turning it off keeps it saved. */
+  const toggleMonitor = useCallback((id: string) => change((current) => ({ id, save: true, monitored: !current.monitored.includes(id) })), [change]);
+
+  const status: SavedTendersStatus =
+    session.status === 'anonymous' ? 'anonymous' : ids.data ? 'ready' : ids.isError || (session.status === 'loading' && session.error) ? 'error' : 'loading';
+
+  return { saved, isSaved, toggle, isMonitored, toggleMonitor, status };
 }

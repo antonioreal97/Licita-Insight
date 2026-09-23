@@ -1,11 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { isApiError } from '@/api';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AppShell } from '@/components/app-shell';
 import AuthPage from '@/features/auth/auth-page';
+import { RequireAuth } from '@/features/auth/components/require-auth';
 import DashboardPage from '@/features/dashboard/dashboard-page';
 import DesignSystemPage from '@/features/design-system/design-system-page';
 import LandingPage from '@/features/landing/landing-page';
@@ -15,9 +17,22 @@ import SavedTendersPage from '@/features/saved-tenders/saved-tenders-page';
 import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
+import { queryKeys } from '@/services/query-keys';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 
-const queryClient = new QueryClient();
+// A 401 from any /me call means the session ended: re-check it so RequireAuth redirects and buttons show the signed-out state.
+const onUnauthenticated = (error: unknown) => {
+  if (isApiError(error) && error.status === 401) queryClient.invalidateQueries({ queryKey: queryKeys.session });
+};
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: onUnauthenticated }),
+  mutationCache: new MutationCache({ onError: onUnauthenticated }),
+});
+// Account data: retry only transient failures (network, 5xx, 429). A 401/403/404 won't pass on retry.
+const retryTransient = (failureCount: number, error: unknown) => isApiError(error) && error.isTransient && failureCount < 2;
+queryClient.setQueryDefaults(queryKeys.me.all, { retry: retryTransient });
+queryClient.setQueryDefaults(queryKeys.session, { retry: retryTransient });
 
 // Static routes only. Pages with dynamic titles (tender detail, 404) set document.title themselves, so this never touches them.
 const routeTitles: Record<string, string> = {
@@ -82,28 +97,36 @@ function Router() {
         <Route path="/saved-searches">
           {() => (
             <AppShell>
-              <SavedSearchesPage />
+              <RequireAuth>
+                <SavedSearchesPage />
+              </RequireAuth>
             </AppShell>
           )}
         </Route>
         <Route path="/saved-tenders">
           {() => (
             <AppShell>
-              <SavedTendersPage />
+              <RequireAuth>
+                <SavedTendersPage />
+              </RequireAuth>
             </AppShell>
           )}
         </Route>
         <Route path="/monitoring">
           {() => (
             <AppShell>
-              <MonitoringPage />
+              <RequireAuth>
+                <MonitoringPage />
+              </RequireAuth>
             </AppShell>
           )}
         </Route>
         <Route path="/settings">
           {() => (
             <AppShell>
-              <SettingsPage />
+              <RequireAuth>
+                <SettingsPage />
+              </RequireAuth>
             </AppShell>
           )}
         </Route>

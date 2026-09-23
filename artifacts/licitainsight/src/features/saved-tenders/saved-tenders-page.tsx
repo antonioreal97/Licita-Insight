@@ -1,22 +1,24 @@
-import { useQueries } from '@tanstack/react-query';
-import { CircleAlert, Download, RefreshCw, Trash2 } from 'lucide-react';
-import { isApiError, type TenderDetail } from '@/api';
+import { useEffect, useState } from 'react';
+import { Download } from 'lucide-react';
+import type { TenderSummary } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
+import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
+import { SearchPagination } from '@/features/search/components/search-pagination';
 import { TenderRow } from '@/features/tenders/components/tender-row';
-import { tenderQuery } from '@/features/tenders/hooks/use-tender';
 import { formatCurrencyPrecise, formatDateTime } from '@/lib/format';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 import { useSavedTenders } from './hooks/use-saved-tenders';
+import { fetchAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
 
-// Saved ids live in the browser; each one is resolved through the detail endpoint (no saved-tenders API yet).
+const PAGE_SIZE = 50;
 
 const csvCell = (value: string | number | null) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
-/** Client-side CSV of the rows that loaded. `;` + BOM so Excel pt-BR opens it with accents and columns intact. */
-function downloadCsv(tenders: TenderDetail[]) {
+/** Client-side CSV. `;` + BOM so Excel pt-BR opens it with accents and columns intact. */
+function downloadCsv(tenders: TenderSummary[]) {
   const header = ['Número', 'Objeto', 'Órgão', 'Modalidade', 'Status', 'Valor estimado', 'Prazo de propostas', 'Município', 'UF', 'Fonte', 'ID'];
   const rows = tenders.map((t) => [
     t.tenderNumber,
@@ -41,31 +43,47 @@ function downloadCsv(tenders: TenderDetail[]) {
 }
 
 export default function SavedTendersPage() {
-  const { saved, toggle, restore } = useSavedTenders();
-  const queries = useQueries({ queries: saved.map((id) => tenderQuery(id)) });
-  const loaded = queries.flatMap((q) => (q.data ? [q.data] : []));
-  const pending = queries.some((q) => q.isPending);
-  const failed = saved.length - loaded.length;
+  const [page, setPage] = useState(1);
+  const list = useSavedTendersList({ page, pageSize: PAGE_SIZE });
+  const { isSaved, isMonitored, toggle, toggleMonitor, status } = useSavedTenders();
+  const [exporting, setExporting] = useState(false);
+
+  const total = list.data?.pagination.total ?? 0;
+  // Removed rows disappear at once (optimistic ids); the list refetches when the change settles.
+  const rows = (list.data?.data ?? []).filter((item) => status !== 'ready' || isSaved(item.tender.id));
+
+  // Removing the last row of the last page leaves an empty page: step back.
+  const totalPages = list.data?.pagination.totalPages ?? 1;
+  useEffect(() => {
+    if (page > 1 && page > totalPages) setPage(Math.max(1, totalPages));
+  }, [page, totalPages]);
 
   const remove = (id: string) => {
-    const index = saved.indexOf(id);
+    const wasMonitored = isMonitored(id);
     toggle(id);
     toast({
       title: 'Edital removido dos salvos',
       action: (
-        <ToastAction altText="Desfazer remoção" data-testid="button-undo-remove-saved" onClick={() => restore(id, index)}>
+        // Turning monitoring back on also saves it, so one request restores both.
+        <ToastAction altText="Desfazer remoção" data-testid="button-undo-remove-saved" onClick={() => (wasMonitored ? toggleMonitor(id) : toggle(id))}>
           Desfazer
         </ToastAction>
       ),
     });
   };
 
-  const exportList = () => {
-    downloadCsv(loaded);
-    toast({
-      title: `${loaded.length} ${loaded.length === 1 ? 'edital exportado' : 'editais exportados'}`,
-      description: failed > 0 ? `${failed} ${failed === 1 ? 'edital não carregou e ficou' : 'editais não carregaram e ficaram'} fora do arquivo.` : undefined,
-    });
+  const exportList = async () => {
+    setExporting(true);
+    try {
+      const all = await fetchAllSavedTenders();
+      downloadCsv(all.map((item) => item.tender));
+      toast({ title: `${all.length} ${all.length === 1 ? 'edital exportado' : 'editais exportados'}` });
+    } catch (error) {
+      console.error('[saved-tenders] Falha ao exportar CSV.', error);
+      toast({ variant: 'destructive', title: 'Não foi possível exportar os editais salvos', description: 'Verifique a conexão e tente novamente.' });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -73,88 +91,42 @@ export default function SavedTendersPage() {
       <PageTitle
         eyebrow="sua shortlist"
         title="Editais salvos"
-        description="Salvos neste navegador. Os dados de cada edital vêm do banco."
+        description="Salvos na sua conta. Os dados de cada edital vêm do banco."
         action={
           <Button
             variant="outline"
             data-testid="button-export-saved"
-            disabled={pending || loaded.length === 0}
-            title={pending ? 'Aguarde os editais carregarem' : loaded.length === 0 ? 'Nenhum edital carregado para exportar' : 'Baixar CSV dos editais salvos'}
+            disabled={exporting || list.isPending || total === 0}
+            title={exporting ? 'Gerando o arquivo…' : total === 0 ? 'Nenhum edital salvo para exportar' : 'Baixar CSV dos editais salvos'}
             onClick={exportList}
           >
             <Download size={14} aria-hidden="true" />
-            Exportar CSV
+            {exporting ? 'Exportando…' : 'Exportar CSV'}
           </Button>
         }
       />
-      {saved.length === 0 ? (
+      {list.isPending ? (
+        <RowsSkeleton />
+      ) : list.isError ? (
+        <ErrorState error={list.error} onRetry={() => list.refetch()} />
+      ) : total === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong bg-card px-6 py-16 text-center type-body text-muted-foreground">
           Nenhum edital salvo ainda.
         </div>
       ) : (
-        <>
+        <div className="@container/results">
           <p aria-live="polite" className="mb-3 type-meta text-muted-foreground" data-testid="text-saved-count">
-            {saved.length} {saved.length === 1 ? 'edital salvo' : 'editais salvos'}
-            {pending && ' · carregando…'}
+            {total} {total === 1 ? 'edital salvo' : 'editais salvos'}
+            {list.isFetching && ' · atualizando…'}
           </p>
           <div className="overflow-hidden rounded-xl border border-border bg-card">
-            {saved.map((id, index) => {
-              const query = queries[index];
-              if (query.data) return <TenderRow key={id} tender={query.data} saved onSave={() => remove(id)} />;
-              if (query.isPending) return <PendingRow key={id} />;
-              return <FailedRow key={id} id={id} error={query.error} onRetry={() => query.refetch()} onRemove={() => remove(id)} />;
-            })}
+            {rows.map(({ tender }) => (
+              <TenderRow key={tender.id} tender={tender} saved onSave={() => remove(tender.id)} />
+            ))}
           </div>
-        </>
+          {totalPages > 1 && <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} />}
+        </div>
       )}
     </>
-  );
-}
-
-function PendingRow() {
-  return (
-    <div role="status" aria-label="Carregando edital" className="border-b border-border px-4 py-4 last:border-0 sm:px-5">
-      <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
-      <div className="mt-2 h-4 w-3/4 animate-pulse rounded-sm bg-muted" />
-      <div className="mt-2 h-3 w-1/2 animate-pulse rounded-sm bg-muted" />
-    </div>
-  );
-}
-
-function FailedRow({ id, error, onRetry, onRemove }: { id: string; error: Error | null; onRetry: () => void; onRemove: () => void }) {
-  const notFound = isApiError(error) && error.code === 'NOT_FOUND';
-  const requestId = isApiError(error) ? error.requestId : undefined;
-  return (
-    <div
-      role={notFound ? undefined : 'alert'}
-      data-testid={`row-saved-unavailable-${id}`}
-      className="flex flex-col gap-3 border-b border-border px-4 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-    >
-      <div className="flex min-w-0 gap-2.5">
-        <CircleAlert size={16} aria-hidden="true" className={notFound ? 'mt-0.5 shrink-0 text-muted-foreground' : 'mt-0.5 shrink-0 text-destructive'} />
-        <div className="min-w-0">
-          <p className="type-ui font-semibold text-foreground">
-            {notFound ? 'Edital não encontrado na base' : 'Não foi possível carregar este edital'}{' '}
-            <span className="break-all type-data text-2xs font-normal text-muted-foreground">(id {id})</span>
-          </p>
-          <p className="mt-0.5 type-meta text-muted-foreground">
-            {notFound ? 'Ele pode ter sido removido da fonte ou salvo numa versão anterior do banco.' : 'Verifique a conexão e tente novamente.'}
-            {requestId && <span className="ml-1.5 type-data text-3xs">ref. {requestId}</span>}
-          </p>
-        </div>
-      </div>
-      <div className="flex shrink-0 gap-2">
-        {!notFound && (
-          <Button variant="outline" size="sm" data-testid={`button-retry-saved-${id}`} onClick={onRetry}>
-            <RefreshCw size={13} aria-hidden="true" />
-            Tentar novamente
-          </Button>
-        )}
-        <Button variant="outline" size="sm" data-testid={`button-remove-saved-${id}`} aria-label={`Remover ${id} dos salvos`} onClick={onRemove}>
-          <Trash2 size={13} aria-hidden="true" />
-          Remover
-        </Button>
-      </div>
-    </div>
   );
 }
