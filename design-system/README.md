@@ -80,7 +80,6 @@ Run through this before you open a PR that touches UI.
 
 `// DS-DEBT:` marks code outside the system. Known debt, to migrate with tokens above:
 
-- `src/features/saved-searches/saved-searches-page.tsx`: adotar `Button variant="destructive"` no diálogo de exclusão (`AlertDialogAction` / `Button`) assim que o orquestrador liberar a edição do arquivo.
 - `src/components/ui/navigation-menu.tsx`: primitivo shadcn não utilizado que ainda contém classes padrão (`hover:bg-accent focus:bg-accent` em vez de `muted`).
 - `src/components/ui/command.tsx`: primitivo shadcn com `data-[selected=true]:bg-accent` (atualmente não consumido em features de produto).
 

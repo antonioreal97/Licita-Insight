@@ -165,12 +165,7 @@ export default function SavedSearchesPage() {
             <Button variant="outline" onClick={() => setToDelete(null)} disabled={remove.isPending} data-testid="button-cancel-delete-saved-search">
               Cancelar
             </Button>
-            <Button
-              loading={remove.isPending}
-              onClick={confirmDelete}
-              data-testid="button-confirm-delete-saved-search"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive"
-            >
+            <Button variant="destructive" loading={remove.isPending} onClick={confirmDelete} data-testid="button-confirm-delete-saved-search">
               Excluir busca
             </Button>
           </AlertDialogFooter>
