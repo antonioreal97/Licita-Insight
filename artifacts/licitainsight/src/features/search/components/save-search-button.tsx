@@ -1,30 +1,148 @@
-import { Bookmark } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
+import { useLocation } from 'wouter';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { isApiError } from '@/api';
 import { Button } from '@/components/common/action-button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
+import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useCreateSavedSearch, useSavedSearches } from '@/features/saved-searches/hooks/use-saved-searches';
+import { savedSearchQuery } from '@/services/account-service';
+import { useSearchUrlState } from '../hooks/use-search-url-state';
+import { SearchSummary } from './search-summary';
 
-/**
- * TODO(saved-searches): wire once the saved-searches API exists.
- * Uses aria-disabled (not `disabled`) so the tooltip still works on hover/focus and a click explains why.
- */
+const NAME_MAX = 80;
+
+function saveErrorMessage(error: unknown) {
+  if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas. Exclua uma em Buscas salvas e tente de novo.';
+  if (isApiError(error) && error.code === 'INVALID_PARAMETER')
+    return 'O servidor recusou o nome ou os filtros. Use um nome de 1 a 80 caracteres e revise os filtros.';
+  if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
+  return isApiError(error) && error.requestId ? `Não foi possível salvar. Tente de novo. ref. ${error.requestId}` : 'Não foi possível salvar. Tente de novo.';
+}
+
+/** Signed out → Google sign-in (back to this search). Signed in → dialog to name the search and turn alerts on. */
 export function SaveSearchButton() {
+  const { params } = useSearchUrlState();
+  const session = useSession();
+  const savedSearches = useSavedSearches();
+  const create = useCreateSavedSearch();
+  const [, navigate] = useLocation();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [alertsEnabled, setAlertsEnabled] = useState(true);
+
+  const query = savedSearchQuery(params);
+  const existing = savedSearches.data?.data.find((search) => search.query === query);
+
+  const start = () => {
+    if (session.status === 'anonymous') return signInWithGoogle();
+    if (session.status !== 'authenticated') {
+      toast({
+        variant: session.error ? 'destructive' : 'default',
+        title: session.error ? 'Não foi possível verificar sua sessão' : 'Verificando sua sessão',
+        description: session.error ? 'Recarregue a página e tente de novo.' : 'Aguarde um instante e tente de novo.',
+      });
+      return;
+    }
+    if (existing) return navigate('/saved-searches');
+    setName((params.q ?? 'Busca sem termo').slice(0, NAME_MAX));
+    setAlertsEnabled(true);
+    create.reset();
+    setOpen(true);
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    create.mutate(
+      { name, params, alertsEnabled },
+      {
+        onSuccess: (search) => {
+          setOpen(false);
+          toast({
+            title: 'Busca salva',
+            description: search.alertsEnabled ? 'Avisaremos aqui no app quando surgirem editais novos.' : `“${search.name}” está em Buscas salvas.`,
+            action: (
+              <ToastAction altText="Ver buscas salvas" data-testid="button-toast-view-saved-searches" onClick={() => navigate('/saved-searches')}>
+                Ver buscas salvas
+              </ToastAction>
+            ),
+          });
+        },
+        onError: (error) => console.error('[saved-searches] Falha ao salvar a busca.', error),
+      },
+    );
+  };
+
+  const nameInvalid = name.trim().length === 0;
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          aria-disabled="true"
-          data-testid="button-save-search"
-          className="w-9 cursor-not-allowed px-0 opacity-70 sm:w-auto sm:px-3.5"
-          onClick={() => toast({ title: 'Buscas salvas em breve', description: 'Em breve você poderá salvar esta busca e receber alertas de novos editais.' })}
-        >
-          <Bookmark size={14} aria-hidden />
-          {/* Icon-only on phones so it shares the title row; the name stays for screen readers. */}
-          <span className="sr-only sm:not-sr-only">Salvar busca</span>
-          <span className="hidden rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground sm:inline">em breve</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Em breve: salve esta busca e receba alertas</TooltipContent>
-    </Tooltip>
+    <>
+      <Button
+        variant="outline"
+        aria-pressed={existing ? true : undefined}
+        data-testid="button-save-search"
+        title={existing ? `Salva como “${existing.name}”. Abrir Buscas salvas` : 'Salvar esta busca e receber alertas de editais novos'}
+        className="w-9 px-0 sm:w-auto sm:px-3.5"
+        onClick={start}
+      >
+        {existing ? <BookmarkCheck size={14} aria-hidden /> : <Bookmark size={14} aria-hidden />}
+        {/* Icon-only on phones so it shares the title row; the name stays for screen readers. */}
+        <span className="sr-only sm:not-sr-only">{existing ? 'Busca salva' : 'Salvar busca'}</span>
+      </Button>
+      <Dialog open={open} onOpenChange={(next) => !create.isPending && setOpen(next)}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-save-search">
+          <form onSubmit={submit} className="grid gap-5">
+            <DialogHeader>
+              <DialogTitle className="type-title">Salvar busca</DialogTitle>
+              <DialogDescription className="type-meta text-muted-foreground">Ela fica em Buscas salvas, pronta para abrir de novo.</DialogDescription>
+            </DialogHeader>
+            <label className="field">
+              Nome
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={NAME_MAX}
+                required
+                autoFocus
+                aria-invalid={nameInvalid || (isApiError(create.error) && create.error.code === 'INVALID_PARAMETER') || undefined}
+                data-testid="input-saved-search-name"
+              />
+            </label>
+            <div>
+              <div className="mb-2 type-label text-muted-foreground">Filtros</div>
+              <SearchSummary params={params} />
+            </div>
+            <label className="flex items-start justify-between gap-4 rounded-lg border border-border bg-surface-sunken p-3">
+              <span>
+                <span className="block type-ui font-semibold text-foreground">Receber alertas de novos editais</span>
+                <span className="block type-meta text-muted-foreground">
+                  Aviso aqui no app quando a coleta diária trouxer editais que batem com esta busca.
+                </span>
+              </span>
+              <Switch checked={alertsEnabled} onCheckedChange={setAlertsEnabled} data-testid="switch-saved-search-alerts" className="mt-0.5" />
+            </label>
+            {create.isError && (
+              <p
+                role="alert"
+                className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground"
+              >
+                {saveErrorMessage(create.error)}
+              </p>
+            )}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={create.isPending} data-testid="button-cancel-save-search">
+                Cancelar
+              </Button>
+              <Button type="submit" loading={create.isPending} disabled={nameInvalid} data-testid="button-confirm-save-search">
+                Salvar busca
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

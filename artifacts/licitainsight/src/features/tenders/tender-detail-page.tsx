@@ -94,8 +94,7 @@ function shortTitle(text: string, max = 60) {
   return `${cut.slice(0, cut.lastIndexOf(' ') > max / 2 ? cut.lastIndexOf(' ') : max).replace(/[\s,;:.–-]+$/, '')}…`;
 }
 
-const monitorSoon = () =>
-  toast({ title: 'Monitoramento em breve', description: 'Em breve você poderá acompanhar mudanças de prazo, valor e documentos deste edital.' });
+const MONITOR_HINT = 'Avisaremos aqui no app quando prazo, status, valor ou documentos mudarem.';
 
 /** `true` while the facts strip has left its natural position right under the sentinel, i.e. it is stuck (xl only). */
 function useStuck(ready: boolean) {
@@ -123,7 +122,7 @@ function useStuck(ready: boolean) {
 export default function TenderDetailPage() {
   const { id } = useParams();
   const query = useTender(id);
-  const { isSaved, toggle } = useSavedTenders();
+  const { isSaved, toggle, isMonitored, toggleMonitor, status: savedStatus } = useSavedTenders();
   const [titleExpanded, setTitleExpanded] = useState(false);
   // Animate the bookmark swap only after a click, never on load.
   const [saveToggled, setSaveToggled] = useState(false);
@@ -152,6 +151,7 @@ export default function TenderDetailPage() {
 
   const tender = query.data;
   const saved = isSaved(tender.id);
+  const monitored = isMonitored(tender.id);
   const place = formatPlace(tender.location);
   const modality = modalityLabels[tender.modality];
   const number = shortTenderNumber(tender, modality);
@@ -167,6 +167,12 @@ export default function TenderDetailPage() {
   const onSave = () => {
     setSaveToggled(true);
     toggle(tender.id);
+  };
+  // Signed out, toggleMonitor starts the Google sign-in and returns here.
+  const onMonitor = () => {
+    const turningOn = savedStatus === 'ready' && !monitored;
+    toggleMonitor(tender.id);
+    if (turningOn) toast({ title: 'Edital monitorado', description: MONITOR_HINT });
   };
   const summary =
     tender.objectSummary && !isCutOf(tender.objectSummary, tender.description) && !isCutOf(tender.objectSummary, tender.title) ? tender.objectSummary : null;
@@ -237,22 +243,14 @@ export default function TenderDetailPage() {
               {saveIcon}
               {saved ? 'Salvo' : 'Salvar edital'}
             </Button>
-            {/* TODO(monitoring): aria-disabled (not `disabled`) so the tooltip works and a click explains; no fake "Monitorando" state. */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  aria-disabled="true"
-                  data-testid="button-detail-monitor"
-                  onClick={monitorSoon}
-                  className="cursor-not-allowed opacity-70"
-                >
+                <Button variant="outline" aria-pressed={monitored} data-testid="button-detail-monitor" onClick={onMonitor}>
                   <Target size={15} aria-hidden="true" />
-                  Monitorar
-                  <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>
+                  {monitored ? 'Monitorando' : 'Monitorar'}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Em breve: acompanhe mudanças neste edital</TooltipContent>
+              <TooltipContent className="max-w-60">{MONITOR_HINT}</TooltipContent>
             </Tooltip>
           </div>
           <div className="ml-1 border-l border-border pl-3">
@@ -379,11 +377,12 @@ export default function TenderDetailPage() {
         <Button
           variant="outline"
           size="lg"
-          aria-disabled="true"
-          aria-label="Monitorar (em breve)"
+          aria-pressed={monitored}
+          aria-label="Monitorar edital"
+          title={MONITOR_HINT}
           data-testid="button-detail-monitor-mobile"
-          onClick={monitorSoon}
-          className="w-11 cursor-not-allowed px-0 opacity-70"
+          onClick={onMonitor}
+          className="w-11 px-0"
         >
           <Target size={15} aria-hidden="true" />
         </Button>

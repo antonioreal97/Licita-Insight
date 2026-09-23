@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, RefreshCw, Search } from 'lucide-react';
+import { ArrowRight, Bell, RefreshCw, Search, Target } from 'lucide-react';
+import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
+import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
+import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-tenders-list';
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { formatNumber } from '@/lib/format';
 
@@ -41,8 +45,61 @@ function metricValue(total: number | undefined, pending: boolean, failed: boolea
   return formatNumber(total);
 }
 
+function countLine(query: { data?: number; isPending: boolean; isError: boolean }, one: string, many: string, none: string) {
+  if (query.isError) return 'não foi possível carregar';
+  if (query.isPending || query.data === undefined) return '…';
+  if (query.data === 0) return none;
+  return `${formatNumber(query.data)} ${query.data === 1 ? one : many}`;
+}
+
+/** Signed in: unread notifications + monitored tenders, from the API. Signed out: invitation to sign in. Nothing while the session loads. */
+function MonitoringCard() {
+  const session = useSession();
+  const unread = useUnreadCount();
+  const monitored = useSavedTendersList({ monitored: true, page: 1, pageSize: 1 });
+  if (session.status === 'anonymous')
+    return (
+      <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-sign-in">
+        <h2 className="type-section text-foreground">Salve e monitore editais</h2>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          Entre com Google para salvar editais e buscas e ser avisado aqui no app quando prazo, status, valor ou documentos mudarem.
+        </p>
+        <Button variant="outline" size="sm" className="mt-4" onClick={() => signInWithGoogle()} data-testid="button-dashboard-sign-in">
+          Entrar com Google
+        </Button>
+      </div>
+    );
+  if (session.status !== 'authenticated') return null;
+  const unreadQuery = { data: unread.data, isPending: unread.isPending, isError: unread.isError };
+  const monitoredQuery = { data: monitored.data?.pagination.total, isPending: monitored.isPending, isError: monitored.isError };
+  return (
+    <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-monitoring">
+      <h2 className="type-section text-foreground">Monitoramento</h2>
+      <ul className="mt-3 space-y-2 type-ui text-foreground">
+        <li className="flex items-center gap-2" data-testid="text-dashboard-unread">
+          <Bell size={14} aria-hidden className="text-foreground-subtle" />
+          {countLine(unreadQuery, 'notificação não lida', 'notificações não lidas', 'Nenhuma notificação não lida')}
+        </li>
+        <li className="flex items-center gap-2" data-testid="text-dashboard-monitored">
+          <Target size={14} aria-hidden className="text-foreground-subtle" />
+          {countLine(monitoredQuery, 'edital monitorado', 'editais monitorados', 'Nenhum edital monitorado')}
+        </li>
+      </ul>
+      <Link
+        href="/monitoring"
+        data-testid="link-dashboard-monitoring"
+        className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+      >
+        Abrir monitoramento <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
+      </Link>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { isSaved, toggle } = useSavedTenders();
+  const { user } = useSession();
+  const firstName = user?.name?.trim().split(/\s+/)[0];
   const today = useMemo(() => saoPauloDate(0), []);
   const weekAgo = useMemo(() => saoPauloDate(-6), []);
   const weekAhead = useMemo(() => saoPauloDate(7), []);
@@ -82,7 +139,7 @@ export default function DashboardPage() {
     <>
       <PageTitle
         eyebrow={eyebrow}
-        title={`${greeting()}, Marina.`}
+        title={firstName ? `${greeting()}, ${firstName}.` : `${greeting()}.`}
         description="Uma leitura rápida das publicações do PNCP que estão no banco."
         action={
           <Link
@@ -141,6 +198,7 @@ export default function DashboardPage() {
           )}
         </section>
         <aside className="space-y-6">
+          <MonitoringCard />
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="type-section text-foreground">Coleta</h2>
