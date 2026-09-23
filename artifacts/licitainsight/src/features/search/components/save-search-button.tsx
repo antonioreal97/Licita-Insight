@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
 import { useCreateSavedSearch, useSavedSearches } from '@/features/saved-searches/hooks/use-saved-searches';
 import { savedSearchQuery } from '@/services/account-service';
+import { searchParamsFromUrl } from '@/services/search-service';
 import { useSearchUrlState } from '../hooks/use-search-url-state';
 import { SearchSummary } from './search-summary';
 
@@ -35,7 +36,8 @@ export function SaveSearchButton() {
   const [alertsEnabled, setAlertsEnabled] = useState(true);
 
   const query = savedSearchQuery(params);
-  const existing = savedSearches.data?.data.find((search) => search.query === query);
+  // Re-canonicalize the stored query so a different key order/encoding from the server still matches.
+  const existing = savedSearches.data?.data.find((search) => savedSearchQuery(searchParamsFromUrl(search.query)) === query);
 
   const start = () => {
     if (session.status === 'anonymous') return signInWithGoogle();
