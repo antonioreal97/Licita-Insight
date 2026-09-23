@@ -1,8 +1,11 @@
 import * as React from 'react';
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Up to 3 stacked, so a new toast doesn't wipe an open "Desfazer". Closed toasts leave the list after their exit animation.
+const TOAST_LIMIT = 3;
+const TOAST_REMOVE_DELAY = 1000;
+/** Toasts with an action ("Desfazer") stay 10 s instead of Radix's 5 s (WCAG 2.2.1); `duration` overrides. */
+const ACTION_TOAST_DURATION = 10_000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -78,9 +81,7 @@ export const reducer = (state: State, action: Action): State => {
     case 'UPDATE_TOAST':
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t,
-        ),
+        toasts: state.toasts.map((t) => (t.id === action.toast.id ? { ...t, ...action.toast } : t)),
       };
 
     case 'DISMISS_TOAST': {
@@ -148,6 +149,7 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: 'ADD_TOAST',
     toast: {
+      duration: props.action ? ACTION_TOAST_DURATION : undefined,
       ...props,
       id,
       open: true,

@@ -62,6 +62,7 @@ export const accountService = {
       alertsEnabled: input.alertsEnabled,
     }),
   deleteSavedSearch: (id: string) => accountAdapter.deleteSavedSearch(id),
+  restoreSavedSearch: (id: string) => accountAdapter.restoreSavedSearch(id),
   markSavedSearchSeen: (id: string) => accountAdapter.markSavedSearchSeen(id),
 
   listNotifications: (params: NotificationsParams, signal?: AbortSignal) =>

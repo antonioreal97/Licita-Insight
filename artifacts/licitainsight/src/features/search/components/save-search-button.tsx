@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { isApiError } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -23,6 +23,8 @@ function saveErrorMessage(error: unknown) {
   if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
   return isApiError(error) && error.requestId ? `Não foi possível salvar. Tente de novo. ref. ${error.requestId}` : 'Não foi possível salvar. Tente de novo.';
 }
+
+const savedSearchHref = (id: string) => `/saved-searches#saved-search-${id}`;
 
 /** Signed out → Google sign-in (back to this search). Signed in → dialog to name the search and turn alerts on. */
 export function SaveSearchButton() {
@@ -49,7 +51,7 @@ export function SaveSearchButton() {
       });
       return;
     }
-    if (existing) return navigate('/saved-searches');
+    if (existing) return navigate(savedSearchHref(existing.id));
     setName((params.q ?? 'Busca sem termo').slice(0, NAME_MAX));
     setAlertsEnabled(true);
     create.reset();
@@ -79,6 +81,8 @@ export function SaveSearchButton() {
   };
 
   const nameInvalid = name.trim().length === 0;
+  // 409 `duplicate` (e.g. saved in another tab since the list loaded) carries the id of the search that already exists.
+  const duplicateId = isApiError(create.error) ? create.error.detail('duplicate')?.existingId : undefined;
 
   return (
     <>
@@ -126,13 +130,30 @@ export function SaveSearchButton() {
               </span>
               <Switch checked={alertsEnabled} onCheckedChange={setAlertsEnabled} data-testid="switch-saved-search-alerts" className="mt-0.5" />
             </label>
-            {create.isError && (
+            {duplicateId ? (
               <p
                 role="alert"
-                className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground"
+                className="rounded-lg bg-warning-subtle px-3 py-2 type-meta text-warning-subtle-foreground"
+                data-testid="text-save-search-duplicate"
               >
-                {saveErrorMessage(create.error)}
+                Você já salvou esta busca.{' '}
+                <Link
+                  href={savedSearchHref(duplicateId)}
+                  className="font-semibold underline underline-offset-2 focus-visible:focus-ring"
+                  data-testid="link-save-search-duplicate"
+                >
+                  Ver em Buscas salvas
+                </Link>
               </p>
+            ) : (
+              create.isError && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground"
+                >
+                  {saveErrorMessage(create.error)}
+                </p>
+              )
             )}
             <DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={create.isPending} data-testid="button-cancel-save-search">

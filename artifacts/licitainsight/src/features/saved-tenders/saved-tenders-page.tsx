@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Target } from 'lucide-react';
 import type { TenderSummary } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
@@ -59,13 +59,13 @@ export default function SavedTendersPage() {
   }, [page, totalPages]);
 
   const remove = (id: string) => {
-    const wasMonitored = isMonitored(id);
     toggle(id);
+    // Monitored: useSavedTenders toasts on success ("monitoramento também foi desligado") with an undo for both.
+    if (isMonitored(id)) return;
     toast({
       title: 'Edital removido dos salvos',
       action: (
-        // Turning monitoring back on also saves it, so one request restores both.
-        <ToastAction altText="Desfazer remoção" data-testid="button-undo-remove-saved" onClick={() => (wasMonitored ? toggleMonitor(id) : toggle(id))}>
+        <ToastAction altText="Desfazer remoção" data-testid="button-undo-remove-saved" onClick={() => toggle(id)}>
           Desfazer
         </ToastAction>
       ),
@@ -120,9 +120,29 @@ export default function SavedTendersPage() {
             {list.isFetching && ' · atualizando…'}
           </p>
           <div className="overflow-hidden rounded-xl border border-border bg-card">
-            {rows.map(({ tender }) => (
-              <TenderRow key={tender.id} tender={tender} saved onSave={() => remove(tender.id)} />
-            ))}
+            {rows.map(({ tender }) => {
+              const monitored = isMonitored(tender.id);
+              return (
+                // The row's own bottom border moves to the wrapper so the monitor bar sits inside the same item.
+                <div key={tender.id} className="border-b border-border last:border-0 [&>article]:border-0">
+                  <TenderRow tender={tender} saved onSave={() => remove(tender.id)} />
+                  <div className="-mt-1 flex items-center gap-2 px-4 pb-3 sm:px-5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-pressed={monitored}
+                      aria-describedby={`tender-title-${tender.id}`}
+                      title={monitored ? 'Parar de monitorar este edital' : 'Monitorar mudanças neste edital'}
+                      onClick={() => toggleMonitor(tender.id)}
+                      data-testid={`button-monitor-saved-${tender.id}`}
+                    >
+                      <Target size={13} aria-hidden="true" />
+                      {monitored ? 'Monitorando' : 'Monitorar'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           {totalPages > 1 && (
             <SearchPagination pagination={list.data.pagination} page={page} onPageChange={setPage} noun={['edital salvo', 'editais salvos']} />

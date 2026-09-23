@@ -164,10 +164,13 @@ export type ApiErrorBody = {
   error: {
     code: ApiErrorCode;
     message: string;
-    details?: { field: string; issue: string }[];
+    details?: ApiErrorDetail[];
     requestId?: string;
   };
 };
+
+/** `existingId` comes with 409 `duplicate` (saved search with the same query). */
+export type ApiErrorDetail = { field: string; issue: string; existingId?: string };
 
 // Account API v1 — source of truth: docs/contracts/account-v1.md.
 

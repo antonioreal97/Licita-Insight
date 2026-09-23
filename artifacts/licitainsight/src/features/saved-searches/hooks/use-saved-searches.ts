@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { SavedSearch, SavedSearchesResponse, TenderSearchParams } from '@/api';
+import { isApiError, type SavedSearch, type SavedSearchesResponse, type TenderSearchParams } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
-// Mutations don't toast: callers show `error` (409 CONFLICT = limit of 50 searches; 400 INVALID_PARAMETER = invalid name/query).
+// Mutations don't toast: callers show `error` (409 CONFLICT = limit of 50 searches or `duplicate` query with `existingId`; 400 INVALID_PARAMETER = invalid name/query).
 
 /** Saved searches of the signed-in user (`updatedAt desc`). Disabled while signed out. */
 export function useSavedSearches() {
@@ -30,9 +30,14 @@ function useReplaceInList() {
 /** `params` is turned into the canonical `query` (no page, pageSize or view) by the service. */
 export function useCreateSavedSearch() {
   const replace = useReplaceInList();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { name: string; params: TenderSearchParams; alertsEnabled: boolean }) => accountService.createSavedSearch(input),
     onSuccess: replace,
+    // 409 means the list is stale (limit reached or the same query saved elsewhere): refetch it.
+    onError: (error) => {
+      if (isApiError(error) && error.code === 'CONFLICT') queryClient.invalidateQueries({ queryKey: queryKeys.me.savedSearches });
+    },
   });
 }
 
@@ -56,6 +61,12 @@ export function useDeleteSavedSearch() {
       queryClient.invalidateQueries({ queryKey: queryKeys.me.savedSearches });
     },
   });
+}
+
+/** Undoes a delete (same id, keeps history) within 30 s; 409 `restore_expired` after that. */
+export function useRestoreSavedSearch() {
+  const replace = useReplaceInList();
+  return useMutation({ mutationFn: (id: string) => accountService.restoreSavedSearch(id), onSuccess: replace });
 }
 
 /** Resets `newMatchesCount` (call when the user opens the saved search). Keeps the list order: `/seen` isn't an edit. */
