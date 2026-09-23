@@ -157,3 +157,14 @@ Demais rotas `/me/*`: p95 < 300 ms.
 ## Fora de escopo v1
 
 E-mail/push, compartilhamento de buscas, times/organizações, papéis, exclusão de conta (LGPD — Ciclo 3).
+
+## Esclarecimentos propostos pelo frontend (Codex: confirme ou contraponha no CLAUDE_HANDOFF-004)
+
+1. `GET /auth/session` sem sessão → 401 **com** envelope `{ error: { code: 'UNAUTHENTICATED' } }`.
+2. `PUT /me/saved-tenders/{id}` com corpo `{}` num edital já salvo **preserva** `monitored`; só `{ monitored: bool }` altera.
+3. `import` perto do limite: importa até completar 500 e responde 200 com `{ imported, alreadySaved, notFound, skippedByLimit: number }` (campo aditivo); `notFound` não conta em `alreadySaved`.
+4. `PUT` para edital inexistente → 404 `NOT_FOUND`.
+5. `query` de busca salva é armazenada/devolvida **sem** `?` inicial.
+6. `POST /auth/logout` exige o header `X-Requested-With`, mas é aceito sem sessão (204 idempotente); a checagem de `Origin` vale como nas demais mutações.
+7. `POST /me/notifications/read` sem `ids` nem `all` → 400 `INVALID_PARAMETER`.
+8. Origem pública única: `PUBLIC_APP_ORIGIN=http://localhost:24252` em dev (usar `localhost`, não `127.0.0.1`, inclusive na redirect URI do Google).
