@@ -53,30 +53,32 @@ Robô de lances fica **fora do roadmap**: exige integração autenticada com Com
 | 0.3 | Deploy online (API + Postgres + Vite), origem pública e `PUBLIC_APP_ORIGIN`/redirect URI do Google corrigidos | `docker-compose.yml`, provedor | — | login Google e busca funcionam no domínio público |
 | 0.4 | Carga nacional dos últimos 30 dias do PNCP | `collect:pncp` com `PNCP_FROM`/`PNCP_TO` | 0.3 | `GET /api/v1/ingest/pncp` mostra as 27 UFs seladas no período |
 | 0.5 | Teste ponta a ponta com um CNPJ real: assinar → salvar → receber notificação | produção | 0.1–0.4 | ciclo completo sem intervenção manual |
-| 0.6 | Assinatura de desenvolvimento: `BILLING_DEV_ENTITLED=true` (só com `NODE_ENV !== 'production'`, como o `AUTH_DEV_LOGIN`) trata o usuário como assinante | `billing/billing-access.ts`, `.env.example` | — | QA dos fluxos `/me` sem Asaas nem `INSERT` manual em `subscriptions` |
+| 0.6 | ✅ (`CLAUDE_HANDOFF-006`) Assinatura de desenvolvimento: `BILLING_DEV_ENTITLED=true` (só com `NODE_ENV !== 'production'`, como o `AUTH_DEV_LOGIN`) trata o usuário como assinante | `billing/billing-access.ts`, `.env.example` | — | QA dos fluxos `/me` sem Asaas nem `INSERT` manual em `subscriptions` |
 
 **Esforço:** 2–4 dias. **Risco:** timeout do PNCP na janela de 30 dias — a coleta já reparte por UF, mas a carga deve rodar fora do horário de pico e pode levar horas.
 
 ---
 
-## Onda 1 — Planos e limites (o freemium de verdade)
+## Onda 1 — Teste de 14 dias, plano único e LGPD da conta
 
-**Objetivo:** dar o que vender. Hoje `require-subscription.ts` responde 402 ou deixa passar; não existe noção de plano.
+**Decisões do owner (24 set 2026):** **teste de 14 dias** (sem gratuito permanente), **plano único** no valor de
+`BILLING_MONTHLY_BRL`, **oportunidades culturais só para quem tem acesso** (teste ou assinatura).
+Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 
-**Por que paga:** sem plano gratuito não há topo de funil; sem limite no gratuito não há motivo de upgrade.
+**Por que paga:** o teste mostra o produto inteiro (salvar, monitorar, alertas, culturais) e o fim do teste é o ponto de venda.
 
 | # | Tarefa | Onde | Detalhe |
 | :-- | :--- | :--- | :--- |
-| 1.1 | Coluna `plan` em `subscriptions` (`free`, `starter`, `pro`) + migração | `lib/db/src/schema/accounts.ts`, `lib/db/migrations` | manter `status` como está; `plan` default `free` |
-| 1.2 | Tabela de limites por plano em um único módulo | `artifacts/api-server/src/billing/plan-limits.ts` (novo) | `{ savedTenders, savedSearches, alertFrequency, monitoredTenders }` |
-| 1.3 | Trocar o gate binário por checagem de limite | tirar `requireSubscription` do `router.use("/v1/me")` e checar por rota em `billing/require-plan.ts` | novo erro `PLAN_LIMIT_REACHED` com **402** (não 403: 402 já significa "pague para continuar", o frontend já trata `SUBSCRIPTION_REQUIRED`, e 403 se confunde com o CSRF) e `details: [{ limit, current, upgradeTo }]` |
-| 1.4 | Liberar salvar até 5 editais e 1 busca salva no gratuito | rotas `/me/saved-tenders`, `/me/saved-searches`, `/me/notifications` | gratuito passa a ter valor de hábito; notificações do que o gratuito salvou também ficam liberadas |
-| 1.5 | Expor plano e uso em `GET /api/v1/me/billing` (rota que já existe; `GET /api/v1/me` não existe) | `routes/billing.ts`, `docs/contracts/account-v1.md` | o frontend precisa saber quanto falta do limite |
-| 1.6 | UI: badge de plano, barra de uso e modal de upgrade no ponto do bloqueio | `features/billing`, `features/saved-tenders`, `features/saved-searches` | o upgrade é vendido onde o limite dói, não em Configurações |
-| 1.7b | LGPD da conta: exportar dados e excluir conta (cancela assinatura e apaga `users` em cascata) | `routes/account.ts` + `features/settings` | com cobrança e conta Google, isso deixa de ser opcional |
-| 1.7 | Dois preços no Asaas (Starter/Pro) em vez de `BILLING_MONTHLY_BRL` único | `billing/asaas-client.ts`, `.env.example` | `BILLING_PLAN_STARTER_BRL`, `BILLING_PLAN_PRO_BRL` |
+| 1.1 | Teste de 14 dias a partir do primeiro login; usuários já existentes ganham 14 dias a partir da migração | `lib/db` (ex. `users.trial_ends_at`), `billing/billing-access.ts` | `entitled` = assinatura elegível **ou** teste vigente |
+| 1.2 | `GET /me/billing` expõe o teste | `billing-service.ts`, contrato | `trialEndsAt`, `source: 'subscription' \| 'trial' \| 'dev' \| null` |
+| 1.3 | Um teste por conta Google, inclusive após excluir a conta | tombstone com hash do `sub` | ponderar com LGPD (dado mínimo, finalidade antiabuso) |
+| 1.4 | Aviso no app 3 dias antes do fim do teste | notificação `trial_ending` | a de "teste acabou" é mostrada pela UI a partir do billing (as notificações ficam atrás do gate) |
+| 1.5 | Oportunidades culturais atrás do gate | `routes/opportunities.ts` | anônimo → 401; sem acesso → 402; coleta diária inalterada |
+| 1.6 | Rota pública com preço e duração do teste | `GET /api/v1/billing/plan` | `{ monthlyBrl, trialDays }` para landing e login |
+| 1.7 | UI: selo "Teste · N dias", aviso nos últimos 3 dias, tela de assinatura ao expirar, textos "14 dias grátis" na landing/login, culturais com paywall | `features/billing`, `app-shell`, `landing`, `opportunities` | o upgrade aparece onde o acesso acaba |
+| 1.8 | LGPD da conta: exportar e excluir | **feito no backend** (`CLAUDE_HANDOFF-006`); UI em `/settings` | — |
 
-**Depende de:** Onda 0.1. **Esforço:** 4–6 dias. **Pronto quando:** um usuário gratuito esbarra no sexto edital salvo e o modal de upgrade leva ao checkout do plano certo.
+**Depende de:** Onda 0.1 para cobrar de fato; o desenvolvimento usa `BILLING_DEV_ENTITLED`. **Pronto quando:** um usuário novo usa tudo por 14 dias, recebe o aviso no dia 11 e, no dia 15, cai na tela de assinatura com o checkout.
 
 ---
 
@@ -97,7 +99,7 @@ Robô de lances fica **fora do roadmap**: exige integração autenticada com Com
 | 2.7 | Link de descadastro e registro de consentimento | `notify/mailer.ts` | exigência legal, não opcional |
 | 2.8 | *(opcional, Pro)* WhatsApp via provedor oficial | `notify/whatsapp.ts` | só depois que o e-mail estiver estável |
 
-**Depende de:** Onda 1 (frequência é atributo de plano). **Esforço:** 6–9 dias sem WhatsApp. **Pronto quando:** um usuário Starter recebe, às 07:00, um e-mail com os editais novos da busca salva dele e consegue desligar isso em um clique.
+**Depende de:** Onda 1 (acesso = teste ou assinatura). **Esforço:** 6–9 dias sem WhatsApp. **Pronto quando:** um usuário Starter recebe, às 07:00, um e-mail com os editais novos da busca salva dele e consegue desligar isso em um clique.
 
 ---
 
@@ -115,7 +117,7 @@ Robô de lances fica **fora do roadmap**: exige integração autenticada com Com
 | 3.4 | Endpoint `POST /api/v1/tenders/:id/ask` com RAG + citação de página | `routes/tenders-ai.ts` (novo) | resposta **sempre** com trecho e página; nunca sem fonte |
 | 3.5 | Resumo automático estruturado (objeto, habilitação, prazos, garantia, penalidades) | `ai/summarize.ts` | cacheado por edital; é o botão mais clicado |
 | 3.6 | UI: painel "Perguntar ao edital" no detalhe | `features/tenders` | histórico por edital, resposta com link para o trecho |
-| 3.7 | Cota de perguntas por plano + medidor de custo | `plan-limits.ts`, `ai/usage.ts` | custo por token é variável: sem cota, a margem some |
+| 3.7 | Cota de perguntas por usuário (teste com cota menor) + medidor de custo | `ai/usage.ts` | custo por token é variável: sem cota, a margem some |
 | 3.8 | Aviso de limitação ("confira o edital original") | UI | risco jurídico: a resposta orienta, não substitui o edital |
 
 **Depende de:** Onda 1 (cota é atributo de plano). **Esforço:** 10–15 dias. **Riscos:** custo por token sem teto; PDF escaneado sem OCR; alucinação em pergunta de habilitação — mitigada por citação obrigatória.
@@ -177,13 +179,14 @@ Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justific
 
 ---
 
-## 3. Decisões pendentes (precisam da sua resposta)
+## 3. Decisões
 
-1. **Preço.** Starter e Pro em quanto? O `BILLING_MONTHLY_BRL` hoje é um valor só. Vale levantar preço público de ConLicitação/Effecti antes de fechar.
-2. **Gratuito de verdade ou trial de 14 dias?** Muda a Onda 1 inteira: limites permanentes × acesso total com prazo.
-3. **Provedor de e-mail:** Resend (simples, bom deliverability) ou SES (mais barato em volume, configuração maior)?
-4. **Modelo de IA da Onda 3:** API paga (Claude/OpenAI) ou modelo aberto hospedado? Define o custo por pergunta e, portanto, a cota do plano.
-5. **Oportunidades culturais** entram em qual plano? Hoje são públicas e são um diferencial exclusivo — podem ser a isca do gratuito ou um add-on.
+Tomadas em 24 set 2026: teste de 14 dias; plano único (`BILLING_MONTHLY_BRL`); oportunidades culturais só com acesso.
+
+Pendentes:
+1. **Provedor de e-mail:** Resend (simples, boa entregabilidade) ou SES (mais barato em volume, configuração maior)?
+2. **Modelo de IA da Onda 3:** API paga (Claude/OpenAI) ou modelo aberto hospedado? Define o custo por pergunta e a cota.
+3. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
 
 ---
 
