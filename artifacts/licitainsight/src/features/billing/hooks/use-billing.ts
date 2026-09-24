@@ -47,7 +47,7 @@ export function useRequireEntitled() {
       return false;
     }
     if (!billing.data.entitled) {
-      navigate('/settings?billing=required');
+      navigate('/settings?billing=required#assinatura');
       return false;
     }
     return true;

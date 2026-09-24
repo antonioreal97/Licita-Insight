@@ -94,7 +94,7 @@ function PlanSection() {
           {plan.isPending && <span role="status" aria-label="Carregando plano" className="block h-10 w-44 animate-pulse rounded-md bg-muted" />}
           {price !== null && (
             <p data-testid="text-plan-price" className="flex items-baseline gap-2">
-              <span className="type-data text-4xl font-bold">{formatCurrencyPrecise(price)}</span>{' '}
+              <span className="text-4xl font-bold tracking-tight tabular-nums">{formatCurrencyPrecise(price)}</span>{' '}
               <span className="text-sm text-muted-foreground">por mês</span>
             </p>
           )}

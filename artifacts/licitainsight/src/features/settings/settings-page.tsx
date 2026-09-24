@@ -275,7 +275,10 @@ function BillingSection() {
               <p className="type-ui font-semibold">
                 {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} em {formatDate(trial.endsAt)}.
               </p>
-              <p className="mt-0.5 type-meta">Assine para voltar a salvar e monitorar editais, receber alertas e ver as chamadas culturais.</p>
+              <p className="mt-0.5 type-meta">
+                Assine para voltar a salvar e monitorar editais, receber alertas e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
+                na sua conta.
+              </p>
             </div>
           ) : (
             <p data-testid="text-billing-status" className="mt-5 type-ui text-foreground">

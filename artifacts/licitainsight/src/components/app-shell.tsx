@@ -441,7 +441,7 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
         <p className="type-ui font-semibold text-foreground">Assine para acompanhar editais</p>
         <p className="mt-1 type-meta text-muted-foreground">Alertas de prazo, status, valor e documentos entram com a assinatura.</p>
         <Link
-          href="/settings?billing=required"
+          href="/settings?billing=required#assinatura"
           data-testid="link-notifications-subscribe"
           onClick={onClose}
           className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"

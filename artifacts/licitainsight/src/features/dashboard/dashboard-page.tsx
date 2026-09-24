@@ -82,7 +82,7 @@ function MonitoringCard() {
           A busca continua aberta. Assine para salvar editais, guardar buscas e receber alertas aqui no app.
         </p>
         <Link
-          href="/settings?billing=required"
+          href="/settings?billing=required#assinatura"
           data-testid="link-dashboard-subscribe"
           className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
         >
