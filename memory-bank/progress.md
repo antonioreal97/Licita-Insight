@@ -30,12 +30,18 @@
 - Checkout/cancelamento Asaas e webhook autenticado. UI em Configurações + `RequireSubscription` nas páginas pagas.
 - 10 testes de billing passaram; typecheck da API e do frontend ok. Schema `subscriptions` no Postgres local.
 
+## O que já funciona — e-mail (Onda 2)
+
+- Preferências (`digest` diário 07:00 BRT, `immediateCritical`) fora do gate, descadastro público em um clique (RFC 8058), entregas idempotentes com retry, buscas salvas em job próprio (15 min).
+- UI: switches em `/settings#notificacoes` (otimista, rollback), `/descadastro` com confirmação explícita. QA headless desktop/mobile em 24 set 2026.
+
 ## O que falta
 
 - Credenciais Asaas no ambiente e restart da API do Compose para as rotas de billing entrarem no processo em execução.
 - Deploy online (fora do ciclo do paywall).
 - Carga nacional dos últimos 30 dias do PNCP.
-- Outras fontes além do Mapas Culturais; e-mail de alerta (hoje só no app).
+- Outras fontes além do Mapas Culturais.
+- Chave Resend + domínio (click/open tracking desligados) e CODEX_HANDOFF-010.
 
 ## Problemas conhecidos
 

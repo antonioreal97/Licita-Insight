@@ -15,7 +15,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (status === 'loading' && error) return <ErrorState error={error} onRetry={() => queryClient.refetchQueries({ queryKey: queryKeys.session })} />;
   if (status === 'loading') return <RowsSkeleton />;
   if (status === 'anonymous') {
-    const returnTo = location + (search ? `?${search}` : '');
+    // Keep the hash too: e-mail footers link to `/settings#notificacoes`.
+    const returnTo = location + (search ? `?${search}` : '') + window.location.hash;
     return <Redirect to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
   return <>{children}</>;

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Info, LogOut } from 'lucide-react';
-import { Link, useSearch } from 'wouter';
+import { useSearch } from 'wouter';
 import { useLocationProperty } from 'wouter/use-browser-location';
 import { isApiError, type BillingResponse } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -10,37 +10,24 @@ import { ErrorState } from '@/components/common/query-states';
 import { UserAvatar } from '@/components/app-shell';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
-import { daysLabel, trialState, type TrialState } from '@/features/billing/lib/trial';
+import { daysLabel, trialEndPhrase, trialState, type TrialState } from '@/features/billing/lib/trial';
 import { useSession, useSignOut } from '@/features/auth/hooks/use-session';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrencyPrecise, formatDate } from '@/lib/format';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 import { AccountDataSection } from './components/account-data-section';
+import { NotificationPreferencesSection } from './components/notification-preferences-section';
+import { useNotificationPreferences } from './hooks/use-notification-preferences';
 
-// TODO(settings): no preferences API yet. Profile comes from the Google session (read-only); nothing here pretends to persist.
+// Profile comes from the Google session (read-only). Sections without an `id` have no settings yet.
 const sections = [
-  { name: 'Assinatura', soon: false },
-  { name: 'Perfil e conta', soon: false },
-  { name: 'Notificações', soon: false },
-  { name: 'Seus dados', soon: false },
-  { name: 'Preferências de busca', soon: true },
-  { name: 'Aparência', soon: true },
-];
-
-const alertRows = [
-  {
-    name: 'Novos resultados',
-    desc: 'Ative alertas em uma busca salva para saber quando surgirem editais novos.',
-    href: '/saved-searches',
-    cta: 'Buscas salvas',
-  },
-  {
-    name: 'Mudanças em editais',
-    desc: 'Monitore um edital para ser avisado quando prazo, status, valor ou documentos mudarem.',
-    href: '/monitoring',
-    cta: 'Monitoramento',
-  },
+  { name: 'Assinatura', id: 'assinatura' },
+  { name: 'Perfil e conta', id: 'perfil' },
+  { name: 'Notificações', id: 'notificacoes' },
+  { name: 'Seus dados', id: 'seus-dados' },
+  { name: 'Preferências de busca', id: null },
+  { name: 'Aparência', id: null },
 ];
 
 export default function SettingsPage() {
@@ -48,10 +35,13 @@ export default function SettingsPage() {
   const { user } = useSession();
   const signOut = useSignOut();
   // Links like "/settings#assinatura" (shell badge, trial banner, notifications): wouter doesn't scroll to the hash on pushState.
+  // Scroll again once the sections above settle: "Carregando…" placeholders grow and would push the anchor down.
   const hash = useLocationProperty(() => window.location.hash);
+  const billingPending = useBilling().isPending;
+  const prefsPending = useNotificationPreferences().isPending;
   useEffect(() => {
     if (hash.length > 1) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
-  }, [hash]);
+  }, [hash, billingPending, prefsPending]);
 
   return (
     <>
@@ -65,22 +55,36 @@ export default function SettingsPage() {
         Nome, e-mail e foto vêm da sua conta Google e não são editados aqui. Preferências de busca e aparência ainda não são configuráveis.
       </p>
       <div className="grid gap-6 xl:grid-cols-[220px_1fr]">
-        {/* Section list, not tabs: the page is short enough to scroll; later sections are labelled as coming later. */}
-        <ul aria-label="Seções" className="flex gap-2 overflow-x-auto xl:block xl:space-y-1">
-          {sections.map(({ name, soon }, index) => (
-            <li
-              key={name}
-              data-testid={`button-settings-${index}`}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${soon ? 'text-muted-foreground' : 'text-foreground'}`}
-            >
-              {name}
-              {soon && <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>}
-            </li>
-          ))}
-        </ul>
+        {/* In-page anchors, not tabs: the page is short enough to scroll; later sections are labelled as coming later. */}
+        {/* min-w-0: a grid item sizes to its content, so without it the chip row widens the page on mobile. */}
+        <nav aria-label="Seções" className="min-w-0">
+          <ul className="flex gap-2 overflow-x-auto xl:block xl:space-y-1">
+            {sections.map(({ name, id }, index) => (
+              <li key={name} className="shrink-0">
+                {id ? (
+                  <a
+                    href={`#${id}`}
+                    data-testid={`button-settings-${index}`}
+                    className="flex whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold text-foreground transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
+                  >
+                    {name}
+                  </a>
+                ) : (
+                  <span
+                    data-testid={`button-settings-${index}`}
+                    className="flex items-center gap-2 whitespace-nowrap px-3 py-2 text-xs font-semibold text-muted-foreground"
+                  >
+                    {name}
+                    <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="space-y-6">
           <BillingSection />
-          <section aria-labelledby="settings-profile" className="rounded-xl border border-border bg-card p-5 sm:p-7">
+          <section id="perfil" aria-labelledby="settings-profile" className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7">
             <h2 id="settings-profile" className="type-section">
               Perfil e conta
             </h2>
@@ -105,29 +109,7 @@ export default function SettingsPage() {
               </div>
             )}
           </section>
-          <section aria-labelledby="settings-notifications" className="rounded-xl border border-border bg-card p-5 sm:p-7">
-            <h2 id="settings-notifications" className="type-section">
-              Notificações
-            </h2>
-            <p className="mt-1 type-meta text-muted-foreground">Os avisos aparecem no sino, no topo da página. Não enviamos e-mails.</p>
-            <div className="mt-5 divide-y divide-border">
-              {alertRows.map(({ name, desc, href, cta }, index) => (
-                <div
-                  key={name}
-                  data-testid={`row-notification-${index}`}
-                  className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block type-ui font-medium">{name}</span>
-                    <span className="mt-0.5 block type-meta text-muted-foreground">{desc}</span>
-                  </span>
-                  <Link href={href} className="type-ui font-semibold text-primary hover:underline">
-                    {cta}
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </section>
+          <NotificationPreferencesSection />
           <AccountDataSection />
         </div>
       </div>
@@ -159,8 +141,9 @@ function checkoutLabel(billing: BillingResponse, trial: TrialState): string {
 
 function trialCopy(trial: Extract<TrialState, { kind: 'active' }>): string {
   if (!trial.endsAt || trial.daysLeft === null) return 'Você está no período de teste, com acesso completo.';
-  const left = trial.daysLeft === 0 ? 'termina hoje' : `faltam ${daysLabel(trial.daysLeft)}`;
-  return `Período de teste até ${formatDate(trial.endsAt)} (${left}), com acesso completo. Assine quando quiser para não perder o acesso.`;
+  if (trial.daysLeft === 0)
+    return `Seu período de teste termina ${trialEndPhrase(trial.endsAt)}. Até lá, o acesso é completo. Assine para não perder o acesso.`;
+  return `Período de teste até ${formatDate(trial.endsAt)} (faltam ${daysLabel(trial.daysLeft)}), com acesso completo. Assine quando quiser para não perder o acesso.`;
 }
 
 function billingErrorMessage(error: unknown, fallback: string) {
@@ -246,7 +229,7 @@ function BillingSection() {
         Assinatura
       </h2>
       <p className="mt-1 type-meta text-muted-foreground">
-        Um plano mensal libera salvar editais, guardar buscas, receber alertas no app e ver as chamadas culturais.
+        Um plano mensal libera salvar editais, guardar buscas, receber alertas no app e por e-mail e ver as chamadas culturais.
         {price !== null ? ` ${formatCurrencyPrecise(price)} por mês.` : ''}
       </p>
       {billingFlag === 'required' && trial.kind !== 'expired' && (
@@ -273,10 +256,10 @@ function BillingSection() {
               className="mt-5 rounded-lg border border-warning/40 bg-warning-subtle px-4 py-3 text-warning-subtle-foreground"
             >
               <p className="type-ui font-semibold">
-                {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} em {formatDate(trial.endsAt)}.
+                {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} {trialEndPhrase(trial.endsAt)}.
               </p>
               <p className="mt-0.5 type-meta">
-                Assine para voltar a salvar e monitorar editais, receber alertas e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
+                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
                 na sua conta.
               </p>
             </div>

@@ -2,7 +2,9 @@
 
 ## Foco agora
 
-MVP de cobrança pronto no código: assinatura mensal via Asaas libera salvar, monitorar e alertas. Busca e detalhe continuam públicos. Falta configurar as chaves do Asaas no `.env` e reiniciar a API do Compose para carregar as rotas novas.
+Onda 2 (e-mail) integrada no cycle4 (24 set 2026): backend Resend do Codex (`c8e4837`) + seção Notificações em `/settings#notificacoes` e página pública `/descadastro`. QA em `docs/reviews/onda2-integration-qa.md`. Follow-ups de backend em `docs/handoffs/CODEX_HANDOFF-010-email-followups.md` (migrate em banco vazio, plurais/prazo no texto do e-mail, segredo próprio do token de descadastro). Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`; sem elas as entregas ficam `skipped`.
+
+O stack Docker em execução no checkout `main` não tem o backend de e-mail: depois do merge, `docker compose up --build` (o `db-setup` aplica o schema novo).
 
 ## O que está na mesa
 

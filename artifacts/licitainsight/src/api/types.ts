@@ -266,6 +266,20 @@ export type UnreadCountResponse = { unreadCount: number };
 
 export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };
 
+/** E-mail alerts (CODEX_HANDOFF-009, proposal): daily digest at 07:00 (São Paulo) and immediate mail for critical changes. */
+export type EmailPreferences = { digest: 'daily' | 'off'; immediateCritical: boolean };
+
+/** `GET/PUT /api/v1/me/notification-preferences` — outside the subscription gate. */
+export type NotificationPreferences = { email: EmailPreferences; emailAddress: string; updatedAt: string | null };
+
+/** Partial PUT body: only the fields sent change. */
+export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences> };
+
+export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
+
+/** Public `POST /api/v1/email/unsubscribe { token, scope }` (no session). Invalid token → 400 INVALID_PARAMETER. */
+export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPreferences };
+
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';

@@ -3,6 +3,7 @@ import type {
   BillingCheckoutResponse,
   BillingResponse,
   ImportSavedTendersResponse,
+  NotificationPreferences,
   NotificationsResponse,
   PublicPlan,
   SavedSearch,
@@ -12,6 +13,7 @@ import type {
   SavedTendersResponse,
   SessionResponse,
   UnreadCountResponse,
+  UnsubscribeResponse,
 } from '../../types';
 import { apiBaseUrl, getFile, getJson, sendJson, toQueryString } from './http-client';
 
@@ -47,4 +49,9 @@ export const httpAccountAdapter: AccountAdapter = {
   listNotifications: (params, signal) => getJson<NotificationsResponse>('/v1/me/notifications', params, signal),
   getUnreadCount: (signal) => getJson<UnreadCountResponse>('/v1/me/notifications/unread-count', {}, signal),
   markNotificationsRead: (body) => sendJson<UnreadCountResponse>('POST', '/v1/me/notifications/read', body),
+
+  getNotificationPreferences: (signal) => getJson<NotificationPreferences>('/v1/me/notification-preferences', {}, signal),
+  updateNotificationPreferences: (body) => sendJson<NotificationPreferences>('PUT', '/v1/me/notification-preferences', body),
+  // Public route; the CSRF header sendJson adds is harmless there (and keeps the call a non-simple CORS request).
+  unsubscribe: (token, scope) => sendJson<UnsubscribeResponse>('POST', '/v1/email/unsubscribe', { token, scope }),
 };

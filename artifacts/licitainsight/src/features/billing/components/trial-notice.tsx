@@ -6,7 +6,7 @@ import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useBilling } from '../hooks/use-billing';
-import { BILLING_HREF, daysLabel, saoPauloDate, trialState } from '../lib/trial';
+import { BILLING_HREF, daysLabel, saoPauloDate, trialEndPhrase, trialState } from '../lib/trial';
 
 /** Header badge: "Teste · N dias" during the trial (amber in the last days), "Dev" for BILLING_DEV_ENTITLED. Nothing for a paid plan. */
 export function AccessBadge() {
@@ -93,8 +93,9 @@ export function TrialEndingBanner() {
       <Clock size={16} strokeWidth={1.75} aria-hidden className="shrink-0" />
       <p className="min-w-0 flex-1 type-ui">
         <span className="font-semibold">
-          {trial.daysLeft === 0 ? 'Seu teste termina hoje' : `Seu teste termina em ${daysLabel(trial.daysLeft)}`}
-          {trial.endsAt ? ` (${formatDate(trial.endsAt)})` : ''}.
+          {trial.daysLeft === 0 && trial.endsAt
+            ? `Seu teste termina ${trialEndPhrase(trial.endsAt)}.`
+            : `Seu teste termina em ${daysLabel(trial.daysLeft)}${trial.endsAt ? ` (${formatDate(trial.endsAt)})` : ''}.`}
         </span>{' '}
         Assine para continuar salvando, monitorando editais e recebendo alertas.{' '}
         <Link href={BILLING_HREF} data-testid="link-trial-banner-subscribe" className="font-semibold underline underline-offset-2 focus-visible:focus-ring">
