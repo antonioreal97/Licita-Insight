@@ -59,9 +59,9 @@ Robô de lances fica **fora do roadmap**: exige integração autenticada com Com
 
 ---
 
-## Onda 1 — Teste de 14 dias, plano único e LGPD da conta
+## Onda 1 — Teste de 7 dias, plano único e LGPD da conta
 
-**Decisões do owner (24 set 2026):** **teste de 14 dias** (sem gratuito permanente), **plano único** no valor de
+**Decisões do owner (24 set 2026):** **teste de 7 dias** (alterado de 14 para 7 pelo owner) (sem gratuito permanente), **plano único** no valor de
 `BILLING_MONTHLY_BRL`, **oportunidades culturais só para quem tem acesso** (teste ou assinatura).
 Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 
@@ -69,16 +69,16 @@ Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 
 | # | Tarefa | Onde | Detalhe |
 | :-- | :--- | :--- | :--- |
-| 1.1 | Teste de 14 dias a partir do primeiro login; usuários já existentes ganham 14 dias a partir da migração | `lib/db` (ex. `users.trial_ends_at`), `billing/billing-access.ts` | `entitled` = assinatura elegível **ou** teste vigente |
+| 1.1 | Teste de 7 dias a partir do primeiro login; usuários já existentes ganham 7 dias a partir da migração | `lib/db` (ex. `users.trial_ends_at`), `billing/billing-access.ts` | `entitled` = assinatura elegível **ou** teste vigente |
 | 1.2 | `GET /me/billing` expõe o teste | `billing-service.ts`, contrato | `trialEndsAt`, `source: 'subscription' \| 'trial' \| 'dev' \| null` |
 | 1.3 | Um teste por conta Google, inclusive após excluir a conta | tombstone com hash do `sub` | ponderar com LGPD (dado mínimo, finalidade antiabuso) |
 | 1.4 | Aviso no app 3 dias antes do fim do teste | notificação `trial_ending` | a de "teste acabou" é mostrada pela UI a partir do billing (as notificações ficam atrás do gate) |
 | 1.5 | Oportunidades culturais atrás do gate | `routes/opportunities.ts` | anônimo → 401; sem acesso → 402; coleta diária inalterada |
 | 1.6 | Rota pública com preço e duração do teste | `GET /api/v1/billing/plan` | `{ monthlyBrl, trialDays }` para landing e login |
-| 1.7 | UI: selo "Teste · N dias", aviso nos últimos 3 dias, tela de assinatura ao expirar, textos "14 dias grátis" na landing/login, culturais com paywall | `features/billing`, `app-shell`, `landing`, `opportunities` | o upgrade aparece onde o acesso acaba |
+| 1.7 | UI: selo "Teste · N dias", aviso nos últimos 3 dias, tela de assinatura ao expirar, textos "7 dias grátis" na landing/login, culturais com paywall | `features/billing`, `app-shell`, `landing`, `opportunities` | o upgrade aparece onde o acesso acaba |
 | 1.8 | LGPD da conta: exportar e excluir | **feito no backend** (`CLAUDE_HANDOFF-006`); UI em `/settings` | — |
 
-**Depende de:** Onda 0.1 para cobrar de fato; o desenvolvimento usa `BILLING_DEV_ENTITLED`. **Pronto quando:** um usuário novo usa tudo por 14 dias, recebe o aviso no dia 11 e, no dia 15, cai na tela de assinatura com o checkout.
+**Depende de:** Onda 0.1 para cobrar de fato; o desenvolvimento usa `BILLING_DEV_ENTITLED`. **Pronto quando:** um usuário novo usa tudo por 7 dias, recebe o aviso no dia 4 e, no dia 8, cai na tela de assinatura com o checkout.
 
 ---
 
@@ -181,7 +181,7 @@ Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justific
 
 ## 3. Decisões
 
-Tomadas em 24 set 2026: teste de 14 dias; plano único (`BILLING_MONTHLY_BRL`); oportunidades culturais só com acesso.
+Tomadas em 24 set 2026: teste de 7 dias (o owner trocou de 14 para 7); plano único (`BILLING_MONTHLY_BRL`); oportunidades culturais só com acesso.
 
 Pendentes:
 1. **Provedor de e-mail:** Resend (simples, boa entregabilidade) ou SES (mais barato em volume, configuração maior)?
