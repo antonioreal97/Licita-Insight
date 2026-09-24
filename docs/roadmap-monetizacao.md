@@ -120,7 +120,7 @@ o trecho oficial do edital, com página, escolhido pelo Jev; nunca um texto inve
 | :-- | :--- | :--- | :--- |
 | 3.1 | Download e extração de texto dos anexos, com página | `artifacts/api-server/src/ai/extract.ts` (novo) | PDF nativo + OCR de fallback |
 | 3.2 | Trechos (`tender_chunks`) com página e busca textual no Postgres | `lib/db` | candidatos por palavra-chave/`tsvector`; embeddings só se o reranking não bastar |
-| 3.3 | Cliente Jev no servidor | `ai/jev-client.ts` | `TYPESAFE_API_KEY`; ler a doc viva (docs.typesafe.ai) antes de integrar |
+| 3.3 | Cliente Jev no servidor | `ai/jev-client.ts` | `JEV_API_KEY` (decisão do owner); ler a doc viva (docs.typesafe.ai) antes de integrar |
 | 3.4 | "Perguntar ao edital": recuperar candidatos → Jev reordena/seleciona → devolver os trechos com página | `POST /api/v1/tenders/:id/ask` | resposta = trechos citados + confiança; abaixo do limiar, "não encontrei no edital" |
 | 3.5 | Ficha estruturada (objeto, habilitação, prazos, garantia, penalidades) por **seleção de trechos candidatos** | `ai/summarize.ts` | cada campo aponta o trecho e a página; campo sem evidência fica vazio, não inventado |
 | 3.6 | Aderência edital × perfil da empresa (Score) | `ai/fit-score.ts` | base para recomendação (Onda 5) e para o `mode=semantic` da busca (reordenar resultados) |
