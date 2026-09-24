@@ -2,10 +2,12 @@ import type {
   BillingCheckoutResponse,
   BillingResponse,
   CreateSavedSearchBody,
+  DownloadedFile,
   ImportSavedTendersResponse,
   MarkNotificationsReadBody,
   NotificationsParams,
   NotificationsResponse,
+  PublicPlan,
   SavedSearch,
   SavedSearchesResponse,
   SavedTender,
@@ -27,9 +29,16 @@ export interface AccountAdapter {
   googleStartUrl(returnTo: string): string;
   logout(): Promise<void>;
 
+  /** LGPD: JSON with the user's personal data (no 402 gate). */
+  exportAccountData(): Promise<DownloadedFile>;
+  /** LGPD: cancels an active subscription, then deletes the account (204). 503 BILLING_UNAVAILABLE → nothing deleted. */
+  deleteAccount(): Promise<void>;
+
   getBilling(signal?: AbortSignal): Promise<BillingResponse>;
   startCheckout(): Promise<BillingCheckoutResponse>;
   cancelBilling(): Promise<BillingResponse>;
+  /** Public, no session: price and trial length for landing/login/settings. */
+  getPublicPlan(signal?: AbortSignal): Promise<PublicPlan>;
 
   listSavedTenders(params: SavedTendersParams, signal?: AbortSignal): Promise<SavedTendersResponse>;
   getSavedTenderIds(signal?: AbortSignal): Promise<SavedTenderIdsResponse>;

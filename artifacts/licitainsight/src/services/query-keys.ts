@@ -13,6 +13,8 @@ export const queryKeys = {
     detail: (id: string) => ['opportunities', 'detail', id] as const,
   },
   session: ['session'] as const,
+  /** Public plan (price, trial length). Outside `me`: it survives sign-out. */
+  billingPlan: ['billing', 'plan'] as const,
   /** Everything scoped to the signed-in user lives under `me`: sign-out removes it in one call. */
   me: {
     all: ['me'] as const,

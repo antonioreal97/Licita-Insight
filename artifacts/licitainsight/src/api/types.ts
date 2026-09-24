@@ -182,15 +182,27 @@ export type SessionResponse = { user: User };
 
 export type BillingStatus = 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
 
+/** What grants access (priority subscription > trial > dev). Optional until every API ships it (CODEX_HANDOFF-006/007). */
+export type BillingSource = 'subscription' | 'trial' | 'dev';
+
 export type BillingResponse = {
   status: BillingStatus;
   entitled: boolean;
   currentPeriodEnd: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
+  /** End of the free trial (ISO; length from `GET /billing/plan`). Absent on APIs without CODEX_HANDOFF-007. */
+  trialEndsAt?: string | null;
+  source?: BillingSource | null;
 };
 
+/** Public `GET /api/v1/billing/plan` (no session): the single plan and the trial length. */
+export type PublicPlan = { monthlyBrl: number | null; trialDays: number; currency: 'BRL' };
+
 export type BillingCheckoutResponse = { url: string };
+
+/** A downloaded attachment (e.g. `GET /me/export`). `filename` comes from `Content-Disposition`, `null` when absent. */
+export type DownloadedFile = { blob: Blob; filename: string | null };
 
 export type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
 
@@ -229,7 +241,7 @@ export type CreateSavedSearchBody = { name: string; query: string; alertsEnabled
 export type UpdateSavedSearchBody = { name?: string; query?: string; alertsEnabled?: boolean };
 
 export type NotificationType =
-  'tender_deadline_changed' | 'tender_status_changed' | 'tender_document_added' | 'tender_value_changed' | 'saved_search_new_matches';
+  'tender_deadline_changed' | 'tender_status_changed' | 'tender_document_added' | 'tender_value_changed' | 'saved_search_new_matches' | 'trial_ending';
 
 export type Notification = {
   id: string;
@@ -303,4 +315,3 @@ export type OpportunitySearchResponse = {
     gaps: { uf: string; name: string }[];
   };
 };
-

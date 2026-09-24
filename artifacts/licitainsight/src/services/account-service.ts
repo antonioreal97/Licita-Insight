@@ -38,10 +38,13 @@ export const accountService = {
   /** `returnTo` must be an app path (starts with `/`); the API falls back to `/dashboard` otherwise. */
   googleSignInUrl: (returnTo: string) => accountAdapter.googleStartUrl(returnTo),
   logout: () => accountAdapter.logout(),
+  exportAccountData: () => accountAdapter.exportAccountData(),
+  deleteAccount: () => accountAdapter.deleteAccount(),
 
   getBilling: (signal?: AbortSignal) => accountAdapter.getBilling(signal),
   startCheckout: () => accountAdapter.startCheckout(),
   cancelBilling: () => accountAdapter.cancelBilling(),
+  getPublicPlan: (signal?: AbortSignal) => accountAdapter.getPublicPlan(signal),
 
   listSavedTenders: (params: SavedTendersParams, signal?: AbortSignal) =>
     accountAdapter.listSavedTenders({ ...params, pageSize: clampPageSize(params.pageSize, MAX_SAVED_TENDERS_PAGE_SIZE) }, signal),
