@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Redirect, useSearch } from 'wouter';
 import { CircleAlert, LockKeyhole } from 'lucide-react';
 import { Button } from '@/components/common/action-button';
+import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { signInWithGoogle, useSession } from './hooks/use-session';
 
 const DEFAULT_RETURN_TO = '/dashboard';
@@ -62,6 +63,8 @@ export default function AuthPage() {
   const errorCode = params.get('error');
   const error = errorCode ? (errorCopy[errorCode] ?? unknownError) : null;
   const { status } = useSession();
+  // Owner decision: 7-day trial. The API (`/billing/plan`) wins when it answers.
+  const trialDays = usePublicPlan().data?.trialDays ?? 7;
   // Full-page navigation to Google: keep the button busy until the page unloads (no double submit).
   const [redirecting, setRedirecting] = useState(false);
   // Back from Google restores this page from the bfcache with the button still busy: reset it.
@@ -142,6 +145,9 @@ export default function AuthPage() {
                 Entrar com Google
               </Button>
               <p className="mt-3 text-center type-meta text-muted-foreground">Primeiro acesso? A conta é criada automaticamente.</p>
+              <p data-testid="text-login-trial" className="mt-1 text-center type-meta font-semibold text-foreground">
+                Ao entrar pela primeira vez, você ganha {trialDays} dias de acesso completo.
+              </p>
             </>
           )}
           <p className="mt-8 flex items-start justify-center gap-2 text-balance text-center type-meta text-muted-foreground">
