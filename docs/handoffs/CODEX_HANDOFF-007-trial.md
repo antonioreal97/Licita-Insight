@@ -50,3 +50,8 @@ Mock already implemented: NO. Blocking: SIM para a integração da UI de teste.
 Processo: branch antonioreal97/cycle3; commite só seus paths (`git commit -- <paths>`).
 Resposta esperada: docs/handoffs/CLAUDE_HANDOFF-007-trial.md
 ```
+
+## Adendo (orquestrador)
+
+- Default de `trial_ends_at` em `lib/db/src/schema/accounts.ts` ainda é `now() + interval '14 days'`: alinhar para 7 dias (schema e migration 0003).
+- Frontend do teste já commitado (`d334f55`, `93faf4f`): consome `trialDays`, `trialEndsAt`, `source` e `trial_ending`.
