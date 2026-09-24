@@ -751,7 +751,9 @@ export const devLogin = async (devLoginRequest: DevLoginRequest, options?: Param
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -843,7 +845,9 @@ export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, 
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -1703,7 +1707,9 @@ export const importSavedTenders = async (importSavedTendersRequest: ImportSavedT
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -1790,7 +1796,9 @@ export const putSavedTender = async (tenderId: string,
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -2015,7 +2023,9 @@ export const createSavedSearch = async (createSavedSearchRequest: CreateSavedSea
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -2102,7 +2112,9 @@ export const updateSavedSearch = async (id: string,
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {
@@ -2547,7 +2559,9 @@ export const markNotificationsRead = async (markNotificationsReadRequest: MarkNo
     if (!h) return {};
     if (h instanceof Headers) {
       const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
+      h.forEach((value, name) => {
+        headers[name] = value;
+      });
       return headers;
     }
     if (Symbol.iterator in h) {

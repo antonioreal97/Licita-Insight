@@ -836,12 +836,24 @@ export type ValueMinParameter = number;
 
 export type ValueMaxParameter = number;
 
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 export type PublishedFromParameter = string;
 
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 export type PublishedToParameter = string;
 
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 export type DeadlineFromParameter = string;
 
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 export type DeadlineToParameter = string;
 
 export type SortParameter = SortOption;
@@ -885,9 +897,21 @@ valueMin?: ValueMinParameter;
  * @minimum 0
  */
 valueMax?: ValueMaxParameter;
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 publishedFrom?: PublishedFromParameter;
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 publishedTo?: PublishedToParameter;
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 deadlineFrom?: DeadlineFromParameter;
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 deadlineTo?: DeadlineToParameter;
 sort?: SortParameter;
 /**
@@ -931,7 +955,13 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+/**
+ * Inclusive lower date in America/Sao_Paulo.
+ */
 deadlineFrom?: string;
+/**
+ * Inclusive upper date in America/Sao_Paulo.
+ */
 deadlineTo?: string;
 /**
  * @minimum 1

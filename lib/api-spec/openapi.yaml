@@ -362,9 +362,11 @@ paths:
               $ref: "#/components/schemas/OpportunityProgram"
         - name: deadlineFrom
           in: query
+          description: Inclusive lower date in America/Sao_Paulo.
           schema: { type: string, format: date }
         - name: deadlineTo
           in: query
+          description: Inclusive upper date in America/Sao_Paulo.
           schema: { type: string, format: date }
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -818,24 +820,28 @@ components:
     PublishedFrom:
       name: publishedFrom
       in: query
+      description: Inclusive lower publication date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     PublishedTo:
       name: publishedTo
       in: query
+      description: Inclusive upper publication date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     DeadlineFrom:
       name: deadlineFrom
       in: query
+      description: Inclusive lower proposal deadline date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     DeadlineTo:
       name: deadlineTo
       in: query
+      description: Inclusive upper proposal deadline date in America/Sao_Paulo.
       schema:
         type: string
         format: date

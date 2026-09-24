@@ -20,7 +20,13 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+/**
+ * Inclusive lower date in America/Sao_Paulo.
+ */
 deadlineFrom?: Date;
+/**
+ * Inclusive upper date in America/Sao_Paulo.
+ */
 deadlineTo?: Date;
 /**
  * @minimum 1

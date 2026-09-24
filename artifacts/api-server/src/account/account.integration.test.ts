@@ -231,6 +231,89 @@ test(
       assert.equal((await request("/v1/opportunities", {}, cookie)).status, 200);
     });
 
+    await t.test("uses Brasília calendar days for tender and opportunity filters", async () => {
+      const boundaries = [
+        { sequence: 900, id: "prior", at: "2026-09-23T23:59:00-03:00" },
+        { sequence: 901, id: "start", at: "2026-09-24T00:00:00-03:00" },
+        { sequence: 902, id: "end", at: "2026-09-24T23:59:59.999-03:00" },
+        { sequence: 903, id: "next", at: "2026-09-25T00:00:00-03:00" },
+      ];
+      await upsertPublications(
+        boundaries.map(({ sequence, id, at }) =>
+          publication(sequence, {
+            objetoCompra: `TEST DATA timezone ${id}`,
+            dataPublicacaoPncp: at,
+            dataEncerramentoProposta: at,
+          }),
+        ),
+        new Date("2026-09-20T12:00:00.000Z"),
+      );
+      await db.insert(culturalOpportunitiesTable).values(
+        boundaries.map(({ id, at }) => ({
+          id: `timezone-${id}`,
+          installationId: "br",
+          externalId: `timezone-${id}`,
+          title: `TEST DATA timezone ${id}`,
+          organizationName: "TEST DATA Cultura",
+          state: "DF",
+          registrationTo: new Date(at),
+          status: "open",
+          program: "audiovisual",
+          searchText: `test data timezone ${id}`,
+          rawPayload: {},
+          fetchedAt: new Date("2026-09-20T12:00:00.000Z"),
+        })),
+      );
+
+      const tenderIds = async (filter: string) => {
+        const response = await request(
+          `/v1/tenders/search?q=timezone&facets=false&pageSize=50&${filter}`,
+        );
+        assert.equal(response.status, 200);
+        return ((await response.json()) as { data: { id: string }[] }).data
+          .map(({ id }) => id)
+          .sort();
+      };
+      const opportunityIds = async (filter: string) => {
+        const response = await request(
+          `/v1/opportunities?q=timezone&facets=false&pageSize=50&${filter}`,
+          {},
+          userACookie,
+        );
+        assert.equal(response.status, 200);
+        return ((await response.json()) as { data: { id: string }[] }).data
+          .map(({ id }) => id)
+          .sort();
+      };
+
+      const tenderId = (sequence: number) =>
+        `00394460000141-1-${String(sequence).padStart(6, "0")}-2026`;
+      const fromDay = [tenderId(901), tenderId(902), tenderId(903)].sort();
+      const throughPriorDay = [tenderId(900)];
+      const throughDay = [tenderId(900), tenderId(901), tenderId(902)].sort();
+
+      assert.deepEqual(await tenderIds("deadlineFrom=2026-09-24"), fromDay);
+      assert.deepEqual(await tenderIds("deadlineTo=2026-09-23"), throughPriorDay);
+      assert.deepEqual(await tenderIds("deadlineTo=2026-09-24"), throughDay);
+      assert.deepEqual(await tenderIds("publishedFrom=2026-09-24"), fromDay);
+      assert.deepEqual(await tenderIds("publishedTo=2026-09-23"), throughPriorDay);
+      assert.deepEqual(await tenderIds("publishedTo=2026-09-24"), throughDay);
+
+      assert.deepEqual(await opportunityIds("deadlineFrom=2026-09-24"), [
+        "timezone-end",
+        "timezone-next",
+        "timezone-start",
+      ]);
+      assert.deepEqual(await opportunityIds("deadlineTo=2026-09-23"), [
+        "timezone-prior",
+      ]);
+      assert.deepEqual(await opportunityIds("deadlineTo=2026-09-24"), [
+        "timezone-end",
+        "timezone-prior",
+        "timezone-start",
+      ]);
+    });
+
     await t.test("development entitlement bypasses paid routes only outside production", async () => {
       const cookie = await login("billing-gate@example.test", false);
       const session = await request("/v1/auth/session", {}, cookie);

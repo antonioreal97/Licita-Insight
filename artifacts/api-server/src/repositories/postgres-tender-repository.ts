@@ -28,6 +28,10 @@ import {
 } from "../ingest/pncp-map";
 import { logger } from "../lib/logger";
 import {
+  onOrAfterSaoPauloDate,
+  onOrBeforeSaoPauloDate,
+} from "./postgres-date-filter";
+import {
   createValueHistogram,
   modalityLabels,
   normalizePageRelevance,
@@ -140,24 +144,16 @@ export const searchWhereFor = (
     filters.push(sql`${tendersTable.estimatedValue}::float8 <= ${criteria.valueMax}`);
   }
   if (criteria.publishedFrom) {
-    filters.push(
-      sql`(${tendersTable.publishedAt} at time zone 'UTC')::date >= ${criteria.publishedFrom.toISOString().slice(0, 10)}::date`,
-    );
+    filters.push(onOrAfterSaoPauloDate(tendersTable.publishedAt, criteria.publishedFrom));
   }
   if (criteria.publishedTo) {
-    filters.push(
-      sql`(${tendersTable.publishedAt} at time zone 'UTC')::date <= ${criteria.publishedTo.toISOString().slice(0, 10)}::date`,
-    );
+    filters.push(onOrBeforeSaoPauloDate(tendersTable.publishedAt, criteria.publishedTo));
   }
   if (criteria.deadlineFrom) {
-    filters.push(
-      sql`(${tendersTable.proposalDeadline} at time zone 'UTC')::date >= ${criteria.deadlineFrom.toISOString().slice(0, 10)}::date`,
-    );
+    filters.push(onOrAfterSaoPauloDate(tendersTable.proposalDeadline, criteria.deadlineFrom));
   }
   if (criteria.deadlineTo) {
-    filters.push(
-      sql`(${tendersTable.proposalDeadline} at time zone 'UTC')::date <= ${criteria.deadlineTo.toISOString().slice(0, 10)}::date`,
-    );
+    filters.push(onOrBeforeSaoPauloDate(tendersTable.proposalDeadline, criteria.deadlineTo));
   }
 
   return filters.length > 0 ? and(...filters) : undefined;

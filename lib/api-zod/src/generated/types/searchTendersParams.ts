@@ -60,9 +60,21 @@ valueMin?: ValueMinParameter;
  * @minimum 0
  */
 valueMax?: ValueMaxParameter;
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 publishedFrom?: PublishedFromParameter;
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 publishedTo?: PublishedToParameter;
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 deadlineFrom?: DeadlineFromParameter;
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 deadlineTo?: DeadlineToParameter;
 sort?: SortParameter;
 /**

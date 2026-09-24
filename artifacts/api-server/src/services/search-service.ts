@@ -15,6 +15,10 @@ import type {
   TenderRepository,
 } from "../domain/search";
 import { normalizeText, queryTokens } from "../domain/normalize";
+import {
+  dateInSaoPaulo,
+  dateParameterValue,
+} from "../lib/sao-paulo-date";
 
 export const statusLabels: Record<TenderStatus, string> = {
   open: "Aberto",
@@ -122,8 +126,6 @@ export const createHighlights = (
   });
 };
 
-const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
-
 const includesNormalized = (
   values: string[],
   candidate: string | null,
@@ -214,28 +216,32 @@ const applyFilters = (
     if (
       criteria.publishedFrom &&
       (!tender.publishedAt ||
-        dateOnly(tender.publishedAt) < dateOnly(criteria.publishedFrom))
+        dateInSaoPaulo(tender.publishedAt) <
+          dateParameterValue(criteria.publishedFrom))
     ) {
       return false;
     }
     if (
       criteria.publishedTo &&
       (!tender.publishedAt ||
-        dateOnly(tender.publishedAt) > dateOnly(criteria.publishedTo))
+        dateInSaoPaulo(tender.publishedAt) >
+          dateParameterValue(criteria.publishedTo))
     ) {
       return false;
     }
     if (
       criteria.deadlineFrom &&
       (!tender.proposalDeadline ||
-        dateOnly(tender.proposalDeadline) < dateOnly(criteria.deadlineFrom))
+        dateInSaoPaulo(tender.proposalDeadline) <
+          dateParameterValue(criteria.deadlineFrom))
     ) {
       return false;
     }
     if (
       criteria.deadlineTo &&
       (!tender.proposalDeadline ||
-        dateOnly(tender.proposalDeadline) > dateOnly(criteria.deadlineTo))
+        dateInSaoPaulo(tender.proposalDeadline) >
+          dateParameterValue(criteria.deadlineTo))
     ) {
       return false;
     }

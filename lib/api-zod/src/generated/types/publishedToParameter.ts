@@ -6,4 +6,7 @@
  * OpenAPI spec version: 1.2.0
  */
 
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 export type PublishedToParameter = Date;
