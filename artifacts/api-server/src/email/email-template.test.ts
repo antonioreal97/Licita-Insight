@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { renderNotificationEmail } from "./email-template";
 
 describe("notification email template", () => {
-  it("renders escaped PT-BR HTML, plain text, and one-click unsubscribe headers", () => {
+  it("renders a deadline change without repeating the current deadline", () => {
     const rendered = renderNotificationEmail({
       mode: "immediate",
       origin: "https://licitai.example",
@@ -19,7 +19,7 @@ describe("notification email template", () => {
           tenderProposalDeadline: new Date("2026-09-25T18:00:00Z"),
           change: {
             field: "proposalDeadline",
-            from: null,
+            from: "2026-09-24T13:00:00.000Z",
             to: "2026-09-25T18:00:00.000Z",
           },
           savedSearchName: null,
@@ -30,7 +30,11 @@ describe("notification email template", () => {
     });
     assert.match(rendered.html, /TEST &lt;Edital&gt;/);
     assert.match(rendered.html, /Órgão &amp; Companhia/);
-    assert.match(rendered.text, /Novo prazo:/);
+    assert.match(
+      rendered.text,
+      /Prazo alterado: 24\/09\/2026, 10:00 → 25\/09\/2026, 15:00/,
+    );
+    assert.doesNotMatch(rendered.text, /Prazo: 25\/09\/2026/);
     assert.match(rendered.text, /\/tenders\/tender%2F1/);
     assert.doesNotMatch(rendered.html, /<img/i);
     assert.equal(
@@ -38,5 +42,76 @@ describe("notification email template", () => {
       "List-Unsubscribe=One-Click",
     );
     assert.match(rendered.headers["List-Unsubscribe"] ?? "", /scope=all/);
+  });
+
+  it("uses singular and plural without parenthesized suffixes", () => {
+    const notification = {
+      id: "saved-search-1",
+      type: "saved_search_new_matches",
+      createdAt: new Date("2026-09-24T12:00:00Z"),
+      tenderId: null,
+      tenderTitle: null,
+      tenderOrganizationName: null,
+      tenderProposalDeadline: null,
+      change: null,
+      savedSearchName: "Software",
+      savedSearchQuery: "q=software",
+      matchCount: 1,
+    };
+    const singular = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [notification],
+    });
+    assert.equal(singular.subject, "LicitAI: 1 atualização no seu resumo");
+    assert.match(singular.text, /1 novo resultado/);
+
+    const plural = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [
+        { ...notification, id: "saved-search-2", matchCount: 4 },
+        { ...notification, id: "saved-search-3" },
+        { ...notification, id: "saved-search-4" },
+      ],
+    });
+    assert.equal(plural.subject, "LicitAI: 3 atualizações no seu resumo");
+    assert.match(plural.text, /4 novos resultados/);
+    assert.doesNotMatch(plural.text, /\(s\)/);
+  });
+
+  it("shows only the new deadline when the previous value is unavailable", () => {
+    const rendered = renderNotificationEmail({
+      mode: "immediate",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [
+        {
+          id: "notification-without-old-deadline",
+          type: "tender_deadline_changed",
+          createdAt: new Date("2026-09-24T12:00:00Z"),
+          tenderId: "tender-1",
+          tenderTitle: "TEST DATA edital",
+          tenderOrganizationName: "Órgão de teste",
+          tenderProposalDeadline: new Date("2026-10-02T13:00:00Z"),
+          change: {
+            field: "proposalDeadline",
+            from: null,
+            to: "2026-10-02T13:00:00.000Z",
+          },
+          savedSearchName: null,
+          savedSearchQuery: null,
+          matchCount: null,
+        },
+      ],
+    });
+    assert.match(rendered.text, /Novo prazo: 02\/10\/2026, 10:00/);
+    assert.doesNotMatch(rendered.text, /Prazo alterado:/);
+    assert.match(
+      rendered.text,
+      /Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados\./,
+    );
   });
 });

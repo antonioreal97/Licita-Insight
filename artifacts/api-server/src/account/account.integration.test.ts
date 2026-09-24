@@ -1411,7 +1411,7 @@ test(
         ({ to }) => to === "email-immediate@example.test",
       );
       assert.ok(monitoredMessage);
-      assert.match(monitoredMessage.text, /Novo prazo:/);
+      assert.match(monitoredMessage.text, /Prazo alterado: .* → .*/);
       assert.match(monitoredMessage.text, /Novo status: Suspenso/);
       assert.doesNotMatch(monitoredMessage.text, /Novos documentos/);
       assert.deepEqual(

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { sessionSecret } from "../auth/config";
+import { emailUnsubscribeSecret } from "../auth/config";
 
 const VERSION = "v1";
 const CONTEXT = "licitai:email-unsubscribe";
@@ -12,12 +12,12 @@ const signature = (tokenId: string, secret: string): string =>
 
 export const createUnsubscribeToken = (
   tokenId: string,
-  secret = sessionSecret(),
+  secret = emailUnsubscribeSecret(),
 ): string => `${VERSION}.${tokenId}.${signature(tokenId, secret)}`;
 
 export const verifyUnsubscribeToken = (
   token: string,
-  secret = sessionSecret(),
+  secret = emailUnsubscribeSecret(),
 ): string | null => {
   const [version, tokenId, received, extra] = token.split(".");
   if (

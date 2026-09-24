@@ -25,6 +25,12 @@ const escapeHtml = (value: string): string =>
 const truncate = (value: string, maximum = 220): string =>
   value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 
+const quantity = (
+  count: number,
+  singular: string,
+  plural: string,
+): string => `${count} ${count === 1 ? singular : plural}`;
+
 const dateTime = (value: Date): string =>
   new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -37,9 +43,15 @@ const changeDescription = (
   change: NotificationChangeRecord | null,
 ): string => {
   if (type === "tender_deadline_changed") {
-    return change?.to
-      ? `Novo prazo: ${dateTime(new Date(String(change.to)))}`
-      : "O prazo foi alterado.";
+    const previous = change?.from
+      ? dateTime(new Date(String(change.from)))
+      : null;
+    const next = change?.to
+      ? dateTime(new Date(String(change.to)))
+      : null;
+    if (previous && next) return `Prazo alterado: ${previous} → ${next}`;
+    if (next) return `Novo prazo: ${next}`;
+    return "O prazo foi alterado.";
   }
   if (type === "tender_status_changed") {
     const labels: Record<string, string> = {
@@ -77,30 +89,39 @@ const notificationLink = (
 
 const itemText = (notification: EmailNotificationSnapshot, origin: string): string => {
   if (notification.type === "saved_search_new_matches") {
+    const matchCount = notification.matchCount ?? 0;
     return [
       `Busca salva: ${notification.savedSearchName ?? "Busca salva"}`,
-      `${notification.matchCount ?? 0} novo(s) resultado(s)`,
+      quantity(matchCount, "novo resultado", "novos resultados"),
       notificationLink(notification, origin),
     ].join("\n");
   }
   if (notification.type === "trial_ending") {
     return [changeDescription(notification.type, notification.change), notificationLink(notification, origin)].join("\n");
   }
-  return [
+  const details = [
     truncate(notification.tenderTitle ?? "Edital monitorado"),
     notification.tenderOrganizationName ?? "Órgão não informado",
-    notification.tenderProposalDeadline
-      ? `Prazo: ${dateTime(notification.tenderProposalDeadline)}`
-      : "Prazo não informado",
-    changeDescription(notification.type, notification.change),
-    notificationLink(notification, origin),
-  ].join("\n");
+  ];
+  if (notification.type === "tender_deadline_changed") {
+    details.push(changeDescription(notification.type, notification.change));
+  } else {
+    details.push(
+      notification.tenderProposalDeadline
+        ? `Prazo: ${dateTime(notification.tenderProposalDeadline)}`
+        : "Prazo não informado",
+      changeDescription(notification.type, notification.change),
+    );
+  }
+  details.push(notificationLink(notification, origin));
+  return details.join("\n");
 };
 
 const itemHtml = (notification: EmailNotificationSnapshot, origin: string): string => {
   const link = escapeHtml(notificationLink(notification, origin));
   if (notification.type === "saved_search_new_matches") {
-    return `<li style="margin-bottom:20px"><strong>${escapeHtml(notification.savedSearchName ?? "Busca salva")}</strong><br>${notification.matchCount ?? 0} novo(s) resultado(s)<br><a href="${link}">Ver resultados</a></li>`;
+    const matchCount = notification.matchCount ?? 0;
+    return `<li style="margin-bottom:20px"><strong>${escapeHtml(notification.savedSearchName ?? "Busca salva")}</strong><br>${quantity(matchCount, "novo resultado", "novos resultados")}<br><a href="${link}">Ver resultados</a></li>`;
   }
   if (notification.type === "trial_ending") {
     return `<li style="margin-bottom:20px"><strong>Seu teste está terminando</strong><br>${escapeHtml(changeDescription(notification.type, notification.change))}<br><a href="${link}">Ver assinatura</a></li>`;
@@ -108,7 +129,11 @@ const itemHtml = (notification: EmailNotificationSnapshot, origin: string): stri
   const deadline = notification.tenderProposalDeadline
     ? dateTime(notification.tenderProposalDeadline)
     : "Não informado";
-  return `<li style="margin-bottom:20px"><strong>${escapeHtml(truncate(notification.tenderTitle ?? "Edital monitorado"))}</strong><br>Órgão: ${escapeHtml(notification.tenderOrganizationName ?? "Não informado")}<br>Prazo: ${escapeHtml(deadline)}<br>${escapeHtml(changeDescription(notification.type, notification.change))}<br><a href="${link}">Ver edital</a></li>`;
+  const deadlineHtml =
+    notification.type === "tender_deadline_changed"
+      ? escapeHtml(changeDescription(notification.type, notification.change))
+      : `Prazo: ${escapeHtml(deadline)}<br>${escapeHtml(changeDescription(notification.type, notification.change))}`;
+  return `<li style="margin-bottom:20px"><strong>${escapeHtml(truncate(notification.tenderTitle ?? "Edital monitorado"))}</strong><br>Órgão: ${escapeHtml(notification.tenderOrganizationName ?? "Não informado")}<br>${deadlineHtml}<br><a href="${link}">Ver edital</a></li>`;
 };
 
 export const renderNotificationEmail = (input: {
@@ -126,8 +151,8 @@ export const renderNotificationEmail = (input: {
       : "Alerta importante da LicitAI";
   const why =
     input.mode === "digest"
-      ? "Você recebeu este e-mail porque ativou o resumo diário de notificações."
-      : "Você recebeu este e-mail porque ativou alertas imediatos para eventos críticos.";
+      ? "Você recebe este resumo porque ele está ligado nas suas preferências do LicitAI."
+      : "Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados.";
   const itemsText = input.notifications
     .map((notification) => itemText(notification, input.origin))
     .join("\n\n");
@@ -138,7 +163,7 @@ export const renderNotificationEmail = (input: {
   return {
     subject:
       input.mode === "digest"
-        ? `LicitAI: ${input.notifications.length} atualização(ões) no seu resumo`
+        ? `LicitAI: ${quantity(input.notifications.length, "atualização", "atualizações")} no seu resumo`
         : "LicitAI: alerta importante em suas oportunidades",
     text: [
       "LicitAI",

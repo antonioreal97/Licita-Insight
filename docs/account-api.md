@@ -34,14 +34,16 @@ ignorada. Ela não cria nem simula uma assinatura no banco.
 
 ```bash
 docker compose up -d postgres
-pnpm --filter @workspace/db run migrate
+DATABASE_URL=postgres://licita:licita@localhost:5432/licita pnpm --filter @workspace/db run push-force
 PORT=3001 PNCP_DAILY_COLLECT=false pnpm --filter @workspace/api-server run dev
 ```
 
-As migrations `0001_account`, `0002_account_followups`, `0003_trial_access` e `0004_email_alerts`
-pressupõem o schema canônico de busca já instalado pelos ciclos anteriores. A terceira concede 7
-dias de teste aos usuários existentes e adiciona o tombstone mínimo antiabuso da identidade Google;
-a quarta adiciona preferências, snapshots e a fila auditável de entregas de e-mail.
+`push-force` é o caminho suportado para criar um banco local vazio porque provisiona primeiro todo o
+schema canônico (`tenders`, tabelas de ingestão e contas). `pnpm --filter @workspace/db run migrate`
+serve para atualizar bancos que já possuem esse baseline; as migrations de conta começam em
+`0001_account` e, isoladamente, não criam as tabelas canônicas anteriores. A migration
+`0003_trial_access` concede 7 dias de teste aos usuários existentes; `0004_email_alerts` adiciona
+preferências, snapshots e a fila auditável de entregas de e-mail.
 
 ## Segurança
 
@@ -99,6 +101,8 @@ a quarta adiciona preferências, snapshots e a fila auditável de entregas de e-
   de edital durante upserts e o scheduler separado de `trial_ending` continuam ativos.
 - Sem `RESEND_API_KEY` ou `MAIL_FROM`, as entregas são persistidas como `skipped` e a API segue no
   ar. `MAIL_REPLY_TO` é opcional.
+- `EMAIL_UNSUBSCRIBE_SECRET` aceita um segredo dedicado de no mínimo 32 caracteres. Mantenha-o
+  estável ao rotacionar `SESSION_SECRET`; sem ele, a API usa `SESSION_SECRET` por compatibilidade.
 - O conteúdo é persistido antes do envio para retry determinístico. Falhas transitórias usam
   backoff de 1, 5 e 30 minutos, com no máximo três tentativas, além da idempotência local e do
   `Idempotency-Key` enviado ao Resend.

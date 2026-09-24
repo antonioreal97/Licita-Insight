@@ -191,8 +191,9 @@ type NotificationPreferences = {
   `400 INVALID_PARAMETER`.
 - O padrão para contas novas e preexistentes é `digest: 'daily'` e `immediateCritical: true`.
 - O descadastro é público e idempotente. Token ou escopo inválido responde
-  `400 INVALID_PARAMETER`. O token é opaco, assinado com HMAC-SHA256 usando `SESSION_SECRET`, não
-  contém PII legível e não possui expiração curta.
+  `400 INVALID_PARAMETER`. O token é opaco, assinado com HMAC-SHA256 usando
+  `EMAIL_UNSUBSCRIBE_SECRET` (fallback `SESSION_SECRET`), não contém PII legível e não possui
+  expiração curta. O segredo dedicado deve permanecer estável nas rotações de sessão.
 - Todo e-mail inclui a página `/descadastro?token=...&scope=all`, preferências em
   `/settings#notificacoes` e os headers `List-Unsubscribe` e `List-Unsubscribe-Post` para
   descadastro em um clique.

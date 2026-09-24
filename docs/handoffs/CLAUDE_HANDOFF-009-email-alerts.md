@@ -17,7 +17,7 @@ POST automático definido pelo RFC 8058, sem alterar o contrato JSON usado pela 
   `immediateCritical: true`.
 - Preferências e descadastro ficam fora do gate de assinatura; o `PUT` exige sessão + CSRF.
 - Token de descadastro opaco `v1.<uuid>.<hmac>`, sem PII legível e sem expiração curta, assinado com
-  `SESSION_SECRET`.
+  `EMAIL_UNSUBSCRIBE_SECRET` ou, por compatibilidade, `SESSION_SECRET`.
 - Digest diário às 07:00 em `America/Sao_Paulo`, incluindo notificações lidas ou não e nunca vazio.
 - Alertas imediatos fecham a janela de agrupamento após 10 minutos para prazo alterado e status
   `suspended`/`cancelled` de edital ainda monitorado. `trial_ending` também é elegível uma vez.
@@ -61,6 +61,7 @@ POST automático definido pelo RFC 8058, sem alterar o contrato JSON usado pela 
 RESEND_API_KEY=re_...
 MAIL_FROM=LicitAI <alertas@example.com>
 MAIL_REPLY_TO=suporte@example.com              # opcional
+EMAIL_UNSUBSCRIBE_SECRET=...                   # estável, mínimo 32 caracteres
 EMAIL_JOBS_ENABLED=true                        # false desliga e-mail + avaliação de buscas
 EMAIL_DIGEST_HOUR=7                            # hora local BRT
 EMAIL_IMMEDIATE_WINDOW_MINUTES=10
@@ -78,12 +79,15 @@ Stack completa, incluindo aplicação do schema:
 docker compose up --build
 ```
 
-Somente API no host, com PostgreSQL disponível:
+Somente API no host, criando o schema completo em PostgreSQL vazio:
 
 ```bash
-DATABASE_URL=postgres://licita:licita@localhost:5432/licita pnpm --filter @workspace/db run migrate
+DATABASE_URL=postgres://licita:licita@localhost:5432/licita pnpm --filter @workspace/db run push-force
 PORT=3001 DATABASE_URL=postgres://licita:licita@localhost:5432/licita PNCP_DAILY_COLLECT=false CULTURE_DAILY_COLLECT=false pnpm --filter @workspace/api-server run dev
 ```
+
+O comando `migrate` pressupõe que o schema canônico de busca/ingestão já foi provisionado; ele não
+é o bootstrap suportado para banco vazio.
 
 ## Contratos gerados
 
