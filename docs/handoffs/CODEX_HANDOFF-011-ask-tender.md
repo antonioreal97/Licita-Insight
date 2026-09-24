@@ -28,6 +28,27 @@ O que a doc viva diz (lida em 24 set 2026; releia antes de integrar: docs.typesa
     shortlist; uma pergunta Noul por par (pergunta do usuário, trecho) devolve a probabilidade de o
     trecho responder; ordene pela noul. Pares independentes podem ir em paralelo.
 
+Sondagem do orquestrador (24 set 2026, jev-1.13.0, JEV_API_KEY do .env): edital PDF real
+  34028316000103-1-000087-2026 (Correios, 29 páginas, arquivo 4), 102 trechos de ~700 caracteres por
+  página, shortlist de até 10 por palavra-chave, uma Noul por par, instructions/criteria em PT-BR
+  (state = { pergunta_do_usuario, trecho_do_edital }; criterio falso = "só trata do mesmo assunto").
+    pergunta                               trecho certo   noul certo   melhor errado
+    participação de consórcios?            1º             0,97         0,86 (declaração sobre consórcio)
+    valor máximo da multa?                 1º             0,75         0,04
+    benefício ME/EPP?                      1º e 2º        0,87 / 0,71  (5.14 e 6.11, os dois respondem)
+    prazo para esclarecer/impugnar?        1º             0,95         0,05
+    visita técnica obrigatória? (ausente)  —              —            0,08  → "não encontrei" correto
+  45.422 tokens de entrada no total ≈ US$ 0,0019 (≈ US$ 0,0004 por pergunta com 10 candidatos).
+  Ponto de partida do limiar: 0,5 para 'answered'; o passo 0 confirma ou ajusta com mais editais.
+  Achados que entram no escopo da extração (item 1):
+    - Metade dos anexos no banco hoje é .zip (4 de 8; um edital só tem o zip): abrir o zip e
+      extrair os PDFs de dentro, guardando o nome do arquivo interno para citar.
+    - pdftotext troca a ligadura "ti" por U+FFFD ("par�cipação") e mantém "ﬁ" (U+FB01). Isso quebra
+      o tsvector. Normalizar NFKC e validar o extrator escolhido nesse arquivo.
+    - Cabeçalho/rodapé repetido em toda página ("SEI/CORREIOS - 68276764 ... 4 of 29 https://...")
+      vira ruído nos trechos: remover linhas que se repetem na maioria das páginas.
+  Script da sondagem: pode ser reproduzido a partir desta descrição; não foi commitado.
+
 Passo 0 (antes de qualquer UI): spike de calibração, script em artifacts/api-server/scripts/ ou teste
   manual, com 5 editais reais do Postgres que tenham PDF nativo e 10 perguntas típicas
   (prazo de proposta, garantia, habilitação técnica, visita técnica, penalidades, amostra, ME/EPP,
