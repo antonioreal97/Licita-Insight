@@ -2,8 +2,9 @@
 
 Status: **ACEITO E IMPLEMENTADO** pelo `CODEX_BACKEND_AGENT` · integração liberada em `docs/handoffs/CLAUDE_HANDOFF-004-account.md`
 
-Decisões do owner (23 set 2026): login **Google OAuth**; alertas **só dentro do app** (sem e-mail neste ciclo);
-monitoramento de **editais específicos** e de **buscas salvas**.
+Decisões do owner (23–24 set 2026): login **Google OAuth**; notificações no app e por e-mail;
+monitoramento de **editais específicos** e de **buscas salvas**; envio por Resend com digest diário
+e alertas críticos imediatos.
 
 O Codex é autoridade sobre schema, sessão, segurança e geração de alertas. Este documento fixa a
 forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (JSON camelCase, enums
@@ -21,7 +22,8 @@ forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (J
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
   Salvar, monitorar, buscas salvas e notificações exigem também assinatura ativa (`402`).
-  Billing e LGPD (`GET /me/export`, `DELETE /me`) exigem só sessão; a exclusão também exige CSRF.
+  Billing, LGPD (`GET /me/export`, `DELETE /me`) e preferências de e-mail exigem só sessão; as
+  mutações autenticadas também exigem CSRF.
 
 ## Novos códigos de erro
 
@@ -99,7 +101,7 @@ type SavedSearch = {
   alertsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
-  lastCheckedAt: string | null; // última avaliação pela coleta
+  lastCheckedAt: string | null; // última avaliação pelo job de buscas salvas
   newMatchesCount: number;      // editais novos desde a última visita (zerado por /seen)
 };
 ```
@@ -156,7 +158,7 @@ Regras de geração:
 - **Editais monitorados:** ao fazer upsert/revisão de um edital, comparar com o estado anterior
   persistido; para cada campo alterado e cada usuário que monitora o edital, uma notificação.
   Não notificar na primeira ingestão do edital.
-- **Buscas salvas com `alertsEnabled`:** após cada execução de coleta, avaliar a busca contra os
+- **Buscas salvas com `alertsEnabled`:** um job independente da coleta avalia a busca contra os
   editais **vistos pela primeira vez** desde `lastCheckedAt`; se houver ≥ 1, criar uma notificação
   `saved_search_new_matches` com `matchCount` e até 20 `tenderIds`, somar em `newMatchesCount` e
   atualizar `lastCheckedAt`.
@@ -164,6 +166,51 @@ Regras de geração:
   agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
 - Deduplicar: a mesma mudança não gera duas notificações para o mesmo usuário.
 - Retenção sugerida: 90 dias.
+
+## 5. E-mail
+
+O canal de e-mail reutiliza as notificações persistidas como snapshots. As preferências e o
+descadastro permanecem acessíveis sem assinatura ativa.
+
+```ts
+type NotificationPreferences = {
+  email: { digest: 'daily' | 'off'; immediateCritical: boolean };
+  emailAddress: string;
+  updatedAt: string | null;
+};
+```
+
+| Método | Caminho | Corpo | Resposta |
+|---|---|---|---|
+| GET | `/api/v1/me/notification-preferences` | — | `NotificationPreferences` |
+| PUT | `/api/v1/me/notification-preferences` | `{ email: { digest?: 'daily' \| 'off'; immediateCritical?: boolean } }` | `NotificationPreferences` |
+| POST | `/api/v1/email/unsubscribe` | `{ token, scope: 'all' \| 'digest' \| 'immediate' }` | `{ scope, email: { digest, immediateCritical } }` |
+
+- `GET` e `PUT` exigem sessão; `PUT` exige CSRF. Ambos ficam fora do gate de assinatura.
+- `PUT` é parcial, mas precisa informar ao menos uma propriedade de `email`; corpo vazio responde
+  `400 INVALID_PARAMETER`.
+- O padrão para contas novas e preexistentes é `digest: 'daily'` e `immediateCritical: true`.
+- O descadastro é público e idempotente. Token ou escopo inválido responde
+  `400 INVALID_PARAMETER`. O token é opaco, assinado com HMAC-SHA256 usando `SESSION_SECRET`, não
+  contém PII legível e não possui expiração curta.
+- Todo e-mail inclui a página `/descadastro?token=...&scope=all`, preferências em
+  `/settings#notificacoes` e os headers `List-Unsubscribe` e `List-Unsubscribe-Post` para
+  descadastro em um clique.
+- O digest roda às 07:00 em `America/Sao_Paulo` por padrão, agrega notificações lidas ou não que
+  ainda não foram vinculadas a uma entrega e não envia e-mail vazio.
+- Alertas imediatos agrupam por 10 minutos mudanças de prazo e mudanças de status para
+  `suspended`/`cancelled` em editais que continuam monitorados. `trial_ending` também é enviado
+  imediatamente uma única vez.
+- Entregas exigem acesso vigente, exceto `trial_ending`. Uma notificação é vinculada a no máximo
+  uma entrega de e-mail, evitando duplicação entre envio imediato e digest.
+- A entrega persiste o payload exato, status `queued | sent | failed | skipped`, tentativas, próximo
+  retry, erro e id do provedor. Falhas transitórias usam backoff de 1, 5 e 30 minutos, com no máximo
+  três tentativas. `dedupeKey` local e `Idempotency-Key` no Resend tornam o envio idempotente.
+- Sem `RESEND_API_KEY` ou `MAIL_FROM`, a API permanece disponível, registra warning e marca a
+  entrega como `skipped`.
+- As mensagens são HTML simples + texto puro em PT-BR, sem pixel, imagem ou link de tracking
+  gerado pela aplicação. O rastreamento de abertura/clique também deve permanecer desligado no
+  domínio do Resend.
 
 ## Assinatura (Asaas)
 
@@ -224,18 +271,20 @@ filename="licitai-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
 ```ts
 type AccountExport = {
   exportedAt: string;
-  user: { id: string; email: string; name: string | null; avatarUrl: string | null; trialEndsAt: string; createdAt: string; updatedAt: string };
+  user: { id: string; email: string; name: string | null; avatarUrl: string | null; trialEndsAt: string; emailDigest: 'daily' | 'off'; emailImmediateCritical: boolean; emailPreferencesUpdatedAt: string | null; createdAt: string; updatedAt: string };
   sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string }>;
   savedTenders: Array<{ tenderId: string; savedAt: string; monitored: boolean; monitoredAt: string | null }>;
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
   notifications: Array<Record<string, unknown>>;
+  emailDeliveries: Array<{ id: string; mode: 'digest' | 'immediate'; status: 'queued' | 'sent' | 'failed' | 'skipped'; recipientEmail: string; subject: string; attempts: number; lastError: string | null; providerMessageId: string | null; createdAt: string; updatedAt: string; sentAt: string | null }>;
   subscription: { status: string; currentPeriodEnd: string | null; updatedAt: string } | null;
 };
 ```
 
 Somente sessões ativas são exportadas. Tokens, hashes de sessão, `googleSub`, chaves do Asaas,
-identificadores internos de cobrança e `dedupeKey` de notificações não são incluídos. Buscas ainda
-retidas por soft delete são incluídas.
+identificadores internos de cobrança, tokens de descadastro, corpos/headers de e-mail e `dedupeKey`
+de notificações não são incluídos. Buscas ainda retidas por soft delete e metadados de entregas de
+e-mail são incluídos.
 
 ### `DELETE /api/v1/me`
 
@@ -260,7 +309,7 @@ Demais rotas `/me/*`: p95 < 300 ms.
 
 ## Fora de escopo v1
 
-E-mail/push, compartilhamento de buscas, times/organizações e papéis.
+Push, compartilhamento de buscas, times/organizações e papéis.
 
 ## Esclarecimentos propostos pelo frontend (Codex: confirme ou contraponha no CLAUDE_HANDOFF-004)
 
@@ -278,7 +327,7 @@ E-mail/push, compartilhamento de buscas, times/organizações e papéis.
 - Os oito esclarecimentos do frontend foram aceitos sem contraproposta e estão cobertos pelo OpenAPI e pelos testes HTTP/integrados.
 - Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 10 minutos sem atividade, com renovação deslizante. O token não vai para o `localStorage`.
 - Limites de salvos são serializados por usuário com advisory lock transacional, além das constraints de unicidade do PostgreSQL.
-- Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados após uma coleta PNCP concluída.
-- Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; retenção operacional é de 90 dias.
+- Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados por job próprio, desacoplado da coleta PNCP.
+- Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; notificações e entregas de e-mail têm retenção operacional de 90 dias.
 - O índice de busca continua reconstruível a partir do banco canônico; nenhuma tabela de conta passa a ser fonte de verdade para os dados públicos do edital.
 - Follow-up 005: OAuth indisponível redireciona com `oauth_unavailable`; dev-login exige CSRF; queries canônicas ativas são únicas por usuário; exclusão de busca usa soft delete com restore de 30 segundos.

@@ -3,8 +3,9 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
+import type { EmailDigestPreference } from './emailDigestPreference';
 
 export interface AccountExportUser {
   id: string;
@@ -14,6 +15,10 @@ export interface AccountExportUser {
   /** @nullable */
   avatarUrl: string | null;
   trialEndsAt: Date;
+  emailDigest: EmailDigestPreference;
+  emailImmediateCritical: boolean;
+  /** @nullable */
+  emailPreferencesUpdatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

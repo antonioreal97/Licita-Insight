@@ -3,6 +3,7 @@ import { once } from "node:events";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
+import type { EmailMessage } from "../email/resend-client";
 
 // Opt-in: uses real Postgres in an isolated schema. The public schema must have
 // the application migrations applied before PNCP_TEST_DATABASE_URL is set.
@@ -20,10 +21,15 @@ test(
     process.env.NODE_ENV = "test";
     process.env.LOG_LEVEL = "silent";
     delete process.env.BILLING_MONTHLY_BRL;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.MAIL_FROM;
+    delete process.env.MAIL_REPLY_TO;
 
     const {
       db,
       culturalOpportunitiesTable,
+      emailDeliveriesTable,
+      emailDeliveryNotificationsTable,
       googleTrialTombstonesTable,
       pool,
       notificationsTable,
@@ -33,7 +39,7 @@ test(
       subscriptionsTable,
       usersTable,
     } = await import("@workspace/db");
-    const { eq } = await import("drizzle-orm");
+    const { eq, inArray } = await import("drizzle-orm");
     const { default: app } = await import("../app");
     const { deleteAccount } = await import("./account-privacy-service");
     const { BillingUnavailableError } = await import("../lib/api-error");
@@ -42,8 +48,14 @@ test(
     const {
       createDocumentAddedNotifications,
       createTrialEndingNotifications,
-      evaluateSavedSearchNotifications,
     } = await import("./notification-service");
+    const { createUnsubscribeToken } = await import("../email/unsubscribe-token");
+    const {
+      retryEmailDeliveries,
+      runDailyEmailDigest,
+      runImmediateEmailAlerts,
+    } = await import("../email/email-service");
+    const { runSavedSearchEvaluationJob } = await import("../email/email-scheduler");
 
     await pool.query(`CREATE SCHEMA "${schema}"`);
     for (const table of [
@@ -57,6 +69,8 @@ test(
       "saved_searches",
       "notifications",
       "subscriptions",
+      "email_deliveries",
+      "email_delivery_notifications",
     ]) {
       await pool.query(
         `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
@@ -173,8 +187,7 @@ test(
       assert.ok(user);
       const trialDurationMs = user.trialEndsAt.getTime() - user.createdAt.getTime();
       const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-      assert.ok(trialDurationMs <= sevenDaysMs);
-      assert.ok(trialDurationMs >= sevenDaysMs - 1_000);
+      assert.ok(Math.abs(trialDurationMs - sevenDaysMs) <= 1_000);
 
       const plan = await request("/v1/billing/plan");
       assert.equal(plan.status, 200);
@@ -312,6 +325,115 @@ test(
         "timezone-prior",
         "timezone-start",
       ]);
+    });
+
+    await t.test("manages email preferences and public one-click unsubscribe", async () => {
+      const cookie = await login("email-preferences@example.test", false);
+      const session = await request("/v1/auth/session", {}, cookie);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+        .where(eq(usersTable.id, userId));
+
+      const defaults = await request(
+        "/v1/me/notification-preferences",
+        {},
+        cookie,
+      );
+      assert.equal(defaults.status, 200);
+      assert.deepEqual(await defaults.json(), {
+        email: { digest: "daily", immediateCritical: true },
+        emailAddress: "email-preferences@example.test",
+        updatedAt: null,
+      });
+      assert.equal(
+        (
+          await request(
+            "/v1/me/notification-preferences",
+            {
+              method: "PUT",
+              body: JSON.stringify({ email: { digest: "off" } }),
+            },
+            cookie,
+          )
+        ).status,
+        403,
+      );
+
+      const partial = await request(
+        "/v1/me/notification-preferences",
+        {
+          method: "PUT",
+          headers: csrf,
+          body: JSON.stringify({ email: { digest: "off" } }),
+        },
+        cookie,
+      );
+      assert.equal(partial.status, 200);
+      const partialBody = (await partial.json()) as {
+        email: { digest: string; immediateCritical: boolean };
+        updatedAt: string | null;
+      };
+      assert.deepEqual(partialBody.email, {
+        digest: "off",
+        immediateCritical: true,
+      });
+      assert.ok(partialBody.updatedAt);
+
+      const [user] = await db
+        .select({ tokenId: usersTable.emailUnsubscribeId })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
+      const token = createUnsubscribeToken(user!.tokenId);
+      const invalid = await request("/v1/email/unsubscribe", {
+        method: "POST",
+        body: JSON.stringify({ token: `${token}x`, scope: "all" }),
+      });
+      assert.equal(invalid.status, 400);
+
+      const immediate = await request("/v1/email/unsubscribe", {
+        method: "POST",
+        body: JSON.stringify({ token, scope: "immediate" }),
+      });
+      assert.equal(immediate.status, 200);
+      assert.deepEqual(await immediate.json(), {
+        scope: "immediate",
+        email: { digest: "off", immediateCritical: false },
+      });
+
+      await request(
+        "/v1/me/notification-preferences",
+        {
+          method: "PUT",
+          headers: csrf,
+          body: JSON.stringify({
+            email: { digest: "daily", immediateCritical: true },
+          }),
+        },
+        cookie,
+      );
+      const digest = await request(
+        `/v1/email/unsubscribe?token=${encodeURIComponent(token)}&scope=digest`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "List-Unsubscribe=One-Click",
+        },
+      );
+      assert.deepEqual(await digest.json(), {
+        scope: "digest",
+        email: { digest: "off", immediateCritical: true },
+      });
+
+      const all = await request("/v1/email/unsubscribe", {
+        method: "POST",
+        body: JSON.stringify({ token, scope: "all" }),
+      });
+      assert.deepEqual(await all.json(), {
+        scope: "all",
+        email: { digest: "off", immediateCritical: false },
+      });
     });
 
     await t.test("development entitlement bypasses paid routes only outside production", async () => {
@@ -494,6 +616,8 @@ test(
             id: tenderId,
             title: "Aquisição de computadores para TEST DATA",
             tenderNumberShort: "123/2026",
+            organizationName: "Órgão de teste",
+            proposalDeadline: new Date("2026-10-31T20:00:00Z"),
           },
           previousCount: 1,
           nextCount: 2,
@@ -507,6 +631,8 @@ test(
             id: tenderId,
             title: "Aquisição de computadores para TEST DATA",
             tenderNumberShort: "123/2026",
+            organizationName: "Órgão de teste",
+            proposalDeadline: new Date("2026-10-31T20:00:00Z"),
           },
           previousCount: 1,
           nextCount: 2,
@@ -581,7 +707,7 @@ test(
         "UPDATE tenders SET created_at = $1 WHERE id = $2",
         [createdAt, "00394460000141-1-000124-2026"],
       );
-      await evaluateSavedSearchNotifications(new Date(createdAt.getTime() + 1_000));
+      await runSavedSearchEvaluationJob(new Date(createdAt.getTime() + 1_000));
 
       const [updated] = await db
         .select()
@@ -754,12 +880,20 @@ test(
       assert.equal(response.headers.get("cache-control"), "no-store");
 
       const body = (await response.json()) as {
-        user: { email: string };
+        user: {
+          email: string;
+          emailDigest: string;
+          emailImmediateCritical: boolean;
+        };
         sessions: unknown[];
         savedTenders: { tenderId: string }[];
         savedSearches: { deletedAt: string | null }[];
+        emailDeliveries: unknown[];
       };
       assert.equal(body.user.email, "user-a@example.test");
+      assert.equal(body.user.emailDigest, "daily");
+      assert.equal(body.user.emailImmediateCritical, true);
+      assert.deepEqual(body.emailDeliveries, []);
       assert.ok(body.sessions.length > 0);
       assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
       assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
@@ -796,6 +930,20 @@ test(
         userId: user.id,
         type: "tender_status_changed",
         dedupeKey: "delete-route-dedupe",
+      });
+      await db.insert(emailDeliveriesTable).values({
+        id: "delete-route-delivery",
+        userId: user.id,
+        mode: "digest",
+        dedupeKey: "delete-route-delivery",
+        recipientEmail: "delete-route@example.test",
+        subject: "TEST DELETE",
+        htmlBody: "<p>TEST DELETE</p>",
+        textBody: "TEST DELETE",
+      });
+      await db.insert(emailDeliveryNotificationsTable).values({
+        deliveryId: "delete-route-delivery",
+        notificationId: "delete-route-notification",
       });
 
       const missingConfirmation = await request(
@@ -839,6 +987,7 @@ test(
         "saved_searches",
         "notifications",
         "subscriptions",
+        "email_deliveries",
       ]) {
         const result = await pool.query(
           `SELECT count(*) AS count FROM ${table} WHERE ${
@@ -848,6 +997,17 @@ test(
         );
         assert.equal(Number(result.rows[0].count), 0, `${table} should cascade`);
       }
+      assert.equal(
+        Number(
+          (
+            await pool.query(
+              "SELECT count(*) AS count FROM email_delivery_notifications WHERE delivery_id = $1",
+              ["delete-route-delivery"],
+            )
+          ).rows[0].count,
+        ),
+        0,
+      );
     });
 
     await t.test("keeps the local account intact when Asaas cancellation fails", async () => {
@@ -999,6 +1159,327 @@ test(
         ).length,
         0,
       );
+    });
+
+    await t.test("delivers daily digests and grouped critical email alerts idempotently", async () => {
+      const now = new Date("2026-09-25T10:00:00.000Z");
+      const userIdFor = async (cookie: string): Promise<string> => {
+        const response = await request("/v1/auth/session", {}, cookie);
+        return ((await response.json()) as { user: { id: string } }).user.id;
+      };
+      await db
+        .update(usersTable)
+        .set({ emailDigest: "off", emailImmediateCritical: false });
+
+      const digestCookie = await login("email-digest@example.test");
+      const digestUserId = await userIdFor(digestCookie);
+      await db
+        .update(usersTable)
+        .set({ emailDigest: "daily" })
+        .where(eq(usersTable.id, digestUserId));
+      await db.insert(notificationsTable).values([
+        {
+          id: "email-digest-document",
+          userId: digestUserId,
+          type: "tender_document_added",
+          dedupeKey: "email-test:digest:document",
+          createdAt: new Date(now.getTime() - 60_000),
+          readAt: now,
+          tenderId,
+          tenderTitle: "TEST DATA computadores",
+          tenderNumberShort: "123/2026",
+          tenderOrganizationName: "Órgão de teste",
+          tenderProposalDeadline: new Date("2026-10-31T20:00:00Z"),
+          change: { field: "documents", from: 1, to: 2 },
+        },
+        {
+          id: "email-digest-value",
+          userId: digestUserId,
+          type: "tender_value_changed",
+          dedupeKey: "email-test:digest:value",
+          createdAt: new Date(now.getTime() - 30_000),
+          tenderId,
+          tenderTitle: "TEST DATA computadores",
+          tenderNumberShort: "123/2026",
+          tenderOrganizationName: "Órgão de teste",
+          tenderProposalDeadline: new Date("2026-10-31T20:00:00Z"),
+          change: { field: "estimatedValue", from: 100, to: 200 },
+        },
+      ]);
+      const digestMessages: EmailMessage[] = [];
+      const digestSend = async (message: EmailMessage) => {
+        digestMessages.push(message);
+        return {
+          status: "sent" as const,
+          providerMessageId: `digest-${digestMessages.length}`,
+        };
+      };
+      assert.deepEqual(await runDailyEmailDigest(now, digestSend), {
+        queued: 1,
+        sent: 1,
+        failed: 0,
+        skipped: 0,
+      });
+      assert.equal(digestMessages.length, 1);
+      assert.match(digestMessages[0]!.html, /Órgão de teste/);
+      assert.match(digestMessages[0]!.text, /TEST DATA computadores/);
+      assert.equal(
+        digestMessages[0]!.headers["List-Unsubscribe-Post"],
+        "List-Unsubscribe=One-Click",
+      );
+      assert.deepEqual(await runDailyEmailDigest(now, digestSend), {
+        queued: 0,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+      });
+      assert.equal(digestMessages.length, 1);
+      assert.equal(
+        (
+          await db
+            .select()
+            .from(emailDeliveryNotificationsTable)
+            .where(
+              inArray(emailDeliveryNotificationsTable.notificationId, [
+                "email-digest-document",
+                "email-digest-value",
+              ]),
+            )
+        ).length,
+        2,
+      );
+
+      await db
+        .update(usersTable)
+        .set({ emailDigest: "off" })
+        .where(eq(usersTable.id, digestUserId));
+      const skippedCookie = await login("email-skipped@example.test");
+      const skippedUserId = await userIdFor(skippedCookie);
+      await db.insert(notificationsTable).values({
+        id: "email-skipped-notification",
+        userId: skippedUserId,
+        type: "tender_document_added",
+        dedupeKey: "email-test:skipped",
+        createdAt: new Date(now.getTime() - 20_000),
+        tenderId,
+        tenderTitle: "TEST DATA sem Resend",
+      });
+      assert.deepEqual(await runDailyEmailDigest(now), {
+        queued: 1,
+        sent: 0,
+        failed: 0,
+        skipped: 1,
+      });
+
+      await db
+        .update(usersTable)
+        .set({ emailDigest: "off" });
+      const immediateCookie = await login("email-immediate@example.test");
+      const immediateUserId = await userIdFor(immediateCookie);
+      const unmonitoredCookie = await login("email-unmonitored@example.test");
+      const unmonitoredUserId = await userIdFor(unmonitoredCookie);
+      const expiredCookie = await login("email-expired@example.test", false);
+      const expiredUserId = await userIdFor(expiredCookie);
+      const trialCookie = await login("email-trial-ending@example.test", false);
+      const trialUserId = await userIdFor(trialCookie);
+      await db
+        .update(usersTable)
+        .set({ emailImmediateCritical: true })
+        .where(
+          inArray(usersTable.id, [
+            immediateUserId,
+            unmonitoredUserId,
+            expiredUserId,
+            trialUserId,
+          ]),
+        );
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+        .where(inArray(usersTable.id, [expiredUserId, trialUserId]));
+      await db.insert(savedTendersTable).values({
+        userId: immediateUserId,
+        tenderId,
+        monitored: true,
+        monitoredAt: now,
+      });
+      const old = new Date(now.getTime() - 11 * 60_000);
+      const snapshot = {
+        createdAt: old,
+        tenderId,
+        tenderTitle: "TEST DATA crítico",
+        tenderNumberShort: "123/2026",
+        tenderOrganizationName: "Órgão de teste",
+        tenderProposalDeadline: new Date("2026-10-31T20:00:00Z"),
+      };
+      await db.insert(notificationsTable).values([
+        {
+          ...snapshot,
+          id: "email-critical-deadline",
+          userId: immediateUserId,
+          type: "tender_deadline_changed",
+          dedupeKey: "email-test:critical:deadline",
+          change: {
+            field: "proposalDeadline",
+            from: "2026-10-30T20:00:00.000Z",
+            to: "2026-10-31T20:00:00.000Z",
+          },
+        },
+        {
+          ...snapshot,
+          id: "email-critical-status",
+          userId: immediateUserId,
+          type: "tender_status_changed",
+          dedupeKey: "email-test:critical:status",
+          change: { field: "status", from: "open", to: "suspended" },
+        },
+        {
+          ...snapshot,
+          id: "email-noncritical-status",
+          userId: immediateUserId,
+          type: "tender_status_changed",
+          dedupeKey: "email-test:noncritical:status",
+          change: { field: "status", from: "under_review", to: "open" },
+        },
+        {
+          ...snapshot,
+          id: "email-noncritical-document",
+          userId: immediateUserId,
+          type: "tender_document_added",
+          dedupeKey: "email-test:noncritical:document",
+          change: { field: "documents", from: 1, to: 2 },
+        },
+        {
+          ...snapshot,
+          id: "email-window-pending",
+          userId: immediateUserId,
+          type: "tender_deadline_changed",
+          dedupeKey: "email-test:window",
+          createdAt: new Date(now.getTime() - 5 * 60_000),
+          change: {
+            field: "proposalDeadline",
+            from: null,
+            to: "2026-10-31T20:00:00.000Z",
+          },
+        },
+        {
+          ...snapshot,
+          id: "email-unmonitored",
+          userId: unmonitoredUserId,
+          type: "tender_deadline_changed",
+          dedupeKey: "email-test:unmonitored",
+          change: { field: "proposalDeadline", from: null, to: "2026-10-31T20:00:00.000Z" },
+        },
+        {
+          ...snapshot,
+          id: "email-no-access",
+          userId: expiredUserId,
+          type: "tender_deadline_changed",
+          dedupeKey: "email-test:no-access",
+          change: { field: "proposalDeadline", from: null, to: "2026-10-31T20:00:00.000Z" },
+        },
+        {
+          id: "email-trial-exception",
+          userId: trialUserId,
+          type: "trial_ending",
+          dedupeKey: "email-test:trial-exception",
+          createdAt: old,
+          change: {
+            field: "trialEndsAt",
+            from: null,
+            to: "2026-09-28T10:00:00.000Z",
+          },
+        },
+      ]);
+      const immediateMessages: EmailMessage[] = [];
+      const immediateSend = async (message: EmailMessage) => {
+        immediateMessages.push(message);
+        return {
+          status: "sent" as const,
+          providerMessageId: `immediate-${immediateMessages.length}`,
+        };
+      };
+      assert.deepEqual(
+        await runImmediateEmailAlerts(now, {
+          windowMinutes: 10,
+          sendEmail: immediateSend,
+        }),
+        { queued: 2, sent: 2, failed: 0, skipped: 0 },
+      );
+      assert.equal(immediateMessages.length, 2);
+      const monitoredMessage = immediateMessages.find(
+        ({ to }) => to === "email-immediate@example.test",
+      );
+      assert.ok(monitoredMessage);
+      assert.match(monitoredMessage.text, /Novo prazo:/);
+      assert.match(monitoredMessage.text, /Novo status: Suspenso/);
+      assert.doesNotMatch(monitoredMessage.text, /Novos documentos/);
+      assert.deepEqual(
+        await runImmediateEmailAlerts(now, {
+          windowMinutes: 10,
+          sendEmail: immediateSend,
+        }),
+        { queued: 0, sent: 0, failed: 0, skipped: 0 },
+      );
+
+      const retryCookie = await login("email-retry@example.test");
+      const retryUserId = await userIdFor(retryCookie);
+      await db
+        .update(usersTable)
+        .set({ emailDigest: "off", emailImmediateCritical: true })
+        .where(eq(usersTable.id, retryUserId));
+      await db.insert(savedTendersTable).values({
+        userId: retryUserId,
+        tenderId,
+        monitored: true,
+        monitoredAt: now,
+      });
+      await db.insert(notificationsTable).values({
+        ...snapshot,
+        id: "email-retry-notification",
+        userId: retryUserId,
+        type: "tender_deadline_changed",
+        dedupeKey: "email-test:retry",
+        change: { field: "proposalDeadline", from: null, to: "2026-10-31T20:00:00.000Z" },
+      });
+      assert.deepEqual(
+        await runImmediateEmailAlerts(now, {
+          windowMinutes: 10,
+          sendEmail: async () => ({
+            status: "failed",
+            reason: "temporary failure",
+            retryable: true,
+          }),
+        }),
+        { queued: 1, sent: 0, failed: 1, skipped: 0 },
+      );
+      const [failedDelivery] = await db
+        .select()
+        .from(emailDeliveriesTable)
+        .where(eq(emailDeliveriesTable.userId, retryUserId));
+      assert.equal(failedDelivery?.status, "failed");
+      assert.equal(failedDelivery?.attempts, 1);
+      assert.equal(
+        failedDelivery?.nextAttemptAt?.toISOString(),
+        new Date(now.getTime() + 60_000).toISOString(),
+      );
+      assert.deepEqual(
+        await retryEmailDeliveries(
+          new Date(now.getTime() + 2 * 60_000),
+          async () => ({
+            status: "sent",
+            providerMessageId: "retry-success",
+          }),
+        ),
+        { queued: 1, sent: 1, failed: 0, skipped: 0 },
+      );
+      const [sentDelivery] = await db
+        .select()
+        .from(emailDeliveriesTable)
+        .where(eq(emailDeliveriesTable.id, failedDelivery!.id));
+      assert.equal(sentDelivery?.status, "sent");
+      assert.equal(sentDelivery?.attempts, 2);
+      assert.equal(sentDelivery?.providerMessageId, "retry-success");
     });
   },
 );

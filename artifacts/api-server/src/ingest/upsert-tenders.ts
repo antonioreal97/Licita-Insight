@@ -15,6 +15,7 @@ export type ExistingTender = {
   status: string;
   proposalDeadline: Date | null;
   title: string;
+  organizationName: string;
   estimatedValue: string | null;
   estimatedValueStatus: string;
   timeline: TenderTimelineRecord[];
@@ -47,6 +48,7 @@ export async function upsertPublications(
       status: tendersTable.status,
       proposalDeadline: tendersTable.proposalDeadline,
       title: tendersTable.title,
+      organizationName: tendersTable.organizationName,
       estimatedValue: tendersTable.estimatedValue,
       estimatedValueStatus: tendersTable.estimatedValueStatus,
       timeline: tendersTable.timeline,
@@ -158,6 +160,7 @@ export async function upsertPublications(
             id: draft.id,
             title: existing.title,
             tenderNumberShort: pncpTenderNumberShort(record),
+            organizationName: existing.organizationName,
             status: existing.status,
             proposalDeadline: existing.proposalDeadline,
             estimatedValue: existing.estimatedValue,
@@ -167,6 +170,7 @@ export async function upsertPublications(
             id: draft.id,
             title: draft.title,
             tenderNumberShort: pncpTenderNumberShort(record),
+            organizationName: draft.organizationName,
             status: draft.status,
             proposalDeadline: draft.proposalDeadline,
             estimatedValue: draft.estimatedValue,

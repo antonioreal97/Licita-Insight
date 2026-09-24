@@ -4,6 +4,7 @@ export type TenderNotificationState = {
   id: string;
   title: string;
   tenderNumberShort: string | null;
+  organizationName: string;
   status: string;
   proposalDeadline: Date | null;
   estimatedValue: string | null;

@@ -3,10 +3,13 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 
 export * from './accountExport';
+export * from './accountExportEmailDelivery';
+export * from './accountExportEmailDeliveryMode';
+export * from './accountExportEmailDeliveryStatus';
 export * from './accountExportNotification';
 export * from './accountExportNotificationChange';
 export * from './accountExportSavedSearch';
@@ -36,6 +39,11 @@ export * from './deadlineToParameter';
 export * from './deleteAccountRequest';
 export * from './deleteAccountRequestConfirm';
 export * from './devLoginRequest';
+export * from './emailDigestPreference';
+export * from './emailNotificationPreferences';
+export * from './emailUnsubscribeRequest';
+export * from './emailUnsubscribeResponse';
+export * from './emailUnsubscribeScope';
 export * from './errorDetail';
 export * from './errorResponse';
 export * from './estimatedValueStatus';
@@ -60,6 +68,7 @@ export * from './notFoundResponse';
 export * from './notification';
 export * from './notificationChange';
 export * from './notificationPage';
+export * from './notificationPreferences';
 export * from './notificationSavedSearch';
 export * from './notificationTender';
 export * from './notificationType';
@@ -120,6 +129,8 @@ export * from './tenderTimelineEntry';
 export * from './tenderTimelineEntryType';
 export * from './unauthenticatedResponse';
 export * from './unreadNotificationCount';
+export * from './updateEmailNotificationPreferences';
+export * from './updateNotificationPreferencesRequest';
 export * from './updateSavedSearchRequest';
 export * from './user';
 export * from './valueHistogramBucket';

@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 export interface HealthStatus {
   status: string;
@@ -104,6 +104,58 @@ export interface DeleteAccountRequest {
   confirm: DeleteAccountRequestConfirm;
 }
 
+export type EmailDigestPreference = typeof EmailDigestPreference[keyof typeof EmailDigestPreference];
+
+
+export const EmailDigestPreference = {
+  daily: 'daily',
+  off: 'off',
+} as const;
+
+export interface EmailNotificationPreferences {
+  digest: EmailDigestPreference;
+  immediateCritical: boolean;
+}
+
+export interface NotificationPreferences {
+  email: EmailNotificationPreferences;
+  emailAddress: string;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface UpdateEmailNotificationPreferences {
+  digest?: EmailDigestPreference;
+  immediateCritical?: boolean;
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  email: UpdateEmailNotificationPreferences;
+}
+
+export type EmailUnsubscribeScope = typeof EmailUnsubscribeScope[keyof typeof EmailUnsubscribeScope];
+
+
+export const EmailUnsubscribeScope = {
+  all: 'all',
+  digest: 'digest',
+  immediate: 'immediate',
+} as const;
+
+export interface EmailUnsubscribeRequest {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  token: string;
+  scope: EmailUnsubscribeScope;
+}
+
+export interface EmailUnsubscribeResponse {
+  scope: EmailUnsubscribeScope;
+  email: EmailNotificationPreferences;
+}
+
 export interface AccountExportUser {
   id: string;
   email: string;
@@ -112,6 +164,10 @@ export interface AccountExportUser {
   /** @nullable */
   avatarUrl: string | null;
   trialEndsAt: string;
+  emailDigest: EmailDigestPreference;
+  emailImmediateCritical: boolean;
+  /** @nullable */
+  emailPreferencesUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +215,10 @@ export interface AccountExportNotification {
   tenderTitle: string | null;
   /** @nullable */
   tenderNumberShort: string | null;
+  /** @nullable */
+  tenderOrganizationName: string | null;
+  /** @nullable */
+  tenderProposalDeadline: string | null;
   change: AccountExportNotificationChange;
   /** @nullable */
   savedSearchId: string | null;
@@ -169,6 +229,42 @@ export interface AccountExportNotification {
   /** @nullable */
   matchCount: number | null;
   tenderIds: string[];
+}
+
+export type AccountExportEmailDeliveryMode = typeof AccountExportEmailDeliveryMode[keyof typeof AccountExportEmailDeliveryMode];
+
+
+export const AccountExportEmailDeliveryMode = {
+  digest: 'digest',
+  immediate: 'immediate',
+} as const;
+
+export type AccountExportEmailDeliveryStatus = typeof AccountExportEmailDeliveryStatus[keyof typeof AccountExportEmailDeliveryStatus];
+
+
+export const AccountExportEmailDeliveryStatus = {
+  queued: 'queued',
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface AccountExportEmailDelivery {
+  id: string;
+  mode: AccountExportEmailDeliveryMode;
+  status: AccountExportEmailDeliveryStatus;
+  recipientEmail: string;
+  subject: string;
+  /** @minimum 0 */
+  attempts: number;
+  /** @nullable */
+  lastError: string | null;
+  /** @nullable */
+  providerMessageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  sentAt: string | null;
 }
 
 export interface AccountExportSubscription {
@@ -185,6 +281,7 @@ export interface AccountExport {
   savedTenders: AccountExportSavedTender[];
   savedSearches: AccountExportSavedSearch[];
   notifications: AccountExportNotification[];
+  emailDeliveries: AccountExportEmailDelivery[];
   subscription: AccountExportSubscription | null;
 }
 

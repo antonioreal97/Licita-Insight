@@ -88,6 +88,8 @@ export async function enrichTenderById(id: string): Promise<void> {
           id: row.id,
           title: row.title,
           tenderNumberShort: pncpTenderNumberShort(publicationRecord),
+          organizationName: row.organizationName,
+          proposalDeadline: row.proposalDeadline,
         },
         previousCount: previousDocuments.length,
         nextCount: documents.length,

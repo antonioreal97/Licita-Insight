@@ -127,6 +127,8 @@ export const createTenderChangeNotifications = async (
           tenderId: input.next.id,
           tenderTitle: input.next.title,
           tenderNumberShort: input.next.tenderNumberShort,
+          tenderOrganizationName: input.next.organizationName,
+          tenderProposalDeadline: input.next.proposalDeadline,
           change,
         })),
       ),
@@ -139,7 +141,14 @@ export const createTenderChangeNotifications = async (
 export const createDocumentAddedNotifications = async (
   tx: Transaction,
   input: {
-    tender: Pick<TenderNotificationState, "id" | "title" | "tenderNumberShort">;
+    tender: Pick<
+      TenderNotificationState,
+      | "id"
+      | "title"
+      | "tenderNumberShort"
+      | "organizationName"
+      | "proposalDeadline"
+    >;
     previousCount: number;
     nextCount: number;
     addedDocumentIds: string[];
@@ -175,6 +184,8 @@ export const createDocumentAddedNotifications = async (
         tenderId: input.tender.id,
         tenderTitle: input.tender.title,
         tenderNumberShort: input.tender.tenderNumberShort,
+        tenderOrganizationName: input.tender.organizationName,
+        tenderProposalDeadline: input.tender.proposalDeadline,
         change,
       })),
     )

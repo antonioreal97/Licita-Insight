@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import type { FacetBucket } from './facetBucket';
 import type { FacetGroupTotals } from './facetGroupTotals';

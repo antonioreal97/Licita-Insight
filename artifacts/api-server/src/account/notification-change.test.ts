@@ -9,6 +9,7 @@ const baseline: TenderNotificationState = {
   id: "TEST-TENDER",
   title: "TEST DATA",
   tenderNumberShort: "001/2026",
+  organizationName: "TEST ORGANIZATION",
   status: "open",
   proposalDeadline: new Date("2026-10-01T18:00:00.000Z"),
   estimatedValue: "100.00",
