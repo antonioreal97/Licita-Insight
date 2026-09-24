@@ -2,23 +2,28 @@ import { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Info, LogOut } from 'lucide-react';
 import { Link, useSearch } from 'wouter';
+import { useLocationProperty } from 'wouter/use-browser-location';
 import { isApiError, type BillingResponse } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState } from '@/components/common/query-states';
 import { UserAvatar } from '@/components/app-shell';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
+import { daysLabel, trialState, type TrialState } from '@/features/billing/lib/trial';
 import { useSession, useSignOut } from '@/features/auth/hooks/use-session';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrencyPrecise, formatDate } from '@/lib/format';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
+import { AccountDataSection } from './components/account-data-section';
 
 // TODO(settings): no preferences API yet. Profile comes from the Google session (read-only); nothing here pretends to persist.
 const sections = [
   { name: 'Assinatura', soon: false },
   { name: 'Perfil e conta', soon: false },
   { name: 'Notificações', soon: false },
+  { name: 'Seus dados', soon: false },
   { name: 'Preferências de busca', soon: true },
   { name: 'Aparência', soon: true },
 ];
@@ -42,6 +47,11 @@ export default function SettingsPage() {
   // Rendered inside <RequireAuth>, so the session is known here.
   const { user } = useSession();
   const signOut = useSignOut();
+  // Links like "/settings#assinatura" (shell badge, trial banner, notifications): wouter doesn't scroll to the hash on pushState.
+  const hash = useLocationProperty(() => window.location.hash);
+  useEffect(() => {
+    if (hash.length > 1) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({ block: 'start' });
+  }, [hash]);
 
   return (
     <>
@@ -118,6 +128,7 @@ export default function SettingsPage() {
               ))}
             </div>
           </section>
+          <AccountDataSection />
         </div>
       </div>
     </>
@@ -140,10 +151,16 @@ function billingCopy(billing: BillingResponse): string {
   }
 }
 
-function checkoutLabel(billing: BillingResponse): string {
+function checkoutLabel(billing: BillingResponse, trial: TrialState): string {
   if (billing.status === 'pending') return 'Continuar pagamento';
   if (billing.status === 'past_due') return 'Regularizar pagamento';
-  return 'Assinar';
+  return trial.kind === 'active' ? 'Assinar agora' : 'Assinar';
+}
+
+function trialCopy(trial: Extract<TrialState, { kind: 'active' }>): string {
+  if (!trial.endsAt || trial.daysLeft === null) return 'Você está no período de teste, com acesso completo.';
+  const left = trial.daysLeft === 0 ? 'termina hoje' : `faltam ${daysLabel(trial.daysLeft)}`;
+  return `Período de teste até ${formatDate(trial.endsAt)} (${left}), com acesso completo. Assine quando quiser para não perder o acesso.`;
 }
 
 function billingErrorMessage(error: unknown, fallback: string) {
@@ -155,10 +172,13 @@ function BillingSection() {
   const search = useSearch();
   const billingFlag = new URLSearchParams(search).get('billing');
   const billing = useBilling();
+  const plan = usePublicPlan();
   const queryClient = useQueryClient();
+  const paid = billing.data?.source === 'subscription' || (billing.data?.entitled === true && !billing.data.source);
 
   useEffect(() => {
-    if (billingFlag !== 'return' || billing.data?.entitled) return;
+    // Back from Asaas: poll until the webhook lands. A trial or dev access is already `entitled`, so wait for a paid source.
+    if (billingFlag !== 'return' || paid) return;
     const timer = window.setInterval(() => {
       void billing.refetch();
     }, 2000);
@@ -167,7 +187,7 @@ function BillingSection() {
       window.clearInterval(timer);
       window.clearTimeout(stop);
     };
-  }, [billing.data?.entitled, billing.refetch, billingFlag]);
+  }, [paid, billing.refetch, billingFlag]);
 
   const checkout = useMutation({
     mutationFn: () => accountService.startCheckout(),
@@ -208,23 +228,35 @@ function BillingSection() {
     },
   });
 
+  const trial: TrialState = billing.data ? trialState(billing.data) : { kind: 'none' };
+  // The price comes from the API only (public plan first, then billing); nothing shown when it isn't configured.
+  const price = plan.data?.monthlyBrl ?? billing.data?.monthlyBrl ?? null;
+  const showCheckout = billing.data !== undefined && (!billing.data.entitled || trial.kind === 'active' || billing.data.source === 'dev');
+  // During a trial with days to spare the checkout is secondary; once it ends (or is about to) it is the main action.
+  const checkoutPrimary = billing.data !== undefined && (!billing.data.entitled || (trial.kind === 'active' && trial.ending));
+
   return (
-    <section aria-labelledby="settings-billing" className="rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="section-billing">
+    <section
+      id="assinatura"
+      aria-labelledby="settings-billing"
+      className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7"
+      data-testid="section-billing"
+    >
       <h2 id="settings-billing" className="type-section">
         Assinatura
       </h2>
       <p className="mt-1 type-meta text-muted-foreground">
-        Um plano mensal libera salvar editais, guardar buscas e receber alertas no app.
-        {billing.data?.monthlyBrl != null ? ` ${formatCurrencyPrecise(billing.data.monthlyBrl)} por mês.` : ''}
+        Um plano mensal libera salvar editais, guardar buscas, receber alertas no app e ver as chamadas culturais.
+        {price !== null ? ` ${formatCurrencyPrecise(price)} por mês.` : ''}
       </p>
-      {billingFlag === 'required' && (
+      {billingFlag === 'required' && trial.kind !== 'expired' && (
         <p role="status" data-testid="text-billing-required" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground">
           Assine para salvar e acompanhar editais.
         </p>
       )}
       {billingFlag === 'return' && (
         <p role="status" data-testid="text-billing-return" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground">
-          {billing.data?.entitled ? 'Pagamento confirmado.' : 'Confirmando o pagamento…'}
+          {paid ? 'Pagamento confirmado.' : 'Confirmando o pagamento…'}
         </p>
       )}
       {billing.isError ? (
@@ -235,13 +267,38 @@ function BillingSection() {
         <p className="mt-5 type-meta text-muted-foreground">Carregando assinatura…</p>
       ) : (
         <>
-          <p data-testid="text-billing-status" className="mt-5 type-ui text-foreground">
-            {billingCopy(billing.data)}
-          </p>
+          {trial.kind === 'expired' ? (
+            <div
+              data-testid="text-trial-expired"
+              className="mt-5 rounded-lg border border-warning/40 bg-warning-subtle px-4 py-3 text-warning-subtle-foreground"
+            >
+              <p className="type-ui font-semibold">
+                {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} em {formatDate(trial.endsAt)}.
+              </p>
+              <p className="mt-0.5 type-meta">
+                Assine para voltar a salvar e monitorar editais, receber alertas e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
+                na sua conta.
+              </p>
+            </div>
+          ) : (
+            <p data-testid="text-billing-status" className="mt-5 type-ui text-foreground">
+              {trial.kind === 'active'
+                ? trialCopy(trial)
+                : billing.data.source === 'dev' && billing.data.status === 'none'
+                  ? 'Acesso de desenvolvimento (BILLING_DEV_ENTITLED). Não é uma assinatura paga.'
+                  : billingCopy(billing.data)}
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap gap-2">
-            {!billing.data.entitled && (
-              <Button data-testid="button-billing-checkout" loading={checkout.isPending} onClick={() => checkout.mutate()}>
-                {checkoutLabel(billing.data)}
+            {showCheckout && (
+              <Button
+                variant={checkoutPrimary ? 'primary' : 'outline'}
+                size={trial.kind === 'expired' ? 'lg' : 'md'}
+                data-testid="button-billing-checkout"
+                loading={checkout.isPending}
+                onClick={() => checkout.mutate()}
+              >
+                {checkoutLabel(billing.data, trial)}
               </Button>
             )}
             {billing.data.canCancel && (

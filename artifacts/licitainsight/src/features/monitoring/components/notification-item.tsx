@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, CircleDollarSign, FileText, RefreshCw, type LucideIcon } from 'lucide-react';
+import { Bell, CalendarClock, CircleDollarSign, FileText, Hourglass, RefreshCw, type LucideIcon } from 'lucide-react';
 import { Link } from 'wouter';
 import type { Notification, NotificationType } from '@/api';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   tender_document_added: FileText,
   tender_value_changed: CircleDollarSign,
   saved_search_new_matches: Bell,
+  trial_ending: Hourglass,
 };
 
 /**

@@ -7,6 +7,8 @@ import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
+import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
+import { useOpportunityAccess } from '@/features/opportunities/hooks/use-opportunities';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-tenders-list';
@@ -80,7 +82,7 @@ function MonitoringCard() {
           A busca continua aberta. Assine para salvar editais, guardar buscas e receber alertas aqui no app.
         </p>
         <Link
-          href="/settings?billing=required"
+          href="/settings?billing=required#assinatura"
           data-testid="link-dashboard-subscribe"
           className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
         >
@@ -109,6 +111,28 @@ function MonitoringCard() {
         className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
       >
         Abrir monitoramento <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
+      </Link>
+    </div>
+  );
+}
+
+/** Entry to cultural calls. Without access (signed out, or no trial/subscription) it says so before the click. */
+function OpportunitiesCard() {
+  const access = useOpportunityAccess();
+  const locked = access.state === 'anonymous' || access.state === 'no-access';
+  return (
+    <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-opportunities">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="type-section text-foreground">Chamadas culturais</h2>
+        {locked && <IncludedInAccessHint />}
+      </div>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">Fomento audiovisual do Mapa da Cultura e das secretarias que publicam no Mapas Culturais.</p>
+      <Link
+        href="/oportunidades"
+        data-testid="link-dashboard-opportunities"
+        className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+      >
+        Ver chamadas <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
       </Link>
     </div>
   );
@@ -217,6 +241,7 @@ export default function DashboardPage() {
         </section>
         <aside className="space-y-6">
           <MonitoringCard />
+          <OpportunitiesCard />
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="type-section text-foreground">Coleta</h2>

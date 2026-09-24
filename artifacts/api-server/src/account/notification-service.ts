@@ -15,7 +15,9 @@ import {
   notificationsTable,
   savedSearchesTable,
   savedTendersTable,
+  subscriptionsTable,
   tendersTable,
+  usersTable,
 } from "@workspace/db";
 import type { NotificationChangeRecord } from "@workspace/db/schema";
 import { searchWhereFor } from "../repositories/postgres-tender-repository";
@@ -25,11 +27,70 @@ import {
   tenderChanges,
   type TenderNotificationState,
 } from "./notification-change";
+import { TRIAL_ENDING_NOTICE_DAYS } from "../billing/trial-access";
+import { hasSubscriptionEntitlement } from "../billing/billing-access";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const digest = (value: string): string =>
   createHash("sha256").update(value).digest("hex").slice(0, 24);
+
+export const createTrialEndingNotifications = async (
+  now = new Date(),
+): Promise<number> => {
+  const noticeLimit = new Date(
+    now.getTime() + TRIAL_ENDING_NOTICE_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const candidates = await db
+    .select({
+      id: usersTable.id,
+      trialEndsAt: usersTable.trialEndsAt,
+      subscriptionStatus: subscriptionsTable.status,
+      currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
+    })
+    .from(usersTable)
+    .leftJoin(
+      subscriptionsTable,
+      eq(subscriptionsTable.userId, usersTable.id),
+    )
+    .where(
+      and(
+        gt(usersTable.trialEndsAt, now),
+        lte(usersTable.trialEndsAt, noticeLimit),
+      ),
+    );
+  const users = candidates.filter(
+    (user) =>
+      !hasSubscriptionEntitlement(
+        {
+          status: user.subscriptionStatus,
+          currentPeriodEnd: user.currentPeriodEnd,
+        },
+        now,
+      ),
+  );
+  if (users.length === 0) return 0;
+
+  const inserted = await db
+    .insert(notificationsTable)
+    .values(
+      users.map((user) => ({
+        id: randomUUID(),
+        userId: user.id,
+        type: "trial_ending",
+        dedupeKey: "account:trial-ending",
+        createdAt: now,
+        change: {
+          field: "trialEndsAt",
+          from: null,
+          to: user.trialEndsAt.toISOString(),
+        },
+      })),
+    )
+    .onConflictDoNothing()
+    .returning({ id: notificationsTable.id });
+  return inserted.length;
+};
 
 export const createTenderChangeNotifications = async (
   tx: Transaction,

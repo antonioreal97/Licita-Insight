@@ -26,6 +26,9 @@ export const usersTable = pgTable(
     email: text("email").notNull(),
     name: text("name"),
     avatarUrl: text("avatar_url"),
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '7 days'`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -40,6 +43,14 @@ export const usersTable = pgTable(
     uniqueIndex("users_email_uidx").on(table.email),
   ],
 );
+
+export const googleTrialTombstonesTable = pgTable("google_trial_tombstones", {
+  subjectHash: text("subject_hash").primaryKey(),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 export const sessionsTable = pgTable(
   "sessions",

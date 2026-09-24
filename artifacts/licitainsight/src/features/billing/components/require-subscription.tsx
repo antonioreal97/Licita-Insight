@@ -14,6 +14,6 @@ export function RequireSubscription({ children }: { children: ReactNode }) {
     return <ErrorState error={billing.error} onRetry={() => queryClient.refetchQueries({ queryKey: queryKeys.me.billing })} />;
   }
   if (!billing.data) return <RowsSkeleton />;
-  if (!billing.data.entitled) return <Redirect to="/settings?billing=required" replace />;
+  if (!billing.data.entitled) return <Redirect to="/settings?billing=required#assinatura" replace />;
   return <>{children}</>;
 }

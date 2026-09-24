@@ -1,15 +1,19 @@
 import { Link } from 'wouter';
 import { ArrowRight, Check, Clock3, Search, Target } from 'lucide-react';
 import { useSession } from '@/features/auth/hooks/use-session';
+import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
+import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatCurrencyPrecise } from '@/lib/format';
 import { statusLabels } from '@/lib/tender-labels';
 
 const navLink = 'font-semibold text-primary hover:underline';
-const primaryCta =
-  'rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
+const primaryCta = 'rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
 const heroCta =
   'inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
+
+// Owner decision: 7-day trial. The API (`/billing/plan`) wins when it answers; 7 only while it loads or if it fails.
+const useTrialDays = () => usePublicPlan().data?.trialDays ?? 7;
 
 function SessionPlaceholder() {
   return <span role="status" aria-label="Carregando conta" className="inline-block h-9 w-28 animate-pulse rounded-lg bg-muted" />;
@@ -17,10 +21,15 @@ function SessionPlaceholder() {
 
 function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
   const { status } = useSession();
+  const trialDays = useTrialDays();
   if (status === 'loading') return <SessionPlaceholder />;
   if (status === 'authenticated') {
     return (
-      <Link href="/dashboard" data-testid={mobile ? 'link-landing-dashboard-mobile' : 'link-landing-dashboard'} className={mobile ? 'text-sm font-semibold text-primary' : primaryCta}>
+      <Link
+        href="/dashboard"
+        data-testid={mobile ? 'link-landing-dashboard-mobile' : 'link-landing-dashboard'}
+        className={mobile ? 'text-sm font-semibold text-primary' : primaryCta}
+      >
         Visão geral
       </Link>
     );
@@ -38,7 +47,7 @@ function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
         Entrar
       </Link>
       <Link href="/login" data-testid="link-landing-register" className={primaryCta}>
-        Começar agora
+        Testar {trialDays} dias grátis
       </Link>
     </>
   );
@@ -46,12 +55,70 @@ function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
 
 function LandingHeroStart() {
   const { status } = useSession();
+  const trialDays = useTrialDays();
   if (status === 'loading') return <SessionPlaceholder />;
   const signedIn = status === 'authenticated';
   return (
     <Link href={signedIn ? '/dashboard' : '/login'} data-testid="link-hero-start" className={heroCta}>
-      {signedIn ? 'Ir para a visão geral' : 'Explorar o radar'} <ArrowRight size={16} />
+      {signedIn ? 'Ir para a visão geral' : `Comece com ${trialDays} dias grátis`} <ArrowRight size={16} />
     </Link>
+  );
+}
+
+const planIncludes = [
+  'Busca de editais do PNCP com filtros',
+  'Salvar e monitorar editais',
+  'Buscas salvas com alertas no app',
+  'Oportunidades de fomento cultural',
+];
+
+/** Single plan. The price comes only from `/billing/plan`: none configured (`null`) or a failed request shows no price. */
+function PlanSection() {
+  const plan = usePublicPlan();
+  const trialDays = plan.data?.trialDays ?? 7;
+  const price = plan.data?.monthlyBrl ?? null;
+  const signedIn = useSession().status === 'authenticated';
+  return (
+    <section id="plano" data-testid="section-plan" aria-labelledby="plano-titulo" className="border-t border-border py-20">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
+        <div>
+          <div className="type-eyebrow font-bold text-primary">Plano</div>
+          <h2 id="plano-titulo" className="mt-4 max-w-lg text-4xl font-semibold leading-[1.05] tracking-display">
+            Um plano. Acesso completo.
+          </h2>
+          <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
+            O teste começa quando você entra com o Google pela primeira vez e libera tudo o que o LicitAI faz. Depois, a assinatura é mensal.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+          {plan.isPending && <span role="status" aria-label="Carregando plano" className="block h-10 w-44 animate-pulse rounded-md bg-muted" />}
+          {price !== null && (
+            <p data-testid="text-plan-price" className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold tracking-tight tabular-nums">{formatCurrencyPrecise(price)}</span>{' '}
+              <span className="text-sm text-muted-foreground">por mês</span>
+            </p>
+          )}
+          {plan.isError && (
+            <p role="alert" className="text-xs text-destructive">
+              Não foi possível carregar o valor da assinatura agora.
+            </p>
+          )}
+          <p className="mt-3 text-lg font-semibold">{trialDays} dias grátis, sem cartão para começar.</p>
+          <ul className="mt-6 grid gap-3 border-t border-border-subtle pt-6 text-sm">
+            {planIncludes.map((item) => (
+              <li key={item} className="flex items-center gap-2.5">
+                <Check size={15} aria-hidden className="shrink-0 text-primary" />
+                {item}
+              </li>
+            ))}
+          </ul>
+          <Link href={signedIn ? BILLING_HREF : '/login'} data-testid="link-plan-start" className={`${heroCta} mt-8`}>
+            {signedIn ? 'Ver minha assinatura' : `Comece com ${trialDays} dias grátis`} <ArrowRight size={16} />
+          </Link>
+          <p className="mt-3 type-meta text-muted-foreground">O teste vale uma vez por conta Google.</p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -74,6 +141,9 @@ export default function LandingPage() {
           </a>
           <a href="#instrumento" className="transition-colors duration-fast hover:text-foreground">
             O instrumento
+          </a>
+          <a href="#plano" className="transition-colors duration-fast hover:text-foreground">
+            Plano
           </a>
           <LandingNavActions />
         </nav>
@@ -120,8 +190,8 @@ export default function LandingPage() {
             <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
               <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
                 <div className="flex items-center gap-2 text-xs font-semibold">
-                  <img src="/LicitAI_logo.png" alt="" width={24} height={24} className="h-6 w-6" />Seu
-                  radar
+                  <img src="/LicitAI_logo.png" alt="" width={24} height={24} className="h-6 w-6" />
+                  Seu radar
                 </div>
                 <span className="type-label text-muted-foreground">dados do PNCP</span>
               </div>
@@ -219,6 +289,7 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+        <PlanSection />
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">

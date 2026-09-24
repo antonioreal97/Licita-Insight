@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 
 export type ApiErrorCode = typeof ApiErrorCode[keyof typeof ApiErrorCode];
@@ -18,4 +18,6 @@ export const ApiErrorCode = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   FORBIDDEN: 'FORBIDDEN',
   CONFLICT: 'CONFLICT',
+  SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
+  BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
 } as const;

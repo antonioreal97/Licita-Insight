@@ -16,30 +16,42 @@ test(
     process.env.DATABASE_URL = url.toString();
     process.env.PUBLIC_APP_ORIGIN = "http://localhost:24252";
     process.env.AUTH_DEV_LOGIN = "true";
+    process.env.SESSION_SECRET = "account-integration-secret-at-least-32-characters";
     process.env.NODE_ENV = "test";
     process.env.LOG_LEVEL = "silent";
+    delete process.env.BILLING_MONTHLY_BRL;
 
     const {
       db,
+      culturalOpportunitiesTable,
+      googleTrialTombstonesTable,
       pool,
       notificationsTable,
       savedSearchesTable,
+      savedTendersTable,
       sessionsTable,
       subscriptionsTable,
       usersTable,
     } = await import("@workspace/db");
     const { eq } = await import("drizzle-orm");
     const { default: app } = await import("../app");
+    const { deleteAccount } = await import("./account-privacy-service");
+    const { BillingUnavailableError } = await import("../lib/api-error");
+    const { upsertGoogleUser } = await import("../auth/session-service");
     const { upsertPublications } = await import("../ingest/upsert-tenders");
     const {
       createDocumentAddedNotifications,
+      createTrialEndingNotifications,
       evaluateSavedSearchNotifications,
     } = await import("./notification-service");
 
     await pool.query(`CREATE SCHEMA "${schema}"`);
     for (const table of [
       "tenders",
+      "cultural_opportunities",
+      "ingest_runs",
       "users",
+      "google_trial_tombstones",
       "sessions",
       "saved_tenders",
       "saved_searches",
@@ -71,7 +83,7 @@ test(
           ...init.headers,
         },
       });
-    const login = async (email: string): Promise<string> => {
+    const login = async (email: string, subscribed = true): Promise<string> => {
       const response = await request("/v1/auth/dev-login", {
         method: "POST",
         headers: csrf,
@@ -84,14 +96,16 @@ test(
       const session = await request("/v1/auth/session", {}, cookie);
       assert.equal(session.status, 200);
       const userId = ((await session.json()) as { user: { id: string } }).user.id;
-      await db
-        .insert(subscriptionsTable)
-        .values({
-          userId,
-          status: "active",
-          currentPeriodEnd: new Date("2099-01-01T00:00:00.000Z"),
-        })
-        .onConflictDoNothing();
+      if (subscribed) {
+        await db
+          .insert(subscriptionsTable)
+          .values({
+            userId,
+            status: "active",
+            currentPeriodEnd: new Date("2099-01-01T00:00:00.000Z"),
+          })
+          .onConflictDoNothing();
+      }
       return cookie;
     };
     const publication = (
@@ -146,12 +160,86 @@ test(
     const userACookie = await login("user-a@example.test");
     const userBCookie = await login("user-b@example.test");
 
-    await t.test("paid account routes require an active subscription", async () => {
-      const cookie = await login("billing-gate@example.test");
+    await t.test("grants a 7-day trial, gates cultural opportunities, and prefers subscriptions", async () => {
+      const cookie = await login("trial-access@example.test", false);
+      const [user] = await db
+        .select({
+          id: usersTable.id,
+          createdAt: usersTable.createdAt,
+          trialEndsAt: usersTable.trialEndsAt,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.email, "trial-access@example.test"));
+      assert.ok(user);
+      const trialDurationMs = user.trialEndsAt.getTime() - user.createdAt.getTime();
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      assert.ok(trialDurationMs <= sevenDaysMs);
+      assert.ok(trialDurationMs >= sevenDaysMs - 1_000);
+
+      const plan = await request("/v1/billing/plan");
+      assert.equal(plan.status, 200);
+      assert.deepEqual(await plan.json(), {
+        monthlyBrl: null,
+        trialDays: 7,
+        currency: "BRL",
+      });
+
+      await db.insert(culturalOpportunitiesTable).values({
+        id: "trial-cultural-opportunity",
+        installationId: "br",
+        externalId: "trial-1",
+        title: "TEST DATA Edital de audiovisual",
+        organizationName: "TEST DATA Cultura",
+        state: "DF",
+        status: "open",
+        program: "audiovisual",
+        searchText: "test data edital audiovisual",
+        rawPayload: {},
+        fetchedAt: new Date(),
+      });
+
+      assert.equal((await request("/v1/opportunities")).status, 401);
+      assert.equal((await request("/v1/me/saved-tenders/ids", {}, cookie)).status, 200);
+      assert.equal((await request("/v1/opportunities", {}, cookie)).status, 200);
+      assert.equal(
+        (await request("/v1/opportunities/trial-cultural-opportunity", {}, cookie)).status,
+        200,
+      );
+      const trialBilling = (await (
+        await request("/v1/me/billing", {}, cookie)
+      ).json()) as { entitled: boolean; source: string; trialEndsAt: string };
+      assert.equal(trialBilling.entitled, true);
+      assert.equal(trialBilling.source, "trial");
+      assert.equal(trialBilling.trialEndsAt, user.trialEndsAt.toISOString());
+
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+        .where(eq(usersTable.id, user.id));
+      assert.equal((await request("/v1/me/saved-tenders/ids", {}, cookie)).status, 402);
+      assert.equal((await request("/v1/opportunities", {}, cookie)).status, 402);
+
+      await db.insert(subscriptionsTable).values({
+        userId: user.id,
+        status: "active",
+        currentPeriodEnd: new Date("2099-01-01T00:00:00.000Z"),
+      });
+      const paidBilling = (await (
+        await request("/v1/me/billing", {}, cookie)
+      ).json()) as { source: string };
+      assert.equal(paidBilling.source, "subscription");
+      assert.equal((await request("/v1/opportunities", {}, cookie)).status, 200);
+    });
+
+    await t.test("development entitlement bypasses paid routes only outside production", async () => {
+      const cookie = await login("billing-gate@example.test", false);
       const session = await request("/v1/auth/session", {}, cookie);
       assert.equal(session.status, 200);
       const userId = ((await session.json()) as { user: { id: string } }).user.id;
-      await db.delete(subscriptionsTable).where(eq(subscriptionsTable.userId, userId));
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+        .where(eq(usersTable.id, userId));
 
       const denied = await request("/v1/me/saved-tenders/ids", {}, cookie);
       assert.equal(denied.status, 402);
@@ -162,9 +250,35 @@ test(
 
       const billing = await request("/v1/me/billing", {}, cookie);
       assert.equal(billing.status, 200);
-      const view = (await billing.json()) as { entitled: boolean; status: string };
+      const view = (await billing.json()) as {
+        entitled: boolean;
+        source: string | null;
+        status: string;
+      };
       assert.equal(view.entitled, false);
+      assert.equal(view.source, null);
       assert.equal(view.status, "none");
+
+      process.env.BILLING_DEV_ENTITLED = "true";
+      const allowed = await request("/v1/me/saved-tenders/ids", {}, cookie);
+      assert.equal(allowed.status, 200);
+      const developmentBilling = (await (
+        await request("/v1/me/billing", {}, cookie)
+      ).json()) as { entitled: boolean; source: string; status: string };
+      assert.equal(developmentBilling.entitled, true);
+      assert.equal(developmentBilling.source, "dev");
+      assert.equal(developmentBilling.status, "none");
+
+      process.env.NODE_ENV = "production";
+      assert.equal(
+        (await request("/v1/me/saved-tenders/ids", {}, cookie)).status,
+        402,
+      );
+      process.env.NODE_ENV = "test";
+      delete process.env.BILLING_DEV_ENTITLED;
+
+      const exportWithoutSubscription = await request("/v1/me/export", {}, cookie);
+      assert.equal(exportWithoutSubscription.status, 200);
     });
 
     await t.test("expires and revokes sessions", async () => {
@@ -544,6 +658,263 @@ test(
           )
         ).status,
         409,
+      );
+    });
+
+    await t.test("exports only the authenticated user's retained data without secrets", async () => {
+      const response = await request("/v1/me/export", {}, authenticatedCookie);
+      assert.equal(response.status, 200);
+      assert.match(
+        response.headers.get("content-disposition") ?? "",
+        /^attachment; filename="licitai-dados-\d{4}-\d{2}-\d{2}\.json"$/,
+      );
+      assert.equal(response.headers.get("cache-control"), "no-store");
+
+      const body = (await response.json()) as {
+        user: { email: string };
+        sessions: unknown[];
+        savedTenders: { tenderId: string }[];
+        savedSearches: { deletedAt: string | null }[];
+      };
+      assert.equal(body.user.email, "user-a@example.test");
+      assert.ok(body.sessions.length > 0);
+      assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
+      assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
+
+      const serialized = JSON.stringify(body);
+      const sessionToken = authenticatedCookie.split("=", 2)[1]!;
+      const { sha256 } = await import("../auth/tokens");
+      assert.equal(serialized.includes(sessionToken), false);
+      assert.equal(serialized.includes(sha256(sessionToken)), false);
+      assert.equal(serialized.includes("user-b@example.test"), false);
+      assert.equal(serialized.includes("asaasSubscriptionId"), false);
+      assert.equal(serialized.includes("dedupeKey"), false);
+    });
+
+    await t.test("deletes the account atomically, cascades personal data, and clears the cookie", async () => {
+      const cookie = await login("delete-route@example.test");
+      const [user] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, "delete-route@example.test"));
+      assert.ok(user);
+      await db
+        .delete(subscriptionsTable)
+        .where(eq(subscriptionsTable.userId, user.id));
+      await db.insert(savedSearchesTable).values({
+        id: "delete-route-search",
+        userId: user.id,
+        name: "TEST DELETE",
+        query: "q=delete",
+      });
+      await db.insert(savedTendersTable).values({ userId: user.id, tenderId });
+      await db.insert(notificationsTable).values({
+        id: "delete-route-notification",
+        userId: user.id,
+        type: "tender_status_changed",
+        dedupeKey: "delete-route-dedupe",
+      });
+
+      const missingConfirmation = await request(
+        "/v1/me",
+        { method: "DELETE", headers: csrf, body: "{}" },
+        cookie,
+      );
+      assert.equal(missingConfirmation.status, 400);
+      assert.equal(
+        ((await missingConfirmation.json()) as { error: { code: string } }).error.code,
+        "INVALID_PARAMETER",
+      );
+      assert.equal(
+        (
+          await request(
+            "/v1/me",
+            { method: "DELETE", body: JSON.stringify({ confirm: "EXCLUIR" }) },
+            cookie,
+          )
+        ).status,
+        403,
+      );
+
+      const deleted = await request(
+        "/v1/me",
+        {
+          method: "DELETE",
+          headers: csrf,
+          body: JSON.stringify({ confirm: "EXCLUIR" }),
+        },
+        cookie,
+      );
+      assert.equal(deleted.status, 204);
+      assert.match(deleted.headers.get("set-cookie") ?? "", /^licita_session=;/);
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 401);
+
+      for (const table of [
+        "users",
+        "sessions",
+        "saved_tenders",
+        "saved_searches",
+        "notifications",
+        "subscriptions",
+      ]) {
+        const result = await pool.query(
+          `SELECT count(*) AS count FROM ${table} WHERE ${
+            table === "users" ? "id" : "user_id"
+          } = $1`,
+          [user.id],
+        );
+        assert.equal(Number(result.rows[0].count), 0, `${table} should cascade`);
+      }
+    });
+
+    await t.test("keeps the local account intact when Asaas cancellation fails", async () => {
+      const cookie = await login("delete-asaas@example.test");
+      const [user] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, "delete-asaas@example.test"));
+      assert.ok(user);
+      await db
+        .update(subscriptionsTable)
+        .set({ asaasSubscriptionId: "sub_delete_test" })
+        .where(eq(subscriptionsTable.userId, user.id));
+
+      let cancellationCalls = 0;
+      await assert.rejects(
+        deleteAccount(user.id, {
+          cancelAsaasSubscription: async (subscriptionId) => {
+            cancellationCalls += 1;
+            assert.equal(subscriptionId, "sub_delete_test");
+            throw new BillingUnavailableError("TEST Asaas outage");
+          },
+        }),
+        (error: unknown) =>
+          error instanceof BillingUnavailableError && error.status === 503,
+      );
+      assert.equal(cancellationCalls, 1);
+      assert.equal(
+        (
+          await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.id, user.id))
+        ).length,
+        1,
+      );
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+
+      await assert.rejects(
+        deleteAccount(user.id, {
+          cancelAsaasSubscription: async () => {
+            cancellationCalls += 1;
+          },
+          deleteLocalAccount: async () => {
+            throw new Error("TEST database outage");
+          },
+        }),
+        /TEST database outage/,
+      );
+      const [compensated] = await db
+        .select({ status: subscriptionsTable.status })
+        .from(subscriptionsTable)
+        .where(eq(subscriptionsTable.userId, user.id));
+      assert.equal(compensated?.status, "canceled");
+      assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+
+      await deleteAccount(user.id, {
+        cancelAsaasSubscription: async () => {
+          cancellationCalls += 1;
+        },
+      });
+      assert.equal(cancellationCalls, 2);
+      assert.equal(
+        (
+          await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.id, user.id))
+        ).length,
+        0,
+      );
+    });
+
+    await t.test("preserves one Google trial across account deletion", async () => {
+      const identity = {
+        sub: "google-subject-trial-test",
+        email: "google-trial@example.test",
+        name: "TEST GOOGLE USER",
+        picture: null,
+      };
+      const startedAt = new Date("2026-09-24T12:00:00.000Z");
+      const first = await upsertGoogleUser(identity, startedAt);
+      const [firstRow] = await db
+        .select({ trialEndsAt: usersTable.trialEndsAt })
+        .from(usersTable)
+        .where(eq(usersTable.id, first.id));
+      assert.equal(
+        firstRow?.trialEndsAt.toISOString(),
+        "2026-10-01T12:00:00.000Z",
+      );
+
+      await deleteAccount(first.id);
+      const tombstones = await db.select().from(googleTrialTombstonesTable);
+      assert.equal(tombstones.length, 1);
+      assert.equal(tombstones[0]?.subjectHash.includes(identity.sub), false);
+
+      const recreated = await upsertGoogleUser(
+        identity,
+        new Date("2026-10-10T12:00:00.000Z"),
+      );
+      const [recreatedRow] = await db
+        .select({ trialEndsAt: usersTable.trialEndsAt })
+        .from(usersTable)
+        .where(eq(usersTable.id, recreated.id));
+      assert.notEqual(recreated.id, first.id);
+      assert.equal(
+        recreatedRow?.trialEndsAt.toISOString(),
+        firstRow?.trialEndsAt.toISOString(),
+      );
+    });
+
+    await t.test("creates one trial-ending notification during the D-3 window", async () => {
+      const cookie = await login("trial-ending@example.test", false);
+      const paidCookie = await login("trial-ending-paid@example.test");
+      const session = await request("/v1/auth/session", {}, cookie);
+      const paidSession = await request("/v1/auth/session", {}, paidCookie);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      const paidUserId = ((await paidSession.json()) as { user: { id: string } }).user.id;
+      const now = new Date("2026-09-24T12:00:00.000Z");
+      const trialEndsAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt })
+        .where(eq(usersTable.id, userId));
+      await db
+        .update(usersTable)
+        .set({ trialEndsAt })
+        .where(eq(usersTable.id, paidUserId));
+
+      assert.equal(await createTrialEndingNotifications(now), 1);
+      assert.equal(await createTrialEndingNotifications(now), 0);
+      const alerts = await db
+        .select()
+        .from(notificationsTable)
+        .where(eq(notificationsTable.userId, userId));
+      assert.equal(alerts.length, 1);
+      assert.equal(alerts[0]?.type, "trial_ending");
+      assert.deepEqual(alerts[0]?.change, {
+        field: "trialEndsAt",
+        from: null,
+        to: trialEndsAt.toISOString(),
+      });
+      assert.equal(
+        (
+          await db
+            .select()
+            .from(notificationsTable)
+            .where(eq(notificationsTable.userId, paidUserId))
+        ).length,
+        0,
       );
     });
   },

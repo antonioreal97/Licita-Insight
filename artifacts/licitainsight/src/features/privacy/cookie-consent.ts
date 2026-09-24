@@ -1,7 +1,7 @@
 export const COOKIE_CONSENT_KEY = 'licita-cookie-consent';
 const CONSENT_EVENT = 'licita-cookie-consent';
 
-const OPTIONAL_KEYS = ['licita-theme', 'licita-sidebar-collapsed', 'licita-recent-searches', 'licita-last-activity'];
+const OPTIONAL_KEYS = ['licita-theme', 'licita-sidebar-collapsed', 'licita-recent-searches', 'licita-last-activity', 'licita-trial-banner-dismissed'];
 
 export type CookieConsent = 'accepted' | 'refused';
 

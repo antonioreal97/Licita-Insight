@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 import * as zod from 'zod';
 
@@ -374,6 +374,264 @@ export const DevLoginBody = zod.object({
 export const DevLoginResponse = zod.void()
 
 
+/**
+ * @summary Permanently delete the authenticated account and its personal data
+ */
+export const DeleteAccountBody = zod.object({
+  "confirm": zod.enum(['EXCLUIR'])
+})
+
+export const DeleteAccountResponse = zod.void()
+
+
+/**
+ * @summary Export the authenticated user's retained personal data
+ */
+export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
+
+
+
+export const ExportAccountDataResponse = zod.object({
+  "exportedAt": zod.coerce.date(),
+  "user": zod.object({
+  "id": zod.string(),
+  "email": zod.string().email(),
+  "name": zod.string().nullable(),
+  "avatarUrl": zod.string().url().nullable(),
+  "trialEndsAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "sessions": zod.array(zod.object({
+  "createdAt": zod.coerce.date(),
+  "lastSeenAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})),
+  "savedTenders": zod.array(zod.object({
+  "tenderId": zod.string(),
+  "savedAt": zod.coerce.date(),
+  "monitored": zod.boolean(),
+  "monitoredAt": zod.coerce.date().nullable()
+})),
+  "savedSearches": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "deletedAt": zod.coerce.date().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(exportAccountDataResponseSavedSearchesItemNewMatchesCountMin)
+})),
+  "notifications": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable(),
+  "tenderId": zod.string().nullable(),
+  "tenderTitle": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullable(),
+  "change": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
+  "savedSearchId": zod.string().nullable(),
+  "savedSearchName": zod.string().nullable(),
+  "savedSearchQuery": zod.string().nullable(),
+  "matchCount": zod.number().int().nullable(),
+  "tenderIds": zod.array(zod.string())
+})),
+  "subscription": zod.union([zod.object({
+  "status": zod.string(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Get subscription and entitlement state
+ */
+export const GetBillingResponse = zod.object({
+  "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
+  "entitled": zod.boolean(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "trialEndsAt": zod.coerce.date().nullable(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "canCancel": zod.boolean(),
+  "monthlyBrl": zod.number().nullable()
+})
+
+
+/**
+ * @summary Get the public single-plan price and trial duration
+ */
+export const GetBillingPlanResponse = zod.object({
+  "monthlyBrl": zod.number().nullable(),
+  "trialDays": zod.literal(7),
+  "currency": zod.enum(['BRL'])
+})
+
+
+/**
+ * @summary Start or resume recurring subscription checkout
+ */
+export const StartBillingCheckoutResponse = zod.object({
+  "url": zod.string().url()
+})
+
+
+/**
+ * @summary Cancel the recurring subscription
+ */
+export const CancelBillingSubscriptionResponse = zod.object({
+  "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
+  "entitled": zod.boolean(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "trialEndsAt": zod.coerce.date().nullable(),
+  "currentPeriodEnd": zod.coerce.date().nullable(),
+  "canCancel": zod.boolean(),
+  "monthlyBrl": zod.number().nullable()
+})
+
+
+/**
+ * @summary Apply an authenticated Asaas payment event
+ */
+export const ApplyAsaasBillingWebhookResponse = zod.object({
+  "received": zod.boolean()
+})
+
+
+/**
+ * @summary Search cultural funding opportunities
+ */
+export const searchOpportunitiesQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
+export const searchOpportunitiesQueryPageDefault = 1;
+
+export const searchOpportunitiesQueryPageSizeDefault = 20;
+export const searchOpportunitiesQueryPageSizeMax = 100;
+
+export const searchOpportunitiesQueryFacetsDefault = true;
+
+export const SearchOpportunitiesQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "state": zod.array(zod.coerce.string().regex(searchOpportunitiesQueryStateItemRegExp)).optional(),
+  "installation": zod.array(zod.coerce.string()).optional(),
+  "status": zod.array(zod.enum(['open', 'upcoming', 'closed', 'undated'])).optional(),
+  "program": zod.array(zod.enum(['audiovisual', 'lpg', 'fac', 'fsa'])).optional(),
+  "deadlineFrom": zod.date().optional(),
+  "deadlineTo": zod.date().optional(),
+  "page": zod.coerce.number().int().min(1).default(searchOpportunitiesQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(searchOpportunitiesQueryPageSizeMax).default(searchOpportunitiesQueryPageSizeDefault),
+  "facets": zod.coerce.boolean().default(searchOpportunitiesQueryFacetsDefault)
+})
+
+export const searchOpportunitiesResponseFacetsOneStatusItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneStateItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneInstallationItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneProgramItemCountMin = 0;
+
+export const searchOpportunitiesResponseMetaTookMsMin = 0;
+
+
+
+export const SearchOpportunitiesResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().nullable(),
+  "organizationName": zod.string(),
+  "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
+  "program": zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "state": zod.string().nullable(),
+  "installation": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "uf": zod.string()
+}),
+  "sourceUrl": zod.string().url().nullable(),
+  "updatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+}),
+  "facets": zod.union([zod.object({
+  "status": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneStatusItemCountMin)
+})),
+  "state": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneStateItemCountMin)
+})),
+  "installation": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneInstallationItemCountMin)
+})),
+  "program": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneProgramItemCountMin)
+}))
+}),zod.null()]),
+  "meta": zod.object({
+  "query": zod.string().nullable(),
+  "tookMs": zod.number().min(searchOpportunitiesResponseMetaTookMsMin),
+  "indexUpdatedAt": zod.coerce.date().nullable(),
+  "installationIssues": zod.array(zod.object({
+  "installationId": zod.string(),
+  "name": zod.string(),
+  "message": zod.string()
+})),
+  "gaps": zod.array(zod.object({
+  "uf": zod.string(),
+  "name": zod.string()
+}))
+})
+})
+
+
+/**
+ * @summary Get a cultural funding opportunity
+ */
+
+
+
+export const GetOpportunityByIdParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const GetOpportunityByIdResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().nullable(),
+  "organizationName": zod.string(),
+  "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
+  "program": zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "state": zod.string().nullable(),
+  "installation": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "uf": zod.string()
+}),
+  "sourceUrl": zod.string().url().nullable(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const listSavedTendersQueryPageDefault = 1;
 
 export const listSavedTendersQueryPageSizeDefault = 20;
@@ -713,7 +971,7 @@ export const listNotificationsResponseUnreadCountMin = 0;
 export const ListNotificationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches']),
+  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'trial_ending']),
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable(),
   "tender": zod.union([zod.object({

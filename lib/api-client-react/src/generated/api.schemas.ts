@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 export interface HealthStatus {
   status: string;
@@ -30,6 +30,162 @@ export interface DevLoginRequest {
      * @maxLength 120
      */
   name?: string;
+}
+
+export type BillingStatus = typeof BillingStatus[keyof typeof BillingStatus];
+
+
+export const BillingStatus = {
+  none: 'none',
+  pending: 'pending',
+  active: 'active',
+  past_due: 'past_due',
+  canceled: 'canceled',
+} as const;
+
+/**
+ * @nullable
+ */
+export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typeof BillingEntitlementSource] | null;
+
+
+export const BillingEntitlementSource = {
+  subscription: 'subscription',
+  trial: 'trial',
+  dev: 'dev',
+} as const;
+
+export interface BillingResponse {
+  status: BillingStatus;
+  entitled: boolean;
+  source: BillingEntitlementSource | null;
+  /** @nullable */
+  trialEndsAt: string | null;
+  /** @nullable */
+  currentPeriodEnd: string | null;
+  canCancel: boolean;
+  /** @nullable */
+  monthlyBrl: number | null;
+}
+
+export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
+
+
+export const BillingPlanResponseTrialDays = {
+  NUMBER_7: 7,
+} as const;
+
+export type BillingPlanResponseCurrency = typeof BillingPlanResponseCurrency[keyof typeof BillingPlanResponseCurrency];
+
+
+export const BillingPlanResponseCurrency = {
+  BRL: 'BRL',
+} as const;
+
+export interface BillingPlanResponse {
+  /** @nullable */
+  monthlyBrl: number | null;
+  trialDays: BillingPlanResponseTrialDays;
+  currency: BillingPlanResponseCurrency;
+}
+
+export interface BillingCheckoutResponse {
+  url: string;
+}
+
+export type DeleteAccountRequestConfirm = typeof DeleteAccountRequestConfirm[keyof typeof DeleteAccountRequestConfirm];
+
+
+export const DeleteAccountRequestConfirm = {
+  EXCLUIR: 'EXCLUIR',
+} as const;
+
+export interface DeleteAccountRequest {
+  confirm: DeleteAccountRequestConfirm;
+}
+
+export interface AccountExportUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  trialEndsAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountExportSession {
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+}
+
+export interface AccountExportSavedTender {
+  tenderId: string;
+  savedAt: string;
+  monitored: boolean;
+  /** @nullable */
+  monitoredAt: string | null;
+}
+
+export interface AccountExportSavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  alertsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  deletedAt: string | null;
+  /** @nullable */
+  lastCheckedAt: string | null;
+  /** @minimum 0 */
+  newMatchesCount: number;
+}
+
+export type AccountExportNotificationChange = { [key: string]: unknown } | null;
+
+export interface AccountExportNotification {
+  id: string;
+  type: string;
+  createdAt: string;
+  /** @nullable */
+  readAt: string | null;
+  /** @nullable */
+  tenderId: string | null;
+  /** @nullable */
+  tenderTitle: string | null;
+  /** @nullable */
+  tenderNumberShort: string | null;
+  change: AccountExportNotificationChange;
+  /** @nullable */
+  savedSearchId: string | null;
+  /** @nullable */
+  savedSearchName: string | null;
+  /** @nullable */
+  savedSearchQuery: string | null;
+  /** @nullable */
+  matchCount: number | null;
+  tenderIds: string[];
+}
+
+export interface AccountExportSubscription {
+  status: string;
+  /** @nullable */
+  currentPeriodEnd: string | null;
+  updatedAt: string;
+}
+
+export interface AccountExport {
+  exportedAt: string;
+  user: AccountExportUser;
+  sessions: AccountExportSession[];
+  savedTenders: AccountExportSavedTender[];
+  savedSearches: AccountExportSavedSearch[];
+  notifications: AccountExportNotification[];
+  subscription: AccountExportSubscription | null;
 }
 
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
@@ -320,6 +476,7 @@ export const NotificationType = {
   tender_document_added: 'tender_document_added',
   tender_value_changed: 'tender_value_changed',
   saved_search_new_matches: 'saved_search_new_matches',
+  trial_ending: 'trial_ending',
 } as const;
 
 export type NotificationTender = {
@@ -379,11 +536,93 @@ export interface MarkNotificationsReadRequest {
   all?: boolean;
 }
 
+export type OpportunityStatus = typeof OpportunityStatus[keyof typeof OpportunityStatus];
+
+
+export const OpportunityStatus = {
+  open: 'open',
+  upcoming: 'upcoming',
+  closed: 'closed',
+  undated: 'undated',
+} as const;
+
+export type OpportunityProgram = typeof OpportunityProgram[keyof typeof OpportunityProgram];
+
+
+export const OpportunityProgram = {
+  audiovisual: 'audiovisual',
+  lpg: 'lpg',
+  fac: 'fac',
+  fsa: 'fsa',
+} as const;
+
+export interface OpportunityInstallation {
+  id: string;
+  name: string;
+  uf: string;
+}
+
+export interface OpportunitySummary {
+  id: string;
+  title: string;
+  /** @nullable */
+  summary: string | null;
+  organizationName: string;
+  status: OpportunityStatus;
+  program: OpportunityProgram;
+  /** @nullable */
+  registrationFrom: string | null;
+  /** @nullable */
+  registrationTo: string | null;
+  /** @nullable */
+  state: string | null;
+  installation: OpportunityInstallation;
+  /** @nullable */
+  sourceUrl: string | null;
+  updatedAt: string;
+}
+
 export interface FacetBucket {
   value: string;
   label: string;
   /** @minimum 0 */
   count: number;
+}
+
+export interface OpportunityFacets {
+  status: FacetBucket[];
+  state: FacetBucket[];
+  installation: FacetBucket[];
+  program: FacetBucket[];
+}
+
+export interface OpportunityInstallationIssue {
+  installationId: string;
+  name: string;
+  message: string;
+}
+
+export interface OpportunityGap {
+  uf: string;
+  name: string;
+}
+
+export interface OpportunitySearchMeta {
+  /** @nullable */
+  query: string | null;
+  /** @minimum 0 */
+  tookMs: number;
+  /** @nullable */
+  indexUpdatedAt: string | null;
+  installationIssues: OpportunityInstallationIssue[];
+  gaps: OpportunityGap[];
+}
+
+export interface OpportunitySearchResponse {
+  data: OpportunitySummary[];
+  pagination: Pagination;
+  facets: OpportunityFacets | null;
+  meta: OpportunitySearchMeta;
 }
 
 export interface ValueHistogramBucket {
@@ -509,6 +748,8 @@ export const ApiErrorCode = {
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   FORBIDDEN: 'FORBIDDEN',
   CONFLICT: 'CONFLICT',
+  SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
+  BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
 } as const;
 
 export interface ApiError {
@@ -562,6 +803,16 @@ export type ForbiddenResponse = ErrorResponse;
  * Resource limit or state conflict
  */
 export type ConflictResponse = ErrorResponse;
+
+/**
+ * Billing provider is unavailable or rejected the operation
+ */
+export type BillingUnavailableResponse = ErrorResponse;
+
+/**
+ * An active subscription or development entitlement is required
+ */
+export type SubscriptionRequiredResponse = ErrorResponse;
 
 export type QueryParameter = string;
 
@@ -665,6 +916,33 @@ limit?: number;
 
 export type StartGoogleAuthParams = {
 returnTo?: string;
+};
+
+export type ApplyAsaasBillingWebhook200 = {
+  received: boolean;
+};
+
+export type SearchOpportunitiesParams = {
+q?: string;
+/**
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+state?: string[];
+installation?: string[];
+status?: OpportunityStatus[];
+program?: OpportunityProgram[];
+deadlineFrom?: string;
+deadlineTo?: string;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: PageSizeParameter;
+facets?: FacetsParameter;
 };
 
 export type ListSavedTendersParams = {

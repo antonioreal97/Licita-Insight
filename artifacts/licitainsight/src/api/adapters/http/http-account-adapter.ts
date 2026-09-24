@@ -4,6 +4,7 @@ import type {
   BillingResponse,
   ImportSavedTendersResponse,
   NotificationsResponse,
+  PublicPlan,
   SavedSearch,
   SavedSearchesResponse,
   SavedTender,
@@ -12,7 +13,7 @@ import type {
   SessionResponse,
   UnreadCountResponse,
 } from '../../types';
-import { apiBaseUrl, getJson, sendJson, toQueryString } from './http-client';
+import { apiBaseUrl, getFile, getJson, sendJson, toQueryString } from './http-client';
 
 const enc = encodeURIComponent;
 
@@ -22,9 +23,13 @@ export const httpAccountAdapter: AccountAdapter = {
   googleStartUrl: (returnTo) => `${apiBaseUrl}/v1/auth/google/start${toQueryString({ returnTo })}`,
   logout: () => sendJson<void>('POST', '/v1/auth/logout'),
 
+  exportAccountData: () => getFile('/v1/me/export'),
+  deleteAccount: () => sendJson<void>('DELETE', '/v1/me', { confirm: 'EXCLUIR' }),
+
   getBilling: (signal) => getJson<BillingResponse>('/v1/me/billing', {}, signal),
   startCheckout: () => sendJson<BillingCheckoutResponse>('POST', '/v1/me/billing/checkout'),
   cancelBilling: () => sendJson<BillingResponse>('POST', '/v1/me/billing/cancel'),
+  getPublicPlan: (signal) => getJson<PublicPlan>('/v1/billing/plan', {}, signal),
 
   listSavedTenders: (params, signal) => getJson<SavedTendersResponse>('/v1/me/saved-tenders', params, signal),
   getSavedTenderIds: (signal) => getJson<SavedTenderIdsResponse>('/v1/me/saved-tenders/ids', {}, signal),

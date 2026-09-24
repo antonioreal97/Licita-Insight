@@ -1,4 +1,6 @@
 import app from "./app";
+import { startTrialNotificationScheduler } from "./account/trial-notification-scheduler";
+import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
@@ -13,6 +15,13 @@ if (!rawPort) {
 }
 
 const port = Number(rawPort);
+
+if (devEntitlementEnabled()) {
+  logger.warn(
+    { entitlementSource: "dev" },
+    "BILLING_DEV_ENTITLED is active; authenticated users bypass the subscription gate",
+  );
+}
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
@@ -33,6 +42,7 @@ const start = async (): Promise<void> => {
     }
 
     logger.info({ port }, "Server listening");
+    startTrialNotificationScheduler();
     startDailyPncpCollect();
     startDailyCultureCollect();
   });

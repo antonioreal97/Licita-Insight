@@ -6,13 +6,39 @@ import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { SearchPagination } from '@/features/search/components/search-pagination';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
-import { useOpportunitySearch } from './hooks/use-opportunities';
+import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
 import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
+import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityStatusBadge, opportunityProgramLabels, opportunityStatusLabels } from './components/opportunity-status';
 
 const UFS = [
-  'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT',
-  'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+  'AC',
+  'AL',
+  'AM',
+  'AP',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MG',
+  'MS',
+  'MT',
+  'PA',
+  'PB',
+  'PE',
+  'PI',
+  'PR',
+  'RJ',
+  'RN',
+  'RO',
+  'RR',
+  'RS',
+  'SC',
+  'SE',
+  'SP',
+  'TO',
 ];
 
 const STATUSES = Object.keys(opportunityStatusLabels) as OpportunityStatus[];
@@ -50,11 +76,28 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
 }
 
 export default function OpportunitiesPage() {
+  return (
+    <>
+      <PageTitle
+        eyebrow="audiovisual"
+        title="Chamadas culturais"
+        description="Fomento do Mapa da Cultura e das secretarias que publicam no Mapas Culturais. Licitações do PNCP continuam em Explorar editais."
+      />
+      <OpportunityAccessGate>
+        <OpportunitySearch />
+      </OpportunityAccessGate>
+    </>
+  );
+}
+
+function OpportunitySearch() {
   const { params, update } = useOpportunityUrlState();
   const search = useOpportunitySearch(params);
   const response = search.data;
   const pagination = response?.pagination;
   const unavailable = search.isError && isApiError(search.error) && search.error.code === 'SEARCH_UNAVAILABLE';
+  const denied = deniedAccess(search.error);
+  if (denied) return <AccessPanel reason={denied} />;
 
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,12 +111,6 @@ export default function OpportunitiesPage() {
 
   return (
     <>
-      <PageTitle
-        eyebrow="audiovisual"
-        title="Chamadas culturais"
-        description="Fomento do Mapa da Cultura e das secretarias que publicam no Mapas Culturais. Licitações do PNCP continuam em Explorar editais."
-      />
-
       <form onSubmit={onSearch} className="mb-4 flex flex-col gap-3 sm:flex-row">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Buscar chamadas</span>
@@ -121,10 +158,7 @@ export default function OpportunitiesPage() {
       </form>
 
       {response && response.meta.installationIssues.length > 0 && (
-        <div
-          data-testid="banner-installation-issues"
-          className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground"
-        >
+        <div data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
           <p className="font-semibold">Algumas fontes não responderam por completo.</p>
           <ul className="mt-2 space-y-1">
             {response.meta.installationIssues.map((issue) => (
@@ -149,9 +183,7 @@ export default function OpportunitiesPage() {
         unavailable ? (
           <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
             <h2 className="type-section">Chamadas temporariamente indisponíveis</h2>
-            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">
-              O banco de chamadas culturais não respondeu. Tente de novo em instantes.
-            </p>
+            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de chamadas culturais não respondeu. Tente de novo em instantes.</p>
           </div>
         ) : (
           <ErrorState error={search.error} onRetry={() => search.refetch()} />
@@ -177,9 +209,7 @@ export default function OpportunitiesPage() {
               <OpportunityRow key={opportunity.id} opportunity={opportunity} />
             ))}
           </ul>
-          {pagination && (
-            <SearchPagination pagination={pagination} page={params.page ?? 1} onPageChange={(page) => update({ page })} />
-          )}
+          {pagination && <SearchPagination pagination={pagination} page={params.page ?? 1} onPageChange={(page) => update({ page })} />}
         </section>
       )}
     </>

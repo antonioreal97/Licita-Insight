@@ -41,12 +41,13 @@ export function useRequireEntitled() {
       toast({
         variant: 'destructive',
         title: 'Não foi possível verificar sua assinatura',
-        description: isApiError(billing.error) && billing.error.requestId ? `Tente de novo. ref. ${billing.error.requestId}` : 'Recarregue a página e tente de novo.',
+        description:
+          isApiError(billing.error) && billing.error.requestId ? `Tente de novo. ref. ${billing.error.requestId}` : 'Recarregue a página e tente de novo.',
       });
       return false;
     }
     if (!billing.data.entitled) {
-      navigate('/settings?billing=required');
+      navigate('/settings?billing=required#assinatura');
       return false;
     }
     return true;

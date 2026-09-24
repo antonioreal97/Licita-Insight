@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { db, sessionsTable, usersTable } from "@workspace/db";
+import {
+  db,
+  googleTrialTombstonesTable,
+  sessionsTable,
+  usersTable,
+} from "@workspace/db";
 import type { User } from "@workspace/api-zod";
+import { googleTrialSubjectHash, trialEndsAtFrom } from "../billing/trial-access";
+import { sessionSecret } from "./config";
 import { randomToken, sha256, type GoogleIdentity } from "./tokens";
 
 export const SESSION_IDLE_MS = 10 * 60 * 1000;
@@ -14,6 +21,7 @@ export const renewedExpiry = (lastSeenAt: Date, now: Date): Date | null => {
 };
 
 type UserRow = typeof usersTable.$inferSelect;
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type AuthSession = { token: string; expiresAt: Date };
 export type AuthContext = { user: User; sessionId: string };
@@ -29,14 +37,17 @@ export const toUser = (row: UserRow): User => ({
 export const upsertGoogleUser = async (
   identity: GoogleIdentity,
   now = new Date(),
+  trialSecret = sessionSecret(),
 ): Promise<User> =>
   db.transaction(async (tx) => {
+    const subjectHash = googleTrialSubjectHash(identity.sub, trialSecret);
     const [bySub] = await tx
       .select()
       .from(usersTable)
       .where(eq(usersTable.googleSub, identity.sub))
       .limit(1);
     if (bySub) {
+      await ensureGoogleTrialTombstone(tx, subjectHash, bySub.trialEndsAt);
       const [updated] = await tx
         .update(usersTable)
         .set({
@@ -56,12 +67,18 @@ export const upsertGoogleUser = async (
       .where(eq(usersTable.email, identity.email))
       .limit(1);
     if (byEmail) {
+      const trialEndsAt = await ensureGoogleTrialTombstone(
+        tx,
+        subjectHash,
+        byEmail.trialEndsAt,
+      );
       const [updated] = await tx
         .update(usersTable)
         .set({
           googleSub: identity.sub,
           name: identity.name,
           avatarUrl: identity.picture,
+          trialEndsAt,
           updatedAt: now,
         })
         .where(and(eq(usersTable.id, byEmail.id), isNull(usersTable.googleSub)))
@@ -70,6 +87,11 @@ export const upsertGoogleUser = async (
       return toUser(updated);
     }
 
+    const trialEndsAt = await ensureGoogleTrialTombstone(
+      tx,
+      subjectHash,
+      trialEndsAtFrom(now),
+    );
     const [created] = await tx
       .insert(usersTable)
       .values({
@@ -78,6 +100,7 @@ export const upsertGoogleUser = async (
         email: identity.email,
         name: identity.name,
         avatarUrl: identity.picture,
+        trialEndsAt,
         createdAt: now,
         updatedAt: now,
       })
@@ -85,6 +108,27 @@ export const upsertGoogleUser = async (
     if (!created) throw new Error("Failed to create Google user");
     return toUser(created);
   });
+
+const ensureGoogleTrialTombstone = async (
+  tx: Transaction,
+  subjectHash: string,
+  proposedTrialEndsAt: Date,
+): Promise<Date> => {
+  const [inserted] = await tx
+    .insert(googleTrialTombstonesTable)
+    .values({ subjectHash, trialEndsAt: proposedTrialEndsAt })
+    .onConflictDoNothing()
+    .returning({ trialEndsAt: googleTrialTombstonesTable.trialEndsAt });
+  if (inserted) return inserted.trialEndsAt;
+
+  const [existing] = await tx
+    .select({ trialEndsAt: googleTrialTombstonesTable.trialEndsAt })
+    .from(googleTrialTombstonesTable)
+    .where(eq(googleTrialTombstonesTable.subjectHash, subjectHash))
+    .limit(1);
+  if (!existing) throw new Error("Failed to persist Google trial identity");
+  return existing.trialEndsAt;
+};
 
 export const upsertDevUser = async (
   input: { email: string; name: string | null },

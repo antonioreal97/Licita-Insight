@@ -15,12 +15,21 @@ import {
   unreadNotificationCount,
   updateSavedSearch,
 } from "../account/account-service";
-import { asyncHandler, authContext, requireAuth, requireCsrf } from "../auth/http";
+import {
+  deleteAccount,
+  exportAccountData,
+} from "../account/account-privacy-service";
+import {
+  asyncHandler,
+  authContext,
+  clearSessionCookie,
+  requireAuth,
+  requireCsrf,
+} from "../auth/http";
 import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 
 const router: IRouter = Router();
-router.use("/v1/me", requireAuth, requireSubscription);
 
 const recordBody = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -84,6 +93,39 @@ const pathParam = (value: string | string[], field: string): string => {
   }
   return parsed;
 };
+
+router.get(
+  "/v1/me/export",
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+    res.set({
+      "Cache-Control": "no-store",
+      "Content-Disposition": `attachment; filename="licitai-dados-${date}.json"`,
+    });
+    res.json(await exportAccountData(authContext(res).user.id, now));
+  }),
+);
+
+router.delete(
+  "/v1/me",
+  requireAuth,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const body = recordBody(req.body);
+    if (body.confirm !== "EXCLUIR") {
+      throw new InvalidParameterError('confirm must be exactly "EXCLUIR"', [
+        { field: "confirm", issue: "invalid_value" },
+      ]);
+    }
+    await deleteAccount(authContext(res).user.id);
+    clearSessionCookie(res);
+    res.status(204).end();
+  }),
+);
+
+router.use("/v1/me", requireAuth, requireSubscription);
 
 router.get(
   "/v1/me/saved-tenders",

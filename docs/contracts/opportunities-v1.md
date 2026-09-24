@@ -12,6 +12,12 @@ Iguais às de `docs/contracts/search-v1.md`: JSON `camelCase`, enums em inglês,
 
 A coleta já restringe a lista a audiovisual. `program` só distingue o fundo quando o título ou o resumo cita FSA, Lei Paulo Gustavo ou FAC.
 
+## Acesso
+
+As duas rotas de leitura exigem sessão e acesso vigente (teste, assinatura ou bypass de
+desenvolvimento). Sem sessão respondem `401 UNAUTHENTICATED`; sessão sem acesso responde
+`402 SUBSCRIPTION_REQUIRED`. A coleta e as rotas internas de ingestão permanecem inalteradas.
+
 ## `GET /api/v1/opportunities`
 
 | Nome | Tipo | Default | Notas |
@@ -63,11 +69,11 @@ type OpportunitySummary = {
 };
 ```
 
-`installationIssues` traz falha de coleta ou ausência do termo Audiovisual na última execução. `gaps` são UFs sem instalação do Mapas Culturais. 503 `SEARCH_UNAVAILABLE` quando o Postgres não responde.
+`installationIssues` traz falha de coleta ou ausência do termo Audiovisual na última execução. `gaps` são UFs sem instalação do Mapas Culturais. 401 sem sessão, 402 sem acesso e 503 `SEARCH_UNAVAILABLE` quando o Postgres não responde.
 
 ## `GET /api/v1/opportunities/{id}`
 
-200: `OpportunitySummary`. 404 `NOT_FOUND` quando o id não existe.
+200: `OpportunitySummary`. 401 sem sessão, 402 sem acesso e 404 `NOT_FOUND` quando o id não existe.
 
 ## `POST /api/v1/ingest/opportunities`
 

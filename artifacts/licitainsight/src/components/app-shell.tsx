@@ -36,7 +36,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { signInWithGoogle, useSession, useSignOut } from '@/features/auth/hooks/use-session';
+import { AccessBadge, TrialEndingBanner } from '@/features/billing/components/trial-notice';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
+import { useOpportunityAccess } from '@/features/opportunities/hooks/use-opportunities';
 import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
 import { queryKeys } from '@/services/query-keys';
 import { NotificationItem } from '@/features/monitoring/components/notification-item';
@@ -82,6 +85,9 @@ function readCollapsed() {
 
 // Sidebar body, shared by the fixed desktop sidebar (lg+) and the drawer below lg.
 function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolean; location: string; onNavigate?: () => void }) {
+  // Cultural calls need access (trial or subscription): say so on the nav item before the user clicks.
+  const access = useOpportunityAccess();
+  const opportunitiesLocked = access.state === 'anonymous' || access.state === 'no-access';
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
@@ -105,6 +111,8 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
             )}
             <nav aria-label={group.label} className="space-y-1">
               {group.items.map(({ href, label, icon: Icon, testId }) => {
+                const locked = href === '/oportunidades' && opportunitiesLocked;
+                const name = locked && collapsed ? `${label} (incluso no acesso)` : label;
                 const active =
                   location === href ||
                   (href === '/search' && location.startsWith('/tenders/')) ||
@@ -119,7 +127,11 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
                     className={`flex items-center gap-3 rounded-lg py-2.5 type-ui font-medium transition-colors duration-fast ease-standard focus-visible:outline-sidebar-ring ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
                   >
                     <Icon size={17} strokeWidth={active ? 2 : 1.75} className="shrink-0" />
-                    <span className={collapsed ? 'sr-only' : ''}>{label}</span>
+                    {/* The hint sits under the label: side by side it doesn't fit the sidebar width. */}
+                    <span className={collapsed ? 'sr-only' : 'flex min-w-0 flex-col'}>
+                      {name}
+                      {locked && !collapsed && <IncludedInAccessHint className="text-sidebar-muted-foreground" />}
+                    </span>
                   </Link>
                 );
                 if (!collapsed) return link;
@@ -130,7 +142,7 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
                       {link}
                     </TooltipTrigger>
                     <TooltipContent side="right" sideOffset={10}>
-                      {label}
+                      {name}
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -264,9 +276,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
               <NotificationBell />
               <div className="ml-1 hidden h-7 w-px bg-border sm:block" />
+              <AccessBadge />
               <AccountMenu />
             </div>
           </header>
+          <TrialEndingBanner />
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
             {children}
           </main>
@@ -314,12 +328,7 @@ function AccountMenu() {
 
   if (error && !user) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        data-testid="button-header-session-retry"
-        onClick={() => queryClient.refetchQueries({ queryKey: queryKeys.session })}
-      >
+      <Button variant="outline" size="sm" data-testid="button-header-session-retry" onClick={() => queryClient.refetchQueries({ queryKey: queryKeys.session })}>
         Tentar de novo
       </Button>
     );
@@ -432,7 +441,7 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
         <p className="type-ui font-semibold text-foreground">Assine para acompanhar editais</p>
         <p className="mt-1 type-meta text-muted-foreground">Alertas de prazo, status, valor e documentos entram com a assinatura.</p>
         <Link
-          href="/settings?billing=required"
+          href="/settings?billing=required#assinatura"
           data-testid="link-notifications-subscribe"
           onClick={onClose}
           className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"

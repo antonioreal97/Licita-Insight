@@ -3,12 +3,29 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 
+export * from './accountExport';
+export * from './accountExportNotification';
+export * from './accountExportNotificationChange';
+export * from './accountExportSavedSearch';
+export * from './accountExportSavedTender';
+export * from './accountExportSession';
+export * from './accountExportSubscription';
+export * from './accountExportUser';
 export * from './apiError';
 export * from './apiErrorCode';
+export * from './applyAsaasBillingWebhook200';
 export * from './authSessionResponse';
+export * from './billingCheckoutResponse';
+export * from './billingEntitlementSource';
+export * from './billingPlanResponse';
+export * from './billingPlanResponseCurrency';
+export * from './billingPlanResponseTrialDays';
+export * from './billingResponse';
+export * from './billingStatus';
+export * from './billingUnavailableResponse';
 export * from './category';
 export * from './categoryFilterParameter';
 export * from './cityFilterParameter';
@@ -16,6 +33,8 @@ export * from './conflictResponse';
 export * from './createSavedSearchRequest';
 export * from './deadlineFromParameter';
 export * from './deadlineToParameter';
+export * from './deleteAccountRequest';
+export * from './deleteAccountRequestConfirm';
 export * from './devLoginRequest';
 export * from './errorDetail';
 export * from './errorResponse';
@@ -44,6 +63,15 @@ export * from './notificationPage';
 export * from './notificationSavedSearch';
 export * from './notificationTender';
 export * from './notificationType';
+export * from './opportunityFacets';
+export * from './opportunityGap';
+export * from './opportunityInstallation';
+export * from './opportunityInstallationIssue';
+export * from './opportunityProgram';
+export * from './opportunitySearchMeta';
+export * from './opportunitySearchResponse';
+export * from './opportunityStatus';
+export * from './opportunitySummary';
 export * from './organization';
 export * from './organizationFilterParameter';
 export * from './pageParameter';
@@ -65,6 +93,7 @@ export * from './searchFacets';
 export * from './searchFacetsValueRange';
 export * from './searchMode';
 export * from './searchModeParameter';
+export * from './searchOpportunitiesParams';
 export * from './searchResponse';
 export * from './searchResponseMeta';
 export * from './searchResponseMetaSearchModeFallbackReason';
@@ -78,6 +107,7 @@ export * from './sourceFilterParameter';
 export * from './startGoogleAuthParams';
 export * from './stateFilterParameter';
 export * from './statusFilterParameter';
+export * from './subscriptionRequiredResponse';
 export * from './suggestion';
 export * from './suggestionsResponse';
 export * from './suggestionType';

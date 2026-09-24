@@ -4,15 +4,29 @@ import { ExternalLink } from 'lucide-react';
 import { isApiError } from '@/api';
 import { ErrorState } from '@/components/common/query-states';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { AccessPanel, OpportunityAccessGate, linkButtonClass } from './components/access-gate';
 import { OpportunityStatusBadge, opportunityProgramLabels } from './components/opportunity-status';
-import { useOpportunity } from './hooks/use-opportunities';
+import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 
-const sourceLinkClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow-xs ' +
-  'transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+function DetailSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Carregando chamada" className="space-y-4">
+      <div className="h-3 w-40 animate-pulse rounded-sm bg-muted" />
+      <div className="h-9 w-3/4 animate-pulse rounded-sm bg-muted" />
+      <div className="h-24 animate-pulse rounded-xl bg-muted" />
+    </div>
+  );
+}
 
 export default function OpportunityDetailPage() {
+  return (
+    <OpportunityAccessGate loading={<DetailSkeleton />}>
+      <OpportunityDetail />
+    </OpportunityAccessGate>
+  );
+}
+
+function OpportunityDetail() {
   const params = useParams<{ id: string }>();
   const id = params.id ?? '';
   const query = useOpportunity(id);
@@ -25,17 +39,11 @@ export default function OpportunityDetailPage() {
     }
   }, [opportunity, query.isError, query.error]);
 
-  if (query.isPending) {
-    return (
-      <div aria-busy="true" aria-label="Carregando chamada" className="space-y-4">
-        <div className="h-3 w-40 animate-pulse rounded-sm bg-muted" />
-        <div className="h-9 w-3/4 animate-pulse rounded-sm bg-muted" />
-        <div className="h-24 animate-pulse rounded-xl bg-muted" />
-      </div>
-    );
-  }
+  if (query.isPending) return <DetailSkeleton />;
 
   if (query.isError) {
+    const denied = deniedAccess(query.error);
+    if (denied) return <AccessPanel reason={denied} />;
     if (isApiError(query.error) && query.error.code === 'NOT_FOUND') {
       return (
         <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
@@ -65,13 +73,7 @@ export default function OpportunityDetailPage() {
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <h1 className="max-w-3xl type-display-sm text-foreground">{opportunity.title}</h1>
         {opportunity.sourceUrl && (
-          <a
-            href={opportunity.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            data-testid="link-opportunity-source"
-            className={sourceLinkClass}
-          >
+          <a href={opportunity.sourceUrl} target="_blank" rel="noreferrer" data-testid="link-opportunity-source" className={linkButtonClass}>
             Ver na fonte
             <ExternalLink size={16} aria-hidden />
           </a>
