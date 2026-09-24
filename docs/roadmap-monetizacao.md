@@ -86,11 +86,13 @@ Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 
 **Objetivo:** a frase que vende a assinatura é "você não precisa entrar no sistema todo dia". Hoje a notificação só existe dentro do app.
 
+**Decisões do owner (24 set 2026):** Resend; padrão = **digest diário às 07:00 + envio imediato para eventos críticos** (mudança de prazo, suspensão/revogação de edital monitorado), com opt-out em um clique.
+
 **Limitação atual a resolver:** `evaluateSavedSearchNotifications()` é chamada **uma vez, no fim da coleta do PNCP** (`collect-pncp.ts:520`), que roda às 06:00. Alerta "em tempo real" não é possível sem desacoplar isso.
 
 | # | Tarefa | Onde | Detalhe |
 | :-- | :--- | :--- | :--- |
-| 2.1 | Provedor de e-mail transacional | `artifacts/api-server/src/notify/mailer.ts` (novo) | Resend ou SES; env `MAIL_API_KEY`, `MAIL_FROM`; sem chave → log e segue |
+| 2.1 | Provedor de e-mail transacional: **Resend** (decisão do owner) | `artifacts/api-server/src/notify/mailer.ts` (novo) | env `RESEND_API_KEY`, `MAIL_FROM`; sem chave → log e entrega marcada como `skipped` |
 | 2.2 | Tabela `notification_deliveries` (canal, status, tentativa, erro) | `lib/db/src/schema/accounts.ts` | idempotência pelo `dedupeKey` que já existe em `notifications` |
 | 2.3 | Digest diário por e-mail: agrupa notificações não lidas por usuário | `notify/digest.ts` (novo) + agendador ao lado de `daily-collect.ts` | um e-mail por usuário por dia, não um por edital |
 | 2.4 | Alerta imediato para mudança de prazo e suspensão de edital monitorado | gancho em `upsert-tenders.ts` | classe de evento crítico ≠ digest |
@@ -103,24 +105,30 @@ Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 
 ---
 
-## Onda 3 — IA no edital
+## Onda 3 — IA no edital (com Jev, da TypeSafe)
 
-**Objetivo:** o diferencial que os concorrentes já vendem ("Aimê", "Dr. Licita"). Economiza horas de leitura — é o que o cliente aceita pagar caro.
+**Decisão do owner (24 set 2026):** usar o **Jev** (TypeSafe) via API key, guardada só no servidor.
 
-**Base que já existe:** `enrich-tender.ts` busca itens e **anexos** do PNCP na primeira abertura do detalhe e grava em `documents`. Ou seja, a fonte do PDF já está mapeada; falta extrair, indexar e perguntar.
+**O que muda no desenho:** o Jev é um modelo *System One*: devolve **julgamentos tipados e probabilidades**
+(Choice, Noul, Score), **não gera texto**. Por isso a Onda 3 passa de "responder em prosa" para
+**"selecionar a evidência"** — o que reforça a regra de sempre citar a fonte: a resposta mostrada ao usuário é
+o trecho oficial do edital, com página, escolhido pelo Jev; nunca um texto inventado.
+
+**Base que já existe:** `enrich-tender.ts` busca itens e **anexos** do PNCP na primeira abertura do detalhe e grava em `documents`.
 
 | # | Tarefa | Onde | Detalhe |
 | :-- | :--- | :--- | :--- |
-| 3.1 | Download e extração de texto dos anexos | `artifacts/api-server/src/ai/extract.ts` (novo) | PDF nativo + OCR de fallback; guardar texto, não só o link |
-| 3.2 | Tabelas `tender_documents_text` e `tender_chunks` com `pgvector` | `lib/db` + extensão no Postgres | chunk com página e trecho para citar a fonte |
-| 3.3 | Pipeline de embedding sob demanda (não em toda a base) | `ai/index-tender.ts` | indexar só edital salvo/monitorado/aberto — custo controlado |
-| 3.4 | Endpoint `POST /api/v1/tenders/:id/ask` com RAG + citação de página | `routes/tenders-ai.ts` (novo) | resposta **sempre** com trecho e página; nunca sem fonte |
-| 3.5 | Resumo automático estruturado (objeto, habilitação, prazos, garantia, penalidades) | `ai/summarize.ts` | cacheado por edital; é o botão mais clicado |
-| 3.6 | UI: painel "Perguntar ao edital" no detalhe | `features/tenders` | histórico por edital, resposta com link para o trecho |
-| 3.7 | Cota de perguntas por usuário (teste com cota menor) + medidor de custo | `ai/usage.ts` | custo por token é variável: sem cota, a margem some |
-| 3.8 | Aviso de limitação ("confira o edital original") | UI | risco jurídico: a resposta orienta, não substitui o edital |
+| 3.1 | Download e extração de texto dos anexos, com página | `artifacts/api-server/src/ai/extract.ts` (novo) | PDF nativo + OCR de fallback |
+| 3.2 | Trechos (`tender_chunks`) com página e busca textual no Postgres | `lib/db` | candidatos por palavra-chave/`tsvector`; embeddings só se o reranking não bastar |
+| 3.3 | Cliente Jev no servidor | `ai/jev-client.ts` | `TYPESAFE_API_KEY`; ler a doc viva (docs.typesafe.ai) antes de integrar |
+| 3.4 | "Perguntar ao edital": recuperar candidatos → Jev reordena/seleciona → devolver os trechos com página | `POST /api/v1/tenders/:id/ask` | resposta = trechos citados + confiança; abaixo do limiar, "não encontrei no edital" |
+| 3.5 | Ficha estruturada (objeto, habilitação, prazos, garantia, penalidades) por **seleção de trechos candidatos** | `ai/summarize.ts` | cada campo aponta o trecho e a página; campo sem evidência fica vazio, não inventado |
+| 3.6 | Aderência edital × perfil da empresa (Score) | `ai/fit-score.ts` | base para recomendação (Onda 5) e para o `mode=semantic` da busca (reordenar resultados) |
+| 3.7 | UI: painel "Perguntar ao edital" e ficha no detalhe, com link para a página do documento | `features/tenders` | mostrar a confiança de forma honesta |
+| 3.8 | Cota por usuário (teste com cota menor) + medidor de custo | `ai/usage.ts` | custo por chamada |
+| 3.9 | Aviso "confira o edital original" | UI | a seleção orienta, não substitui o edital |
 
-**Depende de:** Onda 1 (cota é atributo de plano). **Esforço:** 10–15 dias. **Riscos:** custo por token sem teto; PDF escaneado sem OCR; alucinação em pergunta de habilitação — mitigada por citação obrigatória.
+**Depende de:** Onda 1. **Riscos:** PDF escaneado sem OCR; validar os limiares de confiança do Jev com editais reais antes de exibir.
 
 ---
 
@@ -183,10 +191,10 @@ Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justific
 
 Tomadas em 24 set 2026: teste de 7 dias (o owner trocou de 14 para 7); plano único (`BILLING_MONTHLY_BRL`); oportunidades culturais só com acesso.
 
+Também em 24 set 2026: e-mail pelo **Resend**; alertas com **digest diário + imediato para críticos**; IA da Onda 3 com o **Jev (TypeSafe)**.
+
 Pendentes:
-1. **Provedor de e-mail:** Resend (simples, boa entregabilidade) ou SES (mais barato em volume, configuração maior)?
-2. **Modelo de IA da Onda 3:** API paga (Claude/OpenAI) ou modelo aberto hospedado? Define o custo por pergunta e a cota.
-3. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
+1. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
 
 ---
 
