@@ -15,6 +15,13 @@
       "when": 1790265600000,
       "tag": "0002_account_followups",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790305200000,
+      "tag": "0003_trial_access",
+      "breakpoints": true
     }
   ]
 }

@@ -8,11 +8,12 @@ export const subscriptionStatuses = [
 export type SubscriptionStatus = (typeof subscriptionStatuses)[number];
 
 export type SubscriptionSnapshot = {
-  status: string;
+  status: string | null;
   currentPeriodEnd: Date | null;
+  trialEndsAt?: Date | null;
 };
 
-export type EntitlementSource = "subscription" | "dev" | null;
+export type EntitlementSource = "subscription" | "trial" | "dev" | null;
 
 export function devEntitlementEnabled(
   env: NodeJS.ProcessEnv = process.env,
@@ -34,15 +35,21 @@ export function entitlementSource(
   now: Date,
   env: NodeJS.ProcessEnv = process.env,
 ): EntitlementSource {
-  if (
-    row?.status === "active" ||
-    (row?.status === "canceled" &&
-      row.currentPeriodEnd !== null &&
-      row.currentPeriodEnd > now)
-  ) {
-    return "subscription";
-  }
+  if (hasSubscriptionEntitlement(row, now)) return "subscription";
+  if (row?.trialEndsAt && row.trialEndsAt > now) return "trial";
   return devEntitlementEnabled(env) ? "dev" : null;
+}
+
+export function hasSubscriptionEntitlement(
+  row: SubscriptionSnapshot | null,
+  now: Date,
+): boolean {
+  return Boolean(
+    row?.status === "active" ||
+      (row?.status === "canceled" &&
+        row.currentPeriodEnd !== null &&
+        row.currentPeriodEnd > now),
+  );
 }
 
 /** Asaas dates are calendar days. The paid period ends at midnight in São Paulo on `nextDueDate`. */

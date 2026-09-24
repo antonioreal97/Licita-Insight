@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 
 export interface AccountExportUser {
@@ -13,6 +13,7 @@ export interface AccountExportUser {
   name: string | null;
   /** @nullable */
   avatarUrl: string | null;
+  trialEndsAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }

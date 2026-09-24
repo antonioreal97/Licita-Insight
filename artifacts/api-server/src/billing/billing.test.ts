@@ -3,9 +3,14 @@ import { describe, it } from "node:test";
 import {
   devEntitlementEnabled,
   entitlementSource,
+  hasSubscriptionEntitlement,
   isEntitled,
   periodEndFromAsaasDate,
 } from "./billing-access";
+import {
+  googleTrialSubjectHash,
+  trialEndsAtFrom,
+} from "./trial-access";
 import { webhookPatch } from "./asaas-webhook";
 
 const now = new Date("2026-10-01T12:00:00.000Z");
@@ -63,6 +68,77 @@ describe("subscription access", () => {
       ),
       "subscription",
     );
+  });
+
+  it("allows an active trial and expires it at the boundary", () => {
+    const trialEndsAt = new Date("2026-10-02T12:00:00.000Z");
+    const snapshot = { status: null, currentPeriodEnd: null, trialEndsAt };
+    assert.equal(entitlementSource(snapshot, now, {}), "trial");
+    assert.equal(isEntitled(snapshot, now, {}), true);
+    assert.equal(entitlementSource(snapshot, trialEndsAt, {}), null);
+  });
+
+  it("prioritizes subscription, then trial, then development", () => {
+    const env = { NODE_ENV: "development", BILLING_DEV_ENTITLED: "true" };
+    assert.equal(
+      entitlementSource(
+        {
+          status: "active",
+          currentPeriodEnd: null,
+          trialEndsAt: new Date("2026-10-02T12:00:00.000Z"),
+        },
+        now,
+        env,
+      ),
+      "subscription",
+    );
+    assert.equal(
+      entitlementSource(
+        {
+          status: "pending",
+          currentPeriodEnd: null,
+          trialEndsAt: new Date("2026-10-02T12:00:00.000Z"),
+        },
+        now,
+        env,
+      ),
+      "trial",
+    );
+    assert.equal(
+      entitlementSource(
+        { status: "pending", currentPeriodEnd: null, trialEndsAt: now },
+        now,
+        env,
+      ),
+      "dev",
+    );
+  });
+
+  it("distinguishes paid access so checkout remains available during trial", () => {
+    assert.equal(
+      hasSubscriptionEntitlement(
+        {
+          status: null,
+          currentPeriodEnd: null,
+          trialEndsAt: new Date("2026-10-02T12:00:00.000Z"),
+        },
+        now,
+      ),
+      false,
+    );
+  });
+});
+
+describe("trial identity", () => {
+  it("creates a 7-day trial and a secret-keyed stable Google subject hash", () => {
+    assert.equal(
+      trialEndsAtFrom(now).toISOString(),
+      "2026-10-08T12:00:00.000Z",
+    );
+    const first = googleTrialSubjectHash("google-subject", "secret-a");
+    assert.equal(first, googleTrialSubjectHash("google-subject", "secret-a"));
+    assert.notEqual(first, googleTrialSubjectHash("google-subject", "secret-b"));
+    assert.equal(first.includes("google-subject"), false);
   });
 });
 

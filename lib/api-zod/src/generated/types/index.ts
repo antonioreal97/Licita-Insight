@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 
 export * from './accountExport';
@@ -20,6 +20,9 @@ export * from './applyAsaasBillingWebhook200';
 export * from './authSessionResponse';
 export * from './billingCheckoutResponse';
 export * from './billingEntitlementSource';
+export * from './billingPlanResponse';
+export * from './billingPlanResponseCurrency';
+export * from './billingPlanResponseTrialDays';
 export * from './billingResponse';
 export * from './billingStatus';
 export * from './billingUnavailableResponse';
@@ -60,6 +63,15 @@ export * from './notificationPage';
 export * from './notificationSavedSearch';
 export * from './notificationTender';
 export * from './notificationType';
+export * from './opportunityFacets';
+export * from './opportunityGap';
+export * from './opportunityInstallation';
+export * from './opportunityInstallationIssue';
+export * from './opportunityProgram';
+export * from './opportunitySearchMeta';
+export * from './opportunitySearchResponse';
+export * from './opportunityStatus';
+export * from './opportunitySummary';
 export * from './organization';
 export * from './organizationFilterParameter';
 export * from './pageParameter';
@@ -81,6 +93,7 @@ export * from './searchFacets';
 export * from './searchFacetsValueRange';
 export * from './searchMode';
 export * from './searchModeParameter';
+export * from './searchOpportunitiesParams';
 export * from './searchResponse';
 export * from './searchResponseMeta';
 export * from './searchResponseMetaSearchModeFallbackReason';

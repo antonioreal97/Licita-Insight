@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 export interface HealthStatus {
   status: string;
@@ -51,6 +51,7 @@ export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typ
 
 export const BillingEntitlementSource = {
   subscription: 'subscription',
+  trial: 'trial',
   dev: 'dev',
 } as const;
 
@@ -59,10 +60,33 @@ export interface BillingResponse {
   entitled: boolean;
   source: BillingEntitlementSource | null;
   /** @nullable */
+  trialEndsAt: string | null;
+  /** @nullable */
   currentPeriodEnd: string | null;
   canCancel: boolean;
   /** @nullable */
   monthlyBrl: number | null;
+}
+
+export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
+
+
+export const BillingPlanResponseTrialDays = {
+  NUMBER_7: 7,
+} as const;
+
+export type BillingPlanResponseCurrency = typeof BillingPlanResponseCurrency[keyof typeof BillingPlanResponseCurrency];
+
+
+export const BillingPlanResponseCurrency = {
+  BRL: 'BRL',
+} as const;
+
+export interface BillingPlanResponse {
+  /** @nullable */
+  monthlyBrl: number | null;
+  trialDays: BillingPlanResponseTrialDays;
+  currency: BillingPlanResponseCurrency;
 }
 
 export interface BillingCheckoutResponse {
@@ -87,6 +111,7 @@ export interface AccountExportUser {
   name: string | null;
   /** @nullable */
   avatarUrl: string | null;
+  trialEndsAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -451,6 +476,7 @@ export const NotificationType = {
   tender_document_added: 'tender_document_added',
   tender_value_changed: 'tender_value_changed',
   saved_search_new_matches: 'saved_search_new_matches',
+  trial_ending: 'trial_ending',
 } as const;
 
 export type NotificationTender = {
@@ -510,11 +536,93 @@ export interface MarkNotificationsReadRequest {
   all?: boolean;
 }
 
+export type OpportunityStatus = typeof OpportunityStatus[keyof typeof OpportunityStatus];
+
+
+export const OpportunityStatus = {
+  open: 'open',
+  upcoming: 'upcoming',
+  closed: 'closed',
+  undated: 'undated',
+} as const;
+
+export type OpportunityProgram = typeof OpportunityProgram[keyof typeof OpportunityProgram];
+
+
+export const OpportunityProgram = {
+  audiovisual: 'audiovisual',
+  lpg: 'lpg',
+  fac: 'fac',
+  fsa: 'fsa',
+} as const;
+
+export interface OpportunityInstallation {
+  id: string;
+  name: string;
+  uf: string;
+}
+
+export interface OpportunitySummary {
+  id: string;
+  title: string;
+  /** @nullable */
+  summary: string | null;
+  organizationName: string;
+  status: OpportunityStatus;
+  program: OpportunityProgram;
+  /** @nullable */
+  registrationFrom: string | null;
+  /** @nullable */
+  registrationTo: string | null;
+  /** @nullable */
+  state: string | null;
+  installation: OpportunityInstallation;
+  /** @nullable */
+  sourceUrl: string | null;
+  updatedAt: string;
+}
+
 export interface FacetBucket {
   value: string;
   label: string;
   /** @minimum 0 */
   count: number;
+}
+
+export interface OpportunityFacets {
+  status: FacetBucket[];
+  state: FacetBucket[];
+  installation: FacetBucket[];
+  program: FacetBucket[];
+}
+
+export interface OpportunityInstallationIssue {
+  installationId: string;
+  name: string;
+  message: string;
+}
+
+export interface OpportunityGap {
+  uf: string;
+  name: string;
+}
+
+export interface OpportunitySearchMeta {
+  /** @nullable */
+  query: string | null;
+  /** @minimum 0 */
+  tookMs: number;
+  /** @nullable */
+  indexUpdatedAt: string | null;
+  installationIssues: OpportunityInstallationIssue[];
+  gaps: OpportunityGap[];
+}
+
+export interface OpportunitySearchResponse {
+  data: OpportunitySummary[];
+  pagination: Pagination;
+  facets: OpportunityFacets | null;
+  meta: OpportunitySearchMeta;
 }
 
 export interface ValueHistogramBucket {
@@ -812,6 +920,29 @@ returnTo?: string;
 
 export type ApplyAsaasBillingWebhook200 = {
   received: boolean;
+};
+
+export type SearchOpportunitiesParams = {
+q?: string;
+/**
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+state?: string[];
+installation?: string[];
+status?: OpportunityStatus[];
+program?: OpportunityProgram[];
+deadlineFrom?: string;
+deadlineTo?: string;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: PageSizeParameter;
+facets?: FacetsParameter;
 };
 
 export type ListSavedTendersParams = {

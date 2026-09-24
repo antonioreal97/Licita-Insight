@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 1.1.0
+  version: 1.2.0
   description: Public Licita Insight API
 servers:
   - url: /api
@@ -14,6 +14,8 @@ tags:
     description: Tender discovery operations
   - name: account
     description: Authentication and personal account operations
+  - name: opportunities
+    description: Cultural funding opportunity operations
 paths:
   /healthz:
     get:
@@ -247,6 +249,18 @@ paths:
                 $ref: "#/components/schemas/BillingResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /v1/billing/plan:
+    get:
+      operationId: getBillingPlan
+      tags: [account]
+      summary: Get the public single-plan price and trial duration
+      responses:
+        "200":
+          description: Public plan configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPlanResponse"
   /v1/me/billing/checkout:
     post:
       operationId: startBillingCheckout
@@ -306,6 +320,96 @@ paths:
                 required: [received]
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /v1/opportunities:
+    get:
+      operationId: searchOpportunities
+      tags: [opportunities]
+      summary: Search cultural funding opportunities
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, pattern: "^[A-Za-z]{2}$" }
+        - name: installation
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string }
+        - name: status
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/OpportunityStatus"
+        - name: program
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/OpportunityProgram"
+        - name: deadlineFrom
+          in: query
+          schema: { type: string, format: date }
+        - name: deadlineTo
+          in: query
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Facets"
+      responses:
+        "200":
+          description: Cultural opportunity result page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunitySearchResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
+  /v1/opportunities/{id}:
+    get:
+      operationId: getOpportunityById
+      tags: [opportunities]
+      summary: Get a cultural funding opportunity
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Cultural opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunitySummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
   /v1/me/saved-tenders:
     get:
       operationId: listSavedTenders
@@ -874,7 +978,7 @@ components:
       enum: [none, pending, active, past_due, canceled]
     BillingEntitlementSource:
       type: [string, "null"]
-      enum: [subscription, dev, null]
+      enum: [subscription, trial, dev, null]
     BillingResponse:
       type: object
       properties:
@@ -883,10 +987,18 @@ components:
         entitled: { type: boolean }
         source:
           $ref: "#/components/schemas/BillingEntitlementSource"
+        trialEndsAt: { type: [string, "null"], format: date-time }
         currentPeriodEnd: { type: [string, "null"], format: date-time }
         canCancel: { type: boolean }
         monthlyBrl: { type: [number, "null"] }
-      required: [status, entitled, source, currentPeriodEnd, canCancel, monthlyBrl]
+      required: [status, entitled, source, trialEndsAt, currentPeriodEnd, canCancel, monthlyBrl]
+    BillingPlanResponse:
+      type: object
+      properties:
+        monthlyBrl: { type: [number, "null"] }
+        trialDays: { type: integer, enum: [7] }
+        currency: { type: string, enum: [BRL] }
+      required: [monthlyBrl, trialDays, currency]
     BillingCheckoutResponse:
       type: object
       properties:
@@ -907,9 +1019,10 @@ components:
         email: { type: string, format: email }
         name: { type: [string, "null"] }
         avatarUrl: { type: [string, "null"], format: uri }
+        trialEndsAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, email, name, avatarUrl, createdAt, updatedAt]
+      required: [id, email, name, avatarUrl, trialEndsAt, createdAt, updatedAt]
     AccountExportSession:
       type: object
       properties:
@@ -1351,7 +1464,7 @@ components:
     NotificationType:
       type: string
       enum:
-        [tender_deadline_changed, tender_status_changed, tender_document_added, tender_value_changed, saved_search_new_matches]
+        [tender_deadline_changed, tender_status_changed, tender_document_added, tender_value_changed, saved_search_new_matches, trial_ending]
     Notification:
       type: object
       properties:
@@ -1420,6 +1533,102 @@ components:
           maxItems: 100
           items: { type: string, minLength: 1 }
         all: { type: boolean }
+    OpportunityStatus:
+      type: string
+      enum: [open, upcoming, closed, undated]
+    OpportunityProgram:
+      type: string
+      enum: [audiovisual, lpg, fac, fsa]
+    OpportunityInstallation:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        uf: { type: string }
+      required: [id, name, uf]
+    OpportunitySummary:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        summary: { type: [string, "null"] }
+        organizationName: { type: string }
+        status:
+          $ref: "#/components/schemas/OpportunityStatus"
+        program:
+          $ref: "#/components/schemas/OpportunityProgram"
+        registrationFrom: { type: [string, "null"], format: date-time }
+        registrationTo: { type: [string, "null"], format: date-time }
+        state: { type: [string, "null"] }
+        installation:
+          $ref: "#/components/schemas/OpportunityInstallation"
+        sourceUrl: { type: [string, "null"], format: uri }
+        updatedAt: { type: string, format: date-time }
+      required: [id, title, summary, organizationName, status, program, registrationFrom, registrationTo, state, installation, sourceUrl, updatedAt]
+    OpportunityFacets:
+      type: object
+      properties:
+        status:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        state:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        installation:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        program:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+      required: [status, state, installation, program]
+    OpportunityInstallationIssue:
+      type: object
+      properties:
+        installationId: { type: string }
+        name: { type: string }
+        message: { type: string }
+      required: [installationId, name, message]
+    OpportunityGap:
+      type: object
+      properties:
+        uf: { type: string }
+        name: { type: string }
+      required: [uf, name]
+    OpportunitySearchMeta:
+      type: object
+      properties:
+        query: { type: [string, "null"] }
+        tookMs: { type: number, minimum: 0 }
+        indexUpdatedAt: { type: [string, "null"], format: date-time }
+        installationIssues:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpportunityInstallationIssue"
+        gaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpportunityGap"
+      required: [query, tookMs, indexUpdatedAt, installationIssues, gaps]
+    OpportunitySearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpportunitySummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        facets:
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityFacets"
+            - type: "null"
+        meta:
+          $ref: "#/components/schemas/OpportunitySearchMeta"
+      required: [data, pagination, facets, meta]
     FacetBucket:
       type: object
       properties:

@@ -1,6 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import {
   db,
+  googleTrialTombstonesTable,
   notificationsTable,
   savedSearchesTable,
   savedTendersTable,
@@ -8,7 +9,9 @@ import {
   subscriptionsTable,
   usersTable,
 } from "@workspace/db";
+import { sessionSecret } from "../auth/config";
 import { deleteSubscription } from "../billing/asaas-client";
+import { googleTrialSubjectHash } from "../billing/trial-access";
 import { NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 
@@ -21,6 +24,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           email: usersTable.email,
           name: usersTable.name,
           avatarUrl: usersTable.avatarUrl,
+          trialEndsAt: usersTable.trialEndsAt,
           createdAt: usersTable.createdAt,
           updatedAt: usersTable.updatedAt,
         })
@@ -116,6 +120,24 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
   cancelAsaasSubscription: deleteSubscription,
   deleteLocalAccount: async (userId) => {
     await db.transaction(async (tx) => {
+      const [user] = await tx
+        .select({
+          googleSub: usersTable.googleSub,
+          trialEndsAt: usersTable.trialEndsAt,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      if (!user) throw new NotFoundError("Account was not found");
+      if (user.googleSub) {
+        await tx
+          .insert(googleTrialTombstonesTable)
+          .values({
+            subjectHash: googleTrialSubjectHash(user.googleSub, sessionSecret()),
+            trialEndsAt: user.trialEndsAt,
+          })
+          .onConflictDoNothing();
+      }
       await tx.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
       await tx
         .delete(savedTendersTable)

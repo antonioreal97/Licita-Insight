@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 import type { SearchMode } from './searchMode';
 

@@ -4,11 +4,16 @@ import {
   applyAsaasWebhook,
   cancelSubscription,
   getBilling,
+  getBillingPlan,
   startCheckout,
 } from "../billing/billing-service";
 import { assertAsaasWebhookToken } from "../billing/webhook-token";
 
 const router: IRouter = Router();
+
+router.get("/v1/billing/plan", (_req, res) => {
+  res.json(getBillingPlan());
+});
 
 router.post(
   "/v1/billing/asaas/webhook",

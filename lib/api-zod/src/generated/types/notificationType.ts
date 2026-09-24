@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
@@ -15,4 +15,5 @@ export const NotificationType = {
   tender_document_added: 'tender_document_added',
   tender_value_changed: 'tender_value_changed',
   saved_search_new_matches: 'saved_search_new_matches',
+  trial_ending: 'trial_ending',
 } as const;

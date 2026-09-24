@@ -35,7 +35,9 @@ pnpm --filter @workspace/db run migrate
 PORT=3001 PNCP_DAILY_COLLECT=false pnpm --filter @workspace/api-server run dev
 ```
 
-As migrations `0001_account` e `0002_account_followups` pressupõem o schema canônico de busca já instalado pelos ciclos anteriores. A segunda adiciona soft delete/restore e unicidade parcial das queries de buscas salvas ativas.
+As migrations `0001_account`, `0002_account_followups` e `0003_trial_access` pressupõem o schema
+canônico de busca já instalado pelos ciclos anteriores. A terceira concede 7 dias de teste aos
+usuários existentes e adiciona o tombstone mínimo antiabuso da identidade Google.
 
 ## Segurança
 
@@ -71,6 +73,17 @@ As migrations `0001_account` e `0002_account_followups` pressupõem o schema can
 - A revisão de documentos gera `tender_document_added` apenas quando aparecem ids novos após o primeiro enriquecimento.
 - Buscas com alertas são avaliadas ao final da coleta contra `tenders.created_at` desde `lastCheckedAt`.
 - `notifications(user_id, dedupe_key)` impede duplicatas; registros com mais de 90 dias são removidos após a avaliação.
+- O scheduler de trial roda no boot e a cada 6 horas, criando uma única notificação `trial_ending`
+  quando faltam no máximo 3 dias.
+
+## Trial e plano
+
+- Todo usuário novo recebe 7 dias de acesso completo; assinatura vigente prevalece no campo `source`.
+- `GET /api/v1/billing/plan` é público e expõe somente preço, moeda BRL e duração do trial.
+- O checkout continua disponível durante o trial e a cobrança é imediata nesta integração do Asaas.
+- O HMAC do Google `sub` e o fim original do trial ficam em `google_trial_tombstones` após exclusão,
+  sem e-mail ou nome, exclusivamente para evitar repetição do benefício.
+- As rotas de leitura de oportunidades culturais exigem sessão e acesso vigente.
 
 ## Validação
 

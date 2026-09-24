@@ -122,7 +122,7 @@ query, o restore responde o conflito `duplicate`.
 
 ## 4. Notificações (dentro do app)
 
-Geradas pela coleta/revisão do PNCP (processo da API), nunca pelo frontend.
+Geradas por processos da API, nunca pelo frontend.
 
 ```ts
 type NotificationType =
@@ -130,7 +130,8 @@ type NotificationType =
   | 'tender_status_changed'     // status mudou
   | 'tender_document_added'     // novo documento
   | 'tender_value_changed'      // estimatedValue ou estimatedValueStatus mudou
-  | 'saved_search_new_matches'; // editais novos que batem com uma busca salva com alertas
+  | 'saved_search_new_matches'  // editais novos que batem com uma busca salva com alertas
+  | 'trial_ending';             // teste termina em até 3 dias
 
 type Notification = {
   id: string;
@@ -159,6 +160,8 @@ Regras de geração:
   editais **vistos pela primeira vez** desde `lastCheckedAt`; se houver ≥ 1, criar uma notificação
   `saved_search_new_matches` com `matchCount` e até 20 `tenderIds`, somar em `newMatchesCount` e
   atualizar `lastCheckedAt`.
+- **Fim do teste:** um scheduler da API avalia a cada 6 horas usuários cujo `trialEndsAt` está entre
+  agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
 - Deduplicar: a mesma mudança não gera duas notificações para o mesmo usuário.
 - Retenção sugerida: 90 dias.
 
@@ -168,29 +171,36 @@ Um plano mensal. O valor vem de `BILLING_MONTHLY_BRL` (não fica no código). Se
 `ASAAS_API_BASE_URL` (https), `ASAAS_WEBHOOK_TOKEN` e o valor, o checkout responde `503 BILLING_UNAVAILABLE`
 e o restante do app segue no ar.
 
-Acesso (`entitled`) quando `status = active`, ou `canceled` com `currentPeriodEnd` ainda no futuro.
-Sem linha na tabela `subscriptions` = `status: none`.
+Acesso (`entitled`) quando há assinatura elegível (`active`, ou `canceled` com período pago ainda
+vigente), teste vigente ou bypass de desenvolvimento. A prioridade pública da origem é
+`subscription > trial > dev`. Sem linha na tabela `subscriptions` = `status: none`.
 
 ```ts
 type BillingResponse = {
   status: 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
   entitled: boolean;
-  source: 'subscription' | 'dev' | null;
+  source: 'subscription' | 'trial' | 'dev' | null;
+  trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
 };
 ```
 
+O teste dura 7 dias desde a criação do usuário. A migration `0003_trial_access` concede 7 dias desde
+sua execução aos usuários preexistentes. Um tombstone fora de `users` preserva somente HMAC-SHA256
+do Google `sub` (com `SESSION_SECRET`) e o fim original do teste. Excluir e recriar a conta preserva
+apenas os dias restantes, sem reiniciar o período; e-mail e nome nunca entram no tombstone.
+
 Em desenvolvimento, `BILLING_DEV_ENTITLED=true` libera o gate para qualquer usuário autenticado
-somente quando `NODE_ENV !== 'production'`. Nessa situação, `source: 'dev'` distingue o acesso de uma
-assinatura paga. Se houver uma assinatura realmente ativa, `source` continua `subscription`. Em
-produção a variável é sempre ignorada, mesmo se definida como `true`.
+somente quando `NODE_ENV !== 'production'`. `source: 'dev'` só aparece quando não há assinatura nem
+teste vigente. Em produção a variável é sempre ignorada, mesmo se definida como `true`.
 
 | Método | Caminho | Auth | Resposta |
 |---|---|---|---|
 | GET | `/api/v1/me/billing` | sessão | `BillingResponse` |
-| POST | `/api/v1/me/billing/checkout` | sessão + CSRF | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). 409 se já `entitled`. |
+| GET | `/api/v1/billing/plan` | pública | `{ monthlyBrl: number | null, trialDays: 7, currency: 'BRL' }` |
+| POST | `/api/v1/me/billing/checkout` | sessão + CSRF | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). Permitido durante o teste; 409 somente se já houver assinatura elegível. |
 | POST | `/api/v1/me/billing/cancel` | sessão + CSRF | `BillingResponse` — cancela no Asaas; o período já pago continua. |
 | POST | `/api/v1/billing/asaas/webhook` | header `asaas-access-token` | `{ received: true }`. Sem cookie e sem CSRF. |
 
@@ -198,6 +208,8 @@ Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nex
 `PAYMENT_OVERDUE` marca `past_due` (uma cobrança antiga não derruba um período já pago);
 `PAYMENT_REFUNDED` cancela e encerra o período. Evento desconhecido responde 200 e não altera a linha.
 O usuário é casado por `externalReference` ou pelo `paymentLink` / assinatura já gravados.
+O checkout do Asaas disponível nesta versão cobra imediatamente; pagar durante o teste troca
+`source` para `subscription` e não posterga a primeira cobrança até `trialEndsAt`.
 
 ## LGPD — exportação e exclusão da conta
 
@@ -212,7 +224,7 @@ filename="licitai-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
 ```ts
 type AccountExport = {
   exportedAt: string;
-  user: { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string; updatedAt: string };
+  user: { id: string; email: string; name: string | null; avatarUrl: string | null; trialEndsAt: string; createdAt: string; updatedAt: string };
   sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string }>;
   savedTenders: Array<{ tenderId: string; savedAt: string; monitored: boolean; monitoredAt: string | null }>;
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
@@ -236,6 +248,10 @@ Quando existe assinatura remota não cancelada, a API cancela primeiro no Asaas.
 ocorre em uma única transação. Se essa transação falhar, os dados permanecem íntegros e a compensação
 marca localmente a assinatura como `canceled`, permitindo repetir a exclusão sem cobrar/cancelar de
 novo.
+
+O tombstone antiabuso do teste é deliberadamente preservado após a exclusão. Ele não possui FK para
+`users` e contém somente HMAC não reversível do Google `sub`, `trialEndsAt` e `createdAt`, com
+finalidade documentada de impedir repetição do benefício.
 
 ## Performance esperada
 

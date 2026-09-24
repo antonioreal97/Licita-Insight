@@ -17,11 +17,12 @@ import {
 } from "./asaas-client";
 import {
   entitlementSource,
-  isEntitled,
+  hasSubscriptionEntitlement,
   type EntitlementSource,
   type SubscriptionStatus,
 } from "./billing-access";
 import { webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
+import { TRIAL_DAYS } from "./trial-access";
 
 const HANDLED = new Set([
   "PAYMENT_RECEIVED",
@@ -34,6 +35,7 @@ export type BillingView = {
   status: "none" | SubscriptionStatus;
   entitled: boolean;
   source: EntitlementSource;
+  trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
@@ -42,14 +44,23 @@ export type BillingView = {
 type SubscriptionRow = typeof subscriptionsTable.$inferSelect;
 
 export async function getBilling(userId: string): Promise<BillingView> {
-  const row = await findByUser(userId);
-  return toView(row);
+  const [row, trialEndsAt] = await Promise.all([
+    findByUser(userId),
+    findTrialEndsAt(userId),
+  ]);
+  return toView(row, trialEndsAt);
 }
+
+export const getBillingPlan = () => ({
+  monthlyBrl: monthlyAmountBrl(),
+  trialDays: TRIAL_DAYS,
+  currency: "BRL" as const,
+});
 
 export async function startCheckout(userId: string): Promise<{ url: string }> {
   const row = await findByUser(userId);
   const now = new Date();
-  if (isEntitled(row, now)) {
+  if (hasSubscriptionEntitlement(row, now)) {
     throw new ConflictError("Subscription is already active", [
       { field: "subscription", issue: "already_active" },
     ]);
@@ -104,7 +115,10 @@ export async function startCheckout(userId: string): Promise<{ url: string }> {
 }
 
 export async function cancelSubscription(userId: string): Promise<BillingView> {
-  const row = await findByUser(userId);
+  const [row, trialEndsAt] = await Promise.all([
+    findByUser(userId),
+    findTrialEndsAt(userId),
+  ]);
   if (!row || (row.status !== "active" && row.status !== "past_due")) {
     throw new ConflictError("There is no subscription to cancel", [
       { field: "subscription", issue: "not_cancelable" },
@@ -122,7 +136,7 @@ export async function cancelSubscription(userId: string): Promise<BillingView> {
     .set({ status: "canceled", updatedAt })
     .where(eq(subscriptionsTable.userId, userId))
     .returning();
-  return toView(saved ?? { ...row, status: "canceled", updatedAt });
+  return toView(saved ?? { ...row, status: "canceled", updatedAt }, trialEndsAt);
 }
 
 export async function applyAsaasWebhook(body: unknown): Promise<void> {
@@ -214,6 +228,15 @@ async function findByUser(userId: string): Promise<SubscriptionRow | null> {
   return row ?? null;
 }
 
+async function findTrialEndsAt(userId: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ trialEndsAt: usersTable.trialEndsAt })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+  return row?.trialEndsAt ?? null;
+}
+
 async function findWebhookTarget(payment: AsaasPaymentFields): Promise<{
   userId: string;
   row: SubscriptionRow | null;
@@ -267,14 +290,21 @@ function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function toView(row: SubscriptionRow | null | undefined): BillingView {
+function toView(
+  row: SubscriptionRow | null | undefined,
+  trialEndsAt: Date | null,
+): BillingView {
   const now = new Date();
   const status = isStatus(row?.status) ? row.status : "none";
-  const source = entitlementSource(row ?? null, now);
+  const source = entitlementSource(
+    { status: row?.status ?? null, currentPeriodEnd: row?.currentPeriodEnd ?? null, trialEndsAt },
+    now,
+  );
   return {
     status,
     entitled: source !== null,
     source,
+    trialEndsAt: trialEndsAt?.toISOString() ?? null,
     currentPeriodEnd: row?.currentPeriodEnd?.toISOString() ?? null,
     canCancel: status === "active" || status === "past_due",
     monthlyBrl: monthlyAmountBrl(),

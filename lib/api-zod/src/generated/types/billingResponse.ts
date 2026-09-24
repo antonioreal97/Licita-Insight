@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 import type { BillingEntitlementSource } from './billingEntitlementSource';
 import type { BillingStatus } from './billingStatus';
@@ -12,6 +12,8 @@ export interface BillingResponse {
   status: BillingStatus;
   entitled: boolean;
   source: BillingEntitlementSource | null;
+  /** @nullable */
+  trialEndsAt: Date | null;
   /** @nullable */
   currentPeriodEnd: Date | null;
   canCancel: boolean;

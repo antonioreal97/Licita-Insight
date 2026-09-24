@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.1.0
+ * OpenAPI spec version: 1.2.0
  */
 import {
   useMutation,
@@ -24,6 +24,7 @@ import type {
   ApplyAsaasBillingWebhook200,
   AuthSessionResponse,
   BillingCheckoutResponse,
+  BillingPlanResponse,
   BillingResponse,
   BillingUnavailableResponse,
   ConflictResponse,
@@ -41,6 +42,8 @@ import type {
   MarkNotificationsReadRequest,
   NotFoundResponse,
   NotificationPage,
+  OpportunitySearchResponse,
+  OpportunitySummary,
   PutSavedTenderRequest,
   RateLimitedResponse,
   SavedSearch,
@@ -49,10 +52,12 @@ import type {
   SavedTenderIds,
   SavedTenderImportResult,
   SavedTenderPage,
+  SearchOpportunitiesParams,
   SearchResponse,
   SearchTendersParams,
   SearchUnavailableResponse,
   StartGoogleAuthParams,
+  SubscriptionRequiredResponse,
   SuggestionsResponse,
   TenderDetail,
   UnauthenticatedResponse,
@@ -1067,6 +1072,83 @@ export function useGetBilling<TData = Awaited<ReturnType<typeof getBilling>>, TE
 
 
 
+export const getGetBillingPlanUrl = () => {
+
+
+
+
+  return `/api/v1/billing/plan`
+}
+
+/**
+ * @summary Get the public single-plan price and trial duration
+ */
+export const getBillingPlan = async ( options?: Parameters<typeof customFetch>[1]): Promise<BillingPlanResponse> => {
+
+  return customFetch<BillingPlanResponse>(getGetBillingPlanUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBillingPlanQueryKey = () => {
+    return [
+    `/api/v1/billing/plan`
+    ] as const;
+    }
+
+
+export const getGetBillingPlanQueryOptions = <TData = Awaited<ReturnType<typeof getBillingPlan>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBillingPlanQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBillingPlan>>> = ({ signal }) => getBillingPlan({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBillingPlan>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBillingPlanQueryResult = NonNullable<Awaited<ReturnType<typeof getBillingPlan>>>
+export type GetBillingPlanQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the public single-plan price and trial duration
+ */
+
+export function useGetBillingPlan<TData = Awaited<ReturnType<typeof getBillingPlan>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBillingPlanQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getStartBillingCheckoutUrl = () => {
 
 
@@ -1288,6 +1370,175 @@ export const useApplyAsaasBillingWebhook = <TError = ErrorType<UnauthenticatedRe
       > => {
       return useMutation(getApplyAsaasBillingWebhookMutationOptions(options));
     }
+
+export const getSearchOpportunitiesUrl = (params?: SearchOpportunitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["state","installation","status","program"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/opportunities?${stringifiedParams}` : `/api/v1/opportunities`
+}
+
+/**
+ * @summary Search cultural funding opportunities
+ */
+export const searchOpportunities = async (params?: SearchOpportunitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySearchResponse> => {
+
+  return customFetch<OpportunitySearchResponse>(getSearchOpportunitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchOpportunitiesQueryKey = (params?: SearchOpportunitiesParams,) => {
+    return [
+    `/api/v1/opportunities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchOpportunitiesQueryOptions = <TData = Awaited<ReturnType<typeof searchOpportunities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | SearchUnavailableResponse>>(params?: SearchOpportunitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchOpportunitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchOpportunities>>> = ({ signal }) => searchOpportunities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchOpportunities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchOpportunitiesQueryResult = NonNullable<Awaited<ReturnType<typeof searchOpportunities>>>
+export type SearchOpportunitiesQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Search cultural funding opportunities
+ */
+
+export function useSearchOpportunities<TData = Awaited<ReturnType<typeof searchOpportunities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | SearchUnavailableResponse>>(
+ params?: SearchOpportunitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchOpportunitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOpportunityByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/opportunities/${id}`
+}
+
+/**
+ * @summary Get a cultural funding opportunity
+ */
+export const getOpportunityById = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySummary> => {
+
+  return customFetch<OpportunitySummary>(getGetOpportunityByIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpportunityByIdQueryKey = (id: string,) => {
+    return [
+    `/api/v1/opportunities/${id}`
+    ] as const;
+    }
+
+
+export const getGetOpportunityByIdQueryOptions = <TData = Awaited<ReturnType<typeof getOpportunityById>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | SearchUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpportunityById>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpportunityByIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpportunityById>>> = ({ signal }) => getOpportunityById(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpportunityById>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpportunityByIdQueryResult = NonNullable<Awaited<ReturnType<typeof getOpportunityById>>>
+export type GetOpportunityByIdQueryError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Get a cultural funding opportunity
+ */
+
+export function useGetOpportunityById<TData = Awaited<ReturnType<typeof getOpportunityById>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | SearchUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpportunityById>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpportunityByIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListSavedTendersUrl = (params?: ListSavedTendersParams,) => {
   const normalizedParams = new URLSearchParams();
