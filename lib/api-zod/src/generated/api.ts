@@ -380,6 +380,46 @@ export const AskTenderResponse = zod.object({
 
 
 /**
+ * @summary Get or start the evidence-backed key-field sheet for a tender
+ */
+
+
+
+export const GetTenderSheetParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const getTenderSheetResponseFieldsItemConfidenceMin = 0;
+export const getTenderSheetResponseFieldsItemConfidenceMax = 1;
+
+
+export const getTenderSheetResponseFieldsMax = 13;
+
+export const getTenderSheetResponseUnreadDocumentsMin = 0;
+
+
+
+export const GetTenderSheetResponse = zod.object({
+  "status": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported']),
+  "fields": zod.array(zod.object({
+  "id": zod.enum(['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples', 'bid_guarantee', 'contract_guarantee', 'penalties', 'technical_qualification', 'financial_qualification', 'contract_term', 'delivery_term', 'price_adjustment']),
+  "status": zod.enum(['found', 'not_found']),
+  "answer": zod.union([zod.literal('allowed'),zod.literal('forbidden'),zod.literal('limited'),zod.literal('exclusive'),zod.literal('quota'),zod.literal('benefits_only'),zod.literal('mandatory'),zod.literal('optional'),zod.literal('waived'),zod.literal('required'),zod.literal('not_required'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(getTenderSheetResponseFieldsItemConfidenceMin).max(getTenderSheetResponseFieldsItemConfidenceMax).nullable(),
+  "evidence": zod.union([zod.object({
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string()
+}),zod.null()])
+})).max(getTenderSheetResponseFieldsMax),
+  "unreadDocuments": zod.number().int().min(getTenderSheetResponseUnreadDocumentsMin),
+  "model": zod.string().nullable(),
+  "generatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Read the signed-in account company profile
  */
 export const getCompanyProfileResponseProfileOneOneDescriptionMin = 20;

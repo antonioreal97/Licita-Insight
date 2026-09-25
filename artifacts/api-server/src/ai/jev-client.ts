@@ -1,5 +1,7 @@
 import { TypeSafeClient, choice, noul, score } from "@typesafe-ai/sdk";
 import { aiConfig } from "./config";
+import { sheetFieldSpec } from "./tender-sheet-policy";
+import type { TenderSheetFieldId } from "@workspace/db";
 
 export class JevUnavailableError extends Error {
   constructor(
@@ -26,6 +28,19 @@ export type JevCompanyFit = {
 
 export type JevSizeRestriction = {
   restriction: "exclusive" | "quota" | "none";
+  confidence: number;
+  model: string;
+  inputTokens: number;
+};
+
+export type JevSheetScores = {
+  scores: Partial<Record<TenderSheetFieldId, number>>;
+  model: string;
+  inputTokens: number;
+};
+
+export type JevSheetChoice = {
+  answer: string;
   confidence: number;
   model: string;
   inputTokens: number;
@@ -172,5 +187,83 @@ export async function scoreTenderPassage(
     };
   } catch (error) {
     throw new JevUnavailableError("Jev request failed", error);
+  }
+}
+
+export async function scoreSheetPassage(
+  passage: string,
+  fieldIds: TenderSheetFieldId[],
+  requestFetch?: typeof fetch,
+): Promise<JevSheetScores> {
+  const config = aiConfig();
+  const questions = Object.fromEntries(
+    fieldIds.map((id) => {
+      const spec = sheetFieldSpec(id);
+      return [
+        id,
+        noul(spec.question, {
+          true: "O trecho contém a regra ou o valor pedido de forma explícita.",
+          false:
+            "O trecho só menciona o tema, remete a outro documento ou item, ou trata de outro assunto.",
+        }),
+      ];
+    }),
+  );
+  try {
+    const result = await clientFor(requestFetch).systemOne({
+      model: config.model,
+      state: { trecho_do_edital: passage },
+      questions,
+    });
+    const answers = result.answers as Record<
+      string,
+      { type: string; noul?: number }
+    >;
+    return {
+      scores: Object.fromEntries(
+        fieldIds.map((id) => [id, answers[id]?.noul ?? 0]),
+      ),
+      model: result.model,
+      inputTokens: result.usage.input_tokens,
+    };
+  } catch (error) {
+    throw new JevUnavailableError(
+      "Jev tender-sheet scoring request failed",
+      error,
+    );
+  }
+}
+
+export async function classifySheetField(
+  fieldId: TenderSheetFieldId,
+  passage: string,
+  requestFetch?: typeof fetch,
+): Promise<JevSheetChoice> {
+  const config = aiConfig();
+  const spec = sheetFieldSpec(fieldId);
+  if (!spec.choices)
+    throw new Error(`Sheet field ${fieldId} is not categorical`);
+  try {
+    const result = await clientFor(requestFetch).systemOne({
+      model: config.model,
+      state: { trecho_do_edital: passage },
+      questions: {
+        answer: choice(
+          `Classifique somente a regra explícita deste trecho para o campo ${fieldId}.`,
+          spec.choices,
+        ),
+      },
+    });
+    return {
+      answer: result.answers.answer.choice,
+      confidence: result.answers.answer.confidence,
+      model: result.model,
+      inputTokens: result.usage.input_tokens,
+    };
+  } catch (error) {
+    throw new JevUnavailableError(
+      "Jev tender-sheet choice request failed",
+      error,
+    );
   }
 }

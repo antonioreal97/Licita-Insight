@@ -14,6 +14,7 @@ export const normalizeExtractedText = (value: string): string =>
     .normalize("NFKC")
     .replace(/(\p{Ll})\s*\uFFFD\s*(?=\p{Ll})/gu, "$1ti")
     .replace(/\uFFFD/g, "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "")
     .replace(/[\t ]+/g, " ")
     .trim();
 
@@ -64,9 +65,7 @@ export const normalizePdfPages = (pages: string[][]): string[] => {
     }
   }
   const repeated = new Set(
-    [...counts.entries()]
-      .filter(([line, count]) => pages.length >= 3 && line.length < 180 && count >= Math.ceil(pages.length * 0.6))
-      .map(([line]) => line),
+    [...counts.entries()].filter(([line, count]) => pages.length >= 3 && line.length < 180 && count >= Math.ceil(pages.length * 0.6)).map(([line]) => line),
   );
   return pages.map((page) =>
     page
@@ -79,7 +78,11 @@ export const normalizePdfPages = (pages: string[][]): string[] => {
 };
 
 const extractPdfPages = async (bytes: Uint8Array, maxPages: number): Promise<string[]> => {
-  const pdf = await getDocument({ data: bytes, useSystemFonts: true, useWorkerFetch: false }).promise;
+  const pdf = await getDocument({
+    data: bytes,
+    useSystemFonts: true,
+    useWorkerFetch: false,
+  }).promise;
   if (pdf.numPages > maxPages) throw new Error(`PDF_PAGE_LIMIT:${pdf.numPages}`);
   const rawPages: string[][] = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -91,14 +94,11 @@ const extractPdfPages = async (bytes: Uint8Array, maxPages: number): Promise<str
   return normalizePdfPages(rawPages);
 };
 
-const isPdf = (bytes: Uint8Array): boolean =>
-  new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
+const isPdf = (bytes: Uint8Array): boolean => new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
 
-const isZip = (bytes: Uint8Array): boolean =>
-  bytes[0] === 0x50 && bytes[1] === 0x4b;
+const isZip = (bytes: Uint8Array): boolean => bytes[0] === 0x50 && bytes[1] === 0x4b;
 
-const suffixFor = (value: string): string =>
-  createHash("sha256").update(value).digest("hex").slice(0, 20);
+const suffixFor = (value: string): string => createHash("sha256").update(value).digest("hex").slice(0, 20);
 
 export async function extractDocuments(
   bytes: Uint8Array,
@@ -107,7 +107,14 @@ export async function extractDocuments(
   maxUncompressedBytes = 50 * 1024 * 1024,
 ): Promise<ExtractedDocument[]> {
   if (isPdf(bytes)) {
-    return [{ idSuffix: "pdf", title, internalPath: null, pages: await extractPdfPages(bytes, maxPages) }];
+    return [
+      {
+        idSuffix: "pdf",
+        title,
+        internalPath: null,
+        pages: await extractPdfPages(bytes, maxPages),
+      },
+    ];
   }
   if (!isZip(bytes)) return [];
   let extractedBytes = 0;

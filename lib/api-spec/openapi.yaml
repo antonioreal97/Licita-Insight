@@ -154,6 +154,34 @@ paths:
           $ref: "#/components/responses/AiQuotaExceeded"
         "503":
           $ref: "#/components/responses/AiUnavailable"
+  /v1/tenders/{id}/sheet:
+    get:
+      operationId: getTenderSheet
+      tags: [ai]
+      summary: Get or start the evidence-backed key-field sheet for a tender
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Sheet state mirroring the document index; all 13 fields are present when ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderSheet"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/AiQuotaExceeded"
+        "503":
+          $ref: "#/components/responses/AiUnavailable"
   /v1/me/company-profile:
     get:
       operationId: getCompanyProfile
@@ -1604,6 +1632,78 @@ components:
         quota:
           $ref: "#/components/schemas/AiQuota"
       required: [status, passages, model, quota]
+    SheetFieldId:
+      type: string
+      enum:
+        [
+          consortium,
+          subcontracting,
+          me_epp,
+          site_visit,
+          samples,
+          bid_guarantee,
+          contract_guarantee,
+          penalties,
+          technical_qualification,
+          financial_qualification,
+          contract_term,
+          delivery_term,
+          price_adjustment,
+        ]
+    SheetEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        documentTitle: { type: string }
+        documentUrl: { type: string, format: uri }
+        page: { type: integer, minimum: 1 }
+        text: { type: string }
+      required: [documentTitle, documentUrl, page, text]
+    SheetField:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: "#/components/schemas/SheetFieldId"
+        status: { type: string, enum: [found, not_found] }
+        answer:
+          type: [string, "null"]
+          enum:
+            [
+              allowed,
+              forbidden,
+              limited,
+              exclusive,
+              quota,
+              benefits_only,
+              mandatory,
+              optional,
+              waived,
+              required,
+              not_required,
+              null,
+            ]
+        confidence: { type: [number, "null"], minimum: 0, maximum: 1 }
+        evidence:
+          oneOf:
+            - $ref: "#/components/schemas/SheetEvidence"
+            - type: "null"
+      required: [id, status, answer, confidence, evidence]
+    TenderSheet:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/TenderAskIndexStatus"
+        fields:
+          type: array
+          maxItems: 13
+          items:
+            $ref: "#/components/schemas/SheetField"
+        unreadDocuments: { type: integer, minimum: 0 }
+        model: { type: [string, "null"] }
+        generatedAt: { type: [string, "null"], format: date-time }
+      required: [status, fields, unreadDocuments, model, generatedAt]
     CompanySize:
       type: string
       enum: [me_epp, cooperative, other]
