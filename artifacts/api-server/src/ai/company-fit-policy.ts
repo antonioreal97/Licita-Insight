@@ -1,4 +1,5 @@
-import { InvalidParameterError } from "../lib/api-error";
+import { createHash } from "node:crypto";
+import { InvalidParameterError, type ApiErrorDetail } from "../lib/api-error";
 
 export type CompanySize = "me_epp" | "cooperative" | "other";
 export type CompanyProfileInput = {
@@ -47,105 +48,169 @@ const duplicateKey = (value: string): string =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR");
-const fieldError = (field: string, issue: string): InvalidParameterError =>
-  new InvalidParameterError(`${field} is invalid`, [{ field, issue }]);
-
-const terms = (value: unknown, field: string, minimum: number): string[] => {
-  if (!Array.isArray(value) || value.length < minimum || value.length > 20)
-    throw fieldError(field, "invalid_length");
+const terms = (
+  value: unknown,
+  field: string,
+  minimum: number,
+  details: ApiErrorDetail[],
+): string[] => {
+  if (!Array.isArray(value)) {
+    details.push({ field, issue: "invalid_type" });
+    return [];
+  }
+  if (value.length < minimum || value.length > 20)
+    details.push({ field, issue: "invalid_length" });
   const result = value.map((term, index) => {
-    if (typeof term !== "string")
-      throw fieldError(`${field}.${index}`, "invalid_type");
+    if (typeof term !== "string") {
+      details.push({ field: `${field}.${index}`, issue: "invalid_type" });
+      return "";
+    }
     const parsed = normalized(term);
     if (parsed.length < 2 || parsed.length > 80)
-      throw fieldError(`${field}.${index}`, "invalid_length");
+      details.push({ field: `${field}.${index}`, issue: "invalid_length" });
     return parsed;
   });
-  if (new Set(result.map(duplicateKey)).size !== result.length)
-    throw fieldError(field, "duplicate");
+  const comparable = result.filter(Boolean).map(duplicateKey);
+  if (new Set(comparable).size !== comparable.length)
+    details.push({ field, issue: "duplicate" });
   return result;
 };
 
-const money = (value: unknown, field: string): number | null => {
+const money = (
+  value: unknown,
+  field: string,
+  details: ApiErrorDetail[],
+): number | null | undefined => {
   if (value === null) return null;
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
-    throw fieldError(field, "invalid_value");
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    details.push({ field, issue: "invalid_value" });
+    return undefined;
+  }
   return Math.round(value * 100) / 100;
 };
 
 export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw fieldError("body", "invalid_type");
+    throw new InvalidParameterError("Company profile is invalid", [
+      { field: "body", issue: "invalid_type" },
+    ]);
   const body = value as Record<string, unknown>;
+  const details: ApiErrorDetail[] = [];
+  const description =
+    typeof body.description === "string" ? normalized(body.description) : "";
   if (typeof body.description !== "string")
-    throw fieldError("description", "invalid_type");
-  const description = normalized(body.description);
-  if (description.length < 20 || description.length > 600)
-    throw fieldError("description", "invalid_length");
-  const offerings = terms(body.offerings, "offerings", 1);
-  const exclusions = terms(body.exclusions, "exclusions", 0);
+    details.push({ field: "description", issue: "invalid_type" });
+  else if (description.length < 20 || description.length > 600)
+    details.push({ field: "description", issue: "invalid_length" });
+  const offerings = terms(body.offerings, "offerings", 1, details);
+  const exclusions = terms(body.exclusions, "exclusions", 0, details);
+  let coverage: CompanyProfileInput["coverage"] | undefined;
   if (
     !body.coverage ||
     typeof body.coverage !== "object" ||
     Array.isArray(body.coverage)
-  )
-    throw fieldError("coverage", "invalid_type");
-  const coverageInput = body.coverage as Record<string, unknown>;
-  let coverage: CompanyProfileInput["coverage"];
-  if (coverageInput.scope === "national") coverage = { scope: "national" };
-  else if (coverageInput.scope === "states") {
-    if (
-      !Array.isArray(coverageInput.states) ||
-      coverageInput.states.length < 1 ||
-      coverageInput.states.length > 27
-    )
-      throw fieldError("coverage.states", "invalid_length");
-    const states = coverageInput.states.map((state) =>
-      typeof state === "string" ? state.trim().toUpperCase() : "",
-    );
-    if (
-      states.some((state) => !UFS.has(state)) ||
-      new Set(states).size !== states.length
-    )
-      throw fieldError("coverage.states", "invalid_value");
-    coverage = { scope: "states", states };
-  } else throw fieldError("coverage.scope", "invalid_enum");
+  ) {
+    details.push({ field: "coverage", issue: "invalid_type" });
+  } else {
+    const coverageInput = body.coverage as Record<string, unknown>;
+    if (coverageInput.scope === "national") coverage = { scope: "national" };
+    else if (coverageInput.scope === "states") {
+      if (!Array.isArray(coverageInput.states)) {
+        details.push({ field: "coverage.states", issue: "invalid_type" });
+      } else {
+        if (coverageInput.states.length < 1 || coverageInput.states.length > 27)
+          details.push({ field: "coverage.states", issue: "invalid_length" });
+        const states = coverageInput.states.map((state) =>
+          typeof state === "string" ? state.trim().toUpperCase() : "",
+        );
+        if (
+          states.some((state) => !UFS.has(state)) ||
+          new Set(states).size !== states.length
+        )
+          details.push({ field: "coverage.states", issue: "invalid_value" });
+        coverage = { scope: "states", states };
+      }
+    } else details.push({ field: "coverage.scope", issue: "invalid_enum" });
+  }
+  let min: number | null | undefined;
+  let max: number | null | undefined;
   if (
     !body.valueRange ||
     typeof body.valueRange !== "object" ||
     Array.isArray(body.valueRange)
-  )
-    throw fieldError("valueRange", "invalid_type");
-  const range = body.valueRange as Record<string, unknown>;
-  const min = money(range.min, "valueRange.min");
-  const max = money(range.max, "valueRange.max");
-  if (min !== null && max !== null && min > max)
-    throw fieldError("valueRange", "invalid_range");
+  ) {
+    details.push({ field: "valueRange", issue: "invalid_type" });
+  } else {
+    const range = body.valueRange as Record<string, unknown>;
+    min = money(range.min, "valueRange.min", details);
+    max = money(range.max, "valueRange.max", details);
+  }
   if (
-    body.size !== "me_epp" &&
-    body.size !== "cooperative" &&
-    body.size !== "other"
+    min !== undefined &&
+    max !== undefined &&
+    min !== null &&
+    max !== null &&
+    min > max
   )
-    throw fieldError("size", "invalid_enum");
+    details.push({ field: "valueRange", issue: "invalid_range" });
+  const size =
+    body.size === "me_epp" ||
+    body.size === "cooperative" ||
+    body.size === "other"
+      ? body.size
+      : undefined;
+  if (size === undefined)
+    details.push({ field: "size", issue: "invalid_enum" });
+  if (details.length > 0)
+    throw new InvalidParameterError("Company profile is invalid", details);
   return {
     description,
     offerings,
     exclusions,
-    coverage,
-    valueRange: { min, max },
-    size: body.size,
+    coverage: coverage!,
+    valueRange: { min: min!, max: max! },
+    size: size!,
   };
 }
+
+export type SizeRestriction = "me_epp_exclusive" | "me_epp_quota";
 
 export const fitLevel = (
   score: number,
   excluded = false,
-  sizeRestricted = false,
+  sizeRestriction: SizeRestriction | null = null,
 ): "high" | "medium" | "low" =>
-  excluded || sizeRestricted
+  excluded || sizeRestriction === "me_epp_exclusive"
     ? "low"
     : score >= 0.75
       ? "high"
       : score >= 0.5
         ? "medium"
         : "low";
+
+export type FitTenderFingerprintInput = {
+  title: string;
+  objectSummary: string | null;
+  description: string | null;
+  organizationName: string;
+  estimatedValue: string | null;
+  state: string | null;
+  items: unknown;
+};
+
+export const companyFitTenderFingerprint = (
+  tender: FitTenderFingerprintInput,
+): string =>
+  createHash("sha256")
+    .update(
+      JSON.stringify({
+        title: tender.title,
+        objectSummary: tender.objectSummary,
+        description: tender.description,
+        organizationName: tender.organizationName,
+        estimatedValue: tender.estimatedValue,
+        state: tender.state,
+        items: tender.items,
+      }),
+    )
+    .digest("hex");

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import {
   aiFitDailyUsageTable,
@@ -19,6 +19,7 @@ import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { hasAiAccess } from "./ask-tender-service";
 import { aiConfig } from "./config";
 import {
+  companyFitTenderFingerprint,
   fitLevel,
   parseCompanyProfileInput,
   type CompanyProfileInput,
@@ -45,7 +46,7 @@ export type TenderFit = {
   checkedAt: Date | null;
 };
 
-const PROMPT_VERSION = 1;
+export const COMPANY_FIT_PROMPT_VERSION = 2;
 const runningFits = new Map<string, Promise<void>>();
 
 const toProfile = (
@@ -147,24 +148,7 @@ type TenderRow = Pick<
   | "estimatedValue"
   | "state"
   | "items"
-  | "updatedAt"
 >;
-
-const tenderFingerprint = (tender: TenderRow): string =>
-  createHash("sha256")
-    .update(
-      JSON.stringify({
-        title: tender.title,
-        objectSummary: tender.objectSummary,
-        description: tender.description,
-        organizationName: tender.organizationName,
-        estimatedValue: tender.estimatedValue,
-        state: tender.state,
-        items: tender.items,
-        updatedAt: tender.updatedAt,
-      }),
-    )
-    .digest("hex");
 
 const tenderText = (tender: TenderRow): string =>
   [
@@ -217,11 +201,10 @@ function explicitFilter(
 }
 
 async function sizeRestriction(tenderId: string): Promise<{
-  reason: FitReasonRecord;
+  reason: FitReasonRecord | null;
   model: string;
   inputTokens: number;
 } | null> {
-  const config = aiConfig();
   const [index] = await db
     .select({
       version: tenderAiIndexesTable.version,
@@ -240,28 +223,44 @@ async function sizeRestriction(tenderId: string): Promise<{
     select d.title as "documentTitle", d.source_url as "documentUrl", p.page, p.text
     from ${tenderAiPassagesTable} p
     join ${tenderAiDocumentsTable} d on d.id = p.document_id,
-      websearch_to_tsquery('portuguese', 'ME EPP microempresa empresa pequeno porte exclusiva cota reservada') query
+      websearch_to_tsquery('portuguese', 'ME OR EPP OR microempresa OR "empresa de pequeno porte"') query
     where p.tender_id = ${tenderId} and p.index_version = ${index.version} and p.search_vector @@ query
     order by ts_rank_cd(p.search_vector, query) desc, p.page asc
     limit 4
   `);
+  let quotaEvidence: (typeof result.rows)[number] | null = null;
+  let model: string | null = null;
+  let inputTokens = 0;
   for (const passage of result.rows) {
     const scored = await scoreSizeRestriction(passage.text);
-    if (scored.relevance >= config.fitSizeThreshold) {
+    model = scored.model;
+    inputTokens += scored.inputTokens;
+    if (scored.restriction === "exclusive") {
       return {
         reason: {
           kind: "size_restricted",
-          restriction: /cota|reservad/i.test(passage.text)
-            ? "me_epp_quota"
-            : "me_epp_exclusive",
+          restriction: "me_epp_exclusive",
           evidence: passage,
         },
-        model: scored.model,
-        inputTokens: scored.inputTokens,
+        model,
+        inputTokens,
       };
     }
+    if (scored.restriction === "quota" && !quotaEvidence)
+      quotaEvidence = passage;
   }
-  return null;
+  if (!model) return null;
+  return {
+    reason: quotaEvidence
+      ? {
+          kind: "size_restricted",
+          restriction: "me_epp_quota",
+          evidence: quotaEvidence,
+        }
+      : null,
+    model,
+    inputTokens,
+  };
 }
 
 async function reserveFitQuota(userId: string, now: Date): Promise<boolean> {
@@ -322,10 +321,7 @@ async function processFit(
 ): Promise<void> {
   if (!(await reserveFitQuota(userId, now))) return;
   try {
-    const [offeringTerms, exclusionTerms] = await Promise.all([
-      lexicalMatches(tender.id, profile.offerings),
-      lexicalMatches(tender.id, profile.exclusions),
-    ]);
+    const offeringTerms = await lexicalMatches(tender.id, profile.offerings);
     const semantic = await scoreCompanyFit({
       description: profile.description,
       offerings: profile.offerings,
@@ -342,26 +338,30 @@ async function processFit(
       });
     if (tender.estimatedValue === null)
       reasons.push({ kind: "value_not_published" });
-    const excluded =
-      semantic.excludedProbability !== null &&
-      semantic.excludedProbability >= aiConfig().fitExcludedThreshold;
+    const excludedTerms = semantic.exclusions
+      .filter(
+        ({ probability }) => probability >= aiConfig().fitExcludedThreshold,
+      )
+      .map(({ term }) => term);
+    const excluded = excludedTerms.length > 0;
     if (excluded)
       reasons.push({
         kind: "exclusion",
-        terms: (exclusionTerms.length > 0
-          ? exclusionTerms
-          : profile.exclusions
-        ).slice(0, 6),
+        terms: excludedTerms.slice(0, 6),
       });
     const size =
       profile.size === "other" ? await sizeRestriction(tender.id) : null;
     if (size) {
-      reasons.push(size.reason);
+      if (size.reason) reasons.push(size.reason);
       inputTokens += size.inputTokens;
       model = size.model;
     }
     const score = Math.max(0, Math.min(1, semantic.fitScore / 3));
-    const level = fitLevel(score, excluded, Boolean(size));
+    const level = fitLevel(
+      score,
+      excluded,
+      size?.reason?.kind === "size_restricted" ? size.reason.restriction : null,
+    );
     const checkedAt = new Date();
     await db
       .update(companyTenderFitsTable)
@@ -412,8 +412,8 @@ async function ensureFit(
   wait: boolean,
 ): Promise<TenderFit> {
   const config = aiConfig();
-  const fingerprint = tenderFingerprint(tender);
-  const key = `${userId}:${profile.version}:${tender.id}:${config.model}:${PROMPT_VERSION}`;
+  const fingerprint = companyFitTenderFingerprint(tender);
+  const key = `${userId}:${profile.version}:${tender.id}:${config.model}:${COMPANY_FIT_PROMPT_VERSION}`;
   const filters = explicitFilter(profile, tender);
   const [existing] = await db
     .select()
@@ -424,7 +424,7 @@ async function ensureFit(
         eq(companyTenderFitsTable.profileVersion, profile.version),
         eq(companyTenderFitsTable.tenderId, tender.id),
         eq(companyTenderFitsTable.requestedModel, config.model),
-        eq(companyTenderFitsTable.promptVersion, PROMPT_VERSION),
+        eq(companyTenderFitsTable.promptVersion, COMPANY_FIT_PROMPT_VERSION),
       ),
     )
     .limit(1);
@@ -461,7 +461,7 @@ async function ensureFit(
         profileVersion: profile.version,
         tenderFingerprint: fingerprint,
         requestedModel: config.model,
-        promptVersion: PROMPT_VERSION,
+        promptVersion: COMPANY_FIT_PROMPT_VERSION,
         status: "filtered",
         level: "low",
         score: "0",
@@ -500,7 +500,7 @@ async function ensureFit(
       profileVersion: profile.version,
       tenderFingerprint: fingerprint,
       requestedModel: config.model,
-      promptVersion: PROMPT_VERSION,
+      promptVersion: COMPANY_FIT_PROMPT_VERSION,
       status: "processing",
       updatedAt: new Date(),
     })
@@ -564,7 +564,6 @@ export async function getTenderFits(
       estimatedValue: tendersTable.estimatedValue,
       state: tendersTable.state,
       items: tendersTable.items,
-      updatedAt: tendersTable.updatedAt,
     })
     .from(tendersTable)
     .where(inArray(tendersTable.id, tenderIds));

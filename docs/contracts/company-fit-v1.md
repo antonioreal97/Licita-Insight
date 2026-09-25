@@ -15,7 +15,7 @@ O corpo do `PUT` contém:
 - `valueRange`: `{min:number|null,max:number|null}`, com valores não negativos e `min <= max`;
 - `size`: `me_epp`, `cooperative` ou `other`.
 
-Duplicidade de termos ignora caixa e acentos. Erros de validação retornam `400 INVALID_PARAMETER` com o campo em `details`.
+Duplicidade de termos ignora caixa e acentos. Erros de validação retornam `400 INVALID_PARAMETER` com todos os campos inválidos em `details`.
 
 ## Aderência
 
@@ -45,9 +45,18 @@ Estados:
 - `pending`: avaliação está enfileirada, falhou temporariamente ou a cota diária foi alcançada;
 - `ready`: avaliação concluída.
 
-O score semântico Jev usa uma rubrica 0–3 e é normalizado para 0–1. Nível alto é `>= 0.75`, médio é `>= 0.50`; abaixo disso é baixo. Exclusão confirmada ou restrição de porte confirmada força nível baixo. No máximo quatro razões verificáveis são retornadas. A verificação de porte só consulta um índice documental já pronto e nunca inicia indexação.
+O score semântico Jev usa uma rubrica concreta de 0–3 e é normalizado para 0–1:
 
-O cache inclui usuário, versão do perfil, edital, fingerprint do edital, modelo e versão do prompt. A cota de aderência é independente da cota de perguntas e usa `AI_DAILY_FIT_LIMIT` (padrão `1000`).
+- `0`: o objeto e os itens não têm relação com o que a empresa fornece;
+- `1`: relação indireta, tema vizinho ou somente item acessório;
+- `2`: a empresa fornece parte relevante dos itens, mas não o objeto principal;
+- `3`: a empresa fornece o objeto principal da licitação.
+
+Nível alto é `>= 0.75`, médio é `>= 0.50`; abaixo disso é baixo. Uma exclusão só é confirmada quando o próprio objeto principal é a compra ou prestação do item excluído; insumos de um serviço que a empresa presta não contam como exclusão. Cada termo excluído é avaliado separadamente e somente os termos confirmados aparecem no motivo.
+
+Para empresa de porte `other`, participação exclusiva de ME/EPP força nível baixo. Cota reservada para ME/EPP é apenas informativa, pois a cota principal permanece aberta a outros portes; benefícios como preferência pós-lances, empate ficto e regularidade fiscal tardia não geram motivo de restrição. No máximo quatro razões verificáveis são retornadas. A verificação de porte só consulta um índice documental já pronto e nunca inicia indexação.
+
+O cache inclui usuário, versão do perfil, edital, fingerprint do conteúdo do edital, modelo e versão do prompt. O fingerprint considera título, objeto, descrição, itens, órgão, valor e UF; atualizações operacionais como `updatedAt` não invalidam o resultado. A cota de aderência é independente da cota de perguntas e usa `AI_DAILY_FIT_LIMIT` (padrão `1000`).
 
 ## Alertas
 

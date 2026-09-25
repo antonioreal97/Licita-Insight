@@ -46,6 +46,7 @@ test(
       tenderAiDocumentsTable,
       tenderAiIndexesTable,
       tenderAiPassagesTable,
+      tendersTable,
       usersTable,
     } = await import("@workspace/db");
     const { eq, inArray } = await import("drizzle-orm");
@@ -636,12 +637,22 @@ test(
       assert.equal(fitBody.results[tenderId]?.level, "low");
       assert.equal(fitBody.results[tenderId]?.reasons[0]?.kind, "out_of_coverage");
 
+      const session = await request("/v1/auth/session", {}, authenticatedCookie);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      const [cachedBeforeTouch] = await db.select({ id: companyTenderFitsTable.id, checkedAt: companyTenderFitsTable.checkedAt })
+        .from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId));
+      assert.ok(cachedBeforeTouch);
+      await db.update(tendersTable).set({ updatedAt: new Date("2026-09-25T12:00:00.000Z") }).where(eq(tendersTable.id, tenderId));
+      assert.equal((await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, authenticatedCookie)).status, 200);
+      const [cachedAfterTouch] = await db.select({ id: companyTenderFitsTable.id, checkedAt: companyTenderFitsTable.checkedAt })
+        .from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId));
+      assert.equal(cachedAfterTouch?.id, cachedBeforeTouch.id);
+      assert.equal(cachedAfterTouch?.checkedAt?.toISOString(), cachedBeforeTouch.checkedAt?.toISOString());
+
       const replaced = await request("/v1/me/company-profile", {
         method: "PUT", headers: csrf, body: JSON.stringify({ ...profile, coverage: { scope: "national" } }),
       }, authenticatedCookie);
       assert.equal(((await replaced.json()) as { profile: { version: number } }).profile.version, 2);
-      const session = await request("/v1/auth/session", {}, authenticatedCookie);
-      const userId = ((await session.json()) as { user: { id: string } }).user.id;
       assert.equal((await db.select().from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId))).length, 0);
 
       const expiredCookie = await login("fit-expired@example.test", false);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { aiDailyLimit, aiQuotaResetsAt, completedIndexStatus, lexicalSearchQuery, selectEvidencePassages } from "./policy";
-import { scoreCompanyFit, scoreTenderPassage } from "./jev-client";
+import { scoreCompanyFit, scoreSizeRestriction, scoreTenderPassage } from "./jev-client";
 
 const originalEnv = { ...process.env };
 afterEach(() => {
@@ -75,14 +75,21 @@ test("company fit uses one Jev request for score and optional exclusion", async 
   let calls = 0;
   const mockedFetch: typeof fetch = async (_input, init) => {
     calls += 1;
-    const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string }> };
+    const body = JSON.parse(String(init?.body)) as {
+      questions: Record<string, { type: string; instructions: string; criteria?: Record<string, string> }>;
+    };
     assert.equal(body.questions.aderencia?.type, "score");
-    assert.equal(body.questions.excluido?.type, "noul");
+    assert.equal(body.questions.exclusao_0?.type, "noul");
+    assert.equal(body.questions.exclusao_1?.type, "noul");
+    assert.match(body.questions.aderencia?.instructions ?? "", /licitacao.*perfil_da_empresa/);
+    assert.match(body.questions.exclusao_0?.instructions ?? "", /objeto principal/);
+    assert.match(body.questions.exclusao_0?.criteria?.false ?? "", /insumo/);
     return new Response(JSON.stringify({
       model: "jev-1.13.0",
       answers: {
         aderencia: { type: "score", score: 2.7, confidence: 0.9, legend: {}, probabilities: {} },
-        excluido: { type: "noul", noul: 0.12 },
+        exclusao_0: { type: "noul", noul: 0.91 },
+        exclusao_1: { type: "noul", noul: 0.12 },
       },
       usage: { input_tokens: 321, output_tokens: 0 },
     }), { status: 200, headers: { "content-type": "application/json" } });
@@ -90,13 +97,41 @@ test("company fit uses one Jev request for score and optional exclusion", async 
   assert.deepEqual(await scoreCompanyFit({
     description: "Fornecemos servidores e suporte.",
     offerings: ["servidores"],
-    exclusions: ["obra civil"],
+    exclusions: ["obra civil", "medicamentos"],
     tenderText: "Aquisição de servidores.",
   }, mockedFetch), {
     fitScore: 2.7,
-    excludedProbability: 0.12,
+    exclusions: [
+      { term: "obra civil", probability: 0.91 },
+      { term: "medicamentos", probability: 0.12 },
+    ],
     model: "jev-1.13.0",
     inputTokens: 321,
   });
   assert.equal(calls, 1);
+});
+
+test("classifica exclusividade, cota, benefício e trecho misto com Choice", async () => {
+  process.env.JEV_API_KEY = "test-key";
+  const cases = [
+    ["Participação exclusiva para ME/EPP neste lote.", "exclusive"],
+    ["Cota reservada de 25% para ME/EPP; a cota principal é ampla.", "quota"],
+    ["Será assegurada preferência pós-lances para ME/EPP.", "none"],
+    ["Há cota em outro lote, mas este item é exclusivo para ME/EPP.", "exclusive"],
+  ] as const;
+  for (const [passage, expected] of cases) {
+    const mockedFetch: typeof fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string; criteria: Record<string, string> }> };
+      assert.equal(body.questions.restricao?.type, "choice");
+      assert.deepEqual(Object.keys(body.questions.restricao?.criteria ?? {}), ["exclusive", "quota", "none"]);
+      return new Response(JSON.stringify({
+        model: "jev-1.13.0",
+        answers: { restricao: { type: "choice", choice: expected, confidence: 0.93, probabilities: {} } },
+        usage: { input_tokens: 50, output_tokens: 0 },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    };
+    assert.deepEqual(await scoreSizeRestriction(passage, mockedFetch), {
+      restriction: expected, confidence: 0.93, model: "jev-1.13.0", inputTokens: 50,
+    });
+  }
 });

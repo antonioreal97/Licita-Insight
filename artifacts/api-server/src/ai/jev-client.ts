@@ -1,4 +1,4 @@
-import { TypeSafeClient, noul, score } from "@typesafe-ai/sdk";
+import { TypeSafeClient, choice, noul, score } from "@typesafe-ai/sdk";
 import { aiConfig } from "./config";
 
 export class JevUnavailableError extends Error {
@@ -19,7 +19,14 @@ export type JevScore = {
 
 export type JevCompanyFit = {
   fitScore: number;
-  excludedProbability: number | null;
+  exclusions: Array<{ term: string; probability: number }>;
+  model: string;
+  inputTokens: number;
+};
+
+export type JevSizeRestriction = {
+  restriction: "exclusive" | "quota" | "none";
+  confidence: number;
   model: string;
   inputTokens: number;
 };
@@ -47,27 +54,30 @@ export async function scoreCompanyFit(
   requestFetch?: typeof fetch,
 ): Promise<JevCompanyFit> {
   const config = aiConfig();
+  const exclusionQuestions = Object.fromEntries(
+    input.exclusions.map((term, index) => [
+      `exclusao_${index}`,
+      noul(
+        `O objeto principal de \`licitacao\` é a compra ou a prestação de "${term}", termo listado em \`perfil_da_empresa.exclusoes\`? Julgue o que o órgão está contratando como um todo, não os insumos de um serviço.`,
+        {
+          true: "O que se contrata é, em si, esse item de `perfil_da_empresa.exclusoes` (por exemplo, a licitação é para comprar esse produto).",
+          false:
+            "O objeto é outro, só menciona o tema, ou o item excluído aparece apenas como insumo, material ou parte de um serviço que a empresa presta.",
+        },
+      ),
+    ]),
+  );
   const questions = {
     aderencia: score(
-      "Qual é a aderência entre o que a empresa fornece e o objeto desta licitação? Use somente o texto apresentado.",
+      "Quanto do que `licitacao` contrata é o que `perfil_da_empresa` fornece?",
       [
-        "Sem relação comercial relevante.",
-        "Relação fraca ou apenas indireta.",
-        "Boa relação, embora parcial.",
-        "Relação direta e forte com o fornecimento descrito.",
+        "O objeto e os itens em `licitacao` não têm relação com o que `perfil_da_empresa` fornece.",
+        "Relação indireta: tema vizinho, ou a empresa forneceria só um item acessório.",
+        "A empresa fornece parte relevante dos itens, mas não o objeto principal.",
+        "A empresa fornece o objeto principal da licitação.",
       ] as const,
     ),
-    ...(input.exclusions.length > 0
-      ? {
-          excluido: noul(
-            "A licitação exige principalmente algo que a empresa declarou explicitamente não fornecer?",
-            {
-              true: "O objeto principal está coberto por uma exclusão explícita.",
-              false: "Não há conflito explícito com as exclusões.",
-            },
-          ),
-        }
-      : {}),
+    ...exclusionQuestions,
   };
   try {
     const result = await clientFor(requestFetch).systemOne({
@@ -82,12 +92,16 @@ export async function scoreCompanyFit(
       },
       questions,
     });
+    const answers = result.answers as Record<
+      string,
+      { type: string; noul?: number }
+    >;
     return {
       fitScore: result.answers.aderencia.score,
-      excludedProbability:
-        "excluido" in result.answers && result.answers.excluido
-          ? result.answers.excluido.noul
-          : null,
+      exclusions: input.exclusions.map((term, index) => ({
+        term,
+        probability: answers[`exclusao_${index}`]?.noul ?? 0,
+      })),
       model: result.model,
       inputTokens: result.usage.input_tokens,
     };
@@ -99,24 +113,28 @@ export async function scoreCompanyFit(
 export async function scoreSizeRestriction(
   passage: string,
   requestFetch?: typeof fetch,
-): Promise<JevScore> {
+): Promise<JevSizeRestriction> {
   const config = aiConfig();
   try {
     const result = await clientFor(requestFetch).systemOne({
       model: config.model,
       state: { trecho_do_edital: passage },
       questions: {
-        restricao: noul(
-          "O trecho reserva participação ou cota exclusivamente para ME/EPP, microempresa ou empresa de pequeno porte?",
+        restricao: choice(
+          "Como este trecho trata a participação de ME/EPP, microempresa ou empresa de pequeno porte? Classifique a regra aplicável ao item, lote ou certame descrito no trecho.",
           {
-            true: "Há reserva, exclusividade ou cota explícita para ME/EPP.",
-            false: "Não há restrição explícita desse tipo.",
+            exclusive:
+              "A participação no item, lote ou certame é exclusiva de ME/EPP; empresas de outros portes não podem disputar essa contratação.",
+            quota:
+              "Somente uma parte ou percentual do objeto é uma cota reservada para ME/EPP, permanecendo uma cota principal aberta a outros portes.",
+            none: "Não há exclusividade nem cota reservada; o trecho só traz benefícios como empate ficto, preferência pós-lances, subcontratação ou regularidade fiscal tardia, ou apenas menciona ME/EPP.",
           },
         ),
       },
     });
     return {
-      relevance: result.answers.restricao.noul,
+      restriction: result.answers.restricao.choice,
+      confidence: result.answers.restricao.confidence,
       model: result.model,
       inputTokens: result.usage.input_tokens,
     };

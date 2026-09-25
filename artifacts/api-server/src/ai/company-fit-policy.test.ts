@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { InvalidParameterError } from "../lib/api-error";
-import { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
+import { companyFitTenderFingerprint, fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 
 const valid = () => ({
   description:
@@ -55,10 +55,45 @@ test("rejeita cobertura, faixa e limites inválidos", () => {
   );
 });
 
-test("converte score em nível e força baixo por exclusão ou porte", () => {
+test("devolve todos os campos inválidos no mesmo erro", () => {
+  assert.throws(
+    () => parseCompanyProfileInput({
+      description: "curta",
+      offerings: [],
+      exclusions: ["x"],
+      coverage: { scope: "states", states: ["XX"] },
+      valueRange: { min: -1, max: "alto" },
+      size: "gigante",
+    }),
+    (error) => {
+      assert.ok(error instanceof InvalidParameterError);
+      const fields = new Set(error.details?.map(({ field }) => field));
+      assert.deepEqual(fields, new Set([
+        "description", "offerings", "exclusions.0", "coverage.states",
+        "valueRange.min", "valueRange.max", "size",
+      ]));
+      return true;
+    },
+  );
+});
+
+test("cota ME/EPP é informativa e só exclusividade força nível baixo", () => {
   assert.equal(fitLevel(0.75), "high");
   assert.equal(fitLevel(0.5), "medium");
   assert.equal(fitLevel(0.49), "low");
   assert.equal(fitLevel(0.99, true), "low");
-  assert.equal(fitLevel(0.99, false, true), "low");
+  assert.equal(fitLevel(0.99, false, "me_epp_exclusive"), "low");
+  assert.equal(fitLevel(0.99, false, "me_epp_quota"), "high");
+});
+
+test("fingerprint ignora updatedAt operacional e muda com o conteúdo", () => {
+  const tender = {
+    title: "Aquisição de servidores", objectSummary: "Servidores para datacenter",
+    description: "Aquisição de dois servidores.", organizationName: "Órgão",
+    estimatedValue: "100000.00", state: "DF", items: [{ description: "Servidor rack" }],
+    updatedAt: new Date("2026-09-24T00:00:00Z"),
+  };
+  const tenderTouched = { ...tender, updatedAt: new Date("2026-09-25T00:00:00Z") };
+  assert.equal(companyFitTenderFingerprint(tender), companyFitTenderFingerprint(tenderTouched));
+  assert.notEqual(companyFitTenderFingerprint(tender), companyFitTenderFingerprint({ ...tender, title: "Aquisição de notebooks" }));
 });
