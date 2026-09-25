@@ -301,6 +301,55 @@ export type AskTenderPassage = { documentId: string; documentTitle: string; docu
 /** `POST /api/v1/tenders/:id/ask { question }` (session + CSRF + access). */
 export type AskTenderResult = { status: 'answered' | 'not_found' | 'processing'; passages: AskTenderPassage[]; model: string; quota: AiQuota };
 
+// Aderência (CODEX_HANDOFF-013, proposal): company profile × tender. Rules run in code; Jev only judges the semantic match.
+
+export type CompanySize = 'me_epp' | 'cooperative' | 'other';
+
+export type CompanyCoverage = { scope: 'national' } | { scope: 'states'; states: string[] };
+
+export type CompanyProfileInput = {
+  /** 20–600 chars: what the company supplies. */
+  description: string;
+  /** 1–20 terms, 2–80 chars each. */
+  offerings: string[];
+  /** 0–20 terms the company does not supply. */
+  exclusions: string[];
+  coverage: CompanyCoverage;
+  /** Reais; either side may be open. */
+  valueRange: { min: number | null; max: number | null };
+  size: CompanySize;
+};
+
+export type CompanyProfile = CompanyProfileInput & { version: number; updatedAt: string };
+
+/** `GET/PUT /api/v1/me/company-profile` (session; editing does not need access, the fit does). */
+export type CompanyProfileResponse = { profile: CompanyProfile | null };
+
+export type FitEvidence = { documentTitle: string; documentUrl: string; page: number; text: string };
+
+export type FitReason =
+  | { kind: 'offering_match'; terms: string[] }
+  | { kind: 'exclusion'; terms: string[] }
+  | { kind: 'out_of_coverage'; state: string | null }
+  | { kind: 'out_of_value_range'; estimatedValue: number }
+  | { kind: 'value_not_published' }
+  | { kind: 'size_restricted'; restriction: 'me_epp_exclusive' | 'me_epp_quota'; evidence: FitEvidence };
+
+export type FitLevel = 'high' | 'medium' | 'low';
+
+export type TenderFit = {
+  /** `filtered`: an explicit rule (area, value) ruled it out, no model call. `pending`: queued. */
+  status: 'ready' | 'pending' | 'filtered';
+  level: FitLevel | null;
+  score: number | null;
+  reasons: FitReason[];
+  model: string | null;
+  checkedAt: string | null;
+};
+
+/** `GET /api/v1/me/fit?tenderIds=…` (session + access, ≤ 100 ids). No profile → `profileVersion: null`, empty results. */
+export type TenderFitsResponse = { profileVersion: number | null; results: Record<string, TenderFit> };
+
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';

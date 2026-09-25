@@ -16,6 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { formatCurrencyPrecise, formatDate } from '@/lib/format';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
+import { CompanyProfileSection } from '@/features/company-profile/components/company-profile-section';
 import { AccountDataSection } from './components/account-data-section';
 import { NotificationPreferencesSection } from './components/notification-preferences-section';
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
@@ -24,6 +25,7 @@ import { useNotificationPreferences } from './hooks/use-notification-preferences
 const sections = [
   { name: 'Assinatura', id: 'assinatura' },
   { name: 'Perfil e conta', id: 'perfil' },
+  { name: 'Perfil da empresa', id: 'perfil-empresa' },
   { name: 'Notificações', id: 'notificacoes' },
   { name: 'Seus dados', id: 'seus-dados' },
   { name: 'Preferências de busca', id: null },
@@ -109,6 +111,7 @@ export default function SettingsPage() {
               </div>
             )}
           </section>
+          <CompanyProfileSection />
           <NotificationPreferencesSection />
           <AccountDataSection />
         </div>

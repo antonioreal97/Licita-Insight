@@ -2,6 +2,8 @@
 
 ## Foco agora
 
+Ciclo 5 (branch `antonioreal97/cycle5`, sobre o merge do PR #6): aderência edital × perfil da empresa (roadmap 3.6). Decisões do owner de 25 set 2026 no roadmap. Backend em CODEX_HANDOFF-013 (perfil, `GET /me/fit`, calibração, depois alerta diário). Frontend já feito contra a proposta (`features/company-profile/`), verificado com rotas simuladas: `docs/reviews/onda3-fit-frontend.md`.
+
 Onda 3, fatia 1 ("Perguntar ao edital" com o Jev) pronta: backend `fb9310a` + `7ce9ef4` (HANDOFF-012) e painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). Retestada pelo caminho do Docker (`dist/`) em 25 set 2026; QA em `docs/reviews/onda3-ask-qa.md`. `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`. Próximo na Onda 3: fatia 2 (ficha estruturada 3.5 e aderência 3.6).
 
 Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.

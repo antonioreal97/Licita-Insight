@@ -22,6 +22,12 @@ export const queryKeys = {
     notificationPreferences: ['me', 'notification-preferences'] as const,
     /** Index state and quota of "Perguntar ao edital" for one tender (the quota is per user). */
     askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
+    companyProfile: ['me', 'company-profile'] as const,
+    /** Saving or deleting the profile invalidates every fit (`fit.all`). */
+    fit: {
+      all: ['me', 'fit'] as const,
+      batch: (tenderIds: string[]) => ['me', 'fit', [...new Set(tenderIds)].sort()] as const,
+    },
     savedTenders: {
       all: ['me', 'saved-tenders'] as const,
       ids: ['me', 'saved-tenders', 'ids'] as const,

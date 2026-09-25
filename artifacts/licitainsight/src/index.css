@@ -628,7 +628,7 @@
     font-weight: 600;
   }
 
-  .field input {
+  .field :is(input, textarea) {
     height: 2.625rem;
     border: 1px solid hsl(var(--input));
     border-radius: var(--radius);
@@ -643,30 +643,38 @@
       box-shadow var(--duration-fast) var(--ease-standard);
   }
 
-  .field input::placeholder {
+  .field :is(input, textarea)::placeholder {
     color: hsl(var(--muted-foreground));
   }
 
-  .field input:hover:not(:disabled) {
+  .field :is(input, textarea):hover:not(:disabled) {
     border-color: hsl(var(--border-strong));
   }
 
-  .field input:focus,
-  .field input:focus-visible {
+  .field :is(input, textarea):focus,
+  .field :is(input, textarea):focus-visible {
     border-color: hsl(var(--ring));
     box-shadow: 0 0 0 3px hsl(var(--ring) / 0.2);
   }
 
-  .field input:disabled {
+  .field :is(input, textarea):disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }
 
-  .field input[aria-invalid='true'] {
+  .field :is(input, textarea)[aria-invalid='true'] {
     border-color: hsl(var(--destructive));
   }
 
-  .dark .field input {
+  .field textarea {
+    height: auto;
+    min-height: 5.5rem;
+    padding: 0.625rem 0.75rem;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .dark .field :is(input, textarea) {
     background: hsl(var(--card));
   }
 

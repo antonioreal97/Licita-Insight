@@ -13,6 +13,8 @@ import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-tenders-list';
 import { TenderRow } from '@/features/tenders/components/tender-row';
+import { ProfileInviteCard } from '@/features/company-profile/components/profile-invite-card';
+import { useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
 import { formatNumber } from '@/lib/format';
 
 function saoPauloDate(offsetDays = 0): string {
@@ -169,6 +171,7 @@ export default function DashboardPage() {
   });
   // deadlineFrom=today keeps "open" tenders whose deadline already passed (status lags the source) out of the top.
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], deadlineFrom: today, facets: false });
+  const fits = useTenderFits(priority.data?.data.map((tender) => tender.id) ?? []);
   const refreshing = catalog.isFetching || recent.isFetching || soon.isFetching || priority.isFetching;
   const refresh = () => {
     void catalog.refetch();
@@ -234,12 +237,13 @@ export default function DashboardPage() {
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {priority.data.data.map((tender) => (
-                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact />
+                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact fit={fits.data?.results[tender.id]} />
               ))}
             </div>
           )}
         </section>
         <aside className="space-y-6">
+          <ProfileInviteCard />
           <MonitoringCard />
           <OpportunitiesCard />
           <div className="rounded-xl border border-border bg-card p-5">
