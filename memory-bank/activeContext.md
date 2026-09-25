@@ -2,9 +2,11 @@
 
 ## Foco agora
 
-Onda 2 (e-mail) integrada no cycle4 (24 set 2026): backend Resend do Codex (`c8e4837`) + seção Notificações em `/settings#notificacoes` e página pública `/descadastro`. QA em `docs/reviews/onda2-integration-qa.md`. Follow-ups de backend em `docs/handoffs/CODEX_HANDOFF-010-email-followups.md` (migrate em banco vazio, plurais/prazo no texto do e-mail, segredo próprio do token de descadastro). Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`; sem elas as entregas ficam `skipped`.
+Onda 3, fatia 1 ("Perguntar ao edital" com o Jev): backend `fb9310a` + painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). QA em `docs/reviews/onda3-ask-qa.md`: funciona com o Jev real, mas **não roda no Docker** até o CODEX_HANDOFF-012 (worker do pdfjs fora do `dist/`, `search_vector` nulo com `push-force`, índice preso em `unsupported`, ligaduras quebradas). `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`.
 
-O stack Docker em execução no checkout `main` não tem o backend de e-mail: depois do merge, `docker compose up --build` (o `db-setup` aplica o schema novo).
+Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.
+
+O stack Docker em execução no checkout `main` é do cycle3: depois do merge, `docker compose up --build`.
 
 ## O que está na mesa
 

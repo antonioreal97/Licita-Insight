@@ -35,6 +35,7 @@ import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tender
 import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
+import { AskTenderPanel } from './components/ask-tender-panel';
 import { DeadlineIndicator } from './components/deadline-indicator';
 import { MetaItem } from './components/meta-item';
 import { StatusBadge } from './components/status-badge';
@@ -351,6 +352,7 @@ export default function TenderDetailPage() {
             )}
           </Panel>
 
+          <AskTenderPanel tenderId={tender.id} />
           <ItemsPanel tender={tender} />
           <TimelinePanel events={tender.timeline} />
         </div>
