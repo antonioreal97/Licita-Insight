@@ -45,3 +45,15 @@ Para seguir o QA, a API rodou via `tsx` e a coluna foi recriada como gerada **s�
 
 - Build Docker do frontend e da API juntos (bloqueado pelo item 1).
 - Estado `failed` na UI com erro real de rede do PNCP (coberto por leitura do código: GET de quem tem acesso retenta).
+
+## Reteste após CODEX_HANDOFF-012 (`7ce9ef4`)
+
+- Container do Compose (este worktree): `test:dist-pdf` PASS; `search_vector` gerado (`ALWAYS`) no banco `licita`.
+- `push-force` sobre banco que já tinha a coluna gerada: sem erro, coluna continua `ALWAYS`.
+- API pelo caminho do Docker (`build.mjs` → `dist/`), Jev real, índice zerado:
+  - PDF dos Correios indexado em 6,4 s; edital só com ZIP: 4 PDFs, 54 páginas.
+  - Consórcio: 98% (p. 4) e 97% (o item 4.3 exato); o trecho de ruído de 70% saiu com o corte relativo.
+  - Multa: 84% e 84% (p. 20). Visita técnica e garantia: `not_found`. Cache e cota esgotada: ok.
+  - 352 trechos sem U+FFFD e sem "par cipação", "admi da", "de fi nição", "h ps:"; texto exibido limpo.
+- Resta no log só aviso de fonte do pdfjs (`Warning: TT: undefined function`), sem efeito na extração.
+- Login pelo Google no stack Docker não testado (sem `AUTH_DEV_LOGIN` lá; precisa do owner).
