@@ -133,6 +133,7 @@ type NotificationType =
   | 'tender_document_added'     // novo documento
   | 'tender_value_changed'      // estimatedValue ou estimatedValueStatus mudou
   | 'saved_search_new_matches'  // editais novos que batem com uma busca salva com alertas
+  | 'profile_new_matches'       // editais novos com alta aderência ao perfil da empresa
   | 'trial_ending';             // teste termina em até 3 dias
 
 type Notification = {
@@ -145,6 +146,7 @@ type Notification = {
   savedSearch: { id: string; name: string; query: string } | null;                // saved_search_*
   matchCount: number | null;
   tenderIds: string[];          // até 20 ids dos novos editais (saved_search_new_matches)
+  profileMatches: Array<{ id: string; title: string; organizationName: string; proposalDeadline: string | null; level: 'high' }>;
 };
 ```
 
@@ -164,6 +166,8 @@ Regras de geração:
   atualizar `lastCheckedAt`.
 - **Fim do teste:** um scheduler da API avalia a cada 6 horas usuários cujo `trialEndsAt` está entre
   agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
+- **Perfil da empresa:** antes do digest diário, avaliar somente editais novos desde o checkpoint do
+  perfil e criar no máximo uma `profile_new_matches` por usuário/dia quando houver aderência alta.
 - Deduplicar: a mesma mudança não gera duas notificações para o mesmo usuário.
 - Retenção sugerida: 90 dias.
 
@@ -175,6 +179,7 @@ descadastro permanecem acessíveis sem assinatura ativa.
 ```ts
 type NotificationPreferences = {
   email: { digest: 'daily' | 'off'; immediateCritical: boolean };
+  profileAlerts: boolean;
   emailAddress: string;
   updatedAt: string | null;
 };
@@ -183,13 +188,14 @@ type NotificationPreferences = {
 | Método | Caminho | Corpo | Resposta |
 |---|---|---|---|
 | GET | `/api/v1/me/notification-preferences` | — | `NotificationPreferences` |
-| PUT | `/api/v1/me/notification-preferences` | `{ email: { digest?: 'daily' \| 'off'; immediateCritical?: boolean } }` | `NotificationPreferences` |
+| PUT | `/api/v1/me/notification-preferences` | `{ email?: { digest?: 'daily' \| 'off'; immediateCritical?: boolean }; profileAlerts?: boolean }` | `NotificationPreferences` |
 | POST | `/api/v1/email/unsubscribe` | `{ token, scope: 'all' \| 'digest' \| 'immediate' }` | `{ scope, email: { digest, immediateCritical } }` |
 
 - `GET` e `PUT` exigem sessão; `PUT` exige CSRF. Ambos ficam fora do gate de assinatura.
-- `PUT` é parcial, mas precisa informar ao menos uma propriedade de `email`; corpo vazio responde
+- `PUT` é parcial, mas precisa informar ao menos uma propriedade de `email` ou `profileAlerts`; corpo vazio responde
   `400 INVALID_PARAMETER`.
-- O padrão para contas novas e preexistentes é `digest: 'daily'` e `immediateCritical: true`.
+- O padrão para contas novas e preexistentes é `digest: 'daily'`, `immediateCritical: true` e
+  `profileAlerts: true` (o alerta só produz eventos quando existe perfil).
 - O descadastro é público e idempotente. Token ou escopo inválido responde
   `400 INVALID_PARAMETER`. O token é opaco, assinado com HMAC-SHA256 usando
   `EMAIL_UNSUBSCRIBE_SECRET` (fallback `SESSION_SECRET`), não contém PII legível e não possui

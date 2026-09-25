@@ -9,6 +9,7 @@ import type { EmailNotificationPreferences } from './emailNotificationPreference
 
 export interface NotificationPreferences {
   email: EmailNotificationPreferences;
+  profileAlerts: boolean;
   emailAddress: string;
   /** @nullable */
   updatedAt: Date | null;

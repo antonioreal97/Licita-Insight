@@ -154,6 +154,87 @@ paths:
           $ref: "#/components/responses/AiQuotaExceeded"
         "503":
           $ref: "#/components/responses/AiUnavailable"
+  /v1/me/company-profile:
+    get:
+      operationId: getCompanyProfile
+      tags: [ai]
+      summary: Read the signed-in account company profile
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Current profile, or null when none was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    put:
+      operationId: putCompanyProfile
+      tags: [ai]
+      summary: Replace the company profile and invalidate previous fit results
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyProfileInput"
+      responses:
+        "200":
+          description: Updated versioned profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfileResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      operationId: deleteCompanyProfile
+      tags: [ai]
+      summary: Delete the company profile and its cached fit results
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204":
+          description: Profile deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/fit:
+    get:
+      operationId: getTenderFits
+      tags: [ai]
+      summary: Read or enqueue company-profile fit for up to 100 tenders
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: tenderIds
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: Cached, filtered, or pending fit results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderFitsResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
   /v1/search/suggestions:
     get:
       operationId: getSearchSuggestions
@@ -1130,7 +1211,16 @@ components:
         currentPeriodEnd: { type: [string, "null"], format: date-time }
         canCancel: { type: boolean }
         monthlyBrl: { type: [number, "null"] }
-      required: [status, entitled, source, trialEndsAt, currentPeriodEnd, canCancel, monthlyBrl]
+      required:
+        [
+          status,
+          entitled,
+          source,
+          trialEndsAt,
+          currentPeriodEnd,
+          canCancel,
+          monthlyBrl,
+        ]
     BillingPlanResponse:
       type: object
       properties:
@@ -1169,13 +1259,15 @@ components:
       properties:
         email:
           $ref: "#/components/schemas/EmailNotificationPreferences"
+        profileAlerts:
+          type: boolean
         emailAddress:
           type: string
           format: email
         updatedAt:
           type: [string, "null"]
           format: date-time
-      required: [email, emailAddress, updatedAt]
+      required: [email, profileAlerts, emailAddress, updatedAt]
     UpdateEmailNotificationPreferences:
       type: object
       additionalProperties: false
@@ -1188,10 +1280,12 @@ components:
     UpdateNotificationPreferencesRequest:
       type: object
       additionalProperties: false
+      minProperties: 1
       properties:
         email:
           $ref: "#/components/schemas/UpdateEmailNotificationPreferences"
-      required: [email]
+        profileAlerts:
+          type: boolean
     EmailUnsubscribeScope:
       type: string
       enum: [all, digest, immediate]
@@ -1226,10 +1320,24 @@ components:
         emailDigest:
           $ref: "#/components/schemas/EmailDigestPreference"
         emailImmediateCritical: { type: boolean }
+        profileAlerts: { type: boolean }
         emailPreferencesUpdatedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, email, name, avatarUrl, trialEndsAt, emailDigest, emailImmediateCritical, emailPreferencesUpdatedAt, createdAt, updatedAt]
+      required:
+        [
+          id,
+          email,
+          name,
+          avatarUrl,
+          trialEndsAt,
+          emailDigest,
+          emailImmediateCritical,
+          profileAlerts,
+          emailPreferencesUpdatedAt,
+          createdAt,
+          updatedAt,
+        ]
     AccountExportSession:
       type: object
       properties:
@@ -1257,7 +1365,18 @@ components:
         deletedAt: { type: [string, "null"], format: date-time }
         lastCheckedAt: { type: [string, "null"], format: date-time }
         newMatchesCount: { type: integer, minimum: 0 }
-      required: [id, name, query, alertsEnabled, createdAt, updatedAt, deletedAt, lastCheckedAt, newMatchesCount]
+      required:
+        [
+          id,
+          name,
+          query,
+          alertsEnabled,
+          createdAt,
+          updatedAt,
+          deletedAt,
+          lastCheckedAt,
+          newMatchesCount,
+        ]
     AccountExportNotification:
       type: object
       properties:
@@ -1282,7 +1401,29 @@ components:
         tenderIds:
           type: array
           items: { type: string }
-      required: [id, type, createdAt, readAt, tenderId, tenderTitle, tenderNumberShort, tenderOrganizationName, tenderProposalDeadline, change, savedSearchId, savedSearchName, savedSearchQuery, matchCount, tenderIds]
+        profileMatches:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileMatchNotification"
+      required:
+        [
+          id,
+          type,
+          createdAt,
+          readAt,
+          tenderId,
+          tenderTitle,
+          tenderNumberShort,
+          tenderOrganizationName,
+          tenderProposalDeadline,
+          change,
+          savedSearchId,
+          savedSearchName,
+          savedSearchQuery,
+          matchCount,
+          tenderIds,
+          profileMatches,
+        ]
     AccountExportEmailDelivery:
       type: object
       properties:
@@ -1297,7 +1438,20 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         sentAt: { type: [string, "null"], format: date-time }
-      required: [id, mode, status, recipientEmail, subject, attempts, lastError, providerMessageId, createdAt, updatedAt, sentAt]
+      required:
+        [
+          id,
+          mode,
+          status,
+          recipientEmail,
+          subject,
+          attempts,
+          lastError,
+          providerMessageId,
+          createdAt,
+          updatedAt,
+          sentAt,
+        ]
     AccountExportSubscription:
       type: object
       properties:
@@ -1311,12 +1465,23 @@ components:
         id: { type: string }
         tenderId: { type: string }
         question: { type: string }
-        status: { type: string, enum: [processing, answered, not_found, failed] }
+        status:
+          { type: string, enum: [processing, answered, not_found, failed] }
         model: { type: [string, "null"] }
         inputTokens: { type: integer, minimum: 0 }
         estimatedCostUsd: { type: string }
         createdAt: { type: string, format: date-time }
-      required: [id, tenderId, question, status, model, inputTokens, estimatedCostUsd, createdAt]
+      required:
+        [
+          id,
+          tenderId,
+          question,
+          status,
+          model,
+          inputTokens,
+          estimatedCostUsd,
+          createdAt,
+        ]
     AccountExport:
       type: object
       properties:
@@ -1347,11 +1512,39 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountExportAiQuestion"
+        companyProfile:
+          anyOf:
+            - $ref: "#/components/schemas/CompanyProfile"
+            - type: "null"
+        companyFits:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        fitUsage:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
         subscription:
           anyOf:
             - $ref: "#/components/schemas/AccountExportSubscription"
             - type: "null"
-      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, emailDeliveries, aiQuestions, subscription]
+      required:
+        [
+          exportedAt,
+          user,
+          sessions,
+          savedTenders,
+          savedSearches,
+          notifications,
+          emailDeliveries,
+          aiQuestions,
+          companyProfile,
+          companyFits,
+          fitUsage,
+          subscription,
+        ]
     TenderAskIndexStatus:
       type: string
       enum: [not_started, processing, ready, failed, no_documents, unsupported]
@@ -1411,6 +1604,138 @@ components:
         quota:
           $ref: "#/components/schemas/AiQuota"
       required: [status, passages, model, quota]
+    CompanySize:
+      type: string
+      enum: [me_epp, cooperative, other]
+    CompanyCoverage:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          properties:
+            scope: { type: string, enum: [national] }
+          required: [scope]
+        - type: object
+          additionalProperties: false
+          properties:
+            scope: { type: string, enum: [states] }
+            states:
+              type: array
+              minItems: 1
+              maxItems: 27
+              uniqueItems: true
+              items: { type: string, minLength: 2, maxLength: 2 }
+          required: [scope, states]
+    CompanyValueRange:
+      type: object
+      additionalProperties: false
+      properties:
+        min: { type: [number, "null"], minimum: 0 }
+        max: { type: [number, "null"], minimum: 0 }
+      required: [min, max]
+    CompanyProfileInput:
+      type: object
+      additionalProperties: false
+      properties:
+        description: { type: string, minLength: 20, maxLength: 600 }
+        offerings:
+          type: array
+          minItems: 1
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 2, maxLength: 80 }
+        exclusions:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 2, maxLength: 80 }
+        coverage:
+          $ref: "#/components/schemas/CompanyCoverage"
+        valueRange:
+          $ref: "#/components/schemas/CompanyValueRange"
+        size:
+          $ref: "#/components/schemas/CompanySize"
+      required: [description, offerings, exclusions, coverage, valueRange, size]
+    CompanyProfile:
+      allOf:
+        - $ref: "#/components/schemas/CompanyProfileInput"
+        - type: object
+          properties:
+            version: { type: integer, minimum: 1 }
+            updatedAt: { type: string, format: date-time }
+          required: [version, updatedAt]
+    CompanyProfileResponse:
+      type: object
+      properties:
+        profile:
+          anyOf:
+            - $ref: "#/components/schemas/CompanyProfile"
+            - type: "null"
+      required: [profile]
+    FitEvidence:
+      type: object
+      properties:
+        documentTitle: { type: string }
+        documentUrl: { type: string, format: uri }
+        page: { type: integer, minimum: 1 }
+        text: { type: string }
+      required: [documentTitle, documentUrl, page, text]
+    FitReason:
+      oneOf:
+        - type: object
+          properties:
+            kind: { type: string, enum: [offering_match] }
+            terms: { type: array, items: { type: string } }
+          required: [kind, terms]
+        - type: object
+          properties:
+            kind: { type: string, enum: [exclusion] }
+            terms: { type: array, items: { type: string } }
+          required: [kind, terms]
+        - type: object
+          properties:
+            kind: { type: string, enum: [out_of_coverage] }
+            state: { type: [string, "null"] }
+          required: [kind, state]
+        - type: object
+          properties:
+            kind: { type: string, enum: [out_of_value_range] }
+            estimatedValue: { type: number }
+          required: [kind, estimatedValue]
+        - type: object
+          properties:
+            kind: { type: string, enum: [value_not_published] }
+          required: [kind]
+        - type: object
+          properties:
+            kind: { type: string, enum: [size_restricted] }
+            restriction:
+              { type: string, enum: [me_epp_exclusive, me_epp_quota] }
+            evidence:
+              $ref: "#/components/schemas/FitEvidence"
+          required: [kind, restriction, evidence]
+    TenderFit:
+      type: object
+      properties:
+        status: { type: string, enum: [ready, pending, filtered] }
+        level: { type: [string, "null"], enum: [high, medium, low, null] }
+        score: { type: [number, "null"], minimum: 0, maximum: 1 }
+        reasons:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/FitReason"
+        model: { type: [string, "null"] }
+        checkedAt: { type: [string, "null"], format: date-time }
+      required: [status, level, score, reasons, model, checkedAt]
+    TenderFitsResponse:
+      type: object
+      properties:
+        profileVersion: { type: [integer, "null"], minimum: 1 }
+        results:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TenderFit"
+      required: [profileVersion, results]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -1739,7 +2064,16 @@ components:
         lastCheckedAt: { type: [string, "null"], format: date-time }
         newMatchesCount: { type: integer, minimum: 0 }
       required:
-        [id, name, query, alertsEnabled, createdAt, updatedAt, lastCheckedAt, newMatchesCount]
+        [
+          id,
+          name,
+          query,
+          alertsEnabled,
+          createdAt,
+          updatedAt,
+          lastCheckedAt,
+          newMatchesCount,
+        ]
     SavedSearchList:
       type: object
       properties:
@@ -1767,7 +2101,24 @@ components:
     NotificationType:
       type: string
       enum:
-        [tender_deadline_changed, tender_status_changed, tender_document_added, tender_value_changed, saved_search_new_matches, trial_ending]
+        [
+          tender_deadline_changed,
+          tender_status_changed,
+          tender_document_added,
+          tender_value_changed,
+          saved_search_new_matches,
+          profile_new_matches,
+          trial_ending,
+        ]
+    ProfileMatchNotification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        organizationName: { type: string }
+        proposalDeadline: { type: [string, "null"], format: date-time }
+        level: { type: string, enum: [high] }
+      required: [id, title, organizationName, proposalDeadline, level]
     Notification:
       type: object
       properties:
@@ -1810,7 +2161,24 @@ components:
           type: array
           maxItems: 20
           items: { type: string }
-      required: [id, type, createdAt, readAt, tender, change, savedSearch, matchCount, tenderIds]
+        profileMatches:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ProfileMatchNotification"
+      required:
+        [
+          id,
+          type,
+          createdAt,
+          readAt,
+          tender,
+          change,
+          savedSearch,
+          matchCount,
+          tenderIds,
+          profileMatches,
+        ]
     NotificationPage:
       type: object
       properties:
@@ -1867,7 +2235,21 @@ components:
           $ref: "#/components/schemas/OpportunityInstallation"
         sourceUrl: { type: [string, "null"], format: uri }
         updatedAt: { type: string, format: date-time }
-      required: [id, title, summary, organizationName, status, program, registrationFrom, registrationTo, state, installation, sourceUrl, updatedAt]
+      required:
+        [
+          id,
+          title,
+          summary,
+          organizationName,
+          status,
+          program,
+          registrationFrom,
+          registrationTo,
+          state,
+          installation,
+          sourceUrl,
+          updatedAt,
+        ]
     OpportunityFacets:
       type: object
       properties:

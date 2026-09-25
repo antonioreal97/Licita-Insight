@@ -8,5 +8,6 @@
 import type { UpdateEmailNotificationPreferences } from './updateEmailNotificationPreferences';
 
 export interface UpdateNotificationPreferencesRequest {
-  email: UpdateEmailNotificationPreferences;
+  email?: UpdateEmailNotificationPreferences;
+  profileAlerts?: boolean;
 }

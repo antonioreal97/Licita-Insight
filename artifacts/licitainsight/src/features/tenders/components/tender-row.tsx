@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { Building2, CalendarDays, Globe, MapPin } from 'lucide-react';
-import type { TenderSummary } from '@/api';
+import type { TenderFit, TenderSummary } from '@/api';
+import { FitBadge } from '@/features/company-profile/components/fit-badge';
 import { formatDate } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,8 @@ type Props = {
   compact?: boolean;
   /** Pass `relevanceVaries(results)` from the page; the meter stays hidden when every visible result has the same score. */
   relevanceVaries?: boolean;
+  /** Aderência ao perfil da empresa; nothing renders while pending or without a profile. */
+  fit?: TenderFit;
 };
 
 /**
@@ -28,7 +31,7 @@ type Props = {
  * Layout (grid): mobile stacks facts under the text; ≥sm moves value/deadline/relevance to a right-aligned column
  * so values line up vertically across rows for fast scanning. The whole row opens the detail (title link overlay).
  */
-export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false }: Props) {
+export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit }: Props) {
   const place = formatPlace(tender.location);
   const titleFragment = highlightFor(tender, 'title');
   const snippet = highlightFor(tender, 'objectSummary') ?? highlightFor(tender, 'items');
@@ -57,6 +60,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
             {number}
           </span>
         )}
+        <FitBadge fit={fit} />
       </div>
 
       {/* Title, org line, snippet, categories */}

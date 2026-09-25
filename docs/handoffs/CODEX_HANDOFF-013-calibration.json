@@ -1,0 +1,2495 @@
+{
+  "generatedAt": "2026-09-25T19:31:00.016Z",
+  "source": "PostgreSQL tenders; 10 probable positives, 10 explicit neighbors and 10 random tenders per profile; no fabricated tender data",
+  "model": "jev-1.13.0",
+  "promptVersion": 2,
+  "profiles": [
+    {
+      "id": "technology",
+      "label": "Tecnologia da informação",
+      "neighborTerms": [
+        "servidores públicos",
+        "telefonia",
+        "impressão"
+      ],
+      "input": {
+        "description": "Fornecemos computadores, servidores, redes, licenças de software e serviços de suporte técnico e infraestrutura de TI.",
+        "offerings": [
+          "computadores",
+          "servidores",
+          "software",
+          "rede",
+          "suporte técnico"
+        ],
+        "exclusions": [
+          "obra civil",
+          "medicamentos"
+        ],
+        "coverage": {
+          "scope": "national"
+        },
+        "valueRange": {
+          "min": null,
+          "max": null
+        },
+        "size": "other"
+      },
+      "levelCounts": {
+        "high": 2,
+        "medium": 1,
+        "low": 27,
+        "filtered": 0
+      },
+      "inputTokens": 31967,
+      "estimatedCostUsd": 0.0013426399999999998,
+      "results": [
+        {
+          "tender": {
+            "id": "15126437000305-1-003751-2026",
+            "title": "Registro de Preços para a aquisição de COLETORES, MEIOS DE CULTURA, LÂMINAS, LAMÍNULAS E TUBOS LABORATORIAIS para a Maternidade Climério de Oliveira da Rede Ebserh, a fim de atender às necessidades da Maternidade Climério de Oliveira (MCO/UFBA), pertencente à Rede da Empresa Brasileira de Serviços Hospitalares (Rede Ebserh), por um período de 12 (doze) meses, conforme especificações e demais condições estabelecidas no Termo de Referência.",
+            "objectSummary": "Registro de Preços para a aquisição de COLETORES, MEIOS DE CULTURA, LÂMINAS, LAMÍNULAS E TUBOS LABORATORIAIS para a Maternidade Climério de Oliveira da Rede Ebserh, a fim de atender às necessidades da Maternidade Climério de Oliveira (MCO/UFBA), pertencente à Rede da Empresa Brasileira de…",
+            "organizationName": "EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH",
+            "state": "BA",
+            "estimatedValue": null,
+            "publishedAt": "2026-09-17T07:00:34.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "rede"
+                ]
+              },
+              {
+                "kind": "value_not_published"
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.020Z"
+          },
+          "inputTokens": 1144,
+          "estimatedCostUsd": 0.00004805
+        },
+        {
+          "tender": {
+            "id": "77881449000130-1-000053-2026",
+            "title": "Contratação de serviços para a oferta de 02 (duas) vaga de capacitação, visando a inscrição de Servidores no evento: O Novo Papel das Câmaras Municipais, a ser realizado de 22 a 25 de setembro de 2026, na cidade de Curitiba/PR.",
+            "objectSummary": "Contratação de serviços para a oferta de 02 (duas) vaga de capacitação, visando a inscrição de Servidores no evento: O Novo Papel das Câmaras Municipais, a ser realizado de 22 a 25 de setembro de 2026, na cidade de Curitiba/PR.",
+            "organizationName": "CAMARA MUNICIPAL DE VEREADORES DE SANTA HELENA",
+            "state": "PR",
+            "estimatedValue": 5200,
+            "publishedAt": "2026-09-18T17:50:18.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.02,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores",
+                  "suporte técnico"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.009Z"
+          },
+          "inputTokens": 1346,
+          "estimatedCostUsd": 0.00005653
+        },
+        {
+          "tender": {
+            "id": "02858064000153-1-000013-2026",
+            "title": "Contratação de empresa especializada para locação de software de sistema legislativo e administrativo integrado, em plataforma web, destinado à Câmara Municipal de Itamonte/MG, compreendendo licença de uso, desmaterialização de documentos, processo legislativo e administrativo eletrônico e digital, votação eletrônica, assinatura eletrônica e digital, protocolo, gerenciamento eletrônico de documentos (GED), integração com o Poder Executivo, gestão de visitantes, Diário Oficial, aplicativos para iOS e Android, fornecimento, hospedagem e manutenção de portal eletrônico integrado, bem como serviços de implantação, parametrização, migração e conversão de dados, cadastro e inserção de dados provenientes de sistemas legados, treinamento, suporte técnico especializado e manutenções preventiva, corretiva, adaptativa e evolutiva, conforme as especificações deste Termo de Referência, sendo o certame destinado exclusivamente à participação de microempresas (ME) e empresas de pequeno porte (EPP).\r\n\r\n1.2. Integram o objeto os serviços de suporte técnico com acordo de nível de serviço (SLA), atualizações de versões, adequações decorrentes de alterações legais, monitoramento da integridade dos bancos de dados, rotinas de backup e recuperação, customizações necessárias ao regular funcionamento da solução e demais serviços técnicos correlatos previstos neste instrumento.\r\n\r\nITEM\tESPECIFICAÇÃO\tUNIDADE\tQUANT.\r\n01\tLicença de uso da solução integrada, em plataforma web, para gestão dos processos legislativo e administrativo, incluindo módulos, integrações, votação eletrônica, assinaturas, protocolo, GED, gestão de visitantes, Diário Oficial, aplicativo mobile, portal eletrônico, hospedagem, suporte técnico, manutenções e demais funcionalidades previstas neste Termo de Referência.\tMês\t12\r\n02\tServiços de implantação e parametrização, migração e conversão de dados, cadastro e inserção de dados provenientes de sistemas legados e treinamento inicial/presencial sob demanda, conforme especificações deste Termo de Referência.\tServiço\t1",
+            "objectSummary": "Contratação de empresa especializada para locação de software de sistema legislativo e administrativo integrado, em plataforma web, destinado à Câmara Municipal de Itamonte/MG, compreendendo licença de uso, desmaterialização de documentos, processo legislativo e administrativo eletrônico e…",
+            "organizationName": "CAMARA MUNICIPAL DE ITAMONTE",
+            "state": "MG",
+            "estimatedValue": 62166.63,
+            "publishedAt": "2026-09-18T12:59:35.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "medium",
+            "score": 0.64,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "software",
+                  "suporte técnico"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.008Z"
+          },
+          "inputTokens": 1841,
+          "estimatedCostUsd": 0.00007732
+        },
+        {
+          "tender": {
+            "id": "00508903000188-1-001802-2026",
+            "title": "Contratação da servidora Valéria Cristina Gomes Ribeiro CPF  096.079.478-60 para ministrar uma palestra sobre \"Capacitismo em Desconstrução: Atitudes que Fazem a Diferença\" de 2 horas na modalidade Online, no dia 30/09/2026 às 15h, para todos os servidores da Justiça Federal de Mato Grosso.",
+            "objectSummary": "Contratação da servidora Valéria Cristina Gomes Ribeiro CPF  096.079.478-60 para ministrar uma palestra sobre \"Capacitismo em Desconstrução: Atitudes que Fazem a Diferença\" de 2 horas na modalidade Online, no dia 30/09/2026 às 15h, para todos os servidores da Justiça Federal de Mato Grosso.",
+            "organizationName": "JUSTICA FEDERAL DE PRIMEIRA INSTANCIA",
+            "state": "MT",
+            "estimatedValue": 2000,
+            "publishedAt": "2026-09-17T16:50:29.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0333333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.010Z"
+          },
+          "inputTokens": 1074,
+          "estimatedCostUsd": 0.00004511
+        },
+        {
+          "tender": {
+            "id": "12426325000110-1-000023-2026",
+            "title": "CREDENCIAMENTO DE PESSOAS JURÍDICAS PARA PRESTAÇÃO DE SERVIÇOS MÉDICOS E OUTROS PROFISSIONAIS DE SAÚDE NA REDE SUS, VISANDO O ATENDIMENTO DA POPULAÇÃO NAS UNIDADES PRESTADORAS DE SERVIÇOS DE SAÚDE DA REDE PÚBLICA DO MUNICÍPIO DE AMÉLIA RODRIGUES-BA...",
+            "objectSummary": "CREDENCIAMENTO DE PESSOAS JURÍDICAS PARA PRESTAÇÃO DE SERVIÇOS MÉDICOS E OUTROS PROFISSIONAIS DE SAÚDE NA REDE SUS, VISANDO O ATENDIMENTO DA POPULAÇÃO NAS UNIDADES PRESTADORAS DE SERVIÇOS DE SAÚDE DA REDE PÚBLICA DO MUNICÍPIO DE AMÉLIA RODRIGUES-BA...",
+            "organizationName": "PMAR-FUNDO MUNICIPAL DE SAUDE",
+            "state": "BA",
+            "estimatedValue": 6427153.2,
+            "publishedAt": "2026-09-17T12:58:22.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "rede"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.043Z"
+          },
+          "inputTokens": 1089,
+          "estimatedCostUsd": 0.00004574
+        },
+        {
+          "tender": {
+            "id": "17733643000147-1-000185-2026",
+            "title": "AQUISIÇÃO  DE BRINDES PERSONALIZADOS PARA PRESENTEAR OS SERVIDORES MUNICIPAIS, EM RAZÃO DO DIA DO SERVIDOR, COM FULCRO  NO ART 75, INCISO II LEI 14.133/2021.",
+            "objectSummary": "AQUISIÇÃO  DE BRINDES PERSONALIZADOS PARA PRESENTEAR OS SERVIDORES MUNICIPAIS, EM RAZÃO DO DIA DO SERVIDOR, COM FULCRO  NO ART 75, INCISO II LEI 14.133/2021.",
+            "organizationName": "MUNICIPIO DE LEOPOLDINA",
+            "state": "MG",
+            "estimatedValue": 35850,
+            "publishedAt": "2026-09-17T19:25:17.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0266667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.011Z"
+          },
+          "inputTokens": 993,
+          "estimatedCostUsd": 0.00004171
+        },
+        {
+          "tender": {
+            "id": "03162872000144-1-000064-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA FORNECIMENTO DE LICENÇA DE USO DE SOFTWARE, NA MODALIDADE SaaS (SOFTWARE COMO SERVIÇO) DESTINADO À GESTÃO DE PROCESSOS HABITACIONAIS EM ATENDIMENTO A SECRETARIA MUNICIPAL DE ASSISTÊNCIA SOCIAL DE POCONÉ/MT.",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA FORNECIMENTO DE LICENÇA DE USO DE SOFTWARE, NA MODALIDADE SaaS (SOFTWARE COMO SERVIÇO) DESTINADO À GESTÃO DE PROCESSOS HABITACIONAIS EM ATENDIMENTO A SECRETARIA MUNICIPAL DE ASSISTÊNCIA SOCIAL DE POCONÉ/MT.",
+            "organizationName": "MUNICIPIO DE POCONE",
+            "state": "MT",
+            "estimatedValue": 20213,
+            "publishedAt": "2026-09-17T16:46:43.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.99,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "software"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.011Z"
+          },
+          "inputTokens": 1050,
+          "estimatedCostUsd": 0.0000441
+        },
+        {
+          "tender": {
+            "id": "05853163000130-1-000379-2026",
+            "title": "Aquisição de computadores com monitor (desktops) e computadores portáteis (notebooks), com garantia de funcionamento on-site pelo período de 36 (trinta e seis meses), mediante adesão às atas de registro de preços n.ºs 003/2025 e 007/2025, gerenciadas pelo consórcio intermunicipal MULTIFINALITÁRIO dos municípios do lago de furnas, para atender as necessidades do Serviço de Saneamento Ambiental de Marabá - SSAM.",
+            "objectSummary": "Aquisição de computadores com monitor (desktops) e computadores portáteis (notebooks), com garantia de funcionamento on-site pelo período de 36 (trinta e seis meses), mediante adesão às atas de registro de preços n.ºs 003/2025 e 007/2025, gerenciadas pelo consórcio intermunicipal MULTIFINALITÁRIO…",
+            "organizationName": "MUNICIPIO DE MARABA",
+            "state": "PA",
+            "estimatedValue": 264400,
+            "publishedAt": "2026-09-17T17:35:39.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 1,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "computadores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.062Z"
+          },
+          "inputTokens": 1127,
+          "estimatedCostUsd": 0.00004733
+        },
+        {
+          "tender": {
+            "id": "16782211000163-1-000056-2026",
+            "title": "Contratação de empresa especializada para execução de serviços de relocação/reinstalação de 01 (um) poste da rede elétrica e substituição de 06 (seis) cruzetas de madeira deterioradas, com os ajustes necessários na rede de média tensão, nas dependências do SAAE de Formiga/MG, incluindo mão de obra,  veículos, equipamentos, ferramentas, transporte e demais insumos necessários à perfeita execução.",
+            "objectSummary": "Contratação de empresa especializada para execução de serviços de relocação/reinstalação de 01 (um) poste da rede elétrica e substituição de 06 (seis) cruzetas de madeira deterioradas, com os ajustes necessários na rede de média tensão, nas dependências do SAAE de Formiga/MG, incluindo mão de…",
+            "organizationName": "SERVICO AUTONOMO DE AGUA E ESGOTO",
+            "state": "MG",
+            "estimatedValue": 6950,
+            "publishedAt": "2026-09-17T14:08:06.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0333333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "rede"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.026Z"
+          },
+          "inputTokens": 1078,
+          "estimatedCostUsd": 0.00004528
+        },
+        {
+          "tender": {
+            "id": "10784782000150-1-000378-2026",
+            "title": "Contratação de  prestação de serviço especializado de transporte(mudança), incluindo trabalhos de embalagem, carga e descarga, visando o transporte de mobiliário para remoção da servidora conforme Portaria nº 3.180/SRDA/GAB/RTR, de 07/08/2026, que efetivou remoção da servidora de ofício do Campus Campo Novo do Parecis para ocupar a Diretoria de Pesquisa e Pós-Graduação Reitoria - Cuiabá",
+            "objectSummary": "Contratação de  prestação de serviço especializado de transporte(mudança), incluindo trabalhos de embalagem, carga e descarga, visando o transporte de mobiliário para remoção da servidora conforme Portaria nº 3.180/SRDA/GAB/RTR, de 07/08/2026, que efetivou remoção da servidora de ofício do Campus…",
+            "organizationName": "INSTITUTO FEDERAL DE EDUCACAO, CIENCIA E TECNOLOGIA DE MATO GROSSO",
+            "state": "MT",
+            "estimatedValue": 12900,
+            "publishedAt": "2026-09-17T12:51:05.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.256Z"
+          },
+          "inputTokens": 1100,
+          "estimatedCostUsd": 0.0000462
+        },
+        {
+          "tender": {
+            "id": "16752446000102-1-000239-2026",
+            "title": "CONTRATAÇÃO DA EMPRESA LÍBERO LTDA PARA REALIZAÇÃO DE PALESTRA MOTIVACIONAL MINISTRADA POR SERGINHO DO VÔLEI, DESTINADA AOS SERVIDORES PÚBLICOS MUNICIPAIS, EM COMEMORAÇÃO AO PRIMEIRO ANIVERSÁRIO DA ESCOLA DE GOVERNO DE CONGONHAS E EM CELEBRAÇÃO AO DIA DO SERVIDOR PÚBLICO.",
+            "objectSummary": "CONTRATAÇÃO DA EMPRESA LÍBERO LTDA PARA REALIZAÇÃO DE PALESTRA MOTIVACIONAL MINISTRADA POR SERGINHO DO VÔLEI, DESTINADA AOS SERVIDORES PÚBLICOS MUNICIPAIS, EM COMEMORAÇÃO AO PRIMEIRO ANIVERSÁRIO DA ESCOLA DE GOVERNO DE CONGONHAS E EM CELEBRAÇÃO AO DIA DO SERVIDOR PÚBLICO.",
+            "organizationName": "MUNICIPIO DE CONGONHAS",
+            "state": "MG",
+            "estimatedValue": 12000,
+            "publishedAt": "2026-09-18T13:56:09.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.033Z"
+          },
+          "inputTokens": 1101,
+          "estimatedCostUsd": 0.00004624
+        },
+        {
+          "tender": {
+            "id": "09319617000149-1-000028-2026",
+            "title": "A contratação compreende a substituição da cabeça de impressão, bem como a execução dos serviços de manutenção necessários ao restabelecimento das condições normais de funcionamento do equipamento, atualmente apresentando falhas na\nimpressão, observados os requisitos de qualidade, eficiência e garantia do serviço executado.",
+            "objectSummary": "A contratação compreende a substituição da cabeça de impressão, bem como a execução dos serviços de manutenção necessários ao restabelecimento das condições normais de funcionamento do equipamento, atualmente apresentando falhas na\nimpressão, observados os requisitos de qualidade, eficiência e…",
+            "organizationName": "CONSELHO REGIONAL DE ODONTOLOGIA DA PARAIBA",
+            "state": "PB",
+            "estimatedValue": 646.67,
+            "publishedAt": "2026-09-17T17:12:20.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.3266667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.257Z"
+          },
+          "inputTokens": 988,
+          "estimatedCostUsd": 0.0000415
+        },
+        {
+          "tender": {
+            "id": "00394452000103-1-020303-2026",
+            "title": "Contratação de empresa especializada para o fornecimento, confecção, impressão e instalação de lonas com ilhós e adesivos vinílicos destinados à comunicação visual do Colégio Militar de São Paulo, contemplando 10 lonas nas dimensões de 7,60 m × 1,40 m, 2 adesivos nas dimensões de 3,00 m × 5,00 m e 2 adesivos nas dimensões de 4,00 m × 2,00 m, conforme especificações técnicas, materiais, padrões de impressão, acabamento e condições de instalação definidos pela Administração.",
+            "objectSummary": "Contratação de empresa especializada para o fornecimento, confecção, impressão e instalação de lonas com ilhós e adesivos vinílicos destinados à comunicação visual do Colégio Militar de São Paulo, contemplando 10 lonas nas dimensões de 7,60 m × 1,40 m, 2 adesivos nas dimensões de 3,00 m × 5,00 m…",
+            "organizationName": "COMANDO DO EXERCITO",
+            "state": "SP",
+            "estimatedValue": 24020.62,
+            "publishedAt": "2026-09-18T12:58:53.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.003Z"
+          },
+          "inputTokens": 1184,
+          "estimatedCostUsd": 0.00004973
+        },
+        {
+          "tender": {
+            "id": "07954480000179-1-024191-2026",
+            "title": "Contratação de empresa especializada na prestação de serviços corporativos de impressão (outsourcing), com locação de equipamentos, fornecimento contínuo de suprimentos, consumíveis de impressão (exceto papel) e peças de reposição, além de solução completa de gerenciamento, bilhetagem e suporte técnico preventivo e corretivo on-site.",
+            "objectSummary": "Contratação de empresa especializada na prestação de serviços corporativos de impressão (outsourcing), com locação de equipamentos, fornecimento contínuo de suprimentos, consumíveis de impressão (exceto papel) e peças de reposição, além de solução completa de gerenciamento, bilhetagem e suporte…",
+            "organizationName": "ESTADO DO CEARA",
+            "state": "CE",
+            "estimatedValue": 46812,
+            "publishedAt": "2026-09-17T17:51:09.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.3233333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "suporte técnico"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.007Z"
+          },
+          "inputTokens": 989,
+          "estimatedCostUsd": 0.00004154
+        },
+        {
+          "tender": {
+            "id": "01309021000156-1-000010-2026",
+            "title": "Contratação de empresa especializada para prestação continuada de Serviço Móvel Pessoal – SMP, mediante disponibilização de 04 (quatro) linhas/chips de telefonia móvel, com ligações nacionais ilimitadas para telefones fixos e móveis, SMS, franquia mínima total de 30 GB de dados móveis mensais para o conjunto das linhas, admitida a disponibilização de forma compartilhada ou individual equivalente, fornecimento e ativação dos chips, suporte técnico e possibilidade de portabilidade dos números atualmente utilizados, pelo período de 12 meses.",
+            "objectSummary": "Contratação de empresa especializada para prestação continuada de Serviço Móvel Pessoal – SMP, mediante disponibilização de 04 (quatro) linhas/chips de telefonia móvel, com ligações nacionais ilimitadas para telefones fixos e móveis, SMS, franquia mínima total de 30 GB de dados móveis mensais…",
+            "organizationName": "SAO MANOEL DO PARANA CAMARA MUNICIPAL",
+            "state": "PR",
+            "estimatedValue": 3307.2,
+            "publishedAt": "2026-09-17T17:19:34.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.1966667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "suporte técnico"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.043Z"
+          },
+          "inputTokens": 1013,
+          "estimatedCostUsd": 0.00004255
+        },
+        {
+          "tender": {
+            "id": "17695024000105-1-000119-2026",
+            "title": "[Portal de Compras Públicas] - Contratação de inscrições para servidores públicos da Secretaria Municipal de Fazenda e da Secretaria Municipal de Cultura, Desporto, Lazer e Turismo, do Município de Curvelo, Estado de Minas Gerais, para participação no curso “Licitações e Contratos, da fase preparatória à execução com inteligência artificial”, promovido pelo Centro de Estudos da Administração Pública, a ser realizado nos dias 23 a 25 de setembro de 2026, em Belo Horizonte/MG.",
+            "objectSummary": "[Portal de Compras Públicas] - Contratação de inscrições para servidores públicos da Secretaria Municipal de Fazenda e da Secretaria Municipal de Cultura, Desporto, Lazer e Turismo, do Município de Curvelo, Estado de Minas Gerais, para participação no curso “Licitações e Contratos, da fase…",
+            "organizationName": "MUNICIPIO DE CURVELO",
+            "state": "MG",
+            "estimatedValue": 17520,
+            "publishedAt": "2026-09-18T14:21:57.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0166667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.010Z"
+          },
+          "inputTokens": 1079,
+          "estimatedCostUsd": 0.00004532
+        },
+        {
+          "tender": {
+            "id": "94444122000110-1-000073-2026",
+            "title": "[Portal de Compras Públicas] - CESSÃO ONEROSA DO DIREITO DE REALIZAR, COM EXCLUSIVIDADE, O PAGAMENTO DA FOLHA DOS SERVIDORES PÚBLICOS MUNICIPAIS (ATIVOS, INATIVOS, PENSIONISTAS E ESTAGIÁRIOS).",
+            "objectSummary": "[Portal de Compras Públicas] - CESSÃO ONEROSA DO DIREITO DE REALIZAR, COM EXCLUSIVIDADE, O PAGAMENTO DA FOLHA DOS SERVIDORES PÚBLICOS MUNICIPAIS (ATIVOS, INATIVOS, PENSIONISTAS E ESTAGIÁRIOS).",
+            "organizationName": "MUNICIPIO DE QUEVEDOS",
+            "state": "RS",
+            "estimatedValue": 323725.1,
+            "publishedAt": "2026-09-17T19:36:09.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.07,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.017Z"
+          },
+          "inputTokens": 1005,
+          "estimatedCostUsd": 0.00004221
+        },
+        {
+          "tender": {
+            "id": "87613113000140-1-000105-2026",
+            "title": "AQUISIÇÃO DE CADEIRAS DE ÁREA DOBRÁVEIS PERSONALIZADAS, DESTINADAS AOS SERVIDORES PÚBLICOS MUNICIPAIS EM COMEMORAÇÃO AO DIA DO FUNCIONÁRIO PÚBLICO.",
+            "objectSummary": "AQUISIÇÃO DE CADEIRAS DE ÁREA DOBRÁVEIS PERSONALIZADAS, DESTINADAS AOS SERVIDORES PÚBLICOS MUNICIPAIS EM COMEMORAÇÃO AO DIA DO FUNCIONÁRIO PÚBLICO.",
+            "organizationName": "MUNICIPIO DE REDENTORA",
+            "state": "RS",
+            "estimatedValue": 31056,
+            "publishedAt": "2026-09-18T17:27:03.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.006Z"
+          },
+          "inputTokens": 966,
+          "estimatedCostUsd": 0.00004057
+        },
+        {
+          "tender": {
+            "id": "05193057000178-1-000175-2026",
+            "title": "Contratação de profissional do setor artístico, com reconhecimento perante a opinião pública para realização de show musical em Festa que realizar-se-á no município de Paragominas às comemorações do Dia do Servidor Público.",
+            "objectSummary": "Contratação de profissional do setor artístico, com reconhecimento perante a opinião pública para realização de show musical em Festa que realizar-se-á no município de Paragominas às comemorações do Dia do Servidor Público.",
+            "organizationName": "MUNICIPIO DE PARAGOMINAS",
+            "state": "PA",
+            "estimatedValue": 60000,
+            "publishedAt": "2026-09-18T13:33:33.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.023Z"
+          },
+          "inputTokens": 930,
+          "estimatedCostUsd": 0.00003906
+        },
+        {
+          "tender": {
+            "id": "20289385000166-1-000029-2026",
+            "title": "Contratação de pessoa jurídica para prestação de serviços técnicos especializados de natureza intelectual com profissionais ou empresa de notória especialização para treinamento e aperfeiçoamento de Servidores Públicos, cujo tema: PRÁTICA EM LICITAÇÃO E ESTUDO DE CASOS DOS TCEs E TCU, Providências Preventivas e Medidas Corretivas em Âmbito Municipal, para os Servidores:\n1. Jacqueline Fonseca de Paula\n2. Thiago Augusto Dias Knofel",
+            "objectSummary": "Contratação de pessoa jurídica para prestação de serviços técnicos especializados de natureza intelectual com profissionais ou empresa de notória especialização para treinamento e aperfeiçoamento de Servidores Públicos, cujo tema: PRÁTICA EM LICITAÇÃO E ESTUDO DE CASOS DOS TCEs E TCU,…",
+            "organizationName": "CAMARA MUNICIPAL DE BARBACENA",
+            "state": "MG",
+            "estimatedValue": 3099.98,
+            "publishedAt": "2026-09-17T18:01:35.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0566667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.025Z"
+          },
+          "inputTokens": 1086,
+          "estimatedCostUsd": 0.00004561
+        },
+        {
+          "tender": {
+            "id": "13098181000182-1-000162-2026",
+            "title": "Contratação do artista Bruno Severo da Silva, conhecido artisticamente como Bruno Silva, para compor a programação do evento Moda Mix 2026, a ser realizado no dia 05 de setembro de 2026, no Município de Itabaianinha/SE.",
+            "objectSummary": "Contratação do artista Bruno Severo da Silva, conhecido artisticamente como Bruno Silva, para compor a programação do evento Moda Mix 2026, a ser realizado no dia 05 de setembro de 2026, no Município de Itabaianinha/SE.",
+            "organizationName": "MUNICIPIO DE ITABAIANINHA",
+            "state": "SE",
+            "estimatedValue": 4000,
+            "publishedAt": "2026-09-17T18:56:23.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.009Z"
+          },
+          "inputTokens": 972,
+          "estimatedCostUsd": 0.00004082
+        },
+        {
+          "tender": {
+            "id": "45276128000110-1-003161-2026",
+            "title": "SENSOR DE GLICOSE",
+            "objectSummary": "SENSOR DE GLICOSE",
+            "organizationName": "MUNICIPIO DE ARARAQUARA",
+            "state": "SP",
+            "estimatedValue": 3600,
+            "publishedAt": "2026-09-17T14:13:00.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.010Z"
+          },
+          "inputTokens": 823,
+          "estimatedCostUsd": 0.00003457
+        },
+        {
+          "tender": {
+            "id": "16445876000181-1-000001-2027",
+            "title": "Fornecimento de scanner de documentos de alto volume, para atender as demandas do Setor de Licitacoes e Contratos e Setor de Contabilidade deste Municipio",
+            "objectSummary": "Fornecimento de scanner de documentos de alto volume, para atender as demandas do Setor de Licitacoes e Contratos e Setor de Contabilidade deste Municipio",
+            "organizationName": "MUNICIPIO DE MULUNGU DO MORRO",
+            "state": "BA",
+            "estimatedValue": 19912,
+            "publishedAt": "2026-09-17T13:17:26.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.32,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.026Z"
+          },
+          "inputTokens": 893,
+          "estimatedCostUsd": 0.00003751
+        },
+        {
+          "tender": {
+            "id": "03302282000170-1-000014-2026",
+            "title": "Contratação de empresa especializada para o fornecimento de longarinas de 04 (quatro) lugares, com braços, estrutura em aço carbono com pintura eletrostática, assentos e encostos individuais estofados em espuma de poliuretano e revestidos em courino na cor preta, formato anatômico, estrutura resistente e estável, pés/base metálicos e acabamento adequado, sem rebarbas, arestas ou cantos cortantes, destinadas à utilização em ambientes de recepção, espera e atendimento. Os produtos deverão ser novos, de primeiro uso, entregues montados ou acompanhados de todos os componentes e acessórios necessários à sua completa montagem.",
+            "objectSummary": "Contratação de empresa especializada para o fornecimento de longarinas de 04 (quatro) lugares, com braços, estrutura em aço carbono com pintura eletrostática, assentos e encostos individuais estofados em espuma de poliuretano e revestidos em courino na cor preta, formato anatômico, estrutura…",
+            "organizationName": "CAMARA MUNICIPAL DE SEBASTIAO LARANJEIRAS",
+            "state": "BA",
+            "estimatedValue": 49000,
+            "publishedAt": "2026-09-17T19:45:31.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.047Z"
+          },
+          "inputTokens": 1157,
+          "estimatedCostUsd": 0.00004859
+        },
+        {
+          "tender": {
+            "id": "06002372000133-1-000096-2026",
+            "title": "Seleção da proposta mais vantajosa visando a aquisição de carrocinhas de modo a atender as necessidades operacionais do município de Anajatuba-MA",
+            "objectSummary": "Seleção da proposta mais vantajosa visando a aquisição de carrocinhas de modo a atender as necessidades operacionais do município de Anajatuba-MA",
+            "organizationName": "MUNICIPIO DE ANAJATUBA",
+            "state": "MA",
+            "estimatedValue": 63222.26,
+            "publishedAt": "2026-09-17T13:15:22.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.011Z"
+          },
+          "inputTokens": 893,
+          "estimatedCostUsd": 0.00003751
+        },
+        {
+          "tender": {
+            "id": "00394452000103-1-020351-2026",
+            "title": "CONTRATAÇÃO PARA PRESTAÇÃO DE SERVIÇO DE COLETA, TRANSPORTE E DISTRIBUIÇÃO DE ÁGUA POTÁVEL NO MUNICÍPIO DE BUÍQUE",
+            "objectSummary": "CONTRATAÇÃO PARA PRESTAÇÃO DE SERVIÇO DE COLETA, TRANSPORTE E DISTRIBUIÇÃO DE ÁGUA POTÁVEL NO MUNICÍPIO DE BUÍQUE",
+            "organizationName": "COMANDO DO EXERCITO",
+            "state": "SE",
+            "estimatedValue": 77931461.34,
+            "publishedAt": "2026-09-18T16:17:35.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.017Z"
+          },
+          "inputTokens": 920,
+          "estimatedCostUsd": 0.00003864
+        },
+        {
+          "tender": {
+            "id": "29581876000150-1-000023-2026",
+            "title": "O presente Termo de Referência tem por objeto a contratação de empresa especializada para a execução do simpósio \"4º LICITA BRASIL: Licitações e Contratos na Administração Pública do Futuro – Tecnologia, Controle e Inovação para uma Administração Pública Inteligente\", promovido pela empresa One Eventos Corporativos LTDA, com vistas ao atendimento das demandas da SEPAT, conforme estabelecido no Documento de Formalização de Demanda  - DFD 319",
+            "objectSummary": "O presente Termo de Referência tem por objeto a contratação de empresa especializada para a execução do simpósio \"4º LICITA BRASIL: Licitações e Contratos na Administração Pública do Futuro – Tecnologia, Controle e Inovação para uma Administração Pública Inteligente\", promovido pela empresa One…",
+            "organizationName": "SUPERINTENDENCIA ESTADUAL DE PATRIMONIO E REGULARIZACAO FUNDIARIA",
+            "state": "RO",
+            "estimatedValue": 41860,
+            "publishedAt": "2026-09-17T16:07:02.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.1,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.019Z"
+          },
+          "inputTokens": 1073,
+          "estimatedCostUsd": 0.00004507
+        },
+        {
+          "tender": {
+            "id": "27471911000153-1-000014-2026",
+            "title": "Contratação de empresa especializada na prestação de serviços contínuos de agenciamento de viagens, para\r\ncotação, reserva, emissão, remarcação, cancelamento e fornecimento de passagens aéreas para voos regulares\r\nnacionais, sob demanda, com critério de julgamento por Maior Percentual de Desconto incidente sobre a tarifa aérea,\r\ncom isenção total de taxa de agenciamento, destinadas ao atendimento dos Vereadores e Servidores da Câmara\r\nMunicipal de Ecoporanga/ES",
+            "objectSummary": "Contratação de empresa especializada na prestação de serviços contínuos de agenciamento de viagens, para\r\ncotação, reserva, emissão, remarcação, cancelamento e fornecimento de passagens aéreas para voos regulares\r\nnacionais, sob demanda, com critério de julgamento por Maior Percentual de Desconto…",
+            "organizationName": "CAMARA MUNICIPAL DE ECOPORANGA",
+            "state": "ES",
+            "estimatedValue": 25.17,
+            "publishedAt": "2026-09-17T19:48:03.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "servidores"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.010Z"
+          },
+          "inputTokens": 1115,
+          "estimatedCostUsd": 0.00004683
+        },
+        {
+          "tender": {
+            "id": "00394502000144-1-011929-2026",
+            "title": "Contratação serviço de confecção de bancada de atendimento para as novas instalações da Seção de Incorporações do Centro de Distribuição de Uniformes da Base de Abastecimento da Marinha no Rio de Janeiro (CDU-BAMRJ), garantindo a confecção de bancada sob medida para a recepção da incorporação, nos termos da tabela abaixo, conforme condições e exigências estabelecidas neste instrumento.",
+            "objectSummary": "Contratação serviço de confecção de bancada de atendimento para as novas instalações da Seção de Incorporações do Centro de Distribuição de Uniformes da Base de Abastecimento da Marinha no Rio de Janeiro (CDU-BAMRJ), garantindo a confecção de bancada sob medida para a recepção da incorporação,…",
+            "organizationName": "COMANDO DA MARINHA",
+            "state": "RJ",
+            "estimatedValue": 14844.75,
+            "publishedAt": "2026-09-17T18:24:26.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.04,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.007Z"
+          },
+          "inputTokens": 1093,
+          "estimatedCostUsd": 0.00004591
+        },
+        {
+          "tender": {
+            "id": "43052497000102-1-000476-2026",
+            "title": "aquisição interfolha e sabonete liquido para CGR.6",
+            "objectSummary": "aquisição interfolha e sabonete liquido para CGR.6",
+            "organizationName": "DEPARTAMENTO DE ESTRADAS DE RODAGEM",
+            "state": "SP",
+            "estimatedValue": 5694,
+            "publishedAt": "2026-09-17T12:16:05.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:56.011Z"
+          },
+          "inputTokens": 845,
+          "estimatedCostUsd": 0.00003549
+        }
+      ]
+    },
+    {
+      "id": "construction",
+      "label": "Construção e manutenção predial",
+      "neighborTerms": [
+        "material de construção",
+        "locação de máquinas"
+      ],
+      "input": {
+        "description": "Executamos obras civis, reformas, manutenção predial, instalações elétricas e hidráulicas e serviços de engenharia.",
+        "offerings": [
+          "obra civil",
+          "reforma",
+          "manutenção predial",
+          "instalação elétrica",
+          "engenharia"
+        ],
+        "exclusions": [
+          "software",
+          "alimentação"
+        ],
+        "coverage": {
+          "scope": "national"
+        },
+        "valueRange": {
+          "min": null,
+          "max": null
+        },
+        "size": "me_epp"
+      },
+      "levelCounts": {
+        "high": 10,
+        "medium": 3,
+        "low": 17,
+        "filtered": 0
+      },
+      "inputTokens": 33746,
+      "estimatedCostUsd": 0.0014173200000000003,
+      "results": [
+        {
+          "tender": {
+            "id": "25053083000108-1-000077-2026",
+            "title": "Contratação de empresa especializada em construção civil para execução de obra referente à construção de quatro salas para laboratórios, reforma dos banheiros dos alunos, reforma da cozinha, arquitetura paisagística e reforma elétrica geral do Centro de Ensino Médio Tiradentes, no município de Palmas -TO.",
+            "objectSummary": "Contratação de empresa especializada em construção civil para execução de obra referente à construção de quatro salas para laboratórios, reforma dos banheiros dos alunos, reforma da cozinha, arquitetura paisagística e reforma elétrica geral do Centro de Ensino Médio Tiradentes, no município de…",
+            "organizationName": "SECRETARIA DA EDUCACAO, JUVENTUDE E ESPORTES",
+            "state": "TO",
+            "estimatedValue": 2072125.26,
+            "publishedAt": "2026-09-18T14:01:37.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 1,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "obra civil",
+                  "reforma"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.044Z"
+          },
+          "inputTokens": 987,
+          "estimatedCostUsd": 0.00004145
+        },
+        {
+          "tender": {
+            "id": "55293427000117-1-000212-2026",
+            "title": "1. OBJETO Contratacao de empresa especializada para o fornecimento de materiais de construcao e pintura  destinados a execucao dos servicos de reforma do imovel situado na Rua Parana  n  4 53  destinado a instalacao e ao funcionamento do Fundo Social de Solidariedade  conforme especificacoes e condicoes descritas neste Termo de Referencia. 2. JUSTIFICATIVA E FUNDAMENTACAO DA CONTRATACAO A presente contratacao justifica se pela necessidade de aquisicao de materiais indispensaveis a execucao dos servicos de carpintaria  pintura  alvenaria e demais servicos de manutencao necessarios a reforma e adequacao do imovel que sera destinado ao funcionamento do Fundo Social de Solidariedade. A aquisicao permitira a conclusao da reforma e a disponibilizacao do imovel em condicoes adequadas de estrutura  seguranca  conservacao e funcionamento  possibilitando a transferencia do orgao e o desenvolvimento de suas atividades de atendimento a populacao. A contratacao encontra amparo na Lei n  14.133 2021 e atende ao interesse publico  mostrando se adequada e suficiente para suprir a demanda apresentada pela unidade requisitante. 3. DESCRICAO DA SOLUCAO A solucao consiste na contratacao de empresa especializada para o fornecimento dos materiais e equipamentos necessarios a execucao da reforma  conforme especificacoes e quantitativos definidos.",
+            "objectSummary": "1. OBJETO Contratacao de empresa especializada para o fornecimento de materiais de construcao e pintura  destinados a execucao dos servicos de reforma do imovel situado na Rua Parana  n  4 53  destinado a instalacao e ao funcionamento do Fundo Social de Solidariedade  conforme especificacoes e…",
+            "organizationName": "MUNICIPIO DE PRESIDENTE EPITACIO",
+            "state": "SP",
+            "estimatedValue": 3513,
+            "publishedAt": "2026-09-17T11:28:45.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.4966667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "reforma"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.036Z"
+          },
+          "inputTokens": 1572,
+          "estimatedCostUsd": 0.00006602
+        },
+        {
+          "tender": {
+            "id": "34849691000114-1-000019-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA REALIZAR SERVIÇOS DE REFORMA E AMPLIAÇÃO DO PRÉDIO DO COMPLEXO DE DESENVOLVIMENTO ECONÔMICO DE SERGIPE.",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA REALIZAR SERVIÇOS DE REFORMA E AMPLIAÇÃO DO PRÉDIO DO COMPLEXO DE DESENVOLVIMENTO ECONÔMICO DE SERGIPE.",
+            "organizationName": "SECRETARIA DE ESTADO DO DESENVOLVIMENTO ECONOMICO E DA CIENCIA E TECNOLOGIA",
+            "state": "SE",
+            "estimatedValue": 10447142.2,
+            "publishedAt": "2026-09-18T16:33:36.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 1,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "reforma",
+                  "instalação elétrica"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.031Z"
+          },
+          "inputTokens": 2919,
+          "estimatedCostUsd": 0.0001226
+        },
+        {
+          "tender": {
+            "id": "08142655000106-1-000087-2026",
+            "title": "CONTRATAÇÃO DE PESSOA JURÍDICA ESPECIALIZADA PARA A PRESTAÇÃO DE SERVIÇOS TÉCNICOS DE ENGENHARIA, COMPREENDENDO SUPERVISÃO E FISCALIZAÇÃO DE OBRAS E SERVIÇOS, EMISSÃO DE LAUDOS, ELABORAÇÃO DE PROJETOS BÁSICOS, APOIO TÉCNICO AOS PROCESSOS LICITATÓRIOS DESTINADOS À CONTRATAÇÃO DE OBRAS E SERVIÇOS DE ENGENHARIA, SUPORTE À EQUIPE DE GESTÃO E FISCALIZAÇÃO DE CONTRATOS, ALIMENTAÇÃO E ATUALIZAÇÃO DO SIAI-OBRAS, BEM COMO A EXECUÇÃO DE OUTROS SERVIÇOS DE ENGENHARIA CORRELATOS, SEM DEDICAÇÃO EXCLUSIVA DE MÃO DE OBRA, PARA ATENDER ÀS NECESSIDADES DO MUNICÍPIO DE BOA SAÚDE/RN.",
+            "objectSummary": "CONTRATAÇÃO DE PESSOA JURÍDICA ESPECIALIZADA PARA A PRESTAÇÃO DE SERVIÇOS TÉCNICOS DE ENGENHARIA, COMPREENDENDO SUPERVISÃO E FISCALIZAÇÃO DE OBRAS E SERVIÇOS, EMISSÃO DE LAUDOS, ELABORAÇÃO DE PROJETOS BÁSICOS, APOIO TÉCNICO AOS PROCESSOS LICITATÓRIOS DESTINADOS À CONTRATAÇÃO DE OBRAS E SERVIÇOS…",
+            "organizationName": "MUNICIPIO DE BOA SAUDE",
+            "state": "RN",
+            "estimatedValue": 132000,
+            "publishedAt": "2026-09-18T12:27:01.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.82,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.127Z"
+          },
+          "inputTokens": 1382,
+          "estimatedCostUsd": 0.00005804
+        },
+        {
+          "tender": {
+            "id": "13827035000140-1-000143-2026",
+            "title": "Contrato a contratação de empresa especializada para a prestação de serviços técnicos especializados de engenharia consultiva, assessoria ambiental e engenharia de segurança do trabalho, a serem executados de forma contínua e sob demanda",
+            "objectSummary": "Contrato a contratação de empresa especializada para a prestação de serviços técnicos especializados de engenharia consultiva, assessoria ambiental e engenharia de segurança do trabalho, a serem executados de forma contínua e sob demanda",
+            "organizationName": "MUNICIPIO DE MUTUIPE",
+            "state": "BA",
+            "estimatedValue": 66000,
+            "publishedAt": "2026-09-18T17:39:20.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "medium",
+            "score": 0.6,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.092Z"
+          },
+          "inputTokens": 940,
+          "estimatedCostUsd": 0.00003948
+        },
+        {
+          "tender": {
+            "id": "20928303000186-1-000055-2026",
+            "title": "Inscrição de 03 três representantes da ARISB-MG no 22.º Encontro de Engenharia Sanitária e Ambiental  22.º Simpósio Luso-Brasileiro de Engenharia Sanitária e Ambiental - 22.º ENaSB  SILUBESA.",
+            "objectSummary": "Inscrição de 03 três representantes da ARISB-MG no 22.º Encontro de Engenharia Sanitária e Ambiental  22.º Simpósio Luso-Brasileiro de Engenharia Sanitária e Ambiental - 22.º ENaSB  SILUBESA.",
+            "organizationName": "AGENCIA REGULADORA INTERMUNICIPAL DE SANEAMENTO BASICO DE MINAS GERAIS",
+            "state": "MG",
+            "estimatedValue": 8123.9,
+            "publishedAt": "2026-09-18T14:19:08.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.1,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.100Z"
+          },
+          "inputTokens": 1007,
+          "estimatedCostUsd": 0.00004229
+        },
+        {
+          "tender": {
+            "id": "44919918000104-1-000188-2026",
+            "title": "Contratação de empresa especializada em engenharia para execução, por escopo, de serviços comuns de engenharia destinados ao recapeamento asfáltico de vias públicas do Município de Lucélia/SP, abrangendo área estimada de 4.780,00 m², com execução de camada de rolamento em Concreto Betuminoso Usinado a Quente – CBUQ, com espessura acabada de 3,0 cm, conforme Projeto Executivo, Memorial Descritivo e de Cálculo, Planilha Orçamentária, Cronograma Físico-Financeiro e Termo de Referência.",
+            "objectSummary": "Contratação de empresa especializada em engenharia para execução, por escopo, de serviços comuns de engenharia destinados ao recapeamento asfáltico de vias públicas do Município de Lucélia/SP, abrangendo área estimada de 4.780,00 m², com execução de camada de rolamento em Concreto Betuminoso…",
+            "organizationName": "MUNICIPIO DE LUCELIA",
+            "state": "SP",
+            "estimatedValue": 296083.11,
+            "publishedAt": "2026-09-18T18:13:42.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9333333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.064Z"
+          },
+          "inputTokens": 1163,
+          "estimatedCostUsd": 0.00004885
+        },
+        {
+          "tender": {
+            "id": "00000000000191-1-000125-2026",
+            "title": "Objeto: Carro Engenharia - Contratação de serviços comuns de engenharia para reparações e adaptações na infraestrutura física dos imóveis de interesse Perfil C do Banco do Brasil S/A em seus diversos níveis e segmentos, e respectivos padrões visuais da marca, incluindo todo material ferramental, e instrumental técnico adequado, uniformes, mão-de-obra, equipamentos de segurança individual e coletiva, encargos sociais, administração, seguros, deslocamentos, estadias, e outros materiais/peças inerentes às especialidades envolvidas, inclusive cessão técnica, licenças e tributos, e tudo quanto necessário para a prestação dos serviços, para o Estado de Goiás - Mesorregião Sul Goiano - Lote 02.",
+            "objectSummary": "Objeto: Carro Engenharia - Contratação de serviços comuns de engenharia para reparações e adaptações na infraestrutura física dos imóveis de interesse Perfil C do Banco do Brasil S/A em seus diversos níveis e segmentos, e respectivos padrões visuais da marca, incluindo todo material ferramental,…",
+            "organizationName": "BANCO DO BRASIL SA",
+            "state": "DF",
+            "estimatedValue": 8264428.21,
+            "publishedAt": "2026-09-17T21:33:11.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9833333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.126Z"
+          },
+          "inputTokens": 1199,
+          "estimatedCostUsd": 0.00005036
+        },
+        {
+          "tender": {
+            "id": "00394544000185-1-001994-2026",
+            "title": "Reforma SAA Aldeia MODJAN (JATOBA) - Reforma e ampliação do Sistema de Abastecimento de Água.",
+            "objectSummary": "Reforma SAA Aldeia MODJAN (JATOBA) - Reforma e ampliação do Sistema de Abastecimento de Água.",
+            "organizationName": "MINISTERIO DA SAUDE",
+            "state": "PA",
+            "estimatedValue": 499666.33,
+            "publishedAt": "2026-09-17T07:03:08.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9633333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "reforma"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.051Z"
+          },
+          "inputTokens": 887,
+          "estimatedCostUsd": 0.00003725
+        },
+        {
+          "tender": {
+            "id": "03648540000174-1-000065-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA EM ENGENHARIA, ARQUITETURA E URBANISMO PARA A EXECUÇÃO DE OBRAS E SERVIÇOS DE ENGENHARIA DESTINADOS À IMPLANTAÇÃO E ESTRUTURAÇÃO DO PARQUE LINEAR DO MUNICÍPIO DE DIAMANTINO/MT, DE ACORDO COM O CONTRATO DE REPASSE Nº 98",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA EM ENGENHARIA, ARQUITETURA E URBANISMO PARA A EXECUÇÃO DE OBRAS E SERVIÇOS DE ENGENHARIA DESTINADOS À IMPLANTAÇÃO E ESTRUTURAÇÃO DO PARQUE LINEAR DO MUNICÍPIO DE DIAMANTINO/MT, DE ACORDO COM O CONTRATO DE REPASSE Nº 98",
+            "organizationName": "MUNICIPIO DE DIAMANTINO",
+            "state": "MT",
+            "estimatedValue": 6688514.59,
+            "publishedAt": "2026-09-17T11:58:55.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9533333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.042Z"
+          },
+          "inputTokens": 1090,
+          "estimatedCostUsd": 0.00004578
+        },
+        {
+          "tender": {
+            "id": "88349238000178-1-000218-2026",
+            "title": "MATERIAL DE CONSTRUÇÃO",
+            "objectSummary": "MATERIAL DE CONSTRUÇÃO",
+            "organizationName": "MUNICIPIO DE ENCANTADO",
+            "state": "RS",
+            "estimatedValue": 12920,
+            "publishedAt": "2026-09-18T12:47:43.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.23,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.087Z"
+          },
+          "inputTokens": 854,
+          "estimatedCostUsd": 0.00003587
+        },
+        {
+          "tender": {
+            "id": "46377800000127-1-004005-2026",
+            "title": "AQUISIÇÃO MATERIAL DE CONSTRUÇÃO PARA DELPOL DE LUCELIA.",
+            "objectSummary": "AQUISIÇÃO MATERIAL DE CONSTRUÇÃO PARA DELPOL DE LUCELIA.",
+            "organizationName": "SAO PAULO SECRETARIA DA SEGURANCA PUBLICA",
+            "state": "SP",
+            "estimatedValue": 1638.1,
+            "publishedAt": "2026-09-18T13:04:05.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.3,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.129Z"
+          },
+          "inputTokens": 854,
+          "estimatedCostUsd": 0.00003587
+        },
+        {
+          "tender": {
+            "id": "00699767000150-1-000030-2026",
+            "title": "REALIZAÇÃO DE PROCEDIMENTO ADMINISTRATIVO, EM CARÁTER DE URGÊNCIA, PARA AQUISIÇÃO DE MATERIAL DE CONSTRUÇÃO, VISANDO O FECHAMENTO DO TELHADO DO ESCRITÓRIO ADMINISTRATIVO DO SETOR DO FROTAS CISAJE.",
+            "objectSummary": "REALIZAÇÃO DE PROCEDIMENTO ADMINISTRATIVO, EM CARÁTER DE URGÊNCIA, PARA AQUISIÇÃO DE MATERIAL DE CONSTRUÇÃO, VISANDO O FECHAMENTO DO TELHADO DO ESCRITÓRIO ADMINISTRATIVO DO SETOR DO FROTAS CISAJE.",
+            "organizationName": "CONSORCIO INTERMUNICIPAL DE SAUDE DO ALTO JEQUITINHONHA",
+            "state": "MG",
+            "estimatedValue": 194.58,
+            "publishedAt": "2026-09-18T12:12:34.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.4533333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.070Z"
+          },
+          "inputTokens": 1010,
+          "estimatedCostUsd": 0.00004242
+        },
+        {
+          "tender": {
+            "id": "01612483000148-1-000040-2026",
+            "title": "REGISTRO DE PREÇOS PARA FUTURA E EVENTUAL CONTRATAÇÃO DE EMPRESA ESPECIALIZADA  PARA A PRESTAÇÃO DE SERVIÇOS DE LOCAÇÃO DE MÁQUINAS E EQUIPAMENTOS PESADOS, COM DISPÓNIBILIZAÇÃO DE OPERADORES HABILITADOS.",
+            "objectSummary": "REGISTRO DE PREÇOS PARA FUTURA E EVENTUAL CONTRATAÇÃO DE EMPRESA ESPECIALIZADA  PARA A PRESTAÇÃO DE SERVIÇOS DE LOCAÇÃO DE MÁQUINAS E EQUIPAMENTOS PESADOS, COM DISPÓNIBILIZAÇÃO DE OPERADORES HABILITADOS.",
+            "organizationName": "MUNICIPIO DE FRUTA DE LEITE",
+            "state": "MG",
+            "estimatedValue": 395991.71,
+            "publishedAt": "2026-09-17T12:20:32.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.2,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.023Z"
+          },
+          "inputTokens": 1022,
+          "estimatedCostUsd": 0.00004292
+        },
+        {
+          "tender": {
+            "id": "90256660000120-1-000160-2026",
+            "title": "AQUISIÇÃO DE MATERIAL DE CONSTRUÇÃO",
+            "objectSummary": "AQUISIÇÃO DE MATERIAL DE CONSTRUÇÃO",
+            "organizationName": "MUNICIPIO DE TERRA DE AREIA",
+            "state": "RS",
+            "estimatedValue": 3645.13,
+            "publishedAt": "2026-09-17T12:09:38.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "medium",
+            "score": 0.54,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "reforma"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.041Z"
+          },
+          "inputTokens": 1030,
+          "estimatedCostUsd": 0.00004326
+        },
+        {
+          "tender": {
+            "id": "15558388000118-1-000005-2026",
+            "title": "Registro de Preços para futura e eventual contratação de empresa especializada na locação operacional de máquinas, equipamentos e veículos, com operador ou motorista, incluindo combustível, manutenção preventiva e corretiva, peças, pneus, lubrificantes, seguros, licenciamentos, mobilização, desmobilização e todos os demais insumos necessários à execução, destinados ao atendimento das demandas de terraplenagem, recuperação, conservação e melhoria da infraestrutura viária dos municípios integrantes do Consórcio, conforme condições, quantidades e exigências estabelecidas neste Edital e no Termo de Referência.",
+            "objectSummary": "Registro de Preços para futura e eventual contratação de empresa especializada na locação operacional de máquinas, equipamentos e veículos, com operador ou motorista, incluindo combustível, manutenção preventiva e corretiva, peças, pneus, lubrificantes, seguros, licenciamentos, mobilização,…",
+            "organizationName": "CONSORCIO DE DESENVOLVIMENTO SUSTENTAVEL DO TERRITORIO DO PIEMONTE DA DIAMANTINA",
+            "state": "BA",
+            "estimatedValue": 1,
+            "publishedAt": "2026-09-17T18:11:04.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.1333333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.096Z"
+          },
+          "inputTokens": 2096,
+          "estimatedCostUsd": 0.00008803
+        },
+        {
+          "tender": {
+            "id": "30755320000112-1-000011-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA, COM MÃO DE OBRA E MATERIAL, PARA EXECUÇÃO DA OBRA DE CONSTRUÇÃO DA CRECHE MUNICIPAL DO DISTRITO DE CERAÍMA, EM GUANAMBI-BA.",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA, COM MÃO DE OBRA E MATERIAL, PARA EXECUÇÃO DA OBRA DE CONSTRUÇÃO DA CRECHE MUNICIPAL DO DISTRITO DE CERAÍMA, EM GUANAMBI-BA.",
+            "organizationName": "FUNDO MUNICIPAL DE EDUCACAO DE GUANAMBI",
+            "state": "BA",
+            "estimatedValue": 3481177.68,
+            "publishedAt": "2026-09-18T14:38:01.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 1,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.033Z"
+          },
+          "inputTokens": 974,
+          "estimatedCostUsd": 0.00004091
+        },
+        {
+          "tender": {
+            "id": "07954480000179-1-024189-2026",
+            "title": "Aquisição de material hidráulico, para o período de 12 meses.",
+            "objectSummary": "Aquisição de material hidráulico, para o período de 12 meses.",
+            "organizationName": "ESTADO DO CEARA",
+            "state": "CE",
+            "estimatedValue": 55043.2,
+            "publishedAt": "2026-09-17T17:38:40.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.39,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "manutenção predial"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.063Z"
+          },
+          "inputTokens": 896,
+          "estimatedCostUsd": 0.00003763
+        },
+        {
+          "tender": {
+            "id": "08234155000102-1-000152-2026",
+            "title": "Contratação de pessoa jurídica especializada para a locação, montagem, desmontagem, operação e manutenção de brinquedos infantis infláveis, máquina de algodão doce e pipoqueira, destinados à realização da Festa das Crianças 2026 no Município de Touros/RN",
+            "objectSummary": "Contratação de pessoa jurídica especializada para a locação, montagem, desmontagem, operação e manutenção de brinquedos infantis infláveis, máquina de algodão doce e pipoqueira, destinados à realização da Festa das Crianças 2026 no Município de Touros/RN",
+            "organizationName": "MUNICIPIO DE TOUROS",
+            "state": "RN",
+            "estimatedValue": 56537.68,
+            "publishedAt": "2026-09-17T12:44:23.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.050Z"
+          },
+          "inputTokens": 1003,
+          "estimatedCostUsd": 0.00004213
+        },
+        {
+          "tender": {
+            "id": "00394452000103-1-020262-2026",
+            "title": "Aquisição de máquinários, ferramental, EPI, material para elétrica, hidráulica, serralheria, vidraçaria, ar condicionado e construção em geral.",
+            "objectSummary": "Aquisição de máquinários, ferramental, EPI, material para elétrica, hidráulica, serralheria, vidraçaria, ar condicionado e construção em geral.",
+            "organizationName": "COMANDO DO EXERCITO",
+            "state": "DF",
+            "estimatedValue": 707361.38,
+            "publishedAt": "2026-09-18T10:40:00.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "medium",
+            "score": 0.52,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.063Z"
+          },
+          "inputTokens": 935,
+          "estimatedCostUsd": 0.00003927
+        },
+        {
+          "tender": {
+            "id": "45352267000186-1-000094-2026",
+            "title": "[LICITANET] - Registro de Preços para futura e eventual aquisição de materiais hospitalares para atendimento da rede municipal de saúde",
+            "objectSummary": "[LICITANET] - Registro de Preços para futura e eventual aquisição de materiais hospitalares para atendimento da rede municipal de saúde",
+            "organizationName": "MUNICIPIO DE PONTAL",
+            "state": "SP",
+            "estimatedValue": null,
+            "publishedAt": "2026-09-17T17:18:13.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [
+              {
+                "kind": "value_not_published"
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.026Z"
+          },
+          "inputTokens": 883,
+          "estimatedCostUsd": 0.00003709
+        },
+        {
+          "tender": {
+            "id": "17695032000151-1-000039-2026",
+            "title": "Contratação de empresa de engenharia para execução de serviços de recapeamento asfáltico na Rua Renato Azeredo, bairro Gameleira, município de Felixlândia/MG, em consonância com o Convênio nº 953524/2023, firmado entre o município e o Ministério das Cidades, conforme especificações constantes no Termo de Referência, Projeto Básico, Memorial Descritivo, Cronograma Físico-Financeiro e Orçamento Discriminativo não Desonerado.",
+            "objectSummary": "Contratação de empresa de engenharia para execução de serviços de recapeamento asfáltico na Rua Renato Azeredo, bairro Gameleira, município de Felixlândia/MG, em consonância com o Convênio nº 953524/2023, firmado entre o município e o Ministério das Cidades, conforme especificações constantes no…",
+            "organizationName": "MUNICIPIO DE FELIXLANDIA",
+            "state": "MG",
+            "estimatedValue": 319747.63,
+            "publishedAt": "2026-09-18T19:30:03.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9466667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "engenharia"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.025Z"
+          },
+          "inputTokens": 1146,
+          "estimatedCostUsd": 0.00004813
+        },
+        {
+          "tender": {
+            "id": "95422986000102-1-000252-2026",
+            "title": "Contratação de profissional médico, pessoa física: SARA VIANA SILVA, devidamente credenciado pelo Chamamento Público nº 03/2024, para Prestação de Serviços de Plantões Médicos a ser realizados na UPA 24 horas (Unidade de Pronto Atendimento). Conforme solicitação da Secretaria Municipal de Saúde.",
+            "objectSummary": "Contratação de profissional médico, pessoa física: SARA VIANA SILVA, devidamente credenciado pelo Chamamento Público nº 03/2024, para Prestação de Serviços de Plantões Médicos a ser realizados na UPA 24 horas (Unidade de Pronto Atendimento). Conforme solicitação da Secretaria Municipal de Saúde.",
+            "organizationName": "MUNICIPIO DE FAZENDA RIO GRANDE",
+            "state": "PR",
+            "estimatedValue": 166847.52,
+            "publishedAt": "2026-09-18T12:45:53.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.048Z"
+          },
+          "inputTokens": 1040,
+          "estimatedCostUsd": 0.00004368
+        },
+        {
+          "tender": {
+            "id": "01569688000198-1-000016-2026",
+            "title": "Servicos tecnicos especializados  de natureza predominantemente intelectual e nao continuada  destinados a reorganizacao legislativa do Municipio de Jarinu  mediante mapeamento  classificacao tematica  compilacao e consolidacao de leis que detenham assuntos convergentes em um mesmo diplomalegal observada a Lei Complementar n  95  de 26 de fevereiro de 1998  conforme as especificacoes  os produtos e os criterios de aceite estabelecidos no Termo de Referencia.",
+            "objectSummary": "Servicos tecnicos especializados  de natureza predominantemente intelectual e nao continuada  destinados a reorganizacao legislativa do Municipio de Jarinu  mediante mapeamento  classificacao tematica  compilacao e consolidacao de leis que detenham assuntos convergentes em um mesmo diplomalegal…",
+            "organizationName": "CAMARA MUNICIPAL DE JARINU",
+            "state": "SP",
+            "estimatedValue": 571400,
+            "publishedAt": "2026-09-17T16:27:20.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.050Z"
+          },
+          "inputTokens": 1119,
+          "estimatedCostUsd": 0.000047
+        },
+        {
+          "tender": {
+            "id": "11022597001406-1-000008-2026",
+            "title": "Aquisição de Vidrarias e Insumos para laboratório ICB/UPE 2025",
+            "objectSummary": "Aquisição de Vidrarias e Insumos para laboratório ICB/UPE 2025",
+            "organizationName": "FUNDACAO UNIVERSIDADE DE PERNAMBUCO",
+            "state": "PE",
+            "estimatedValue": 52999.13,
+            "publishedAt": "2026-09-18T15:59:08.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.070Z"
+          },
+          "inputTokens": 877,
+          "estimatedCostUsd": 0.00003683
+        },
+        {
+          "tender": {
+            "id": "13898581000172-1-000057-2026",
+            "title": "Contratação de serviços contínuos, com cessão de mão de obra, direcionadas a manutenção preventiva e corretiva com o fornecimento de peças do sistema Chiller na central de Ar condicionado no Instituto Médico de Alagoas IML, a serem executados com regime de dedicação exclusiva de mão de obra.",
+            "objectSummary": "Contratação de serviços contínuos, com cessão de mão de obra, direcionadas a manutenção preventiva e corretiva com o fornecimento de peças do sistema Chiller na central de Ar condicionado no Instituto Médico de Alagoas IML, a serem executados com regime de dedicação exclusiva de mão de obra.",
+            "organizationName": "PERICIA OFICIAL DO ESTADO DE ALAGOAS",
+            "state": "AL",
+            "estimatedValue": 484161.26,
+            "publishedAt": "2026-09-18T14:22:08.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.7733333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.034Z"
+          },
+          "inputTokens": 1010,
+          "estimatedCostUsd": 0.00004242
+        },
+        {
+          "tender": {
+            "id": "44567014000167-1-000071-2026",
+            "title": "REGISTRO DE PRECOS PARA EVENTUAIS AQUISICOES DE PRODUTOS DE GENERO ALIMENTICIO PERECIVEIS E NAO PERECIVEIS PARA SUPRIR A NECESSIDADE DA COZINHA PILOTO MUNICIPAL E DE TODA ALIMENTACAO ESCOLAR INCLUINDO O  PROGRAMA NACIONAL DE ALIMENTACAO ESCOLAR (PNAE) SOLICITADO PELA SECRETARIA MUNICIPAL DE EDUCACAO DE SAO PEDRO DO TURVO/SP.",
+            "objectSummary": "REGISTRO DE PRECOS PARA EVENTUAIS AQUISICOES DE PRODUTOS DE GENERO ALIMENTICIO PERECIVEIS E NAO PERECIVEIS PARA SUPRIR A NECESSIDADE DA COZINHA PILOTO MUNICIPAL E DE TODA ALIMENTACAO ESCOLAR INCLUINDO O  PROGRAMA NACIONAL DE ALIMENTACAO ESCOLAR (PNAE) SOLICITADO PELA SECRETARIA MUNICIPAL DE…",
+            "organizationName": "MUNICIPIO DE SAO PEDRO DO TURVO",
+            "state": "SP",
+            "estimatedValue": 6914030.37,
+            "publishedAt": "2026-09-17T14:06:46.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "alimentação"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.075Z"
+          },
+          "inputTokens": 1146,
+          "estimatedCostUsd": 0.00004813
+        },
+        {
+          "tender": {
+            "id": "03831971000171-1-000035-2026",
+            "title": "Contratação de de  empresa  especializada  na  capacitação  de  servidores  na  area jurídica, a fim de atender as demandas do Instituto de Terras de Mato  Grosso – INTERMAT",
+            "objectSummary": "Contratação de de  empresa  especializada  na  capacitação  de  servidores  na  area jurídica, a fim de atender as demandas do Instituto de Terras de Mato  Grosso – INTERMAT",
+            "organizationName": "INSTITUTO DE TERRAS DE MATO GROSSO",
+            "state": "MT",
+            "estimatedValue": 9200,
+            "publishedAt": "2026-09-17T13:07:23.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.067Z"
+          },
+          "inputTokens": 915,
+          "estimatedCostUsd": 0.00003843
+        },
+        {
+          "tender": {
+            "id": "46410866000171-1-000849-2026",
+            "title": "PE 90084 - REGISTRO DE PREÇOS PARA AQUISIÇÃO DE INSUMOS HOSPITALARES",
+            "objectSummary": "PE 90084 - REGISTRO DE PREÇOS PARA AQUISIÇÃO DE INSUMOS HOSPITALARES",
+            "organizationName": "MUNICIPIO DE JAGUARIUNA",
+            "state": "SP",
+            "estimatedValue": 1951007.6,
+            "publishedAt": "2026-09-17T11:25:32.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0166667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.080Z"
+          },
+          "inputTokens": 880,
+          "estimatedCostUsd": 0.00003696
+        },
+        {
+          "tender": {
+            "id": "08345495000100-1-000033-2026",
+            "title": "Aquisição de equipamentos para sala de estimulação para atendimento de crianças neurodivergentes, a fim de atender as necessidades do Fundo Municipal de Saúde de Araquari",
+            "objectSummary": "Aquisição de equipamentos para sala de estimulação para atendimento de crianças neurodivergentes, a fim de atender as necessidades do Fundo Municipal de Saúde de Araquari",
+            "organizationName": "FUNDO MUNICIPAL DE SAUDE DE ARAQUARI - SC",
+            "state": "SC",
+            "estimatedValue": 114549.61,
+            "publishedAt": "2026-09-17T13:47:05.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.12,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:58.024Z"
+          },
+          "inputTokens": 910,
+          "estimatedCostUsd": 0.00003822
+        }
+      ]
+    },
+    {
+      "id": "facilities",
+      "label": "Limpeza e facilities",
+      "neighborTerms": [
+        "material de limpeza",
+        "produtos de limpeza",
+        "vigilância"
+      ],
+      "input": {
+        "description": "Prestamos limpeza profissional, conservação, recepção, jardinagem e apoio operacional para órgãos e empresas.",
+        "offerings": [
+          "limpeza",
+          "conservação",
+          "recepção",
+          "jardinagem",
+          "apoio operacional"
+        ],
+        "exclusions": [
+          "material de limpeza",
+          "produtos de limpeza"
+        ],
+        "coverage": {
+          "scope": "national"
+        },
+        "valueRange": {
+          "min": null,
+          "max": null
+        },
+        "size": "cooperative"
+      },
+      "levelCounts": {
+        "high": 3,
+        "medium": 0,
+        "low": 27,
+        "filtered": 0
+      },
+      "inputTokens": 32748,
+      "estimatedCostUsd": 0.00137541,
+      "results": [
+        {
+          "tender": {
+            "id": "46392122000171-1-000066-2026",
+            "title": "Contratação de empresa especializada em Prestação de Serviços contínuos de limpeza geral, asseio e conservação predial, com dedicação exclusiva de mão de obra, com fornecimento de saneantes domissanitários, materiais de higiene e limpeza, limpeza de calhas, telhados, limpeza de caixa d'água, dedetização, desratização, com apoio tecnológico visando controle de qualidade dos serviços executados, para os Equipamentos Esportivos / Unidades de administração direta da SEME",
+            "objectSummary": "Contratação de empresa especializada em Prestação de Serviços contínuos de limpeza geral, asseio e conservação predial, com dedicação exclusiva de mão de obra, com fornecimento de saneantes domissanitários, materiais de higiene e limpeza, limpeza de calhas, telhados, limpeza de caixa d'água,…",
+            "organizationName": "SECRETARIA MUNICIPAL  DE ESPORTES E LAZER _  SEME",
+            "state": "SP",
+            "estimatedValue": 77491117.93,
+            "publishedAt": "2026-09-17T17:06:22.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.88,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:31:00.002Z"
+          },
+          "inputTokens": 1103,
+          "estimatedCostUsd": 0.00004633
+        },
+        {
+          "tender": {
+            "id": "00833944000140-1-000144-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA PARA O FORNECIMENTO DE GÊNROS ALIMENTÍCIOS E MATERIAIS DE LIMPEZA PARA REPOSIÇÃO DE ESTOQUE PARA A CÂMARA MUNICIPAL DE CAMPO ALEGRE DE GOIÁS.\nJUSTIFICATIVA DA CONTRATAÇÃO\n\nJustifica-se a contratação de empresa para o fornecimento de gêneros alimentícios e materiais de limpeza destinados à reposição do estoque da Câmara Municipal de Campo Alegre de Goiás – GO, visando assegurar o abastecimento regular dos produtos necessários ao funcionamento e à manutenção das atividades administrativas e legislativas da instituição.\n\nA aquisição de gêneros alimentícios mostra-se necessária para atender às demandas de consumo interno da Câmara Municipal, incluindo o fornecimento de itens utilizados no atendimento a vereadores, servidores, colaboradores e visitantes durante o expediente, sessões legislativas, reuniões e demais atividades institucionais realizadas nas dependências do Poder Legislativo.\n\nDa mesma forma, a aquisição de materiais de limpeza e higienização é indispensável para garantir condições adequadas de conservação, limpeza e higiene das dependências da Câmara Municipal, abrangendo gabinetes, setores administrativos, Plenário, banheiros, corredores, áreas de circulação e demais ambientes de uso comum.\n\nA reposição do estoque tem por finalidade evitar o desabastecimento de produtos de consumo contínuo, assegurando que os setores responsáveis disponham dos materiais necessários para execução regular de suas atividades. A manutenção de estoque em quantitativo adequado também possibilita maior organização e controle do consumo, reduzindo a necessidade de aquisições emergenciais.\n\nOs quantitativos deverão ser definidos considerando o consumo médio, o saldo disponível em estoque e a demanda estimada para o período, buscando manter nível suficiente para atendimento das necessidades da Câmara Municipal, sem formação de estoque excessivo, especialmente quanto aos gêneros alimentícios sujeitos a prazos de validade.",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA PARA O FORNECIMENTO DE GÊNROS ALIMENTÍCIOS E MATERIAIS DE LIMPEZA PARA REPOSIÇÃO DE ESTOQUE PARA A CÂMARA MUNICIPAL DE CAMPO ALEGRE DE GOIÁS.\nJUSTIFICATIVA DA CONTRATAÇÃO\n\nJustifica-se a contratação de empresa para o fornecimento de gêneros alimentícios e materiais de…",
+            "organizationName": "CAMARA MUNICIPAL DE CAMPO ALEGRE DE GOIAS",
+            "state": "GO",
+            "estimatedValue": 5722.86,
+            "publishedAt": "2026-09-17T12:35:23.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.13,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.877Z"
+          },
+          "inputTokens": 1806,
+          "estimatedCostUsd": 0.00007585
+        },
+        {
+          "tender": {
+            "id": "87612784000197-1-000100-2026",
+            "title": "Contratação de empresa para realizar serviços junto a equipe de encascalhamento e patrolamento de estradas públicas, com retirada de pedras, limpeza de valetas, corte de galhos, limpeza de bueiros, reconstrução de cabeceira de pontes, enfim serviços manuais de suporte aos operadores de máquinas e veículos\nA contratação justifica-se pela necessidade de disponibilizar mão de obra de apoio para a realização dos serviços de manutenção e recuperação das estradas públicas municipais, auxiliando as equipes e os operadores de máquinas nas atividades que exigem serviços manuais. A execução desses serviços é necessária para garantir a conservação das vias, melhorar as condições de trafegabilidade e proporcionar maior segurança aos usuários, especialmente nas estradas do interior do Município. A mão de obra contratada será utilizada em atividades como retirada de pedras, limpeza de valetas e bueiros, corte de galhos, manutenção de cabeceiras de pontes e demais serviços de suporte, conforme as necessidades identificadas pelas equipes municipais. A contratação contribuirá para a continuidade e maior eficiência dos serviços públicos de manutenção viária, atendendo às demandas do Município e da população.",
+            "objectSummary": "Contratação de empresa para realizar serviços junto a equipe de encascalhamento e patrolamento de estradas públicas, com retirada de pedras, limpeza de valetas, corte de galhos, limpeza de bueiros, reconstrução de cabeceira de pontes, enfim serviços manuais de suporte aos operadores de máquinas e…",
+            "organizationName": "MUNICIPIO DE ALECRIM",
+            "state": "RS",
+            "estimatedValue": 30000,
+            "publishedAt": "2026-09-17T12:31:33.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.4233333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.910Z"
+          },
+          "inputTokens": 1370,
+          "estimatedCostUsd": 0.00005754
+        },
+        {
+          "tender": {
+            "id": "87958625000149-1-000372-2026",
+            "title": "Contratação EMERGENCIAL de empresa especializada para a prestação de serviços continuados de limpeza, conservação e higienização, com fornecimento de materiais de limpeza, insumos, equipamentos e mão de obra em regime de dedicação exclusiva, mediante a disponibilização de 03 (três) postos de Auxiliar de Limpeza, destinados ao atendimento das dependências da 13ª Coordenadoria Regional de Saúde de Santa Cruz do Sul/RS, compreendendo sua Sede Administrativa, o Almoxarifado Regional de Medicamentos e Materiais e o Laboratório Regional, visando assegurar a manutenção das condições adequadas de higiene, salubridade, conservação e funcionamento das unidades.",
+            "objectSummary": "Contratação EMERGENCIAL de empresa especializada para a prestação de serviços continuados de limpeza, conservação e higienização, com fornecimento de materiais de limpeza, insumos, equipamentos e mão de obra em regime de dedicação exclusiva, mediante a disponibilização de 03 (três) postos de…",
+            "organizationName": "SECRETARIA DA SAUDE",
+            "state": "RS",
+            "estimatedValue": 180168.24,
+            "publishedAt": "2026-09-18T16:51:12.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.82,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.909Z"
+          },
+          "inputTokens": 1205,
+          "estimatedCostUsd": 0.00005061
+        },
+        {
+          "tender": {
+            "id": "76970391000139-1-000030-2026",
+            "title": "AQUISIÇÃO DE 01 (UM) TRATOR AGRÍCOLA NOVO, DE PRIMEIRO USO, PLATAFORMADO, DESTINADO AO ATENDIMENTO DAS NECESSIDADES OPERACIONAIS DO MUNICÍPIO DE PARANAPOEMA/PR, ESPECIALMENTE PARA ATIVIDADES DE ROÇAGEM, MANUTENÇÃO E LIMPEZA DE ÁREAS PÚBLICAS E ESTRADAS RURAIS, TRANSPORTE DE MATERIAIS E INSUMOS COM UTILIZAÇÃO DE CARRETA, APOIO ÀS ATIVIDADES DE LIMPEZA E SANEAMENTO, INCLUINDO A OPERAÇÃO DE EQUIPAMENTO PARA LIMPEZA DE FOSSAS, E DEMAIS SERVIÇOS DE INTERESSE PÚBLICO QUE DEMANDEM O USO DE TRATOR .",
+            "objectSummary": "AQUISIÇÃO DE 01 (UM) TRATOR AGRÍCOLA NOVO, DE PRIMEIRO USO, PLATAFORMADO, DESTINADO AO ATENDIMENTO DAS NECESSIDADES OPERACIONAIS DO MUNICÍPIO DE PARANAPOEMA/PR, ESPECIALMENTE PARA ATIVIDADES DE ROÇAGEM, MANUTENÇÃO E LIMPEZA DE ÁREAS PÚBLICAS E ESTRADAS RURAIS, TRANSPORTE DE MATERIAIS E INSUMOS…",
+            "organizationName": "MUNICIPIO DE PARANAPOEMA",
+            "state": "PR",
+            "estimatedValue": 214585.72,
+            "publishedAt": "2026-09-17T16:39:05.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.1433333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.875Z"
+          },
+          "inputTokens": 1310,
+          "estimatedCostUsd": 0.00005502
+        },
+        {
+          "tender": {
+            "id": "29988441000125-1-000012-2026",
+            "title": "[Portal de Compras Públicas] - A presente contratação justifica-se pela necessidade administrativa de garantir a manutenção, as condições de higiene, limpeza, conservação e o suporte operacional das dependências da Câmara Municipal de Conceição da Barra - ES.\nTrata-se de materiais indispensáveis ao funcionamento diário desta Casa de Leis, visando proporcionar um ambiente adequado, salubre e acolhedor tanto para os servidores e vereadores quanto para o público em geral que transita por esta instituição.\nA aquisição será dividida em lotes, conforme abaixo:\nLOTE 01 – MATERIAIS DE LIMPEZA E HIGIENE: Destinado a suprir a demanda de materiais necessários para a limpeza e conservação predial, bem como para a higiene pessoal dos usuários das instalações.\nLOTE 02 – GÊNEROS ALIMENTÍCIOS: Destinado ao atendimento das necessidades de copa e cozinha, para servir servidores, vereadores e visitantes durante o expediente e sessões legislativas.",
+            "objectSummary": "[Portal de Compras Públicas] - A presente contratação justifica-se pela necessidade administrativa de garantir a manutenção, as condições de higiene, limpeza, conservação e o suporte operacional das dependências da Câmara Municipal de Conceição da Barra - ES.\nTrata-se de materiais indispensáveis…",
+            "organizationName": "CONCEICAO DA BARRA CAMARA MUNICIPAL",
+            "state": "ES",
+            "estimatedValue": 23955.33,
+            "publishedAt": "2026-09-17T17:04:29.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.3,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.895Z"
+          },
+          "inputTokens": 1297,
+          "estimatedCostUsd": 0.00005447
+        },
+        {
+          "tender": {
+            "id": "10779511000107-1-000189-2026",
+            "title": "Aquisição de materiais de limpeza que são itens necessários higienização dos itens de hortifrutti e limpeza das dependências do restaurante\nestudantil do campus de Itaperuna",
+            "objectSummary": "Aquisição de materiais de limpeza que são itens necessários higienização dos itens de hortifrutti e limpeza das dependências do restaurante\nestudantil do campus de Itaperuna",
+            "organizationName": "INSTITUTO FEDERAL DE EDUCACAO, CIENCIA E TECNOLOGIA FLUMINENSE.",
+            "state": "RJ",
+            "estimatedValue": 18565.18,
+            "publishedAt": "2026-09-17T18:24:51.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0933333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.881Z"
+          },
+          "inputTokens": 926,
+          "estimatedCostUsd": 0.00003889
+        },
+        {
+          "tender": {
+            "id": "04884574000120-1-000038-2026",
+            "title": "Contratação de serviços contínuos de limpeza e conservação, a serem executados com regime de dedicação exclusiva de mão de obra, incluindo materiais de limpeza e higiene, equipamentos e máquinas, a fim de atender às necessidades do Escritório Central da Agência Nacional do Cinema – ANCINE, no Rio de Janeiro",
+            "objectSummary": "Contratação de serviços contínuos de limpeza e conservação, a serem executados com regime de dedicação exclusiva de mão de obra, incluindo materiais de limpeza e higiene, equipamentos e máquinas, a fim de atender às necessidades do Escritório Central da Agência Nacional do Cinema – ANCINE, no Rio…",
+            "organizationName": "AGENCIA NACIONAL DO CINEMA",
+            "state": "RJ",
+            "estimatedValue": 720524.07,
+            "publishedAt": "2026-09-18T10:40:24.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "high",
+            "score": 0.9133333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza",
+                  "conservação"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.892Z"
+          },
+          "inputTokens": 997,
+          "estimatedCostUsd": 0.00004187
+        },
+        {
+          "tender": {
+            "id": "59015438000196-1-000132-2026",
+            "title": "Aquisição de materiais de limpeza diversos por meio de dispensa de licitação visando o abastecimento, limpeza e organização dos setores do Hospital Municipal Dr. Tabajara Ramos e das suas unidade dependentes, até a conclusão do processo licitatório 2026/82 que se encontra atualmente em fase de analise de amostras.",
+            "objectSummary": "Aquisição de materiais de limpeza diversos por meio de dispensa de licitação visando o abastecimento, limpeza e organização dos setores do Hospital Municipal Dr. Tabajara Ramos e das suas unidade dependentes, até a conclusão do processo licitatório 2026/82 que se encontra atualmente em fase de…",
+            "organizationName": "HOSPITAL MUNICIPAL DR. TABAJARA RAMOS",
+            "state": "SP",
+            "estimatedValue": 28317.95,
+            "publishedAt": "2026-09-18T17:11:33.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.14,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.937Z"
+          },
+          "inputTokens": 1024,
+          "estimatedCostUsd": 0.00004301
+        },
+        {
+          "tender": {
+            "id": "02367597000132-1-000239-2026",
+            "title": "LICITAÇÃO EXCLUSIVA PARA EMPRESA LOCAL/REGIONAL LEI MUNICIPAL Nº 632/2026 - REGISTRO DE PREÇOS visando à Aquisição de material de limpeza, destinado à manutenção da limpeza das repartições da administração municipal, em atendimento à solicitação da Secretaria Municipal de Administração de Alvorada do Norte, conforme especificados no Anexo I – Termo de Referência/Especificações do objeto.",
+            "objectSummary": "LICITAÇÃO EXCLUSIVA PARA EMPRESA LOCAL/REGIONAL LEI MUNICIPAL Nº 632/2026 - REGISTRO DE PREÇOS visando à Aquisição de material de limpeza, destinado à manutenção da limpeza das repartições da administração municipal, em atendimento à solicitação da Secretaria Municipal de Administração de…",
+            "organizationName": "MUNICIPIO DE ALVORADA DO NORTE",
+            "state": "GO",
+            "estimatedValue": 116508.2,
+            "publishedAt": "2026-09-18T18:22:31.000Z"
+          },
+          "sampleGroup": "probable_positive",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.12,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.882Z"
+          },
+          "inputTokens": 1097,
+          "estimatedCostUsd": 0.00004607
+        },
+        {
+          "tender": {
+            "id": "11323985000102-1-000098-2026",
+            "title": "Aquisição de 01 (uma) diária de hospedagem para a Sra. Alice Alves de Souza, servidora da Agência Nacional de Vigilância Sanitária – ANVISA, que se deslocará de Brasília/DF até o Município de Xaxim/SC para participar, na condição de palestrante, da 2ª Oficina da Vigilância Sanitária Regional, a ser realizada no dia 24 de setembro de 2026, no Município de Xaxim/SC.",
+            "objectSummary": "Aquisição de 01 (uma) diária de hospedagem para a Sra. Alice Alves de Souza, servidora da Agência Nacional de Vigilância Sanitária – ANVISA, que se deslocará de Brasília/DF até o Município de Xaxim/SC para participar, na condição de palestrante, da 2ª Oficina da Vigilância Sanitária Regional, a…",
+            "organizationName": "FUNDO MUNICIPAL DE SAUDE DE XAXIM",
+            "state": "SC",
+            "estimatedValue": 150,
+            "publishedAt": "2026-09-17T12:42:35.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.906Z"
+          },
+          "inputTokens": 1123,
+          "estimatedCostUsd": 0.00004717
+        },
+        {
+          "tender": {
+            "id": "01619022000105-1-000051-2026",
+            "title": "Contratação de empresa especializada em serviços de vigilância patrimonial, regularmente autorizada pela Polícia Federal, para a prestação de serviços de segurança privada desarmada em evento, mediante o emprego de vigilantes especialmente habilitados para segurança de eventos, durante a “Solenidade de Entrega do Troféu Seriema – 24º Prêmio Crea de Meio Ambiente”, a ocorrer entre os dias 24 (vinte e quatro) e 29 (vinte e nove) de novembro de 2026, no WTC Goiânia, Goiânia-GO.",
+            "objectSummary": "Contratação de empresa especializada em serviços de vigilância patrimonial, regularmente autorizada pela Polícia Federal, para a prestação de serviços de segurança privada desarmada em evento, mediante o emprego de vigilantes especialmente habilitados para segurança de eventos, durante a…",
+            "organizationName": "CONSELHO REGIONAL DE ENGENHARIA E AGRONOMIA DE GOIAS",
+            "state": "GO",
+            "estimatedValue": 8808.69,
+            "publishedAt": "2026-09-17T15:41:04.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.917Z"
+          },
+          "inputTokens": 1116,
+          "estimatedCostUsd": 0.00004687
+        },
+        {
+          "tender": {
+            "id": "12098239000125-1-000005-2026",
+            "title": "CONTRATAÇÃO DE PESSOA JURIDICA PARA O FORNECIMENTO DE MATERIAL DE EXPEDIENTE, MATERIAL DE LIMPEZA, MATERIAL DE INFORMATICA E GÊNEROS ALIMENTÍCIO, PARA O FUNDO DE PREVIDENCIA SOCIAL DO MUNICIPIO DE MAUÉS, EXERCÍCIO DE 2026, CONFORME DETALHAMENTO NO TERMO DE REFERENCIA.",
+            "objectSummary": "CONTRATAÇÃO DE PESSOA JURIDICA PARA O FORNECIMENTO DE MATERIAL DE EXPEDIENTE, MATERIAL DE LIMPEZA, MATERIAL DE INFORMATICA E GÊNEROS ALIMENTÍCIO, PARA O FUNDO DE PREVIDENCIA SOCIAL DO MUNICIPIO DE MAUÉS, EXERCÍCIO DE 2026, CONFORME DETALHAMENTO NO TERMO DE REFERENCIA.",
+            "organizationName": "FUNDO DE PREVIDENCIA SOCIAL DO MUNICIPIO DE MAUES - AM",
+            "state": "AM",
+            "estimatedValue": 42472.1,
+            "publishedAt": "2026-09-17T15:35:09.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0866667,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.924Z"
+          },
+          "inputTokens": 1117,
+          "estimatedCostUsd": 0.00004691
+        },
+        {
+          "tender": {
+            "id": "23070071000166-1-000005-2026",
+            "title": "Material de limpeza",
+            "objectSummary": "Material de limpeza",
+            "organizationName": "FUNDACAO DE ARTE DE OURO PRETO",
+            "state": "MG",
+            "estimatedValue": 6952.17,
+            "publishedAt": "2026-09-17T22:10:29.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0833333,
+            "reasons": [
+              {
+                "kind": "offering_match",
+                "terms": [
+                  "limpeza"
+                ]
+              },
+              {
+                "kind": "exclusion",
+                "terms": [
+                  "material de limpeza",
+                  "produtos de limpeza"
+                ]
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.876Z"
+          },
+          "inputTokens": 803,
+          "estimatedCostUsd": 0.00003373
+        },
+        {
+          "tender": {
+            "id": "01409580000138-1-001449-2026",
+            "title": "A presente contratação tem por objeto a aquisição de itens de identificação funcional e vestuário institucional para os fiscais e Técnicos de Vigilância em saúde  do Estado de Goiás, divididos em duas categorias principais.",
+            "objectSummary": "A presente contratação tem por objeto a aquisição de itens de identificação funcional e vestuário institucional para os fiscais e Técnicos de Vigilância em saúde  do Estado de Goiás, divididos em duas categorias principais.",
+            "organizationName": "ESTADO DE GOIAS",
+            "state": "GO",
+            "estimatedValue": 188667,
+            "publishedAt": "2026-09-17T15:27:51.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.01,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.886Z"
+          },
+          "inputTokens": 939,
+          "estimatedCostUsd": 0.00003944
+        },
+        {
+          "tender": {
+            "id": "82575812000120-1-000423-2026",
+            "title": "[Portal de Compras Públicas] - Registro de preço - Aquisição de materiais, equipamentos, utensílios e equipamentos de proteção destinados à Vigilância Epidemiológica do Município de Porto Belo/SC, conforme as especificações contidas no Termo de Referência (Anexo I).",
+            "objectSummary": "[Portal de Compras Públicas] - Registro de preço - Aquisição de materiais, equipamentos, utensílios e equipamentos de proteção destinados à Vigilância Epidemiológica do Município de Porto Belo/SC, conforme as especificações contidas no Termo de Referência (Anexo I).",
+            "organizationName": "MUNICIPIO DE PORTO BELO",
+            "state": "SC",
+            "estimatedValue": 451613.61,
+            "publishedAt": "2026-09-17T11:13:55.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.891Z"
+          },
+          "inputTokens": 1011,
+          "estimatedCostUsd": 0.00004246
+        },
+        {
+          "tender": {
+            "id": "94704020000197-1-000044-2026",
+            "title": "Aquisição de Larvicida BTI, larvicida biológico em suspensão concentrada, para o controle de Aedes aegypti, Culex e simulídeos (borrachudos), com princípio ativo Bacillus thuringiensis subsp. israelensis – Bti, cepa LFB.Fiocruz 584, teor de 1.200 UTI/MG, 5% p/p, destinado às ações de vigilância e controle de vetores do Município de Santo Antônio do Planalto/RS",
+            "objectSummary": "Aquisição de Larvicida BTI, larvicida biológico em suspensão concentrada, para o controle de Aedes aegypti, Culex e simulídeos (borrachudos), com princípio ativo Bacillus thuringiensis subsp. israelensis – Bti, cepa LFB.Fiocruz 584, teor de 1.200 UTI/MG, 5% p/p, destinado às ações de vigilância e…",
+            "organizationName": "MUNICIPIO DE SANTO ANTONIO DO PLANALTO",
+            "state": "RS",
+            "estimatedValue": 19850,
+            "publishedAt": "2026-09-18T16:53:51.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0366667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.898Z"
+          },
+          "inputTokens": 1153,
+          "estimatedCostUsd": 0.00004843
+        },
+        {
+          "tender": {
+            "id": "29979036000140-1-000144-2026",
+            "title": "Contratação de serviços continuados de vigilância ostensiva, com previsão de horas eventuais sob demanda, destinados ao atendimento das necessidades da Superintendência Regional Sudeste I e de suas unidades vinculadas no Estado de São Paulo, a serem executados com regime de dedicação exclusiva de mão de obra, conforme condições, quantidades e exigências estabelecidas no Edital e seus anexos.",
+            "objectSummary": "Contratação de serviços continuados de vigilância ostensiva, com previsão de horas eventuais sob demanda, destinados ao atendimento das necessidades da Superintendência Regional Sudeste I e de suas unidades vinculadas no Estado de São Paulo, a serem executados com regime de dedicação exclusiva de…",
+            "organizationName": "INSTITUTO NACIONAL DO SEGURO SOCIAL",
+            "state": "SP",
+            "estimatedValue": 278480159.49,
+            "publishedAt": "2026-09-17T07:00:13.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.874Z"
+          },
+          "inputTokens": 1055,
+          "estimatedCostUsd": 0.00004431
+        },
+        {
+          "tender": {
+            "id": "11422955000153-1-000161-2026",
+            "title": "PRESTAÇÃO DE SERVIÇO DE DIAGNÓSTICO POR SCANNER, PARA IDENTIFICAÇÃO DE FALHAS E PROBLEMAS MECÂNICOS PARA MANUTENÇÃO DOS VEÍCULOS PLACA RAC-7787, PERTENCENTE AO MAC, RYC-8H59, PERTENCENTE AO SAMU, E QJV-6208, PERTENCENTE À VIGILÂNCIA SANITÁRIA.",
+            "objectSummary": "PRESTAÇÃO DE SERVIÇO DE DIAGNÓSTICO POR SCANNER, PARA IDENTIFICAÇÃO DE FALHAS E PROBLEMAS MECÂNICOS PARA MANUTENÇÃO DOS VEÍCULOS PLACA RAC-7787, PERTENCENTE AO MAC, RYC-8H59, PERTENCENTE AO SAMU, E QJV-6208, PERTENCENTE À VIGILÂNCIA SANITÁRIA.",
+            "organizationName": "FUNDO MUNICIPAL DE SAUDE DE TIMBO",
+            "state": "SC",
+            "estimatedValue": 555,
+            "publishedAt": "2026-09-17T18:25:15.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.900Z"
+          },
+          "inputTokens": 1070,
+          "estimatedCostUsd": 0.00004494
+        },
+        {
+          "tender": {
+            "id": "11332999000192-1-000014-2026",
+            "title": "locação de imóvel na Rua 08 de Maio, 290 Centro, Anastacio MS, para funcionamento da vigilância em Saúde do Município de Anastácio-MS",
+            "objectSummary": "locação de imóvel na Rua 08 de Maio, 290 Centro, Anastacio MS, para funcionamento da vigilância em Saúde do Município de Anastácio-MS",
+            "organizationName": "FUNDO MUNICIPAL DE SAUDE - FMS DO MUNICIPIO DE ANASTACIO",
+            "state": "MS",
+            "estimatedValue": 25800,
+            "publishedAt": "2026-09-17T15:09:57.000Z"
+          },
+          "sampleGroup": "neighbor",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0433333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.896Z"
+          },
+          "inputTokens": 920,
+          "estimatedCostUsd": 0.00003864
+        },
+        {
+          "tender": {
+            "id": "88830609000139-1-000527-2026",
+            "title": "Prestação de serviços de acesso ao software Memorial 8 Índices (renovação de 12 licenças anuais), para elaboração de cálculos judiciais.",
+            "objectSummary": "Prestação de serviços de acesso ao software Memorial 8 Índices (renovação de 12 licenças anuais), para elaboração de cálculos judiciais.",
+            "organizationName": "MUNICIPIO DE CAXIAS DO SUL",
+            "state": "RS",
+            "estimatedValue": 6132,
+            "publishedAt": "2026-09-18T11:13:09.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.948Z"
+          },
+          "inputTokens": 896,
+          "estimatedCostUsd": 0.00003763
+        },
+        {
+          "tender": {
+            "id": "47784477000179-1-000106-2026",
+            "title": "Contratação da empresa BH LOCAÇÃO DE MATERIAIS PARA EVENTOS LTDA., CNPJ 08.668.276/0001-54, para a locação de gradis de isolamento, visando atender às necessidades de organização, controle de acesso e segurança da Cerimônia de Posse da Nova Diretoria do Tribunal Regional Federal da 6ª Região para o biênio 2026-2028",
+            "objectSummary": "Contratação da empresa BH LOCAÇÃO DE MATERIAIS PARA EVENTOS LTDA., CNPJ 08.668.276/0001-54, para a locação de gradis de isolamento, visando atender às necessidades de organização, controle de acesso e segurança da Cerimônia de Posse da Nova Diretoria do Tribunal Regional Federal da 6ª Região para…",
+            "organizationName": "TRIBUNAL REGIONAL FEDERAL DA 6A REGIAO",
+            "state": "MG",
+            "estimatedValue": 1750,
+            "publishedAt": "2026-09-18T15:56:05.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.04,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.922Z"
+          },
+          "inputTokens": 1093,
+          "estimatedCostUsd": 0.00004591
+        },
+        {
+          "tender": {
+            "id": "45358058000140-1-000157-2026",
+            "title": "Contratação de serviços de fornecimento de energia",
+            "objectSummary": "Contratação de serviços de fornecimento de energia",
+            "organizationName": "FUNDACAO UNIVERSIDADE FEDERAL DE SAO CARLOS",
+            "state": "SP",
+            "estimatedValue": 24000,
+            "publishedAt": "2026-09-18T11:10:26.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.892Z"
+          },
+          "inputTokens": 830,
+          "estimatedCostUsd": 0.00003486
+        },
+        {
+          "tender": {
+            "id": "09122706000109-1-000042-2026",
+            "title": "Contratação de empresa de engenharia para execução das obras emergências na PB-048",
+            "objectSummary": "Contratação de empresa de engenharia para execução das obras emergências na PB-048",
+            "organizationName": "DEPARTAMENTO DE ESTRADAS DE RODAGEM DO ESTADO DA PB",
+            "state": "PB",
+            "estimatedValue": 720191.33,
+            "publishedAt": "2026-09-17T11:45:43.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0166667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.883Z"
+          },
+          "inputTokens": 866,
+          "estimatedCostUsd": 0.00003637
+        },
+        {
+          "tender": {
+            "id": "01138957000161-1-000047-2026",
+            "title": "JUSTIFIVATIVA : CONTRATAÇÃO DE SERVIÇOS TÉCNICOS ESPECIALIZADOS DE ASSESSORIA E CONSULTORIA ESPECIALIZADA NA PRESTAÇÃO DE SERVIÇOS DE ASSESSORIA, DE APOIO ADMINISTRATIVO, ESPECIFICAMENTE NA ÁREA DE CONTROLE E JURIDICIDADE DE LICITAÇÕES E CONTRATAÇÕES PÚBLICAS.",
+            "objectSummary": "JUSTIFIVATIVA : CONTRATAÇÃO DE SERVIÇOS TÉCNICOS ESPECIALIZADOS DE ASSESSORIA E CONSULTORIA ESPECIALIZADA NA PRESTAÇÃO DE SERVIÇOS DE ASSESSORIA, DE APOIO ADMINISTRATIVO, ESPECIFICAMENTE NA ÁREA DE CONTROLE E JURIDICIDADE DE LICITAÇÕES E CONTRATAÇÕES PÚBLICAS.",
+            "organizationName": "MUNICIPIO DE DIANOPOLIS",
+            "state": "TO",
+            "estimatedValue": 92000.04,
+            "publishedAt": "2026-09-17T16:16:57.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0133333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.910Z"
+          },
+          "inputTokens": 1092,
+          "estimatedCostUsd": 0.00004586
+        },
+        {
+          "tender": {
+            "id": "12264222000109-1-000075-2026",
+            "title": "Contratação da banda WILLIAM SANFONA, para realização de 01 (um) show artístico musical ao vivo, com duração mínima de 2H00MIN (duas horas), durante as festividades de emancipação política, a ser realizado no dia 27 de setembro de 2026.",
+            "objectSummary": "Contratação da banda WILLIAM SANFONA, para realização de 01 (um) show artístico musical ao vivo, com duração mínima de 2H00MIN (duas horas), durante as festividades de emancipação política, a ser realizado no dia 27 de setembro de 2026.",
+            "organizationName": "MUNICIPIO DE SAO MIGUEL DOS CAMPOS",
+            "state": "AL",
+            "estimatedValue": 120000,
+            "publishedAt": "2026-09-17T16:51:44.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.931Z"
+          },
+          "inputTokens": 1008,
+          "estimatedCostUsd": 0.00004234
+        },
+        {
+          "tender": {
+            "id": "11297536000137-1-000013-2026",
+            "title": "LOCAÇÃO DE UNIDADE MÓVEL DE SAÚDE COM OPERAÇÃO COMPLETA INCLUSA, DESTINADA À EXECUÇÃO DE EXAMES DE DIAGNÓSTICO POR IMAGEM, COM EMISSÃO E DISPONIBILIZAÇÃO DE LAUDOS, COM MEDIÇÃO POR DIÁRIA EFETIVAMENTE UTILIZADA",
+            "objectSummary": "LOCAÇÃO DE UNIDADE MÓVEL DE SAÚDE COM OPERAÇÃO COMPLETA INCLUSA, DESTINADA À EXECUÇÃO DE EXAMES DE DIAGNÓSTICO POR IMAGEM, COM EMISSÃO E DISPONIBILIZAÇÃO DE LAUDOS, COM MEDIÇÃO POR DIÁRIA EFETIVAMENTE UTILIZADA",
+            "organizationName": "FUNDO MUNICIPAL DE SAUDE",
+            "state": "RJ",
+            "estimatedValue": 2619900,
+            "publishedAt": "2026-09-17T18:34:37.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0266667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.884Z"
+          },
+          "inputTokens": 1046,
+          "estimatedCostUsd": 0.00004393
+        },
+        {
+          "tender": {
+            "id": "08334385000135-1-000081-2026",
+            "title": "​Contratação de pessoa jurídica especializada para prestação de serviços continuados, sem dedicação exclusiva, para: elaboração e atualização de cálculos judiciais e extrajudiciais; emissão de pareceres técnicos e cálculos econômico-financeiros decorrentes da implementação da reforma tributária sobre o consumo (EC nº 132/2023 e LC nº 214/2026), em especial, no tocante ao cumprimento do rito exigido pelo capítulo que trata de reequilíbrio de contratos administrativos; apresentação de quesitos em perícias; impugnação de cálculos apresentados pela parte contrária, em qualquer fase processual, pré-processual ou procedimentos administrativos; Realizar cálculos advindos da área administrativa, em relação aos pedidos de: repactuações contratuais, reequilíbrio econômico-financeiro do contrato e reajustamento contratual, conforme preceitua o RILCC da CAERN e demais normas aplicáveis.",
+            "objectSummary": "​Contratação de pessoa jurídica especializada para prestação de serviços continuados, sem dedicação exclusiva, para: elaboração e atualização de cálculos judiciais e extrajudiciais; emissão de pareceres técnicos e cálculos econômico-financeiros decorrentes da implementação da reforma tributária…",
+            "organizationName": "COMPANHIA DE AGUAS E ESGOTOS DO RIO GRANDE DO NORTE",
+            "state": "RN",
+            "estimatedValue": null,
+            "publishedAt": "2026-09-17T15:23:19.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0033333,
+            "reasons": [
+              {
+                "kind": "value_not_published"
+              }
+            ],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.986Z"
+          },
+          "inputTokens": 1180,
+          "estimatedCostUsd": 0.00004956
+        },
+        {
+          "tender": {
+            "id": "08993909000108-1-000149-2026",
+            "title": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA E DEVIDAMENTE LICENCIADA PARA O RECEBIMENTO, TRATAMENTO E DISPOSIÇÃO FINAL AMBIENTALMENTE ADEQUADA DE RESÍDUOS SÓLIDOS CLASSE II A, PRODUZIDOS PELO MATADOURO MUNICIPAL DE ESPERANÇA–PB, INCLUINDO O RECEBIMENTO DOS RESÍDUOS DE TECIDOS ANIMAIS E SUA DESTINAÇÃO FINAL EM ATERRO SANITÁRIO LICENCIADO, EM CONFORMIDADE COM A LEGISLAÇÃO AMBIENTAL VIGENTE E COM AS LICENÇAS E AUTORIZAÇÕES DOS ÓRGÃOS COMPETENTES",
+            "objectSummary": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA E DEVIDAMENTE LICENCIADA PARA O RECEBIMENTO, TRATAMENTO E DISPOSIÇÃO FINAL AMBIENTALMENTE ADEQUADA DE RESÍDUOS SÓLIDOS CLASSE II A, PRODUZIDOS PELO MATADOURO MUNICIPAL DE ESPERANÇA–PB, INCLUINDO O RECEBIMENTO DOS RESÍDUOS DE TECIDOS ANIMAIS E SUA DESTINAÇÃO…",
+            "organizationName": "MUNICIPIO DE ESPERANCA",
+            "state": "PB",
+            "estimatedValue": 264000,
+            "publishedAt": "2026-09-17T14:05:39.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0233333,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.906Z"
+          },
+          "inputTokens": 1237,
+          "estimatedCostUsd": 0.00005195
+        },
+        {
+          "tender": {
+            "id": "87612735000154-1-000198-2026",
+            "title": "Aquisicao de pecas de reposicao  filtros e oleos lubrificantes destinados a manutencao preventiva e corretiva de 01  uma  maquina escavadeira da marca Liugong  pertencente a frota da Secretaria Municipal da Agricultura de Barros Cassal RS  conforme especificacoes  quantidades e condicoes estabelecidas neste Termo de Referencia.",
+            "objectSummary": "Aquisicao de pecas de reposicao  filtros e oleos lubrificantes destinados a manutencao preventiva e corretiva de 01  uma  maquina escavadeira da marca Liugong  pertencente a frota da Secretaria Municipal da Agricultura de Barros Cassal RS  conforme especificacoes  quantidades e condicoes…",
+            "organizationName": "MUNICIPIO DE BARROS CASSAL",
+            "state": "RS",
+            "estimatedValue": 10879.5,
+            "publishedAt": "2026-09-18T11:48:56.000Z"
+          },
+          "sampleGroup": "random",
+          "fit": {
+            "status": "ready",
+            "level": "low",
+            "score": 0.0066667,
+            "reasons": [],
+            "model": "jev-1.13.0",
+            "checkedAt": "2026-09-25T19:30:59.917Z"
+          },
+          "inputTokens": 1058,
+          "estimatedCostUsd": 0.00004444
+        }
+      ]
+    }
+  ]
+}

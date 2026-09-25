@@ -1,0 +1,100 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { InvalidParameterError } from "../lib/api-error";
+import { companyFitTenderFingerprint, fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
+
+const valid = () => ({
+  description:
+    "Fornecemos computadores, servidores e suporte técnico especializado.",
+  offerings: ["computadores", "suporte técnico"],
+  exclusions: ["locação de veículos"],
+  coverage: { scope: "states", states: ["sp", "DF"] },
+  valueRange: { min: 1000, max: 500000 },
+  size: "other",
+});
+
+test("normaliza um perfil válido sem alterar sua intenção", () => {
+  assert.deepEqual(parseCompanyProfileInput(valid()), {
+    ...valid(),
+    coverage: { scope: "states", states: ["SP", "DF"] },
+  });
+});
+
+test("rejeita termos duplicados ignorando caixa e acentos", () => {
+  const input = valid();
+  input.offerings = ["Solução", "solucao"];
+  assert.throws(
+    () => parseCompanyProfileInput(input),
+    (error) =>
+      error instanceof InvalidParameterError &&
+      error.details?.[0]?.field === "offerings" &&
+      error.details[0].issue === "duplicate",
+  );
+});
+
+test("rejeita cobertura, faixa e limites inválidos", () => {
+  assert.throws(
+    () =>
+      parseCompanyProfileInput({
+        ...valid(),
+        coverage: { scope: "states", states: ["XX"] },
+      }),
+    InvalidParameterError,
+  );
+  assert.throws(
+    () =>
+      parseCompanyProfileInput({
+        ...valid(),
+        valueRange: { min: 20, max: 10 },
+      }),
+    InvalidParameterError,
+  );
+  assert.throws(
+    () => parseCompanyProfileInput({ ...valid(), offerings: [] }),
+    InvalidParameterError,
+  );
+});
+
+test("devolve todos os campos inválidos no mesmo erro", () => {
+  assert.throws(
+    () => parseCompanyProfileInput({
+      description: "curta",
+      offerings: [],
+      exclusions: ["x"],
+      coverage: { scope: "states", states: ["XX"] },
+      valueRange: { min: -1, max: "alto" },
+      size: "gigante",
+    }),
+    (error) => {
+      assert.ok(error instanceof InvalidParameterError);
+      const fields = new Set(error.details?.map(({ field }) => field));
+      assert.deepEqual(fields, new Set([
+        "description", "offerings", "exclusions.0", "coverage.states",
+        "valueRange.min", "valueRange.max", "size",
+      ]));
+      return true;
+    },
+  );
+});
+
+test("cota ME/EPP é informativa e só exclusividade força nível baixo", () => {
+  assert.equal(fitLevel(0.75), "high");
+  assert.equal(fitLevel(0.74), "medium");
+  assert.equal(fitLevel(0.55), "medium");
+  assert.equal(fitLevel(0.54), "low");
+  assert.equal(fitLevel(0.99, true), "low");
+  assert.equal(fitLevel(0.99, false, "me_epp_exclusive"), "low");
+  assert.equal(fitLevel(0.99, false, "me_epp_quota"), "high");
+});
+
+test("fingerprint ignora updatedAt operacional e muda com o conteúdo", () => {
+  const tender = {
+    title: "Aquisição de servidores", objectSummary: "Servidores para datacenter",
+    description: "Aquisição de dois servidores.", organizationName: "Órgão",
+    estimatedValue: "100000.00", state: "DF", items: [{ description: "Servidor rack" }],
+    updatedAt: new Date("2026-09-24T00:00:00Z"),
+  };
+  const tenderTouched = { ...tender, updatedAt: new Date("2026-09-25T00:00:00Z") };
+  assert.equal(companyFitTenderFingerprint(tender), companyFitTenderFingerprint(tenderTouched));
+  assert.notEqual(companyFitTenderFingerprint(tender), companyFitTenderFingerprint({ ...tender, title: "Aquisição de notebooks" }));
+});

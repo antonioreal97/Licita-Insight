@@ -31,6 +31,8 @@ import type {
   BillingPlanResponse,
   BillingResponse,
   BillingUnavailableResponse,
+  CompanyProfileInput,
+  CompanyProfileResponse,
   ConflictResponse,
   CreateSavedSearchRequest,
   DeleteAccountRequest,
@@ -39,6 +41,7 @@ import type {
   EmailUnsubscribeResponse,
   ForbiddenResponse,
   GetSearchSuggestionsParams,
+  GetTenderFitsParams,
   HealthStatus,
   ImportSavedTendersRequest,
   InternalErrorResponse,
@@ -68,6 +71,7 @@ import type {
   SuggestionsResponse,
   TenderAskStatus,
   TenderDetail,
+  TenderFitsResponse,
   UnauthenticatedResponse,
   UnreadNotificationCount,
   UpdateNotificationPreferencesRequest,
@@ -440,11 +444,7 @@ export const askTender = async (id: string,
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -516,6 +516,335 @@ export const useAskTender = <TError = ErrorType<InvalidParameterResponse | Unaut
       > => {
       return useMutation(getAskTenderMutationOptions(options));
     }
+
+export const getGetCompanyProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-profile`
+}
+
+/**
+ * @summary Read the signed-in account company profile
+ */
+export const getCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
+
+  return customFetch<CompanyProfileResponse>(getGetCompanyProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompanyProfileQueryKey = () => {
+    return [
+    `/api/v1/me/company-profile`
+    ] as const;
+    }
+
+
+export const getGetCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyProfile>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanyProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyProfile>>> = ({ signal }) => getCompanyProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompanyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getCompanyProfile>>>
+export type GetCompanyProfileQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Read the signed-in account company profile
+ */
+
+export function useGetCompanyProfile<TData = Awaited<ReturnType<typeof getCompanyProfile>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompanyProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPutCompanyProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-profile`
+}
+
+/**
+ * @summary Replace the company profile and invalidate previous fit results
+ */
+export const putCompanyProfile = async (companyProfileInput: CompanyProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CompanyProfileResponse>(getPutCompanyProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyProfileInput)
+  }
+);}
+
+
+
+
+
+export const getPutCompanyProfileMutationKey = () => ['putCompanyProfile'] as const;
+
+export const getPutCompanyProfileMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putCompanyProfile>>, TError,PutCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putCompanyProfile>>, TError,PutCompanyProfileMutationVariables, TContext> => {
+
+const mutationKey = getPutCompanyProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putCompanyProfile>>, PutCompanyProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  putCompanyProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutCompanyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof putCompanyProfile>>>
+    export type PutCompanyProfileMutationBody = BodyType<CompanyProfileInput>
+    export type PutCompanyProfileMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type PutCompanyProfileMutationVariables = {data: BodyType<CompanyProfileInput>}
+
+    /**
+ * @summary Replace the company profile and invalidate previous fit results
+ */
+export const usePutCompanyProfile = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putCompanyProfile>>, TError,PutCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putCompanyProfile>>,
+        TError,
+        PutCompanyProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutCompanyProfileMutationOptions(options));
+    }
+
+export const getDeleteCompanyProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-profile`
+}
+
+/**
+ * @summary Delete the company profile and its cached fit results
+ */
+export const deleteCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteCompanyProfileUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCompanyProfileMutationKey = () => ['deleteCompanyProfile'] as const;
+
+export const getDeleteCompanyProfileMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext> => {
+
+const mutationKey = getDeleteCompanyProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCompanyProfile>>, void> = () => {
+
+
+          return  deleteCompanyProfile(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCompanyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCompanyProfile>>>
+
+    export type DeleteCompanyProfileMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>
+
+
+    /**
+ * @summary Delete the company profile and its cached fit results
+ */
+export const useDeleteCompanyProfile = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCompanyProfile>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteCompanyProfileMutationOptions(options));
+    }
+
+export const getGetTenderFitsUrl = (params: GetTenderFitsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["tenderIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/fit?${stringifiedParams}` : `/api/v1/me/fit`
+}
+
+/**
+ * @summary Read or enqueue company-profile fit for up to 100 tenders
+ */
+export const getTenderFits = async (params: GetTenderFitsParams, options?: Parameters<typeof customFetch>[1]): Promise<TenderFitsResponse> => {
+
+  return customFetch<TenderFitsResponse>(getGetTenderFitsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderFitsQueryKey = (params?: GetTenderFitsParams,) => {
+    return [
+    `/api/v1/me/fit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTenderFitsQueryOptions = <TData = Awaited<ReturnType<typeof getTenderFits>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(params: GetTenderFitsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderFits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderFitsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderFits>>> = ({ signal }) => getTenderFits(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderFits>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderFitsQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderFits>>>
+export type GetTenderFitsQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>
+
+
+/**
+ * @summary Read or enqueue company-profile fit for up to 100 tenders
+ */
+
+export function useGetTenderFits<TData = Awaited<ReturnType<typeof getTenderFits>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(
+ params: GetTenderFitsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderFits>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderFitsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetSearchSuggestionsUrl = (params: GetSearchSuggestionsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -928,11 +1257,7 @@ export const devLogin = async (devLoginRequest: DevLoginRequest, options?: Param
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -1020,11 +1345,7 @@ export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, 
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -1880,11 +2201,7 @@ export const importSavedTenders = async (importSavedTendersRequest: ImportSavedT
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -1967,11 +2284,7 @@ export const putSavedTender = async (tenderId: string,
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -2192,11 +2505,7 @@ export const createSavedSearch = async (createSavedSearchRequest: CreateSavedSea
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -2279,11 +2588,7 @@ export const updateSavedSearch = async (id: string,
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -2733,11 +3038,7 @@ export const updateNotificationPreferences = async (updateNotificationPreference
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -2825,11 +3126,7 @@ export const unsubscribeEmail = async (emailUnsubscribeRequest: EmailUnsubscribe
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
@@ -2985,11 +3282,7 @@ export const markNotificationsRead = async (markNotificationsReadRequest: MarkNo
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
-    if (h instanceof Headers) {
-      const entries: [string, string][] = [];
-      h.forEach((value, name) => entries.push([name, value]));
-      return Object.fromEntries(entries);
-    }
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
         Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),

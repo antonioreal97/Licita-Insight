@@ -119,6 +119,7 @@ export interface EmailNotificationPreferences {
 
 export interface NotificationPreferences {
   email: EmailNotificationPreferences;
+  profileAlerts: boolean;
   emailAddress: string;
   /** @nullable */
   updatedAt: string | null;
@@ -130,7 +131,8 @@ export interface UpdateEmailNotificationPreferences {
 }
 
 export interface UpdateNotificationPreferencesRequest {
-  email: UpdateEmailNotificationPreferences;
+  email?: UpdateEmailNotificationPreferences;
+  profileAlerts?: boolean;
 }
 
 export type EmailUnsubscribeScope = typeof EmailUnsubscribeScope[keyof typeof EmailUnsubscribeScope];
@@ -166,6 +168,7 @@ export interface AccountExportUser {
   trialEndsAt: string;
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
+  profileAlerts: boolean;
   /** @nullable */
   emailPreferencesUpdatedAt: string | null;
   createdAt: string;
@@ -203,6 +206,22 @@ export interface AccountExportSavedSearch {
 
 export type AccountExportNotificationChange = { [key: string]: unknown } | null;
 
+export type ProfileMatchNotificationLevel = typeof ProfileMatchNotificationLevel[keyof typeof ProfileMatchNotificationLevel];
+
+
+export const ProfileMatchNotificationLevel = {
+  high: 'high',
+} as const;
+
+export interface ProfileMatchNotification {
+  id: string;
+  title: string;
+  organizationName: string;
+  /** @nullable */
+  proposalDeadline: string | null;
+  level: ProfileMatchNotificationLevel;
+}
+
 export interface AccountExportNotification {
   id: string;
   type: string;
@@ -229,6 +248,7 @@ export interface AccountExportNotification {
   /** @nullable */
   matchCount: number | null;
   tenderIds: string[];
+  profileMatches: ProfileMatchNotification[];
 }
 
 export type AccountExportEmailDeliveryMode = typeof AccountExportEmailDeliveryMode[keyof typeof AccountExportEmailDeliveryMode];
@@ -297,6 +317,75 @@ export interface AccountExportAiQuestion {
   createdAt: string;
 }
 
+export type AccountExportCompanyFitsItem = { [key: string]: unknown };
+
+export type AccountExportFitUsageItem = { [key: string]: unknown };
+
+export type CompanyCoverage = {
+  scope: 'national';
+} | {
+  scope: 'states';
+  /**
+     * @minItems 1
+     * @maxItems 27
+     * @items.minLength 2
+     * @items.maxLength 2
+     */
+  states: string[];
+};
+
+export interface CompanyValueRange {
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  min: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  max: number | null;
+}
+
+export type CompanySize = typeof CompanySize[keyof typeof CompanySize];
+
+
+export const CompanySize = {
+  me_epp: 'me_epp',
+  cooperative: 'cooperative',
+  other: 'other',
+} as const;
+
+export interface CompanyProfileInput {
+  /**
+     * @minLength 20
+     * @maxLength 600
+     */
+  description: string;
+  /**
+     * @minItems 1
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  offerings: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  exclusions: string[];
+  coverage: CompanyCoverage;
+  valueRange: CompanyValueRange;
+  size: CompanySize;
+}
+
+export type CompanyProfile = CompanyProfileInput & {
+  /** @minimum 1 */
+  version: number;
+  updatedAt: string;
+};
+
 export interface AccountExport {
   exportedAt: string;
   user: AccountExportUser;
@@ -306,6 +395,9 @@ export interface AccountExport {
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
   aiQuestions: AccountExportAiQuestion[];
+  companyProfile: CompanyProfile | null;
+  companyFits: AccountExportCompanyFitsItem[];
+  fitUsage: AccountExportFitUsageItem[];
   subscription: AccountExportSubscription | null;
 }
 
@@ -393,6 +485,89 @@ export interface AskTenderResult {
   passages: AskTenderPassage[];
   model: string;
   quota: AiQuota;
+}
+
+export interface CompanyProfileResponse {
+  profile: CompanyProfile | null;
+}
+
+export interface FitEvidence {
+  documentTitle: string;
+  documentUrl: string;
+  /** @minimum 1 */
+  page: number;
+  text: string;
+}
+
+export type FitReason = {
+  kind: 'offering_match';
+  terms: string[];
+} | {
+  kind: 'exclusion';
+  terms: string[];
+} | {
+  kind: 'out_of_coverage';
+  /** @nullable */
+  state: string | null;
+} | {
+  kind: 'out_of_value_range';
+  estimatedValue: number;
+} | {
+  kind: 'value_not_published';
+} | {
+  kind: 'size_restricted';
+  restriction: 'me_epp_exclusive' | 'me_epp_quota';
+  evidence: FitEvidence;
+};
+
+export type TenderFitStatus = typeof TenderFitStatus[keyof typeof TenderFitStatus];
+
+
+export const TenderFitStatus = {
+  ready: 'ready',
+  pending: 'pending',
+  filtered: 'filtered',
+} as const;
+
+/**
+ * @nullable
+ */
+export type TenderFitLevel = typeof TenderFitLevel[keyof typeof TenderFitLevel] | null;
+
+
+export const TenderFitLevel = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export interface TenderFit {
+  status: TenderFitStatus;
+  /** @nullable */
+  level: TenderFitLevel;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  score: number | null;
+  /** @maxItems 4 */
+  reasons: FitReason[];
+  /** @nullable */
+  model: string | null;
+  /** @nullable */
+  checkedAt: string | null;
+}
+
+export type TenderFitsResponseResults = {[key: string]: TenderFit};
+
+export interface TenderFitsResponse {
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  profileVersion: number | null;
+  results: TenderFitsResponseResults;
 }
 
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
@@ -683,6 +858,7 @@ export const NotificationType = {
   tender_document_added: 'tender_document_added',
   tender_value_changed: 'tender_value_changed',
   saved_search_new_matches: 'saved_search_new_matches',
+  profile_new_matches: 'profile_new_matches',
   trial_ending: 'trial_ending',
 } as const;
 
@@ -720,6 +896,8 @@ export interface Notification {
   matchCount: number | null;
   /** @maxItems 20 */
   tenderIds: string[];
+  /** @maxItems 5 */
+  profileMatches: ProfileMatchNotification[];
 }
 
 export interface NotificationPage {
@@ -1143,6 +1321,16 @@ page?: PageParameter;
  */
 pageSize?: PageSizeParameter;
 facets?: FacetsParameter;
+};
+
+export type GetTenderFitsParams = {
+/**
+ * @minItems 1
+ * @maxItems 100
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+tenderIds: string[];
 };
 
 export type GetSearchSuggestionsParams = {

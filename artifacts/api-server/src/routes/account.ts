@@ -146,16 +146,12 @@ router.put(
   requireCsrf,
   asyncHandler(async (req, res) => {
     const body = recordBody(req.body);
-    if (!body.email || typeof body.email !== "object" || Array.isArray(body.email)) {
-      throw new InvalidParameterError("email preferences are required", [
-        { field: "email", issue: "invalid_type" },
-      ]);
+    if (body.email !== undefined && (!body.email || typeof body.email !== "object" || Array.isArray(body.email))) {
+      throw new InvalidParameterError("email preferences are invalid", [{ field: "email", issue: "invalid_type" }]);
     }
-    const email = body.email as Record<string, unknown>;
-    if (email.digest === undefined && email.immediateCritical === undefined) {
-      throw new InvalidParameterError("At least one email preference is required", [
-        { field: "email", issue: "too_small" },
-      ]);
+    const email = (body.email ?? {}) as Record<string, unknown>;
+    if (email.digest === undefined && email.immediateCritical === undefined && body.profileAlerts === undefined) {
+      throw new InvalidParameterError("At least one notification preference is required", [{ field: "body", issue: "too_small" }]);
     }
     if (
       email.digest !== undefined &&
@@ -174,6 +170,11 @@ router.put(
         { field: "email.immediateCritical", issue: "invalid_type" },
       ]);
     }
+    if (body.profileAlerts !== undefined && typeof body.profileAlerts !== "boolean") {
+      throw new InvalidParameterError("profileAlerts is invalid", [
+        { field: "profileAlerts", issue: "invalid_type" },
+      ]);
+    }
     res.json(
       await updateNotificationPreferences({
         userId: authContext(res).user.id,
@@ -182,6 +183,9 @@ router.put(
           : {}),
         ...(email.immediateCritical !== undefined
           ? { immediateCritical: email.immediateCritical }
+          : {}),
+        ...(body.profileAlerts !== undefined
+          ? { profileAlerts: body.profileAlerts as boolean }
           : {}),
       }),
     );

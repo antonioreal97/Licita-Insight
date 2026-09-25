@@ -7,6 +7,7 @@ import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
+import { useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { sortLabels } from '@/lib/tender-labels';
 import { countActiveFilters, DEFAULT_PAGE_SIZE } from '@/services/search-service';
@@ -40,6 +41,7 @@ export default function SearchPage() {
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
 
   const response = search.data;
+  const fits = useTenderFits(response?.data.map((tender) => tender.id) ?? []);
   const facets = response?.facets;
   const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
@@ -260,7 +262,7 @@ export default function SearchPage() {
                   {/* Table view is a desktop affordance; phones always get the list. */}
                   <div className={`overflow-hidden rounded-xl border border-border bg-card ${view === 'table' ? 'md:hidden' : ''}`}>
                     {response!.data.map((tender) => (
-                      <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} relevanceVaries={scoresVary} />
+                      <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} relevanceVaries={scoresVary} fit={fits.data?.results[tender.id]} />
                     ))}
                   </div>
                   {view === 'table' && (

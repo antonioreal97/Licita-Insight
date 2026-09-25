@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EmailPreferences, NotificationPreferences, UnsubscribeScope } from '@/api';
+import type { NotificationPreferences, UnsubscribeScope, UpdateNotificationPreferencesBody } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
@@ -22,14 +22,19 @@ export function useUpdateNotificationPreferences() {
   const key = queryKeys.me.notificationPreferences;
   return useMutation({
     mutationKey: UPDATE_KEY,
-    mutationFn: (email: Partial<EmailPreferences>) => accountService.updateNotificationPreferences({ email }),
-    onMutate: async (email) => {
+    mutationFn: (changes: UpdateNotificationPreferencesBody) => accountService.updateNotificationPreferences(changes),
+    onMutate: async (changes) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<NotificationPreferences>(key);
-      if (previous) queryClient.setQueryData<NotificationPreferences>(key, { ...previous, email: { ...previous.email, ...email } });
+      if (previous)
+        queryClient.setQueryData<NotificationPreferences>(key, {
+          ...previous,
+          ...(changes.profileAlerts !== undefined ? { profileAlerts: changes.profileAlerts } : {}),
+          email: { ...previous.email, ...changes.email },
+        });
       return { previous };
     },
-    onError: (error, _email, context) => {
+    onError: (error, _changes, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       console.error('[notificacoes] Falha ao salvar as preferências de e-mail.', error);
     },

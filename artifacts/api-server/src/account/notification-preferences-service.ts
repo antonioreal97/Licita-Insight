@@ -11,6 +11,7 @@ export type NotificationPreferences = {
     digest: EmailDigestPreference;
     immediateCritical: boolean;
   };
+  profileAlerts: boolean;
   emailAddress: string;
   updatedAt: Date | null;
 };
@@ -21,6 +22,7 @@ const toPreferences = (
     | "email"
     | "emailDigest"
     | "emailImmediateCritical"
+    | "profileAlerts"
     | "emailPreferencesUpdatedAt"
   >,
 ): NotificationPreferences => ({
@@ -28,6 +30,7 @@ const toPreferences = (
     digest: row.emailDigest as EmailDigestPreference,
     immediateCritical: row.emailImmediateCritical,
   },
+  profileAlerts: row.profileAlerts,
   emailAddress: row.email,
   updatedAt: row.emailPreferencesUpdatedAt,
 });
@@ -38,6 +41,7 @@ const selectPreferences = async (userId: string) => {
       email: usersTable.email,
       emailDigest: usersTable.emailDigest,
       emailImmediateCritical: usersTable.emailImmediateCritical,
+      profileAlerts: usersTable.profileAlerts,
       emailPreferencesUpdatedAt: usersTable.emailPreferencesUpdatedAt,
     })
     .from(usersTable)
@@ -49,12 +53,14 @@ const selectPreferences = async (userId: string) => {
 
 export const getNotificationPreferences = async (
   userId: string,
-): Promise<NotificationPreferences> => toPreferences(await selectPreferences(userId));
+): Promise<NotificationPreferences> =>
+  toPreferences(await selectPreferences(userId));
 
 export const updateNotificationPreferences = async (input: {
   userId: string;
   digest?: EmailDigestPreference;
   immediateCritical?: boolean;
+  profileAlerts?: boolean;
   now?: Date;
 }): Promise<NotificationPreferences> => {
   const now = input.now ?? new Date();
@@ -65,6 +71,9 @@ export const updateNotificationPreferences = async (input: {
       ...(input.immediateCritical !== undefined
         ? { emailImmediateCritical: input.immediateCritical }
         : {}),
+      ...(input.profileAlerts !== undefined
+        ? { profileAlerts: input.profileAlerts }
+        : {}),
       emailPreferencesUpdatedAt: now,
       updatedAt: now,
     })
@@ -73,6 +82,7 @@ export const updateNotificationPreferences = async (input: {
       email: usersTable.email,
       emailDigest: usersTable.emailDigest,
       emailImmediateCritical: usersTable.emailImmediateCritical,
+      profileAlerts: usersTable.profileAlerts,
       emailPreferencesUpdatedAt: usersTable.emailPreferencesUpdatedAt,
     });
   if (!row) throw new NotFoundError("Account was not found");
@@ -83,7 +93,10 @@ export const unsubscribeEmail = async (input: {
   token: string;
   scope: UnsubscribeScope;
   now?: Date;
-}): Promise<{ scope: UnsubscribeScope; email: NotificationPreferences["email"] }> => {
+}): Promise<{
+  scope: UnsubscribeScope;
+  email: NotificationPreferences["email"];
+}> => {
   const tokenId = verifyUnsubscribeToken(input.token);
   if (!tokenId) {
     throw new InvalidParameterError("Unsubscribe token is invalid", [

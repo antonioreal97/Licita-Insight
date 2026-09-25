@@ -380,6 +380,213 @@ export const AskTenderResponse = zod.object({
 
 
 /**
+ * @summary Read the signed-in account company profile
+ */
+export const getCompanyProfileResponseProfileOneOneDescriptionMin = 20;
+export const getCompanyProfileResponseProfileOneOneDescriptionMax = 600;
+
+export const getCompanyProfileResponseProfileOneOneOfferingsItemMin = 2;
+export const getCompanyProfileResponseProfileOneOneOfferingsItemMax = 80;
+
+export const getCompanyProfileResponseProfileOneOneOfferingsMax = 20;
+
+export const getCompanyProfileResponseProfileOneOneExclusionsItemMin = 2;
+export const getCompanyProfileResponseProfileOneOneExclusionsItemMax = 80;
+
+export const getCompanyProfileResponseProfileOneOneExclusionsMax = 20;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
+export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesMax = 27;
+
+export const getCompanyProfileResponseProfileOneOneValueRangeMinMin = 0;
+
+export const getCompanyProfileResponseProfileOneOneValueRangeMaxMin = 0;
+
+
+
+
+export const GetCompanyProfileResponse = zod.object({
+  "profile": zod.union([zod.object({
+  "description": zod.string().min(getCompanyProfileResponseProfileOneOneDescriptionMin).max(getCompanyProfileResponseProfileOneOneDescriptionMax),
+  "offerings": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneOfferingsItemMin).max(getCompanyProfileResponseProfileOneOneOfferingsItemMax)).min(1).max(getCompanyProfileResponseProfileOneOneOfferingsMax),
+  "exclusions": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneExclusionsItemMin).max(getCompanyProfileResponseProfileOneOneExclusionsItemMax)).max(getCompanyProfileResponseProfileOneOneExclusionsMax),
+  "coverage": zod.union([zod.object({
+  "scope": zod.enum(['national'])
+}),zod.object({
+  "scope": zod.enum(['states']),
+  "states": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).min(1).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesMax)
+})]),
+  "valueRange": zod.object({
+  "min": zod.number().min(getCompanyProfileResponseProfileOneOneValueRangeMinMin).nullable(),
+  "max": zod.number().min(getCompanyProfileResponseProfileOneOneValueRangeMaxMin).nullable()
+}),
+  "size": zod.enum(['me_epp', 'cooperative', 'other'])
+}).and(zod.object({
+  "version": zod.number().int().min(1),
+  "updatedAt": zod.coerce.date()
+})),zod.null()])
+})
+
+
+/**
+ * @summary Replace the company profile and invalidate previous fit results
+ */
+export const putCompanyProfileBodyDescriptionMin = 20;
+export const putCompanyProfileBodyDescriptionMax = 600;
+
+export const putCompanyProfileBodyOfferingsItemMin = 2;
+export const putCompanyProfileBodyOfferingsItemMax = 80;
+
+export const putCompanyProfileBodyOfferingsMax = 20;
+
+export const putCompanyProfileBodyExclusionsItemMin = 2;
+export const putCompanyProfileBodyExclusionsItemMax = 80;
+
+export const putCompanyProfileBodyExclusionsMax = 20;
+
+export const putCompanyProfileBodyCoverageTwoStatesItemMin = 2;
+export const putCompanyProfileBodyCoverageTwoStatesItemMax = 2;
+
+export const putCompanyProfileBodyCoverageTwoStatesMax = 27;
+
+export const putCompanyProfileBodyValueRangeMinMin = 0;
+
+export const putCompanyProfileBodyValueRangeMaxMin = 0;
+
+
+
+export const PutCompanyProfileBody = zod.object({
+  "description": zod.string().min(putCompanyProfileBodyDescriptionMin).max(putCompanyProfileBodyDescriptionMax),
+  "offerings": zod.array(zod.string().min(putCompanyProfileBodyOfferingsItemMin).max(putCompanyProfileBodyOfferingsItemMax)).min(1).max(putCompanyProfileBodyOfferingsMax),
+  "exclusions": zod.array(zod.string().min(putCompanyProfileBodyExclusionsItemMin).max(putCompanyProfileBodyExclusionsItemMax)).max(putCompanyProfileBodyExclusionsMax),
+  "coverage": zod.union([zod.object({
+  "scope": zod.enum(['national'])
+}),zod.object({
+  "scope": zod.enum(['states']),
+  "states": zod.array(zod.string().min(putCompanyProfileBodyCoverageTwoStatesItemMin).max(putCompanyProfileBodyCoverageTwoStatesItemMax)).min(1).max(putCompanyProfileBodyCoverageTwoStatesMax)
+})]),
+  "valueRange": zod.object({
+  "min": zod.number().min(putCompanyProfileBodyValueRangeMinMin).nullable(),
+  "max": zod.number().min(putCompanyProfileBodyValueRangeMaxMin).nullable()
+}),
+  "size": zod.enum(['me_epp', 'cooperative', 'other'])
+})
+
+export const putCompanyProfileResponseProfileOneOneDescriptionMin = 20;
+export const putCompanyProfileResponseProfileOneOneDescriptionMax = 600;
+
+export const putCompanyProfileResponseProfileOneOneOfferingsItemMin = 2;
+export const putCompanyProfileResponseProfileOneOneOfferingsItemMax = 80;
+
+export const putCompanyProfileResponseProfileOneOneOfferingsMax = 20;
+
+export const putCompanyProfileResponseProfileOneOneExclusionsItemMin = 2;
+export const putCompanyProfileResponseProfileOneOneExclusionsItemMax = 80;
+
+export const putCompanyProfileResponseProfileOneOneExclusionsMax = 20;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
+export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesMax = 27;
+
+export const putCompanyProfileResponseProfileOneOneValueRangeMinMin = 0;
+
+export const putCompanyProfileResponseProfileOneOneValueRangeMaxMin = 0;
+
+
+
+
+export const PutCompanyProfileResponse = zod.object({
+  "profile": zod.union([zod.object({
+  "description": zod.string().min(putCompanyProfileResponseProfileOneOneDescriptionMin).max(putCompanyProfileResponseProfileOneOneDescriptionMax),
+  "offerings": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneOfferingsItemMin).max(putCompanyProfileResponseProfileOneOneOfferingsItemMax)).min(1).max(putCompanyProfileResponseProfileOneOneOfferingsMax),
+  "exclusions": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneExclusionsItemMin).max(putCompanyProfileResponseProfileOneOneExclusionsItemMax)).max(putCompanyProfileResponseProfileOneOneExclusionsMax),
+  "coverage": zod.union([zod.object({
+  "scope": zod.enum(['national'])
+}),zod.object({
+  "scope": zod.enum(['states']),
+  "states": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).min(1).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesMax)
+})]),
+  "valueRange": zod.object({
+  "min": zod.number().min(putCompanyProfileResponseProfileOneOneValueRangeMinMin).nullable(),
+  "max": zod.number().min(putCompanyProfileResponseProfileOneOneValueRangeMaxMin).nullable()
+}),
+  "size": zod.enum(['me_epp', 'cooperative', 'other'])
+}).and(zod.object({
+  "version": zod.number().int().min(1),
+  "updatedAt": zod.coerce.date()
+})),zod.null()])
+})
+
+
+/**
+ * @summary Delete the company profile and its cached fit results
+ */
+export const DeleteCompanyProfileResponse = zod.void()
+
+
+/**
+ * @summary Read or enqueue company-profile fit for up to 100 tenders
+ */
+export const getTenderFitsQueryTenderIdsItemMax = 200;
+
+export const getTenderFitsQueryTenderIdsMax = 100;
+
+
+
+export const GetTenderFitsQueryParams = zod.object({
+  "tenderIds": zod.array(zod.coerce.string().min(1).max(getTenderFitsQueryTenderIdsItemMax)).min(1).max(getTenderFitsQueryTenderIdsMax)
+})
+
+
+export const getTenderFitsResponseResultsScoreMin = 0;
+export const getTenderFitsResponseResultsScoreMax = 1;
+
+
+export const getTenderFitsResponseResultsReasonsMax = 4;
+
+
+
+export const GetTenderFitsResponse = zod.object({
+  "profileVersion": zod.number().int().min(1).nullable(),
+  "results": zod.record(zod.string(), zod.object({
+  "status": zod.enum(['ready', 'pending', 'filtered']),
+  "level": zod.union([zod.literal('high'),zod.literal('medium'),zod.literal('low'),zod.literal(null)]).nullable(),
+  "score": zod.number().min(getTenderFitsResponseResultsScoreMin).max(getTenderFitsResponseResultsScoreMax).nullable(),
+  "reasons": zod.array(zod.union([zod.object({
+  "kind": zod.enum(['offering_match']),
+  "terms": zod.array(zod.string())
+}),zod.object({
+  "kind": zod.enum(['exclusion']),
+  "terms": zod.array(zod.string())
+}),zod.object({
+  "kind": zod.enum(['out_of_coverage']),
+  "state": zod.string().nullable()
+}),zod.object({
+  "kind": zod.enum(['out_of_value_range']),
+  "estimatedValue": zod.number()
+}),zod.object({
+  "kind": zod.enum(['value_not_published'])
+}),zod.object({
+  "kind": zod.enum(['size_restricted']),
+  "restriction": zod.enum(['me_epp_exclusive', 'me_epp_quota']),
+  "evidence": zod.object({
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string()
+})
+})])).max(getTenderFitsResponseResultsReasonsMax),
+  "model": zod.string().nullable(),
+  "checkedAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
  * @summary Get search autocomplete suggestions
  */
 export const getSearchSuggestionsQueryQMin = 2;
@@ -474,6 +681,29 @@ export const exportAccountDataResponseEmailDeliveriesItemAttemptsMin = 0;
 
 export const exportAccountDataResponseAiQuestionsItemInputTokensMin = 0;
 
+export const exportAccountDataResponseCompanyProfileOneOneDescriptionMin = 20;
+export const exportAccountDataResponseCompanyProfileOneOneDescriptionMax = 600;
+
+export const exportAccountDataResponseCompanyProfileOneOneOfferingsItemMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneOfferingsItemMax = 80;
+
+export const exportAccountDataResponseCompanyProfileOneOneOfferingsMax = 20;
+
+export const exportAccountDataResponseCompanyProfileOneOneExclusionsItemMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneExclusionsItemMax = 80;
+
+export const exportAccountDataResponseCompanyProfileOneOneExclusionsMax = 20;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax = 2;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesMax = 27;
+
+export const exportAccountDataResponseCompanyProfileOneOneValueRangeMinMin = 0;
+
+export const exportAccountDataResponseCompanyProfileOneOneValueRangeMaxMin = 0;
+
+
 
 
 export const ExportAccountDataResponse = zod.object({
@@ -486,6 +716,7 @@ export const ExportAccountDataResponse = zod.object({
   "trialEndsAt": zod.coerce.date(),
   "emailDigest": zod.enum(['daily', 'off']),
   "emailImmediateCritical": zod.boolean(),
+  "profileAlerts": zod.boolean(),
   "emailPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -527,7 +758,14 @@ export const ExportAccountDataResponse = zod.object({
   "savedSearchName": zod.string().nullable(),
   "savedSearchQuery": zod.string().nullable(),
   "matchCount": zod.number().int().nullable(),
-  "tenderIds": zod.array(zod.string())
+  "tenderIds": zod.array(zod.string()),
+  "profileMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "organizationName": zod.string(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "level": zod.enum(['high'])
+}))
 })),
   "emailDeliveries": zod.array(zod.object({
   "id": zod.string(),
@@ -552,6 +790,27 @@ export const ExportAccountDataResponse = zod.object({
   "estimatedCostUsd": zod.string(),
   "createdAt": zod.coerce.date()
 })),
+  "companyProfile": zod.union([zod.object({
+  "description": zod.string().min(exportAccountDataResponseCompanyProfileOneOneDescriptionMin).max(exportAccountDataResponseCompanyProfileOneOneDescriptionMax),
+  "offerings": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneOfferingsItemMin).max(exportAccountDataResponseCompanyProfileOneOneOfferingsItemMax)).min(1).max(exportAccountDataResponseCompanyProfileOneOneOfferingsMax),
+  "exclusions": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneExclusionsItemMin).max(exportAccountDataResponseCompanyProfileOneOneExclusionsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneExclusionsMax),
+  "coverage": zod.union([zod.object({
+  "scope": zod.enum(['national'])
+}),zod.object({
+  "scope": zod.enum(['states']),
+  "states": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax)).min(1).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesMax)
+})]),
+  "valueRange": zod.object({
+  "min": zod.number().min(exportAccountDataResponseCompanyProfileOneOneValueRangeMinMin).nullable(),
+  "max": zod.number().min(exportAccountDataResponseCompanyProfileOneOneValueRangeMaxMin).nullable()
+}),
+  "size": zod.enum(['me_epp', 'cooperative', 'other'])
+}).and(zod.object({
+  "version": zod.number().int().min(1),
+  "updatedAt": zod.coerce.date()
+})),zod.null()]),
+  "companyFits": zod.array(zod.record(zod.string(), zod.unknown())),
+  "fitUsage": zod.array(zod.record(zod.string(), zod.unknown())),
   "subscription": zod.union([zod.object({
   "status": zod.string(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
@@ -1077,6 +1336,8 @@ export const ListNotificationsQueryParams = zod.object({
 
 export const listNotificationsResponseDataItemTenderIdsMax = 20;
 
+export const listNotificationsResponseDataItemProfileMatchesMax = 5;
+
 export const listNotificationsResponseUnreadCountMin = 0;
 
 
@@ -1084,7 +1345,7 @@ export const listNotificationsResponseUnreadCountMin = 0;
 export const ListNotificationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'trial_ending']),
+  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'profile_new_matches', 'trial_ending']),
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable(),
   "tender": zod.union([zod.object({
@@ -1103,7 +1364,14 @@ export const ListNotificationsResponse = zod.object({
   "query": zod.string()
 }),zod.null()]),
   "matchCount": zod.number().int().nullable(),
-  "tenderIds": zod.array(zod.string()).max(listNotificationsResponseDataItemTenderIdsMax)
+  "tenderIds": zod.array(zod.string()).max(listNotificationsResponseDataItemTenderIdsMax),
+  "profileMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "organizationName": zod.string(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "level": zod.enum(['high'])
+})).max(listNotificationsResponseDataItemProfileMatchesMax)
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -1124,6 +1392,7 @@ export const GetNotificationPreferencesResponse = zod.object({
   "digest": zod.enum(['daily', 'off']),
   "immediateCritical": zod.boolean()
 }),
+  "profileAlerts": zod.boolean(),
   "emailAddress": zod.string().email(),
   "updatedAt": zod.coerce.date().nullable()
 })
@@ -1136,7 +1405,8 @@ export const UpdateNotificationPreferencesBody = zod.object({
   "email": zod.object({
   "digest": zod.enum(['daily', 'off']).optional(),
   "immediateCritical": zod.boolean().optional()
-})
+}).optional(),
+  "profileAlerts": zod.boolean().optional()
 })
 
 export const UpdateNotificationPreferencesResponse = zod.object({
@@ -1144,6 +1414,7 @@ export const UpdateNotificationPreferencesResponse = zod.object({
   "digest": zod.enum(['daily', 'off']),
   "immediateCritical": zod.boolean()
 }),
+  "profileAlerts": zod.boolean(),
   "emailAddress": zod.string().email(),
   "updatedAt": zod.coerce.date().nullable()
 })

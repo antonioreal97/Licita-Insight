@@ -6,13 +6,16 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { AccountExportAiQuestion } from './accountExportAiQuestion';
+import type { AccountExportCompanyFitsItem } from './accountExportCompanyFitsItem';
 import type { AccountExportEmailDelivery } from './accountExportEmailDelivery';
+import type { AccountExportFitUsageItem } from './accountExportFitUsageItem';
 import type { AccountExportNotification } from './accountExportNotification';
 import type { AccountExportSavedSearch } from './accountExportSavedSearch';
 import type { AccountExportSavedTender } from './accountExportSavedTender';
 import type { AccountExportSession } from './accountExportSession';
 import type { AccountExportSubscription } from './accountExportSubscription';
 import type { AccountExportUser } from './accountExportUser';
+import type { CompanyProfile } from './companyProfile';
 
 export interface AccountExport {
   exportedAt: Date;
@@ -23,5 +26,8 @@ export interface AccountExport {
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
   aiQuestions: AccountExportAiQuestion[];
+  companyProfile: CompanyProfile | null;
+  companyFits: AccountExportCompanyFitsItem[];
+  fitUsage: AccountExportFitUsageItem[];
   subscription: AccountExportSubscription | null;
 }

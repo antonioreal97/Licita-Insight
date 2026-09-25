@@ -2,6 +2,9 @@ import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
   aiAskRequestsTable,
   aiDailyUsageTable,
+  aiFitDailyUsageTable,
+  companyProfilesTable,
+  companyTenderFitsTable,
   db,
   emailDeliveriesTable,
   emailDeliveryNotificationsTable,
@@ -20,7 +23,7 @@ import { NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries, aiQuestions] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries, aiQuestions, companyProfiles, companyFits, fitUsage] =
     await Promise.all([
       db
         .select({
@@ -31,6 +34,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           trialEndsAt: usersTable.trialEndsAt,
           emailDigest: usersTable.emailDigest,
           emailImmediateCritical: usersTable.emailImmediateCritical,
+          profileAlerts: usersTable.profileAlerts,
           emailPreferencesUpdatedAt: usersTable.emailPreferencesUpdatedAt,
           createdAt: usersTable.createdAt,
           updatedAt: usersTable.updatedAt,
@@ -92,6 +96,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           savedSearchQuery: notificationsTable.savedSearchQuery,
           matchCount: notificationsTable.matchCount,
           tenderIds: notificationsTable.tenderIds,
+          profileMatches: notificationsTable.profileMatches,
         })
         .from(notificationsTable)
         .where(eq(notificationsTable.userId, userId)),
@@ -133,6 +138,18 @@ export async function exportAccountData(userId: string, now = new Date()) {
         })
         .from(aiAskRequestsTable)
         .where(eq(aiAskRequestsTable.userId, userId)),
+      db.select().from(companyProfilesTable).where(eq(companyProfilesTable.userId, userId)).limit(1),
+      db.select({
+        tenderId: companyTenderFitsTable.tenderId,
+        profileVersion: companyTenderFitsTable.profileVersion,
+        status: companyTenderFitsTable.status,
+        level: companyTenderFitsTable.level,
+        score: companyTenderFitsTable.score,
+        reasons: companyTenderFitsTable.reasons,
+        model: companyTenderFitsTable.responseModel,
+        checkedAt: companyTenderFitsTable.checkedAt,
+      }).from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId)),
+      db.select().from(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId)),
     ]);
 
   const user = users[0];
@@ -147,6 +164,9 @@ export async function exportAccountData(userId: string, now = new Date()) {
     notifications,
     emailDeliveries,
     aiQuestions,
+    companyProfile: companyProfiles[0] ?? null,
+    companyFits,
+    fitUsage,
     subscription: subscriptions[0] ?? null,
   };
 }
@@ -211,6 +231,9 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx
         .delete(aiDailyUsageTable)
         .where(eq(aiDailyUsageTable.userId, userId));
+      await tx.delete(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId));
+      await tx.delete(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId));
+      await tx.delete(companyProfilesTable).where(eq(companyProfilesTable.userId, userId));
       await tx
         .delete(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId));

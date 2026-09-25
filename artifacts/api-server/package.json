@@ -10,6 +10,7 @@
     "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
     "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
+    "calibrate:company-fit": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-company-fit.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

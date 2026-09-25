@@ -531,6 +531,7 @@ const toNotification = (
       : null,
   matchCount: row.matchCount,
   tenderIds: row.tenderIds,
+  profileMatches: row.profileMatches,
 });
 
 export const unreadNotificationCount = async (userId: string): Promise<number> => {

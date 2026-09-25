@@ -1,4 +1,5 @@
 import { evaluateSavedSearchNotifications } from "../account/notification-service";
+import { evaluateProfileAlertNotifications } from "../ai/company-fit-service";
 import { logger } from "../lib/logger";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
@@ -98,6 +99,7 @@ export function startEmailNotificationJobs(): void {
   });
   const runDigest = protectedJob("email_digest", async () => {
     const startedAt = Date.now();
+    await evaluateProfileAlertNotifications();
     const result = await runDailyEmailDigest();
     logEmailJobResult("email_digest", result, startedAt);
   });

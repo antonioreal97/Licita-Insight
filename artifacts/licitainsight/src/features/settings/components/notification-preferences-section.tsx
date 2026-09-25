@@ -87,7 +87,11 @@ export function NotificationPreferencesSection() {
             E-mails vão para <span className="font-semibold">{prefs.data.emailAddress}</span>, o e-mail da sua conta Google.
           </p>
           {billing.data && !billing.data.entitled && (
-            <p role="note" data-testid="text-notification-no-access" className="mt-3 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground">
+            <p
+              role="note"
+              data-testid="text-notification-no-access"
+              className="mt-3 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground"
+            >
               Enviamos e-mails só enquanto a conta tem acesso (teste ou assinatura). Suas escolhas ficam guardadas.{' '}
               <Link href={BILLING_HREF} className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring">
                 Ver assinatura
@@ -104,13 +108,13 @@ export function NotificationPreferencesSection() {
                   aria-describedby="switch-email-digest-desc"
                   data-testid="switch-email-digest"
                   checked={email.digest === 'daily'}
-                  onCheckedChange={(checked) => update.mutate({ digest: checked ? 'daily' : 'off' })}
+                  onCheckedChange={(checked) => update.mutate({ email: { digest: checked ? 'daily' : 'off' } })}
                   className="mt-0.5"
                 />
               }
             >
-              Um e-mail por dia, às 07:00 (horário de Brasília), com os avisos novos: mudanças nos editais monitorados e editais novos das buscas salvas
-              com alertas. Sem novidade, não enviamos.
+              Um e-mail por dia, às 07:00 (horário de Brasília), com os avisos novos: mudanças nos editais monitorados e editais novos das buscas salvas com
+              alertas. Sem novidade, não enviamos.
             </PreferenceRow>
             <PreferenceRow
               id="switch-email-immediate"
@@ -121,12 +125,28 @@ export function NotificationPreferencesSection() {
                   aria-describedby="switch-email-immediate-desc"
                   data-testid="switch-email-immediate"
                   checked={email.immediateCritical}
-                  onCheckedChange={(checked) => update.mutate({ immediateCritical: checked })}
+                  onCheckedChange={(checked) => update.mutate({ email: { immediateCritical: checked } })}
                   className="mt-0.5"
                 />
               }
             >
               Crítico é prazo alterado ou edital suspenso ou revogado. O e-mail sai logo após detectarmos a mudança, sem esperar o resumo.
+            </PreferenceRow>
+            <PreferenceRow
+              id="switch-profile-alerts"
+              title="Editais com alta aderência ao perfil da empresa"
+              control={
+                <Switch
+                  id="switch-profile-alerts"
+                  aria-describedby="switch-profile-alerts-desc"
+                  data-testid="switch-profile-alerts"
+                  checked={prefs.data.profileAlerts}
+                  onCheckedChange={(checked) => update.mutate({ profileAlerts: checked })}
+                  className="mt-0.5"
+                />
+              }
+            >
+              Inclui no sino e no resumo diário os editais novos classificados com alta aderência. Requer um perfil da empresa e acesso ativo.
             </PreferenceRow>
           </div>
           {update.isError && (

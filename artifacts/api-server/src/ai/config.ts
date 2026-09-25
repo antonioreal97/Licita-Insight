@@ -16,6 +16,8 @@ export const aiConfig = () => ({
   relativeThresholdDelta: probability("JEV_RELATIVE_RELEVANCE_DELTA", 0.25),
   trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 5),
   paidDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_PAID", 30),
+  fitDailyLimit: positiveInteger("AI_DAILY_FIT_LIMIT", 1_000),
+  fitExcludedThreshold: probability("AI_FIT_EXCLUDED_THRESHOLD", 0.65),
   maxDocumentBytes: positiveInteger("AI_MAX_DOCUMENT_BYTES", 25 * 1024 * 1024),
   maxPdfPages: positiveInteger("AI_MAX_PDF_PAGES", 300),
   shortlistSize: positiveInteger("AI_SHORTLIST_SIZE", 10),
