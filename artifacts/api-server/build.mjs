@@ -15,7 +15,10 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: {
+      index: path.resolve(artifactDir, "src/index.ts"),
+      "document-extractor": path.resolve(artifactDir, "src/ai/document-extractor.ts"),
+    },
     platform: "node",
     bundle: true,
     format: "esm",
@@ -56,6 +59,7 @@ async function buildAll() {
       "protobufjs",
       "onnxruntime-node",
       "@tensorflow/*",
+      "pdfjs-dist/*",
       "@prisma/client",
       "@mikro-orm/*",
       "@grpc/*",

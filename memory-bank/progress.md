@@ -39,7 +39,7 @@
 
 - Extração de PDF (inclusive dentro de ZIP) por página, trechos com `tsvector`, Jev (`jev-1.13.0`) ordena por noul, limiar 0,5, cota diária (teste 5, pago 30), cache por usuário.
 - UI: painel no detalhe com estados de acesso/índice/cota, melhor trecho com termos destacados, link para o documento oficial e página, aviso fixo.
-- Bloqueado no Docker pelo CODEX_HANDOFF-012.
+- CODEX_HANDOFF-012 concluído: `pdfjs` resolvido no bundle, `search_vector` gerado pelo `push-force`, índices com falha retentáveis, ligaduras corrigidas e corte relativo de 0,25. Stack Docker e PDF real de 29 páginas validados.
 
 ## O que falta
 

@@ -13,6 +13,7 @@ export const aiConfig = () => ({
   model: process.env.JEV_MODEL?.trim() || "jev-1.13.0",
   timeoutMs: positiveInteger("JEV_TIMEOUT_MS", 15_000),
   threshold: probability("JEV_RELEVANCE_THRESHOLD", 0.5),
+  relativeThresholdDelta: probability("JEV_RELATIVE_RELEVANCE_DELTA", 0.25),
   trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 5),
   paidDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_PAID", 30),
   maxDocumentBytes: positiveInteger("AI_MAX_DOCUMENT_BYTES", 25 * 1024 * 1024),

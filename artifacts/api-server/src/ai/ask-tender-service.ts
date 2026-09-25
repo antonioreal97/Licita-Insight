@@ -23,6 +23,7 @@ import { JevUnavailableError, scoreTenderPassage } from "./jev-client";
 import {
   aiDailyLimit,
   aiQuotaResetsAt,
+  completedIndexStatus,
   lexicalSearchQuery,
   selectEvidencePassages,
   type PassageCandidate,
@@ -39,10 +40,14 @@ export type AskStatus = {
 };
 
 const runningIndexes = new Map<string, Promise<void>>();
+const EXTRACTOR_VERSION = 2;
 
 const fingerprint = (documents: TenderDocumentRecord[]): string =>
   createHash("sha256")
-    .update(JSON.stringify(documents.map(({ id, name, url, sizeBytes, publishedAt }) => ({ id, name, url, sizeBytes, publishedAt }))))
+    .update(JSON.stringify({
+      extractorVersion: EXTRACTOR_VERSION,
+      documents: documents.map(({ id, name, url, sizeBytes, publishedAt }) => ({ id, name, url, sizeBytes, publishedAt })),
+    }))
     .digest("hex");
 
 const documentId = (tenderId: string, sourceId: string, suffix: string): string =>
@@ -135,6 +140,7 @@ async function processIndex(tenderId: string, documents: TenderDocumentRecord[],
   const config = aiConfig();
   let readyDocuments = 0;
   let unsupportedDocuments = 0;
+  let failedDocuments = 0;
   try {
     await db.delete(tenderAiDocumentsTable).where(eq(tenderAiDocumentsTable.tenderId, tenderId));
     for (const sourceDocument of documents) {
@@ -172,6 +178,7 @@ async function processIndex(tenderId: string, documents: TenderDocumentRecord[],
           }
         }
       } catch (error) {
+        failedDocuments += 1;
         logger.warn({ err: error, tenderId, sourceDocumentId: sourceDocument.id }, "Tender document extraction failed");
         await db.insert(tenderAiDocumentsTable).values({
           id: documentId(tenderId, sourceDocument.id, "failed"), tenderId,
@@ -180,7 +187,7 @@ async function processIndex(tenderId: string, documents: TenderDocumentRecord[],
         });
       }
     }
-    const status: StoredIndexStatus = readyDocuments > 0 ? "ready" : unsupportedDocuments > 0 ? "unsupported" : "failed";
+    const status: StoredIndexStatus = completedIndexStatus(readyDocuments, unsupportedDocuments, failedDocuments);
     await db.update(tenderAiIndexesTable).set({ status, completedAt: new Date(), updatedAt: new Date(), error: null }).where(eq(tenderAiIndexesTable.tenderId, tenderId));
   } catch (error) {
     await db.update(tenderAiIndexesTable).set({ status: "failed", error: error instanceof Error ? error.message : "Index failed", completedAt: new Date(), updatedAt: new Date() }).where(eq(tenderAiIndexesTable.tenderId, tenderId));
@@ -266,7 +273,7 @@ export async function askTender(userId: string, tenderId: string, question: stri
   });
   try {
     const scores = await Promise.all(candidates.map(({ text }) => scoreTenderPassage(question, text)));
-    const passages = selectEvidencePassages(candidates, scores, config.threshold);
+    const passages = selectEvidencePassages(candidates, scores, config.threshold, config.relativeThresholdDelta);
     const inputTokens = scores.reduce((total, score) => total + score.inputTokens, 0);
     const estimatedCost = inputTokens * 0.000000042;
     const responseModel = scores[0]?.model ?? config.model;

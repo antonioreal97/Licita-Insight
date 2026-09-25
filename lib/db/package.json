@@ -10,7 +10,8 @@
   "scripts": {
     "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "verify:ai-push": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-push.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

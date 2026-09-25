@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { aiDailyLimit, aiQuotaResetsAt, lexicalSearchQuery, selectEvidencePassages } from "./policy";
+import { aiDailyLimit, aiQuotaResetsAt, completedIndexStatus, lexicalSearchQuery, selectEvidencePassages } from "./policy";
 import { scoreTenderPassage } from "./jev-client";
 
 const originalEnv = { ...process.env };
@@ -19,6 +19,10 @@ test("applies the evidence threshold, sorts and limits passages", () => {
   const scores = [0.49, 0.97, 0.75, 0.6].map((relevance) => ({ relevance, model: "jev-1.13.0", inputTokens: 10 }));
   assert.deepEqual(selectEvidencePassages(candidates, scores, 0.5).map(({ relevance }) => relevance), [0.97, 0.75, 0.6]);
   assert.equal(selectEvidencePassages(candidates, scores, 0.99).length, 0);
+  assert.deepEqual(
+    selectEvidencePassages(candidates, scores, 0.5, 0.25).map(({ relevance }) => relevance),
+    [0.97, 0.75],
+  );
 });
 
 test("uses separate trial and paid limits", () => {
@@ -27,6 +31,13 @@ test("uses separate trial and paid limits", () => {
   assert.equal(aiDailyLimit("trial"), 4);
   assert.equal(aiDailyLimit("subscription"), 40);
   assert.equal(aiDailyLimit("dev"), 40);
+});
+
+test("keeps an index retryable when any document extraction fails", () => {
+  assert.equal(completedIndexStatus(1, 1, 1), "failed");
+  assert.equal(completedIndexStatus(1, 1, 0), "ready");
+  assert.equal(completedIndexStatus(0, 2, 0), "unsupported");
+  assert.equal(completedIndexStatus(0, 0, 0), "failed");
 });
 
 test("quota resets at midnight in America/Sao_Paulo", () => {

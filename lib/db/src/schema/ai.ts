@@ -80,7 +80,9 @@ export const tenderAiPassagesTable = pgTable(
     page: integer("page").notNull(),
     passageOrder: integer("passage_order").notNull(),
     text: text("text").notNull(),
-    searchVector: tsvector("search_vector"),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql`to_tsvector('portuguese', "text")`,
+    ),
   },
   (table) => [
     uniqueIndex("tender_ai_passages_position_uidx").on(

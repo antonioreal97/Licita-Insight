@@ -9,17 +9,57 @@ export type ExtractedDocument = {
   pages: string[];
 };
 
-const normalizeLine = (value: string): string =>
+export const normalizeExtractedText = (value: string): string =>
   value
     .normalize("NFKC")
+    .replace(/(\p{Ll})\s*\uFFFD\s*(?=\p{Ll})/gu, "$1ti")
     .replace(/\uFFFD/g, "")
     .replace(/[\t ]+/g, " ")
     .trim();
 
+type PositionedTextItem = {
+  str: string;
+  width: number;
+  height: number;
+  transform: number[];
+  hasEOL: boolean;
+};
+
+export const joinPositionedTextItems = (items: PositionedTextItem[]): string[] => {
+  const lines: string[] = [];
+  let current = "";
+  let previous: PositionedTextItem | null = null;
+  for (const item of items) {
+    const value = item.str.normalize("NFKC");
+    if (!value) {
+      if (item.hasEOL && current) {
+        lines.push(current);
+        current = "";
+      }
+      previous = item;
+      continue;
+    }
+    const sameLine = previous !== null && Math.abs((item.transform[5] ?? 0) - (previous.transform[5] ?? 0)) <= Math.max(item.height, previous.height, 1) * 0.45;
+    const previousEnd = previous ? (previous.transform[4] ?? 0) + previous.width : 0;
+    const gap = previous ? (item.transform[4] ?? 0) - previousEnd : 0;
+    const adjacent = previous !== null && sameLine && !previous.hasEOL && gap <= Math.max(item.height, previous.height, 1) * 0.18;
+    const alreadySeparated = /\s$/u.test(current) || /^\s|^[,.;:!?%)]/u.test(value);
+    if (current && !adjacent && !alreadySeparated) current += " ";
+    current += value;
+    if (item.hasEOL) {
+      lines.push(current);
+      current = "";
+    }
+    previous = item;
+  }
+  if (current) lines.push(current);
+  return lines.map(normalizeExtractedText).filter(Boolean);
+};
+
 export const normalizePdfPages = (pages: string[][]): string[] => {
   const counts = new Map<string, number>();
   for (const page of pages) {
-    for (const line of new Set(page.map(normalizeLine).filter(Boolean))) {
+    for (const line of new Set(page.map(normalizeExtractedText).filter(Boolean))) {
       counts.set(line, (counts.get(line) ?? 0) + 1);
     }
   }
@@ -30,7 +70,7 @@ export const normalizePdfPages = (pages: string[][]): string[] => {
   );
   return pages.map((page) =>
     page
-      .map(normalizeLine)
+      .map(normalizeExtractedText)
       .filter((line) => line && !repeated.has(line))
       .join("\n")
       .replace(/\n{3,}/g, "\n\n")
@@ -45,18 +85,8 @@ const extractPdfPages = async (bytes: Uint8Array, maxPages: number): Promise<str
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
-    const lines: string[] = [];
-    let current = "";
-    for (const item of content.items) {
-      if (!("str" in item)) continue;
-      current += `${current ? " " : ""}${item.str}`;
-      if (item.hasEOL) {
-        lines.push(current);
-        current = "";
-      }
-    }
-    if (current) lines.push(current);
-    rawPages.push(lines);
+    const textItems = content.items.filter((item) => "str" in item);
+    rawPages.push(joinPositionedTextItems(textItems));
   }
   return normalizePdfPages(rawPages);
 };

@@ -22,15 +22,28 @@ export const aiDailyLimit = (source: EntitlementSource): number => {
   return source === "trial" || source === null ? config.trialDailyLimit : config.paidDailyLimit;
 };
 
+export const completedIndexStatus = (
+  readyDocuments: number,
+  unsupportedDocuments: number,
+  failedDocuments: number,
+): "ready" | "unsupported" | "failed" => {
+  if (failedDocuments > 0) return "failed";
+  if (readyDocuments > 0) return "ready";
+  if (unsupportedDocuments > 0) return "unsupported";
+  return "failed";
+};
+
 export const selectEvidencePassages = (
   candidates: PassageCandidate[],
   scores: JevScore[],
   threshold: number,
+  relativeDelta = 1,
 ): AiPassageRecord[] =>
   candidates
     .map((candidate, position) => ({ ...candidate, relevance: scores[position]!.relevance }))
     .filter(({ relevance }) => relevance >= threshold)
     .sort((a, b) => b.relevance - a.relevance)
+    .filter((passage, _position, sorted) => passage.relevance >= sorted[0]!.relevance - relativeDelta)
     .slice(0, 3);
 
 export const lexicalSearchQuery = (question: string): string => {

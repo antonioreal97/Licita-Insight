@@ -2,7 +2,7 @@
 
 ## Foco agora
 
-Onda 3, fatia 1 ("Perguntar ao edital" com o Jev): backend `fb9310a` + painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). QA em `docs/reviews/onda3-ask-qa.md`: funciona com o Jev real, mas **não roda no Docker** até o CODEX_HANDOFF-012 (worker do pdfjs fora do `dist/`, `search_vector` nulo com `push-force`, índice preso em `unsupported`, ligaduras quebradas). `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`.
+Onda 3, fatia 1 ("Perguntar ao edital" com o Jev): backend `fb9310a` + painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). O CODEX_HANDOFF-012 corrigiu o worker do `pdfjs` no bundle, `search_vector` no `push-force`, retry de índices, ligaduras/fragmentos e corte relativo de evidências. Stack Docker e PDF real validados. `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`.
 
 Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.
 

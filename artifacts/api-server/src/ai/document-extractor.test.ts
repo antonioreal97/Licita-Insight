@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { zipSync } from "fflate";
-import { chunkPages, extractDocuments, normalizePdfPages } from "./document-extractor";
+import {
+  chunkPages,
+  extractDocuments,
+  joinPositionedTextItems,
+  normalizeExtractedText,
+  normalizePdfPages,
+} from "./document-extractor";
 
 function fixturePdf(text: string): Uint8Array {
   const escaped = text.replace(/([\\()])/g, "\\$1");
@@ -49,6 +55,17 @@ test("normalizes ligatures and removes repeated headers", () => {
   ]);
   assert.doesNotMatch(pages.join(" "), /SEI\/CORREIOS/);
   assert.match(pages[0]!, /finalidade/);
+  assert.equal(normalizeExtractedText("par�cipação admi�da"), "participação admitida");
+  assert.deepEqual(
+    joinPositionedTextItems([
+      { str: "de", width: 10, height: 10, transform: [1, 0, 0, 1, 0, 10], hasEOL: false },
+      { str: "fi", width: 7, height: 10, transform: [1, 0, 0, 1, 10.2, 10], hasEOL: false },
+      { str: "nição", width: 20, height: 10, transform: [1, 0, 0, 1, 17.3, 10], hasEOL: false },
+      { str: "h", width: 5, height: 10, transform: [1, 0, 0, 1, 45, 10], hasEOL: false },
+      { str: "ttps://", width: 25, height: 10, transform: [1, 0, 0, 1, 50.1, 10], hasEOL: true },
+    ]),
+    ["definição https://"],
+  );
 });
 
 test("a PDF without extractable text is represented without passages", async () => {
