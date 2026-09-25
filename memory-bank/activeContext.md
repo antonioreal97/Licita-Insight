@@ -3,7 +3,7 @@
 ## Foco agora
 
 Ciclo 5 (branch `antonioreal97/cycle5`, sobre o merge do PR #6): aderência edital × perfil da empresa (roadmap 3.6). Decisões do owner de 25 set 2026 no roadmap. Backend em CODEX_HANDOFF-013 (perfil, `GET /me/fit`, calibração, depois alerta diário). Frontend já feito contra a proposta (`features/company-profile/`), verificado com rotas simuladas: `docs/reviews/onda3-fit-frontend.md`.
-Backend entregue (`5fcc392`), mas o QA real com o Jev achou a exclusão rebaixando o próprio negócio do perfil e a cota ME/EPP forçando nível baixo: correções no CODEX_HANDOFF-014 (com adendo de sondagem). Calibração só depois do 014.
+Backend `5fcc392` + correções `d18f840` (HANDOFF-014): exclusão por termo e só do objeto principal, cota ME/EPP informativa, cache sem `updatedAt`, rubrica concreta. Retestado com Jev real; calibração 15/15 "Alta" corretos. Pendente: owner aprovar limiares 0,75/0,50 e abrir PR do cycle5.
 
 Ambiente em 25 set 2026: o Compose ativo é o projeto `main` (este worktree, volume `main_licita_pg`, banco `licita` vazio). O stack antigo `licita-insight` (volume com 8.431 editais) está parado. Para QA, os editais foram copiados para o banco `licita_cycle5` no Postgres do `main` (autorizado pelo owner, leitura temporária do volume antigo).
 

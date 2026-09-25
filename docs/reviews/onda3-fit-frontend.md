@@ -22,3 +22,11 @@ Data: 25 set 2026. Branch `antonioreal97/cycle5`. Contrato: proposta do CODEX_HA
 - Integração com o backend real (CLAUDE_HANDOFF-013) e revisão da calibração dos níveis com o owner.
 - Visão em tabela da busca (desktop) ainda sem selo.
 - Fase B (alerta diário do perfil): toggle nas preferências e item no sino.
+
+## Integração real (backend 5fcc392 + d18f840, Jev jev-1.13.0, 8.431 editais em licita_cycle5)
+
+- Contrato real bate com a UI; nenhuma mudança de frontend foi necessária.
+- 1ª rodada (antes do HANDOFF-014): serviços de limpeza/conservação saíam "Baixa aderência" pela Noul de exclusão; nenhum "Alta". Sondagem em CODEX_HANDOFF-014 (adendo).
+- Depois do HANDOFF-014, perfil limpeza/facilities, busca "limpeza": os 4 serviços de limpeza/conservação e o de copeiragem em "Alta", compras de material em "Baixa" com o motivo de exclusão certo, 20 selos em ~4 s por página, sem erros de console.
+- Calibração do Codex (3 perfis × 30: prováveis positivos, vizinhos, aleatórios): 15/15 "Alta" corretos; vizinhos de TI e facilities 10/10 "Baixa"; em construção, "material de construção" (0,54) e "maquinário/material elétrico" (0,52) ficaram "Média". Os "Baixa" entre prováveis positivos são erro do seletor lexical ("servidores" = servidores públicos), não da nota. Custo ≈ US$ 0,0014 por perfil a cada 30 editais.
+- Limiares mantidos em 0,75 (alta) e 0,50 (média), pendentes de aprovação do owner.
