@@ -37,6 +37,7 @@ import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { TenderFitPanel } from '@/features/company-profile/components/tender-fit-panel';
 import { AskTenderPanel } from './components/ask-tender-panel';
+import { TenderSheetPanel } from './components/tender-sheet-panel';
 import { DeadlineIndicator } from './components/deadline-indicator';
 import { MetaItem } from './components/meta-item';
 import { StatusBadge } from './components/status-badge';
@@ -353,6 +354,7 @@ export default function TenderDetailPage() {
             )}
           </Panel>
 
+          <TenderSheetPanel tenderId={tender.id} />
           <AskTenderPanel tenderId={tender.id} />
           <ItemsPanel tender={tender} />
           <TimelinePanel events={tender.timeline} />

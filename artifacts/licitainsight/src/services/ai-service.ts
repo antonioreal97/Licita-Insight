@@ -14,6 +14,8 @@ export const aiService = {
   getAskStatus: (tenderId: string, signal?: AbortSignal) => aiAdapter.getAskStatus(tenderId, signal),
   ask: (tenderId: string, question: string) => aiAdapter.askTender(tenderId, question.trim().replace(/\s+/g, ' ')),
 
+  getTenderSheet: (tenderId: string, signal?: AbortSignal) => aiAdapter.getTenderSheet(tenderId, signal),
+
   getCompanyProfile: (signal?: AbortSignal) => aiAdapter.getCompanyProfile(signal),
   saveCompanyProfile: (profile: CompanyProfileInput) => aiAdapter.saveCompanyProfile(profile),
   deleteCompanyProfile: () => aiAdapter.deleteCompanyProfile(),

@@ -22,6 +22,8 @@ export const queryKeys = {
     notificationPreferences: ['me', 'notification-preferences'] as const,
     /** Index state and quota of "Perguntar ao edital" for one tender (the quota is per user). */
     askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
+    /** The sheet is public tender data, but only served with access: it lives under `me` so sign-out drops it. */
+    tenderSheet: (tenderId: string) => ['me', 'tender-sheet', tenderId] as const,
     companyProfile: ['me', 'company-profile'] as const,
     /** Saving or deleting the profile invalidates every fit (`fit.all`). */
     fit: {

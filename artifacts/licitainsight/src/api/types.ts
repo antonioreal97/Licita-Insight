@@ -317,6 +317,37 @@ export type AskTenderPassage = { documentId: string; documentTitle: string; docu
 /** `POST /api/v1/tenders/:id/ask { question }` (session + CSRF + access). */
 export type AskTenderResult = { status: 'answered' | 'not_found' | 'processing'; passages: AskTenderPassage[]; model: string; quota: AiQuota };
 
+// Ficha do edital (CODEX_HANDOFF-015, proposal): one official passage per key field. Absence is `not_found`, never a "no".
+
+export type SheetFieldId =
+  | 'consortium'
+  | 'subcontracting'
+  | 'me_epp'
+  | 'site_visit'
+  | 'samples'
+  | 'bid_guarantee'
+  | 'contract_guarantee'
+  | 'penalties'
+  | 'technical_qualification'
+  | 'financial_qualification'
+  | 'contract_term'
+  | 'delivery_term'
+  | 'price_adjustment';
+
+export type SheetEvidence = { documentTitle: string; documentUrl: string; page: number; text: string };
+
+/** `answer` is a category key for categorical fields (e.g. `forbidden`), `null` for passage-only fields or when unsure. */
+export type SheetField = { id: SheetFieldId; status: 'found' | 'not_found'; answer: string | null; confidence: number | null; evidence: SheetEvidence | null };
+
+/** `GET /api/v1/tenders/:id/sheet` (session + access). `status` mirrors the document index. */
+export type TenderSheet = {
+  status: 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported';
+  fields: SheetField[];
+  unreadDocuments: number;
+  model: string | null;
+  generatedAt: string | null;
+};
+
 // Aderência (CODEX_HANDOFF-013, proposal): company profile × tender. Rules run in code; Jev only judges the semantic match.
 
 export type CompanySize = 'me_epp' | 'cooperative' | 'other';
