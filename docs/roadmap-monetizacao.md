@@ -123,7 +123,7 @@ o trecho oficial do edital, com página, escolhido pelo Jev; nunca um texto inve
 | 3.3 | Cliente Jev no servidor | `ai/jev-client.ts` | `JEV_API_KEY` (decisão do owner); ler a doc viva (docs.typesafe.ai) antes de integrar |
 | 3.4 | "Perguntar ao edital": recuperar candidatos → Jev reordena/seleciona → devolver os trechos com página | `POST /api/v1/tenders/:id/ask` | resposta = trechos citados + confiança; abaixo do limiar, "não encontrei no edital" |
 | 3.5 | Ficha estruturada (objeto, habilitação, prazos, garantia, penalidades) por **seleção de trechos candidatos** | `ai/summarize.ts` | cada campo aponta o trecho e a página; campo sem evidência fica vazio, não inventado |
-| 3.6 | Aderência edital × perfil da empresa (Score) | `ai/fit-score.ts` | base para recomendação (Onda 5) e para o `mode=semantic` da busca (reordenar resultados) |
+| 3.6 | Aderência edital × perfil da empresa (Score) | `ai/fit-score.ts` | selo na busca/detalhe → alerta diário do perfil; `mode=semantic` depois (decisões de 25 set 2026) |
 | 3.7 | UI: painel "Perguntar ao edital" e ficha no detalhe, com link para a página do documento | `features/tenders` | mostrar a confiança de forma honesta |
 | 3.8 | Cota por usuário (teste com cota menor) + medidor de custo | `ai/usage.ts` | custo por chamada |
 | 3.9 | Aviso "confira o edital original" | UI | a seleção orienta, não substitui o edital |
@@ -192,6 +192,8 @@ Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justific
 Tomadas em 24 set 2026: teste de 7 dias (o owner trocou de 14 para 7); plano único (`BILLING_MONTHLY_BRL`); oportunidades culturais só com acesso.
 
 Também em 24 set 2026: e-mail pelo **Resend**; alertas com **digest diário + imediato para críticos**; IA da Onda 3 com o **Jev (TypeSafe)**.
+
+Em 25 set 2026, aderência (3.6): perfil da empresa com **6 campos** (o que fornece, produtos/serviços, o que não atende, área de atuação com opção **Brasil inteiro**, faixa de valor, porte). **Porte só pesa com trecho citado** do edital. **Um perfil por conta**. Superfície: **selo de aderência** na busca e no detalhe primeiro, depois **alerta diário de editais para o perfil**; reordenar a busca (`mode=semantic`) fica para depois, opcional. Formulário em **Configurações** com convite no painel inicial, sem wizard bloqueante.
 
 Pendentes:
 1. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
