@@ -49,6 +49,46 @@ exceto a semântica do item 1 (documentar em company-fit-v1.md).
 5. P3 — 400 do PUT traz só o primeiro campo inválido
    O contrato diz erro por campo; devolver todos os details (a UI já mapeia vários).
 
+ADENDO (25 set 2026, QA real com Jev jev-1.13.0, 8.431 editais no licita_cycle5) — vira o item mais grave:
+
+0. P0 — a Noul de exclusão rebaixa o próprio negócio do perfil
+   Perfil de limpeza/facilities com exclusões ["material de limpeza", "produtos de limpeza"]. Na busca
+   "limpeza", os SERVIÇOS de limpeza e conservação (o negócio do perfil) saíram 'low' com o motivo
+   "parece ser algo que vocês não atendem". Nenhum edital saiu 'high'. Causa: contrato de serviço
+   "com fornecimento de materiais" faz a pergunta atual responder sim acima de 0,65.
+   Sondagem com o state atual (perfil_da_empresa + licitacao), mesma chamada:
+     edital                                          exclusão atual   reescrita
+     Aquisição de materiais de limpeza diversos       0,96             0,96
+     AQUISIÇÃO DE MATERIAL DE LIMPEZA                 0,97             0,95
+     Serviços de limpeza e conservação diária         0,70             0,04
+     Serviços de limpeza, asseio e conservação        0,68             0,04
+     Serviços de copeiragem                           0,50             0,06
+   Reescrita:
+     instructions: "O objeto principal de `licitacao` é a compra ou a prestação de algo listado em
+       `perfil_da_empresa.exclusoes`? Julgue o que o órgão está contratando como um todo, não os insumos
+       de um serviço."
+     true:  "O que se contrata é, em si, um item de `perfil_da_empresa.exclusoes` (ex.: a licitação é
+       para comprar esse produto)."
+     false: "O objeto é outro, ou o item excluído aparece só como insumo, material ou parte de um serviço
+       que a empresa presta."
+   Motivo 'exclusion' hoje lista todas as exclusões do perfil (até 6), não a que casou. Opções: uma
+   Noul por termo excluído no mesmo request (fan-out) e listar só os acima do limiar; ou listar só os
+   termos que casam lexicalmente com o edital. Nunca todos.
+
+3. (reforço) Níveis concretos da Score — sondagem nos mesmos editais, nota/3:
+     edital                                   rubrica atual   rubrica concreta (item 3)
+     Serviços de limpeza, asseio e conservação   0,77            0,94
+     Serviços de limpeza e conservação diária    0,74            0,81
+     Serviços de copeiragem                      0,74            0,96
+     Dedetização (vizinho)                       0,28            0,18
+     Pintura predial (vizinho)                   0,30            0,25
+     Compra de material de limpeza               0,07–0,11       0,11
+   Instructions usada: "Quanto do que `licitacao` contrata é o que `perfil_da_empresa` fornece?"
+   Com a rubrica atual, os três positivos claros ficam 'medium'.
+
+O que funcionou no QA real: 20 selos em ~4 s por página, filtros sem Jev, cache, detalhe com motivos,
+sem erros de console. A ordenação pela nota já era boa; o problema é a exclusão sobrepondo a nota.
+
 Processo: commite só seus paths (`git commit -- <paths>`).
 Resposta esperada: docs/handoffs/CLAUDE_HANDOFF-014-fit-fixes.md
 ```
