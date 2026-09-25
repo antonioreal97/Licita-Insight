@@ -20,6 +20,13 @@ import {
   exportAccountData,
 } from "../account/account-privacy-service";
 import {
+  getNotificationPreferences,
+  unsubscribeEmail,
+  updateNotificationPreferences,
+  type EmailDigestPreference,
+  type UnsubscribeScope,
+} from "../account/notification-preferences-service";
+import {
   asyncHandler,
   authContext,
   clearSessionCookie,
@@ -122,6 +129,87 @@ router.delete(
     await deleteAccount(authContext(res).user.id);
     clearSessionCookie(res);
     res.status(204).end();
+  }),
+);
+
+router.get(
+  "/v1/me/notification-preferences",
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    res.json(await getNotificationPreferences(authContext(res).user.id));
+  }),
+);
+
+router.put(
+  "/v1/me/notification-preferences",
+  requireAuth,
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const body = recordBody(req.body);
+    if (!body.email || typeof body.email !== "object" || Array.isArray(body.email)) {
+      throw new InvalidParameterError("email preferences are required", [
+        { field: "email", issue: "invalid_type" },
+      ]);
+    }
+    const email = body.email as Record<string, unknown>;
+    if (email.digest === undefined && email.immediateCritical === undefined) {
+      throw new InvalidParameterError("At least one email preference is required", [
+        { field: "email", issue: "too_small" },
+      ]);
+    }
+    if (
+      email.digest !== undefined &&
+      email.digest !== "daily" &&
+      email.digest !== "off"
+    ) {
+      throw new InvalidParameterError("email.digest is invalid", [
+        { field: "email.digest", issue: "invalid_enum" },
+      ]);
+    }
+    if (
+      email.immediateCritical !== undefined &&
+      typeof email.immediateCritical !== "boolean"
+    ) {
+      throw new InvalidParameterError("email.immediateCritical is invalid", [
+        { field: "email.immediateCritical", issue: "invalid_type" },
+      ]);
+    }
+    res.json(
+      await updateNotificationPreferences({
+        userId: authContext(res).user.id,
+        ...(email.digest !== undefined
+          ? { digest: email.digest as EmailDigestPreference }
+          : {}),
+        ...(email.immediateCritical !== undefined
+          ? { immediateCritical: email.immediateCritical }
+          : {}),
+      }),
+    );
+  }),
+);
+
+router.post(
+  "/v1/email/unsubscribe",
+  asyncHandler(async (req, res) => {
+    const body = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+    const token = body.token ?? req.query.token;
+    const scope = body.scope ?? req.query.scope;
+    if (typeof token !== "string" || token.length > 500) {
+      throw new InvalidParameterError("token is invalid", [
+        { field: "token", issue: "invalid_value" },
+      ]);
+    }
+    if (scope !== "all" && scope !== "digest" && scope !== "immediate") {
+      throw new InvalidParameterError("scope is invalid", [
+        { field: "scope", issue: "invalid_enum" },
+      ]);
+    }
+    res.json(
+      await unsubscribeEmail({
+        token,
+        scope: scope as UnsubscribeScope,
+      }),
+    );
   }),
 );
 

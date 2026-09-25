@@ -4,6 +4,7 @@ import {
 } from "@workspace/api-zod";
 import type { SearchCriteria } from "../domain/search";
 import { InvalidParameterError } from "./api-error";
+import { parseDateParameter } from "./sao-paulo-date";
 
 const arrayFields = [
   "status",
@@ -63,7 +64,7 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
   for (const field of dateFields) {
     const value = normalized[field];
     if (typeof value === "string") {
-      normalized[field] = new Date(`${value}T00:00:00.000Z`);
+      normalized[field] = parseDateParameter(value) ?? new Date(Number.NaN);
     }
   }
 

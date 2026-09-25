@@ -21,6 +21,7 @@ import OpportunityDetailPage from '@/features/opportunities/opportunity-detail-p
 import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
+import UnsubscribePage from '@/features/unsubscribe/unsubscribe-page';
 import { CookieNotice } from '@/features/privacy/cookie-notice';
 import { queryKeys } from '@/services/query-keys';
 import { toast } from '@/hooks/use-toast';
@@ -53,6 +54,7 @@ const routeTitles: Record<string, string> = {
   '/login': 'Entrar · LicitAI',
   '/register': 'Criar conta · LicitAI',
   '/forgot-password': 'Recuperar acesso · LicitAI',
+  '/descadastro': 'Descadastro de e-mails · LicitAI',
   '/dashboard': 'Visão geral · LicitAI',
   '/search': 'Explorar editais · LicitAI',
   '/oportunidades': 'Chamadas culturais · LicitAI',
@@ -88,6 +90,7 @@ function Router() {
         <Route path="/login" component={AuthPage} />
         <Route path="/register" component={LoginRedirect} />
         <Route path="/forgot-password" component={LoginRedirect} />
+        <Route path="/descadastro" component={UnsubscribePage} />
         <Route path="/dashboard">
           {() => (
             <AppShell>

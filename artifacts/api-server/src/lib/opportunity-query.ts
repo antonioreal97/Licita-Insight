@@ -6,6 +6,7 @@ import {
   type OpportunityStatus,
 } from "../ingest/opportunity-map";
 import { InvalidParameterError } from "./api-error";
+import { parseDateParameter } from "./sao-paulo-date";
 
 const UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
@@ -52,12 +53,11 @@ const parseEnumList = <T extends string>(
 
 const parseDate = (field: string, value: unknown): Date | undefined => {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
+  if (typeof value !== "string") {
+    return invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
   }
-  const clock = field === "deadlineTo" ? "23:59:59" : "00:00:00";
-  const date = new Date(`${value}T${clock}-03:00`);
-  if (Number.isNaN(date.getTime())) invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
+  const date = parseDateParameter(value);
+  if (!date) return invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
   return date;
 };
 

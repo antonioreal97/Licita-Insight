@@ -3,10 +3,15 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 
 export * from './accountExport';
+export * from './accountExportAiQuestion';
+export * from './accountExportAiQuestionStatus';
+export * from './accountExportEmailDelivery';
+export * from './accountExportEmailDeliveryMode';
+export * from './accountExportEmailDeliveryStatus';
 export * from './accountExportNotification';
 export * from './accountExportNotificationChange';
 export * from './accountExportSavedSearch';
@@ -14,9 +19,16 @@ export * from './accountExportSavedTender';
 export * from './accountExportSession';
 export * from './accountExportSubscription';
 export * from './accountExportUser';
+export * from './aiQuota';
+export * from './aiQuotaExceededResponse';
+export * from './aiUnavailableResponse';
 export * from './apiError';
 export * from './apiErrorCode';
 export * from './applyAsaasBillingWebhook200';
+export * from './askTenderPassage';
+export * from './askTenderRequest';
+export * from './askTenderResult';
+export * from './askTenderResultStatus';
 export * from './authSessionResponse';
 export * from './billingCheckoutResponse';
 export * from './billingEntitlementSource';
@@ -36,6 +48,11 @@ export * from './deadlineToParameter';
 export * from './deleteAccountRequest';
 export * from './deleteAccountRequestConfirm';
 export * from './devLoginRequest';
+export * from './emailDigestPreference';
+export * from './emailNotificationPreferences';
+export * from './emailUnsubscribeRequest';
+export * from './emailUnsubscribeResponse';
+export * from './emailUnsubscribeScope';
 export * from './errorDetail';
 export * from './errorResponse';
 export * from './estimatedValueStatus';
@@ -60,6 +77,7 @@ export * from './notFoundResponse';
 export * from './notification';
 export * from './notificationChange';
 export * from './notificationPage';
+export * from './notificationPreferences';
 export * from './notificationSavedSearch';
 export * from './notificationTender';
 export * from './notificationType';
@@ -111,6 +129,10 @@ export * from './subscriptionRequiredResponse';
 export * from './suggestion';
 export * from './suggestionsResponse';
 export * from './suggestionType';
+export * from './tenderAskDocument';
+export * from './tenderAskDocumentStatus';
+export * from './tenderAskIndexStatus';
+export * from './tenderAskStatus';
 export * from './tenderDetail';
 export * from './tenderDocument';
 export * from './tenderItem';
@@ -120,6 +142,8 @@ export * from './tenderTimelineEntry';
 export * from './tenderTimelineEntryType';
 export * from './unauthenticatedResponse';
 export * from './unreadNotificationCount';
+export * from './updateEmailNotificationPreferences';
+export * from './updateNotificationPreferencesRequest';
 export * from './updateSavedSearchRequest';
 export * from './user';
 export * from './valueHistogramBucket';

@@ -2,7 +2,11 @@
 
 ## Foco agora
 
-MVP de cobrança pronto no código: assinatura mensal via Asaas libera salvar, monitorar e alertas. Busca e detalhe continuam públicos. Falta configurar as chaves do Asaas no `.env` e reiniciar a API do Compose para carregar as rotas novas.
+Onda 3, fatia 1 ("Perguntar ao edital" com o Jev) pronta: backend `fb9310a` + `7ce9ef4` (HANDOFF-012) e painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). Retestada pelo caminho do Docker (`dist/`) em 25 set 2026; QA em `docs/reviews/onda3-ask-qa.md`. `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`. Próximo na Onda 3: fatia 2 (ficha estruturada 3.5 e aderência 3.6).
+
+Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.
+
+O stack Docker em execução no checkout `main` é do cycle3: depois do merge, `docker compose up --build`.
 
 ## O que está na mesa
 

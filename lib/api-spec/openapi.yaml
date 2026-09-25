@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 1.2.0
+  version: 1.3.0
   description: Public Licita Insight API
 servers:
   - url: /api
@@ -14,6 +14,8 @@ tags:
     description: Tender discovery operations
   - name: account
     description: Authentication and personal account operations
+  - name: ai
+    description: Evidence-only tender document questions
   - name: opportunities
     description: Cultural funding opportunity operations
 paths:
@@ -92,6 +94,66 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /v1/tenders/{id}/ask-status:
+    get:
+      operationId: getTenderAskStatus
+      tags: [ai]
+      summary: Get or start the document index used for tender questions
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Current index and daily quota status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderAskStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/tenders/{id}/ask:
+    post:
+      operationId: askTender
+      tags: [ai]
+      summary: Find official passages that answer a question about a tender
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AskTenderRequest"
+      responses:
+        "200":
+          description: Evidence passages, an explicit no-result, or an indexing state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AskTenderResult"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/AiQuotaExceeded"
+        "503":
+          $ref: "#/components/responses/AiUnavailable"
   /v1/search/suggestions:
     get:
       operationId: getSearchSuggestions
@@ -362,9 +424,11 @@ paths:
               $ref: "#/components/schemas/OpportunityProgram"
         - name: deadlineFrom
           in: query
+          description: Inclusive lower date in America/Sao_Paulo.
           schema: { type: string, format: date }
         - name: deadlineTo
           in: query
+          description: Inclusive upper date in America/Sao_Paulo.
           schema: { type: string, format: date }
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PageSize"
@@ -679,6 +743,65 @@ paths:
                 $ref: "#/components/schemas/NotificationPage"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /v1/me/notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [account]
+      summary: Read email notification preferences outside the subscription gate
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Current notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    put:
+      operationId: updateNotificationPreferences
+      tags: [account]
+      summary: Partially update email notification preferences
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferencesRequest"
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/email/unsubscribe:
+    post:
+      operationId: unsubscribeEmail
+      tags: [account]
+      summary: Disable email notifications using an opaque signed token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailUnsubscribeRequest"
+      responses:
+        "200":
+          description: Updated email preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailUnsubscribeResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
   /v1/me/notifications/unread-count:
     get:
       operationId: getUnreadNotificationCount
@@ -818,24 +941,28 @@ components:
     PublishedFrom:
       name: publishedFrom
       in: query
+      description: Inclusive lower publication date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     PublishedTo:
       name: publishedTo
       in: query
+      description: Inclusive upper publication date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     DeadlineFrom:
       name: deadlineFrom
       in: query
+      description: Inclusive lower proposal deadline date in America/Sao_Paulo.
       schema:
         type: string
         format: date
     DeadlineTo:
       name: deadlineTo
       in: query
+      description: Inclusive upper proposal deadline date in America/Sao_Paulo.
       schema:
         type: string
         format: date
@@ -931,6 +1058,18 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    AiQuotaExceeded:
+      description: Daily AI question quota exhausted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    AiUnavailable:
+      description: Tender question service unavailable or not configured
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -1012,6 +1151,70 @@ components:
           type: string
           enum: [EXCLUIR]
       required: [confirm]
+    EmailDigestPreference:
+      type: string
+      enum: [daily, off]
+    EmailNotificationPreferences:
+      type: object
+      additionalProperties: false
+      properties:
+        digest:
+          $ref: "#/components/schemas/EmailDigestPreference"
+        immediateCritical:
+          type: boolean
+      required: [digest, immediateCritical]
+    NotificationPreferences:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          $ref: "#/components/schemas/EmailNotificationPreferences"
+        emailAddress:
+          type: string
+          format: email
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+      required: [email, emailAddress, updatedAt]
+    UpdateEmailNotificationPreferences:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        digest:
+          $ref: "#/components/schemas/EmailDigestPreference"
+        immediateCritical:
+          type: boolean
+    UpdateNotificationPreferencesRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          $ref: "#/components/schemas/UpdateEmailNotificationPreferences"
+      required: [email]
+    EmailUnsubscribeScope:
+      type: string
+      enum: [all, digest, immediate]
+    EmailUnsubscribeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 500
+        scope:
+          $ref: "#/components/schemas/EmailUnsubscribeScope"
+      required: [token, scope]
+    EmailUnsubscribeResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        scope:
+          $ref: "#/components/schemas/EmailUnsubscribeScope"
+        email:
+          $ref: "#/components/schemas/EmailNotificationPreferences"
+      required: [scope, email]
     AccountExportUser:
       type: object
       properties:
@@ -1020,9 +1223,13 @@ components:
         name: { type: [string, "null"] }
         avatarUrl: { type: [string, "null"], format: uri }
         trialEndsAt: { type: string, format: date-time }
+        emailDigest:
+          $ref: "#/components/schemas/EmailDigestPreference"
+        emailImmediateCritical: { type: boolean }
+        emailPreferencesUpdatedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, email, name, avatarUrl, trialEndsAt, createdAt, updatedAt]
+      required: [id, email, name, avatarUrl, trialEndsAt, emailDigest, emailImmediateCritical, emailPreferencesUpdatedAt, createdAt, updatedAt]
     AccountExportSession:
       type: object
       properties:
@@ -1061,6 +1268,8 @@ components:
         tenderId: { type: [string, "null"] }
         tenderTitle: { type: [string, "null"] }
         tenderNumberShort: { type: [string, "null"] }
+        tenderOrganizationName: { type: [string, "null"] }
+        tenderProposalDeadline: { type: [string, "null"], format: date-time }
         change:
           anyOf:
             - type: object
@@ -1073,7 +1282,22 @@ components:
         tenderIds:
           type: array
           items: { type: string }
-      required: [id, type, createdAt, readAt, tenderId, tenderTitle, tenderNumberShort, change, savedSearchId, savedSearchName, savedSearchQuery, matchCount, tenderIds]
+      required: [id, type, createdAt, readAt, tenderId, tenderTitle, tenderNumberShort, tenderOrganizationName, tenderProposalDeadline, change, savedSearchId, savedSearchName, savedSearchQuery, matchCount, tenderIds]
+    AccountExportEmailDelivery:
+      type: object
+      properties:
+        id: { type: string }
+        mode: { type: string, enum: [digest, immediate] }
+        status: { type: string, enum: [queued, sent, failed, skipped] }
+        recipientEmail: { type: string, format: email }
+        subject: { type: string }
+        attempts: { type: integer, minimum: 0 }
+        lastError: { type: [string, "null"] }
+        providerMessageId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        sentAt: { type: [string, "null"], format: date-time }
+      required: [id, mode, status, recipientEmail, subject, attempts, lastError, providerMessageId, createdAt, updatedAt, sentAt]
     AccountExportSubscription:
       type: object
       properties:
@@ -1081,6 +1305,18 @@ components:
         currentPeriodEnd: { type: [string, "null"], format: date-time }
         updatedAt: { type: string, format: date-time }
       required: [status, currentPeriodEnd, updatedAt]
+    AccountExportAiQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        tenderId: { type: string }
+        question: { type: string }
+        status: { type: string, enum: [processing, answered, not_found, failed] }
+        model: { type: [string, "null"] }
+        inputTokens: { type: integer, minimum: 0 }
+        estimatedCostUsd: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, tenderId, question, status, model, inputTokens, estimatedCostUsd, createdAt]
     AccountExport:
       type: object
       properties:
@@ -1103,11 +1339,78 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountExportNotification"
+        emailDeliveries:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportEmailDelivery"
+        aiQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportAiQuestion"
         subscription:
           anyOf:
             - $ref: "#/components/schemas/AccountExportSubscription"
             - type: "null"
-      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, subscription]
+      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, emailDeliveries, aiQuestions, subscription]
+    TenderAskIndexStatus:
+      type: string
+      enum: [not_started, processing, ready, failed, no_documents, unsupported]
+    TenderAskDocument:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        pages: { type: [integer, "null"], minimum: 1 }
+        status: { type: string, enum: [processing, ready, failed, unsupported] }
+      required: [id, title, pages, status]
+    AiQuota:
+      type: object
+      properties:
+        used: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1 }
+        resetsAt: { type: string, format: date-time }
+      required: [used, limit, resetsAt]
+    TenderAskStatus:
+      type: object
+      properties:
+        index:
+          $ref: "#/components/schemas/TenderAskIndexStatus"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenderAskDocument"
+        quota:
+          $ref: "#/components/schemas/AiQuota"
+      required: [index, documents, quota]
+    AskTenderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        question: { type: string, minLength: 3, maxLength: 300 }
+      required: [question]
+    AskTenderPassage:
+      type: object
+      properties:
+        documentId: { type: string }
+        documentTitle: { type: string }
+        documentUrl: { type: string, format: uri }
+        page: { type: integer, minimum: 1 }
+        text: { type: string }
+        relevance: { type: number, minimum: 0, maximum: 1 }
+      required: [documentId, documentTitle, documentUrl, page, text, relevance]
+    AskTenderResult:
+      type: object
+      properties:
+        status: { type: string, enum: [answered, not_found, processing] }
+        passages:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/AskTenderPassage"
+        model: { type: string }
+        quota:
+          $ref: "#/components/schemas/AiQuota"
+      required: [status, passages, model, quota]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -1826,6 +2129,8 @@ components:
               CONFLICT,
               SUBSCRIPTION_REQUIRED,
               BILLING_UNAVAILABLE,
+              AI_QUOTA_EXCEEDED,
+              AI_UNAVAILABLE,
             ]
         message:
           type: string

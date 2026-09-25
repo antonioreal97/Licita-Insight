@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import {
   useMutation,
@@ -21,7 +21,11 @@ import type {
 
 import type {
   AccountExport,
+  AiQuotaExceededResponse,
+  AiUnavailableResponse,
   ApplyAsaasBillingWebhook200,
+  AskTenderRequest,
+  AskTenderResult,
   AuthSessionResponse,
   BillingCheckoutResponse,
   BillingPlanResponse,
@@ -31,6 +35,8 @@ import type {
   CreateSavedSearchRequest,
   DeleteAccountRequest,
   DevLoginRequest,
+  EmailUnsubscribeRequest,
+  EmailUnsubscribeResponse,
   ForbiddenResponse,
   GetSearchSuggestionsParams,
   HealthStatus,
@@ -42,6 +48,7 @@ import type {
   MarkNotificationsReadRequest,
   NotFoundResponse,
   NotificationPage,
+  NotificationPreferences,
   OpportunitySearchResponse,
   OpportunitySummary,
   PutSavedTenderRequest,
@@ -59,9 +66,11 @@ import type {
   StartGoogleAuthParams,
   SubscriptionRequiredResponse,
   SuggestionsResponse,
+  TenderAskStatus,
   TenderDetail,
   UnauthenticatedResponse,
   UnreadNotificationCount,
+  UpdateNotificationPreferencesRequest,
   UpdateSavedSearchRequest
 } from './api.schemas';
 
@@ -337,6 +346,176 @@ export function useGetTenderById<TData = Awaited<ReturnType<typeof getTenderById
 
 
 
+
+export const getGetTenderAskStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/ask-status`
+}
+
+/**
+ * @summary Get or start the document index used for tender questions
+ */
+export const getTenderAskStatus = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TenderAskStatus> => {
+
+  return customFetch<TenderAskStatus>(getGetTenderAskStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderAskStatusQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/ask-status`
+    ] as const;
+    }
+
+
+export const getGetTenderAskStatusQueryOptions = <TData = Awaited<ReturnType<typeof getTenderAskStatus>>, TError = ErrorType<UnauthenticatedResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderAskStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderAskStatus>>> = ({ signal }) => getTenderAskStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderAskStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderAskStatus>>>
+export type GetTenderAskStatusQueryError = ErrorType<UnauthenticatedResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get or start the document index used for tender questions
+ */
+
+export function useGetTenderAskStatus<TData = Awaited<ReturnType<typeof getTenderAskStatus>>, TError = ErrorType<UnauthenticatedResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderAskStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAskTenderUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/ask`
+}
+
+/**
+ * @summary Find official passages that answer a question about a tender
+ */
+export const askTender = async (id: string,
+    askTenderRequest: AskTenderRequest, options?: Parameters<typeof customFetch>[1]): Promise<AskTenderResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AskTenderResult>(getAskTenderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(askTenderRequest)
+  }
+);}
+
+
+
+
+
+export const getAskTenderMutationKey = () => ['askTender'] as const;
+
+export const getAskTenderMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext> => {
+
+const mutationKey = getAskTenderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askTender>>, AskTenderMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  askTender(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskTenderMutationResult = NonNullable<Awaited<ReturnType<typeof askTender>>>
+    export type AskTenderMutationBody = BodyType<AskTenderRequest>
+    export type AskTenderMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>
+    export type AskTenderMutationVariables = {id: string;data: BodyType<AskTenderRequest>}
+
+    /**
+ * @summary Find official passages that answer a question about a tender
+ */
+export const useAskTender = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askTender>>,
+        TError,
+        AskTenderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAskTenderMutationOptions(options));
+    }
 
 export const getGetSearchSuggestionsUrl = (params: GetSearchSuggestionsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -750,9 +929,9 @@ export const devLogin = async (devLoginRequest: DevLoginRequest, options?: Param
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -842,9 +1021,9 @@ export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -1702,9 +1881,9 @@ export const importSavedTenders = async (importSavedTendersRequest: ImportSavedT
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -1789,9 +1968,9 @@ export const putSavedTender = async (tenderId: string,
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2014,9 +2193,9 @@ export const createSavedSearch = async (createSavedSearchRequest: CreateSavedSea
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2101,9 +2280,9 @@ export const updateSavedSearch = async (id: string,
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2462,6 +2641,267 @@ export function useListNotifications<TData = Awaited<ReturnType<typeof listNotif
 
 
 
+export const getGetNotificationPreferencesUrl = () => {
+
+
+
+
+  return `/api/v1/me/notification-preferences`
+}
+
+/**
+ * @summary Read email notification preferences outside the subscription gate
+ */
+export const getNotificationPreferences = async ( options?: Parameters<typeof customFetch>[1]): Promise<NotificationPreferences> => {
+
+  return customFetch<NotificationPreferences>(getGetNotificationPreferencesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNotificationPreferencesQueryKey = () => {
+    return [
+    `/api/v1/me/notification-preferences`
+    ] as const;
+    }
+
+
+export const getGetNotificationPreferencesQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationPreferences>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNotificationPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNotificationPreferencesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotificationPreferences>>> = ({ signal }) => getNotificationPreferences({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNotificationPreferences>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNotificationPreferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getNotificationPreferences>>>
+export type GetNotificationPreferencesQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Read email notification preferences outside the subscription gate
+ */
+
+export function useGetNotificationPreferences<TData = Awaited<ReturnType<typeof getNotificationPreferences>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNotificationPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNotificationPreferencesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateNotificationPreferencesUrl = () => {
+
+
+
+
+  return `/api/v1/me/notification-preferences`
+}
+
+/**
+ * @summary Partially update email notification preferences
+ */
+export const updateNotificationPreferences = async (updateNotificationPreferencesRequest: UpdateNotificationPreferencesRequest, options?: Parameters<typeof customFetch>[1]): Promise<NotificationPreferences> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<NotificationPreferences>(getUpdateNotificationPreferencesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateNotificationPreferencesRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateNotificationPreferencesMutationKey = () => ['updateNotificationPreferences'] as const;
+
+export const getUpdateNotificationPreferencesMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,UpdateNotificationPreferencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,UpdateNotificationPreferencesMutationVariables, TContext> => {
+
+const mutationKey = getUpdateNotificationPreferencesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateNotificationPreferences>>, UpdateNotificationPreferencesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateNotificationPreferences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateNotificationPreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updateNotificationPreferences>>>
+    export type UpdateNotificationPreferencesMutationBody = BodyType<UpdateNotificationPreferencesRequest>
+    export type UpdateNotificationPreferencesMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type UpdateNotificationPreferencesMutationVariables = {data: BodyType<UpdateNotificationPreferencesRequest>}
+
+    /**
+ * @summary Partially update email notification preferences
+ */
+export const useUpdateNotificationPreferences = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,UpdateNotificationPreferencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateNotificationPreferences>>,
+        TError,
+        UpdateNotificationPreferencesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateNotificationPreferencesMutationOptions(options));
+    }
+
+export const getUnsubscribeEmailUrl = () => {
+
+
+
+
+  return `/api/v1/email/unsubscribe`
+}
+
+/**
+ * @summary Disable email notifications using an opaque signed token
+ */
+export const unsubscribeEmail = async (emailUnsubscribeRequest: EmailUnsubscribeRequest, options?: Parameters<typeof customFetch>[1]): Promise<EmailUnsubscribeResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EmailUnsubscribeResponse>(getUnsubscribeEmailUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(emailUnsubscribeRequest)
+  }
+);}
+
+
+
+
+
+export const getUnsubscribeEmailMutationKey = () => ['unsubscribeEmail'] as const;
+
+export const getUnsubscribeEmailMutationOptions = <TError = ErrorType<InvalidParameterResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribeEmail>>, TError,UnsubscribeEmailMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unsubscribeEmail>>, TError,UnsubscribeEmailMutationVariables, TContext> => {
+
+const mutationKey = getUnsubscribeEmailMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unsubscribeEmail>>, UnsubscribeEmailMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  unsubscribeEmail(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnsubscribeEmailMutationResult = NonNullable<Awaited<ReturnType<typeof unsubscribeEmail>>>
+    export type UnsubscribeEmailMutationBody = BodyType<EmailUnsubscribeRequest>
+    export type UnsubscribeEmailMutationError = ErrorType<InvalidParameterResponse>
+    export type UnsubscribeEmailMutationVariables = {data: BodyType<EmailUnsubscribeRequest>}
+
+    /**
+ * @summary Disable email notifications using an opaque signed token
+ */
+export const useUnsubscribeEmail = <TError = ErrorType<InvalidParameterResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribeEmail>>, TError,UnsubscribeEmailMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unsubscribeEmail>>,
+        TError,
+        UnsubscribeEmailMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnsubscribeEmailMutationOptions(options));
+    }
+
 export const getGetUnreadNotificationCountUrl = () => {
 
 
@@ -2546,9 +2986,9 @@ export const markNotificationsRead = async (markNotificationsReadRequest: MarkNo
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(

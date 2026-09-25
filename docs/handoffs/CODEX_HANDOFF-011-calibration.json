@@ -1,0 +1,847 @@
+{
+  "model": "jev-1.13.0",
+  "threshold": 0.5,
+  "generatedAt": "2026-09-25T12:12:23.426Z",
+  "rows": [
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Qual é o prazo para envio das propostas?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "1. Minuta de Edital - PG 43-2026.pdf",
+          "page": 7,
+          "relevance": 0.38,
+          "inputTokens": 576,
+          "excerpt": "de oferecer uma proposta final fechada dentro do prazo de 5 (cinco) minutos, que será sigilosa até o término desse período. 10.8.1. O intervalo de diferença entre os lances deverá ser de, no mínimo, R$ 0,10 (dez centavos), tanto em relação "
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 7,
+          "relevance": 0.06,
+          "inputTokens": 560,
+          "excerpt": "específicas de fornecimento, quantitativos, prazos e demais obrigações das partes. 12.3. É de responsabilidade da CONTRATADA manter seus dados cadastrais atualizados durante a vigência da Ata de Registro de Preços, inclusive o endereço elet"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 8,
+          "relevance": 0.05,
+          "inputTokens": 559,
+          "excerpt": "de preços ou índices setoriais; III. relatórios técnicos ou outros documentos que comprovem a ocorrência de caso fortuito ou força maior, quando aplicável; IV. planilha de custos detalhada, acompanhada da respectiva memória de cálculo. 16. "
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Existe garantia de proposta ou garantia contratual?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "1.1. Quadro Resumo da Licitação.pdf",
+          "page": 1,
+          "relevance": 0.93,
+          "inputTokens": 606,
+          "excerpt": "apenas para operacionalizar a execução do certame até o fim da fase recursal (se houver). OBJETO REGISTRO DE PREÇOS PARA AQUISIÇÃO DE PASTILHAS DETERGENTES DESTINADAS À HIGIENIZAÇÃO DE EQUIPAMENTOS DE COZINHA DOS RESTAURANTES DO SESC-DF. VA"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 12,
+          "relevance": 0.79,
+          "inputTokens": 561,
+          "excerpt": "à CONTRATADA, em decorrência de penalidade ou inadimplência contratual, sem que isso gere direito a reajustamento ou atualização monetária. 20.10. Havendo incorreções na nota fiscal ou na documentação apresentada, o documento será devolvido"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 13,
+          "relevance": 0.68,
+          "inputTokens": 575,
+          "excerpt": "ou qualquer outra movimentação dos produtos decorrente de vícios, defeitos ou desconformidades correrão exclusivamente por conta da CONTRATADA, sem qualquer ônus para o Sesc-AR/DF. 23. DA GARANTIA DA PROPOSTA 23.1. Não será exigida garantia"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Quais são as exigências de habilitação técnica?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 4,
+          "relevance": 0.83,
+          "inputTokens": 577,
+          "excerpt": "4.4. Para fins de aceitação, será exigida a comprovação de fornecimento de, no mínimo, 10% (dez por cento) da quantidade estimada do grupo licitado. 4.5. As comprovações dos quantitativos solicitados nos atestados de capacidade técnica pode"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 3,
+          "relevance": 0.17,
+          "inputTokens": 551,
+          "excerpt": "serão aceitos os produtos da marca Rational, nos modelos e códigos de referência especificados neste Termo de Referência. 2.8. Não serão aceitos produtos similares, equivalentes ou de outras marcas, ainda que apresentem características ou e"
+        },
+        {
+          "document": "1. Minuta de Edital - PG 43-2026.pdf",
+          "page": 12,
+          "relevance": 0.14,
+          "inputTokens": 553,
+          "excerpt": "do valor total estimado da contratação. b.2) As empresas criadas no exercício financeiro da licitação deverão atender a todas as exigências da habilitação e poderão substituir os demonstrativos contábeis pelo balanço de abertura. b.3) O ate"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "A visita técnica é obrigatória?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 4,
+          "relevance": 0.16,
+          "inputTokens": 573,
+          "excerpt": "ou da filial participante da licitação, conforme o caso. 4.7. As exigências previstas neste item têm por finalidade resguardar o Sesc-AR/DF quanto à capacidade técnica da futura contratada, reduzindo os riscos de inexecução contratual e ass"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 2,
+          "relevance": 0.05,
+          "inputTokens": 513,
+          "excerpt": "fornecimento de produtos usados, reembalados, adulterados ou fora das especificações do fabricante. 2.6. Em caso de divergência entre as informações constantes na proposta da licitante, catálogos, fichas técnicas ou demais documentos aprese"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 3,
+          "relevance": 0.05,
+          "inputTokens": 574,
+          "excerpt": "b) estejam em regime de consórcio; c) sejam entidades estrangeiras ou sociedade que não funcionem no país; d) estejam suspensas e/ou impedidas de licitar ou contratar com o Sesc-AR/DF; e) possuam débitos pendentes junto ao Sesc-AR/DF; e f) "
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Quais são as penalidades e o valor máximo da multa?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "1. Minuta de Edital - PG 43-2026.pdf",
+          "page": 19,
+          "relevance": 0.94,
+          "inputTokens": 566,
+          "excerpt": "Página 19 de 28 oficiais, índices setoriais); iii. Relatórios técnicos ou periciais que atestem a ocorrência de caso fortuito ou força maior; iv Planilha de custos detalhada com memória de cálculo; 22. DAS PENALIDADES 22.1. A licitante que "
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 15,
+          "relevance": 0.52,
+          "inputTokens": 567,
+          "excerpt": "24.3. As multas estabelecidas são independentes e poderão ser aplicadas de forma cumulativa e consecutiva, de acordo com as normas que regem a licitação, observado o limite máximo de 30% (trinta por cento) do val or to tal da contratação, t"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 13,
+          "relevance": 0.27,
+          "inputTokens": 531,
+          "excerpt": "a licitação ou a execução do contrato; II. fraudar a licitação ou praticar ato fraudulento na execução do contrato; III. comportar-se de modo inidôneo ou cometer fraude de qualquer natureza; IV. praticar atos ilícitos com vistas a frustrar "
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "É exigida amostra do produto ou serviço?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "1.1. Quadro Resumo da Licitação.pdf",
+          "page": 1,
+          "relevance": 0.96,
+          "inputTokens": 606,
+          "excerpt": "apenas para operacionalizar a execução do certame até o fim da fase recursal (se houver). OBJETO REGISTRO DE PREÇOS PARA AQUISIÇÃO DE PASTILHAS DETERGENTES DESTINADAS À HIGIENIZAÇÃO DE EQUIPAMENTOS DE COZINHA DOS RESTAURANTES DO SESC-DF. VA"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 4,
+          "relevance": 0.59,
+          "inputTokens": 572,
+          "excerpt": "4.4. Para fins de aceitação, será exigida a comprovação de fornecimento de, no mínimo, 10% (dez por cento) da quantidade estimada do grupo licitado. 4.5. As comprovações dos quantitativos solicitados nos atestados de capacidade técnica pode"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 6,
+          "relevance": 0.13,
+          "inputTokens": 441,
+          "excerpt": "exigidos na contratação original; sejam mantidas as demais cláusulas e condições do contrato; não haja prejuízo à execução do objeto pactuado e haja a anuência expressa da Administração à continuidade do contrato. 11. DA APRESENTAÇÃO DE AMO"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Há benefício ou tratamento favorecido para ME e EPP?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 3,
+          "relevance": 0.05,
+          "inputTokens": 549,
+          "excerpt": "serão aceitos os produtos da marca Rational, nos modelos e códigos de referência especificados neste Termo de Referência. 2.8. Não serão aceitos produtos similares, equivalentes ou de outras marcas, ainda que apresentem características ou e"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 3,
+          "relevance": 0.05,
+          "inputTokens": 570,
+          "excerpt": "presente licitação, a interessada deverá apresentar a seguinte documentação: 3.1.1. As exigências de habilitação jurídica e de regularidade fiscal e trabalhista são as usuais para a generalidade dos objetos, conforme a ser disciplinado no e"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 1,
+          "relevance": 0.04,
+          "inputTokens": 580,
+          "excerpt": "SERVIÇO SOCIAL DO COMÉRCIO ADMINISTRAÇÃO REGIONAL DO DISTRITO FEDERAL GERÊNCIA DE NUTRIÇÃO TERMO DE REFERÊNCIA 1. DO OBJETO 1.1. O presente Termo de Referência tem por objeto o Registro de Preços para aquisição de pastilhas detergentes dest"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "É permitida a participação de empresas em consórcio?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 6,
+          "relevance": 0.98,
+          "inputTokens": 552,
+          "excerpt": "de calcário e conservação dos componentes internos dos equipamentos. 8.7. A definição da marca está amparada na Resolução Sesc no 1.593/2024, mediante justificativa técnica, visando assegurar a compatibilidade com os equipamentos existentes"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 3,
+          "relevance": 0.94,
+          "inputTokens": 570,
+          "excerpt": "presente licitação, a interessada deverá apresentar a seguinte documentação: 3.1.1. As exigências de habilitação jurídica e de regularidade fiscal e trabalhista são as usuais para a generalidade dos objetos, conforme a ser disciplinado no e"
+        },
+        {
+          "document": "1. Minuta de Edital - PG 43-2026.pdf",
+          "page": 4,
+          "relevance": 0.37,
+          "inputTokens": 576,
+          "excerpt": "funcionem no país; c) estejam suspensas e/ou impedidas de licitar ou contratar com o Sesc AR/DF; d) possuam débitos pendentes junto ao Sesc AR/DF; e) tenham participação, seja a que título for, de dirigentes ou funcionários do Sesc AR/DF, d"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Qual é a regra de reajuste dos preços?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 7,
+          "relevance": 0.94,
+          "inputTokens": 598,
+          "excerpt": "Registro de Preços poderão ser emitidas Ordens de Compra, de acordo com a necessidade do Sesc-AR/DF, observados os quantitativos registrados e as condições estabelecidas neste Termo de Referência. 14. DO REAJUSTE 14.1. Os valores registrado"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 8,
+          "relevance": 0.68,
+          "inputTokens": 559,
+          "excerpt": "a execução da contratação; b) alterações legislativas ou regulamentares supervenientes que impliquem aumento de custos ou oneração das obrigações assumidas pelo fornecedor registrado; c) variações significativas e imprevisíveis dos preços d"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 8,
+          "relevance": 0.6,
+          "inputTokens": 570,
+          "excerpt": "15. DA FORMALIZAÇÃO DOS PEDIDOS DE REEQUILÍBRIO 15.1. O reequilíbrio econômico-financeiro da Ata de Registro de Preços ou das contratações dela decorrentes somente será concedido nas hipóteses previstas na Resolução Sesc no 1.593/2024, espe"
+        }
+      ]
+    },
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "question": "Qual é o local de entrega ou execução?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 9,
+          "relevance": 0.95,
+          "inputTokens": 565,
+          "excerpt": "decorrentes. 16.8. A Contratada será responsável por garantir a integridade dos produtos até sua entrega. 16.9. As entregas deverão ser realizadas, preferencialmente, no Almoxarifado Central do Sesc- AR/DF, localizado na QR 101, Conjunto 1,"
+        },
+        {
+          "document": "1.1. Quadro Resumo da Licitação.pdf",
+          "page": 1,
+          "relevance": 0.29,
+          "inputTokens": 543,
+          "excerpt": "atestado mediante declaração assinada por profissional habilitado da área contábil, apresentada pelo fornecedor. DA EXECUÇÃO Os produtos deverão ser novos, originais, de primeiro uso, não recondicionados, entregues em suas embalagens origin"
+        },
+        {
+          "document": "2. Termo de Referencia - PG 43-2026.pdf",
+          "page": 5,
+          "relevance": 0.26,
+          "inputTokens": 542,
+          "excerpt": "contratação conjunta assegura a compatibilidade entre os produtos e o adequado funcionamento dos ciclos de higienização dos equipamentos. 8.5.2. A aquisição individualizada poderia ocasionar o desabastecimento de um dos produtos, compromete"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Qual é o prazo para envio das propostas?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 21,
+          "relevance": 0.54,
+          "inputTokens": 581,
+          "excerpt": "7.10. A proposta econômica e os documentos exigidos neste Edital, bem como aqueles, porventura, vencidos no SICAF, deverão ser encaminhados pela licitante melhor classi fi cada, no prazo estabelecido pelo Pregoeiro no ato da convocação, no "
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 22,
+          "relevance": 0.45,
+          "inputTokens": 543,
+          "excerpt": "de 05 (cinco) dias úteis, contados a partir da declaração da licitante vencedora, para apresentar as razões relacionadas à intenção manifestada, fi cando as demais licitantes desde logo intimadas para, querendo, apresentarem contrarrazões e"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 10,
+          "relevance": 0.1,
+          "inputTokens": 563,
+          "excerpt": "ou informações adicionais), que possa identi fi car a LICITANTE, sob pena de desclassi fi cação. 6.9.1. É recomendável que as LICITANTES registrem suas propostas com antecedência, não deixando para cadastrá-las no dia do certame. O sigilo d"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Existe garantia de proposta ou garantia contratual?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 10,
+          "relevance": 0.2,
+          "inputTokens": 565,
+          "excerpt": "com as exigências deste Edital, sujeitando-se às sanções legais na hipótese de declaração falsa. 6.9.6. A validade da proposta será de, no mínimo, 90 (noventa) dias , contados a partir da data de apresentação da proposta após a negociação. "
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 10,
+          "relevance": 0.12,
+          "inputTokens": 554,
+          "excerpt": "6.8.2. A LICITANTE será responsável por todas as transações que forem efetuadas em seu nome no sistema eletrônico, declarando e assumindo como fi rmes e verdadeiras suas propostas e lances, inclusive os atos praticados diretamente ou por se"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 10,
+          "relevance": 0.09,
+          "inputTokens": 565,
+          "excerpt": "ou informações adicionais), que possa identi fi car a LICITANTE, sob pena de desclassi fi cação. 6.9.1. É recomendável que as LICITANTES registrem suas propostas com antecedência, não deixando para cadastrá-las no dia do certame. O sigilo d"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Quais são as exigências de habilitação técnica?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 16,
+          "relevance": 0.41,
+          "inputTokens": 579,
+          "excerpt": "habilitação dos interessados será veri fi cada em consonância com o Art. 58 da Lei n° 13.303/2016, para comprovação da possibilidade da aquisição de direitos e da contração de obrigações por parte do interessado, de sua quali fi cação técni"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 20,
+          "relevance": 0.34,
+          "inputTokens": 581,
+          "excerpt": "na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 3,
+          "relevance": 0.15,
+          "inputTokens": 655,
+          "excerpt": "UN 355 ** 7 Substituição do dispositivo (troca de veículo) - Veículo Administrativo UN 30 ** SUBTOTAL 1 ** Item Descrição UM * Qtde DESPESA ESTIMADA - MENSAL (R$) DESPESA ESTIMADA - TOTAL (R$) 8 Pedágio Operacional Mês 30 R$ 216.062,34 R$ 6"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "A visita técnica é obrigatória?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 8,
+          "relevance": 0.93,
+          "inputTokens": 573,
+          "excerpt": "observados os direitos do interessado ao contraditório e à ampla defesa. 4.8 As vedações acima aplicam-se às pessoas físicas quando participarem na condição de licitantes, no que couber. 5. VISTORIA TÉCNICA 5.1 Não se aplica. 6. REGULAMENTO"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 17,
+          "relevance": 0.06,
+          "inputTokens": 564,
+          "excerpt": "Serviço - FGTS; c) Certidão Negativa de Débitos Trabalhistas - CNDT. 7.4 A quali fi cação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica , fornecido(s) por pessoa jurídica de direito público ou privado, qu"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 34,
+          "relevance": 0.06,
+          "inputTokens": 539,
+          "excerpt": "b) a omissão de qualquer item acima previsto será analisada pelo Pregoeiro, que decidirá pela validação ou não do Atestado de Capacidade Técnica, desde que não comprometa a análise da quali fi cação técnica e o atestado se encontre pertinen"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Quais são as penalidades e o valor máximo da multa?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 23,
+          "relevance": 0.76,
+          "inputTokens": 592,
+          "excerpt": "O recurso será dirigido à autoridade superior, por intermédio da que praticou o ato recorrido, a qual poderá reconsiderar sua decisão, no prazo de 05 (cinco) dias úteis , ou, neste mesmo prazo, fazê-lo subir, devidamente informado, para dec"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 23,
+          "relevance": 0.76,
+          "inputTokens": 626,
+          "excerpt": "10% (dez por cento) do valor do lote arrematado, quando: a) não mantiver os preços ou as condições de habilitação; b) recusar-se, injusti fi cadamente, a assinar o contrato ou a ata de registro de preços ou a receber/retirar instrumento de "
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 15,
+          "relevance": 0.25,
+          "inputTokens": 555,
+          "excerpt": "50% (cinquenta por cento) do valor global máximo aceito. 6.19.2 Na hipótese do subitem anterior, se houver indícios de inexequibilidade, será efetuada diligência para a comprovação, pelo licitante, da exequibilidade da Proposta apresentada,"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "É exigida amostra do produto ou serviço?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 15,
+          "relevance": 0.12,
+          "inputTokens": 567,
+          "excerpt": "suprimentos e fabricantes; d) veri fi cação de notas fi scais dos produtos/serviços adquiridos pela proponente; e) análise de soluções técnicas escolhidas e/ou condições excepcionalmente favoráveis que a proponente disponha para forneciment"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 17,
+          "relevance": 0.09,
+          "inputTokens": 565,
+          "excerpt": "Serviço - FGTS; c) Certidão Negativa de Débitos Trabalhistas - CNDT. 7.4 A quali fi cação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica , fornecido(s) por pessoa jurídica de direito público ou privado, qu"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 3,
+          "relevance": 0.08,
+          "inputTokens": 650,
+          "excerpt": "UN 355 ** 7 Substituição do dispositivo (troca de veículo) - Veículo Administrativo UN 30 ** SUBTOTAL 1 ** Item Descrição UM * Qtde DESPESA ESTIMADA - MENSAL (R$) DESPESA ESTIMADA - TOTAL (R$) 8 Pedágio Operacional Mês 30 R$ 216.062,34 R$ 6"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Há benefício ou tratamento favorecido para ME e EPP?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 21,
+          "relevance": 0.87,
+          "inputTokens": 590,
+          "excerpt": "Empresa de Pequeno Porte – EPP / Cooperativa - COOP, havendo alguma restrição na regularidade fi scal e trabalhista, será assegurado prazo de 05 (cinco) dias úteis, prorrogáveis por igual período, a critério dos CORREIOS, para a regularizaç"
+        },
+        {
+          "document": "AVISOAOS LICITANTES.pdf",
+          "page": 1,
+          "relevance": 0.82,
+          "inputTokens": 577,
+          "excerpt": "caso, efetuem o processamento do tratamento diferenciado constante no Capítulo V da Lei Complementar no 123/2006. 3. Ao selecionar a opção ME , EPP ou COOP(*) , o licitante se apresenta para o sistema e para o pregoeiro como apto a usufruir"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 21,
+          "relevance": 0.77,
+          "inputTokens": 601,
+          "excerpt": "pelo licitante, mediante apresentação de justi fi cativa. 7.11.2. A licitante ME/EPP/COOP, bene fi ciada pelo regime diferenciado e favorecido da Lei Complementar no 123/2006, deverá apresentar toda a documentação exigida para habilitação, "
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "É permitida a participação de empresas em consórcio?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 5,
+          "relevance": 0.97,
+          "inputTokens": 589,
+          "excerpt": "Edital, não sendo alterada a data da Sessão do Pregão. 4. CONDIÇÕES DE PARTICIPAÇÃO E HIPÓTESES DE IMPEDIMENTO 4.1. A participação neste Pregão implica a aceitação, plena e irrevogável, das normas constantes do presente Edital e seus Anexos"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 5,
+          "relevance": 0.89,
+          "inputTokens": 588,
+          "excerpt": "seja compatível com o objeto licitado. 4.3. Não será permitida a participação de consórcios neste certame. 4.4. A subcontratação não será admitida. 4.5. A participação de cooperativa será admitida na presente licitação, desde que não haja r"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 7,
+          "relevance": 0.25,
+          "inputTokens": 548,
+          "excerpt": "no art. 156, inciso IV, da Lei no 14.133/2021. f) empresas que se encontrem sob falência decretada, recuperação judicial e extrajudicial, concurso de credores, dissolução ou liquidação; f.1) será permitido a participação de empresas em recu"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Qual é a regra de reajuste dos preços?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 23,
+          "relevance": 0.1,
+          "inputTokens": 588,
+          "excerpt": "O recurso será dirigido à autoridade superior, por intermédio da que praticou o ato recorrido, a qual poderá reconsiderar sua decisão, no prazo de 05 (cinco) dias úteis , ou, neste mesmo prazo, fazê-lo subir, devidamente informado, para dec"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 1,
+          "relevance": 0.04,
+          "inputTokens": 660,
+          "excerpt": "no 12.846/2013, Regulamento de Licitações e Contratações dos Correios e demais disposições aplicáveis, bem como pelas regras e condições estabelecidas neste Edital. Comissão Permanente de Licitação - CPL Endereço: Rua Boaventura, 401 - Sala"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 9,
+          "relevance": 0.03,
+          "inputTokens": 515,
+          "excerpt": "bloqueio de acesso. - PARTICIPAÇÃO - 6.8. A participação no Pregão Eletrônica se dará por meio da digitação da senha pessoal e intransferível da licitante e subsequente registro da proposta de preços, exclusivamente por meio do sistema elet"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "question": "Qual é o local de entrega ou execução?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 14,
+          "relevance": 0.55,
+          "inputTokens": 558,
+          "excerpt": "6.15.1. Persistindo a situação de empate, no que se refere o inciso I, deverá ser adotado o próximo critério de desempate, afastada a possibilidade de uma nova rodada de apresentação de propostas fechadas. 6.15.2. Para fi ns de classi fi ca"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 19,
+          "relevance": 0.21,
+          "inputTokens": 549,
+          "excerpt": "distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoa física; 7.5.3.1 Se a certidão apresentada contiver a observação de que o seu conteúdo declaratório (nada consta) não ab"
+        },
+        {
+          "document": "EDITAL_26000413-SPI.pdf",
+          "page": 19,
+          "relevance": 0.08,
+          "inputTokens": 566,
+          "excerpt": "Balanço Patrimonial por balancetes ou balanços provisórios. 7.5.2.4 As sociedades constituídas no exercício em curso ou com menos de 1 (um) ano deverão apresentar o balanço de abertura ou intermediário, conforme o caso. 7.5.2.5 As sociedade"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Qual é o prazo para envio das propostas?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 10,
+          "relevance": 0.2,
+          "inputTokens": 542,
+          "excerpt": "para apresentar novo lance no prazo máximo de até 5 (cinco) minutos, a contar da convocação automá ca pelo sistema, sob pena de preclusão do direito. Nesta fase somente a empresa convocada poderá oferecer novo lance, obrigatoriamente abaixo"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 8,
+          "relevance": 0.09,
+          "inputTokens": 565,
+          "excerpt": "fi car a LICITANTE, sob pena de desclassi fi cação. 5.9.1. É recomendável que as LICITANTES registrem suas propostas com antecedência, não deixando para cadastrá-las no dia do certame. O sigilo das propostas é garan do pelo administrador do"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 13,
+          "relevance": 0.08,
+          "inputTokens": 569,
+          "excerpt": "por até 2 (dois) anos. 5.21. A LICITANTE classi fi cada em primeiro lugar deverá apresentar a proposta econômica escrita com os valores unitários dos itens e total do(s) lote(s), conforme modelos disponíveis neste Edital, nos prazos e forma"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Existe garantia de proposta ou garantia contratual?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 8,
+          "relevance": 0.32,
+          "inputTokens": 554,
+          "excerpt": "de preferência estabelecido na Lei Complementar 123/2006, deverão informar no sistema o po de segmento de empresa que representam. A falta desta informação implicará a perda desse direito. 5.9.4. O registro da proposta pressupõe o pleno con"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 23,
+          "relevance": 0.15,
+          "inputTokens": 581,
+          "excerpt": "Competente, desde que per nentes com o objeto do Pregão, e observadas a legislação em vigor. 10.7. Na contagem dos prazos estabelecidos neste Edital e seus Anexos, excluir-se-á o dia do início e incluir-se-á o do vencimento; Os prazos somen"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 4,
+          "relevance": 0.15,
+          "inputTokens": 557,
+          "excerpt": "realização dos serviços correlatos que forem contratados entre a origem e o des no, inclusive os de consolidação e desconsolidação documental de cargas. 4.4.3. Na subcontratação a Contratada responderá perante a Contratante pela execução to"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Quais são as exigências de habilitação técnica?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 17,
+          "relevance": 0.62,
+          "inputTokens": 591,
+          "excerpt": "na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impedi vo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes "
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 14,
+          "relevance": 0.56,
+          "inputTokens": 572,
+          "excerpt": "6. HABILITAÇÃO 6.1 A habilitação dos interessados será veri fi cada em consonância com o Art. 58 da Lei n° 13.303/2016, para comprovação da possibilidade da aquisição de direitos e da contração de obrigações por parte do interessado, de sua"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 28,
+          "relevance": 0.42,
+          "inputTokens": 561,
+          "excerpt": "na legislação vigente. • que até a presente data, inexiste(m) fato(s) impedi vo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; • que atende plenamente os requisitos de habilitação constante"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "A visita técnica é obrigatória?",
+      "candidateCount": 9,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 14,
+          "relevance": 0.06,
+          "inputTokens": 568,
+          "excerpt": "per nente ao objeto licitado; 6.3 A prova de regularidade fi scal e trabalhista será realizada mediante a apresentação dos seguintes documentos: a) Cer dão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 27,
+          "relevance": 0.06,
+          "inputTokens": 559,
+          "excerpt": "responsabilidade com as obrigações assumidas. ............................, .......de ....................de 20.... IDENTIFICAÇÃO (nome, cargo/função) E ASSINATURA DA DECLARANTE CONDIÇÃO DE ACEITABILIDADE: a) os atestados podem ser emi dos "
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 14,
+          "relevance": 0.05,
+          "inputTokens": 566,
+          "excerpt": "6. HABILITAÇÃO 6.1 A habilitação dos interessados será veri fi cada em consonância com o Art. 58 da Lei n° 13.303/2016, para comprovação da possibilidade da aquisição de direitos e da contração de obrigações por parte do interessado, de sua"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Quais são as penalidades e o valor máximo da multa?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 20,
+          "relevance": 0.67,
+          "inputTokens": 607,
+          "excerpt": "8.1. A LICITANTE fi cará sujeita às penalidades de multa e de suspensão temporária de par cipação em licitação e impedimento de contratar com os Correios, quando incorrer nas hipóteses de irregularidades previstas no subitens 8.1.1 e 8.1.2,"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 13,
+          "relevance": 0.29,
+          "inputTokens": 580,
+          "excerpt": "valor máximo aceito para cada item e não resultem em majoração do valor global do lote. 5.20.1.2. Serão desclassi fi cadas as propostas que, após eventuais ajustes, apresentarem valor global do lote ou total de qualquer item superior ao val"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 20,
+          "relevance": 0.13,
+          "inputTokens": 588,
+          "excerpt": "5o, da Lei 12.846/2013 (“lei an corrupção”) como ato lesivo à Administração Pública. 8.2. A penalidade de suspensão temporária de par cipação em licitação e impedimento de contratar com os CORREIOS poderá ser aplicada juntamente com a de mu"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "É exigida amostra do produto ou serviço?",
+      "candidateCount": 6,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 13,
+          "relevance": 0.12,
+          "inputTokens": 569,
+          "excerpt": "suprimentos e fabricantes; d) veri fi cação de notas fi scais dos produtos/serviços adquiridos pela proponente; e) análise de soluções técnicas escolhidas e/ou condições excepcionalmente favoráveis que a proponente disponha para forneciment"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 14,
+          "relevance": 0.09,
+          "inputTokens": 569,
+          "excerpt": "per nente ao objeto licitado; 6.3 A prova de regularidade fi scal e trabalhista será realizada mediante a apresentação dos seguintes documentos: a) Cer dão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 2,
+          "relevance": 0.06,
+          "inputTokens": 612,
+          "excerpt": "APÊNDICE 01 - MODELOS DE ATESTADOS, DECLARAÇÕES E PROPOSTA. I) Proposta Econômica I-A) Planilha de Custos II) Atestado de Capacidade Técnica III) Modelo de Declaração ANEXO 01 - MINUTA DE CONTRATO APÊNDICE 01 DO CONTRATO – MATRIZ DE RISCO A"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Há benefício ou tratamento favorecido para ME e EPP?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 10,
+          "relevance": 0.96,
+          "inputTokens": 581,
+          "excerpt": "10 (dez) minutos, a sessão pública do Pregão será suspensa e reiniciada 24 (vinte e quatro) horas após comunicação às LICITANTES par cipantes, no endereço eletrônico u lizado para divulgação. - JULGAMENTO - 5.13. Para o julgamento das propo"
+        },
+        {
+          "document": "AVISO_AOS_LICITANTES.pdf",
+          "page": 1,
+          "relevance": 0.85,
+          "inputTokens": 581,
+          "excerpt": "for o caso, efetuem o processamento do tratamento diferenciado constante no Capítulo V da Lei Complementar no 123/2006. 3. Ao selecionar a opção ME , EPP ou COOP(*) , o licitante se apresenta para o sistema e para o pregoeiro como apto a us"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 8,
+          "relevance": 0.78,
+          "inputTokens": 570,
+          "excerpt": "fi car a LICITANTE, sob pena de desclassi fi cação. 5.9.1. É recomendável que as LICITANTES registrem suas propostas com antecedência, não deixando para cadastrá-las no dia do certame. O sigilo das propostas é garan do pelo administrador do"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "É permitida a participação de empresas em consórcio?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 4,
+          "relevance": 0.97,
+          "inputTokens": 591,
+          "excerpt": "4. CONDIÇÕES DE PARTICIPAÇÃO E HIPÓTESES DE IMPEDIMENTO 4.1. A par cipação neste Pregão implica a aceitação, plena e irrevogável, das normas constantes do presente Edital e seus Anexos/Apêndices, do Regulamento de Licitações e Contratações "
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 6,
+          "relevance": 0.07,
+          "inputTokens": 549,
+          "excerpt": "f.1) será permi do a par cipação de empresas em recuperação judicial, com plano de recuperação acolhido judicialmente, e empresas em recuperação extrajudicial, com plano de recuperação homologado judicialmente; g) sociedades integrantes de "
+        },
+        {
+          "document": "AVISO_AOS_LICITANTES.pdf",
+          "page": 1,
+          "relevance": 0.05,
+          "inputTokens": 586,
+          "excerpt": "usufruto do citado bene cio (parágrafo 4°) e da correspondente regra de desenquadramento ( parágrafo 6° ). 6. Caso esteja inserido em uma das situações de desenquadramento previstas nos parágrafos 6°, 9° e 9°-A, o fornecedor não poderá par "
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Qual é a regra de reajuste dos preços?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 2,
+          "relevance": 0.05,
+          "inputTokens": 584,
+          "excerpt": "Tipo de Carga Es ma va de QTDE (KG) PREÇOS (R$) UNITÁRIO TOTAL 1 00340024 Transporte Mul modal de Cargas Regional dos Correios SE/AM pelos modais rodoviário e hidroviário carga de alta densidade 2.440.920 * * VALOR TOTAL * * * O valor es ma"
+        },
+        {
+          "document": "AVISO_AOS_LICITANTES.pdf",
+          "page": 1,
+          "relevance": 0.04,
+          "inputTokens": 583,
+          "excerpt": "Assessoria Jurídica dos Correios nos termos da legislação vigente, sendo regido pela Lei no 13.303/2016 e demais disposições aplicáveis conforme apresentado no caput do Edital. Nesse sen do, não cabendo relação com os ditames da Lei 8.666/9"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 24,
+          "relevance": 0.03,
+          "inputTokens": 591,
+          "excerpt": "4. Prazo de Pagamento: conforme Edital. 5. A Unidade da Federação na qual será emi do o documento fi scal é................... 6. Apresentamos nossa proposta para PRESTAÇÃO DE SERVIÇO, na forma de Pregão Eletrônico, referente ao objeto do P"
+        }
+      ]
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "question": "Qual é o local de entrega ou execução?",
+      "candidateCount": 10,
+      "top": [
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 11,
+          "relevance": 0.63,
+          "inputTokens": 490,
+          "excerpt": "formal do dia, hora e local, feita com antecedência mínima de 3 (três) dias úteis, no próprio ambiente eletrônico da licitação, no chat de mensagens do lote. 5.15.3.1. Decorridos 30 (trinta) minutos da hora marcada, sem que compareçam os in"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 2,
+          "relevance": 0.43,
+          "inputTokens": 583,
+          "excerpt": "Tipo de Carga Es ma va de QTDE (KG) PREÇOS (R$) UNITÁRIO TOTAL 1 00340024 Transporte Mul modal de Cargas Regional dos Correios SE/AM pelos modais rodoviário e hidroviário carga de alta densidade 2.440.920 * * VALOR TOTAL * * * O valor es ma"
+        },
+        {
+          "document": "EDITAL_PGE_26000415_AM.pdf",
+          "page": 11,
+          "relevance": 0.26,
+          "inputTokens": 553,
+          "excerpt": "- desenvolvimento, realizado pela licitante, de programa de integridade, conforme orientações dos órgãos de controle; V - sorteio. 5.15.1. Persis ndo a situação de empate, no que se refere o inciso I, deverá ser adotado o próximo critério d"
+        }
+      ]
+    }
+  ]
+}

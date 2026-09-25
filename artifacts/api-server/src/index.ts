@@ -1,5 +1,7 @@
 import app from "./app";
+import { startAiRetentionScheduler } from "./ai/ask-tender-service";
 import { startTrialNotificationScheduler } from "./account/trial-notification-scheduler";
+import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
@@ -43,6 +45,8 @@ const start = async (): Promise<void> => {
 
     logger.info({ port }, "Server listening");
     startTrialNotificationScheduler();
+    startEmailNotificationJobs();
+    startAiRetentionScheduler();
     startDailyPncpCollect();
     startDailyCultureCollect();
   });

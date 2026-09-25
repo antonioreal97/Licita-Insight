@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -9,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { tendersTable } from "./tenders";
 
@@ -29,6 +31,16 @@ export const usersTable = pgTable(
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true })
       .notNull()
       .default(sql`now() + interval '7 days'`),
+    emailDigest: text("email_digest").notNull().default("daily"),
+    emailImmediateCritical: boolean("email_immediate_critical")
+      .notNull()
+      .default(true),
+    emailPreferencesUpdatedAt: timestamp("email_preferences_updated_at", {
+      withTimezone: true,
+    }),
+    emailUnsubscribeId: uuid("email_unsubscribe_id")
+      .notNull()
+      .defaultRandom(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -41,6 +53,8 @@ export const usersTable = pgTable(
       .on(table.googleSub)
       .where(sql`${table.googleSub} is not null`),
     uniqueIndex("users_email_uidx").on(table.email),
+    uniqueIndex("users_email_unsubscribe_uidx").on(table.emailUnsubscribeId),
+    check("users_email_digest_check", sql`${table.emailDigest} in ('daily', 'off')`),
   ],
 );
 
@@ -148,6 +162,10 @@ export const notificationsTable = pgTable(
     tenderId: text("tender_id"),
     tenderTitle: text("tender_title"),
     tenderNumberShort: text("tender_number_short"),
+    tenderOrganizationName: text("tender_organization_name"),
+    tenderProposalDeadline: timestamp("tender_proposal_deadline", {
+      withTimezone: true,
+    }),
     change: jsonb("change").$type<NotificationChangeRecord>(),
     savedSearchId: text("saved_search_id"),
     savedSearchName: text("saved_search_name"),
@@ -170,6 +188,75 @@ export const notificationsTable = pgTable(
     index("notifications_user_unread_idx")
       .on(table.userId, table.createdAt)
       .where(sql`${table.readAt} is null`),
+  ],
+);
+
+export const emailDeliveriesTable = pgTable(
+  "email_deliveries",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull().default("email"),
+    mode: text("mode").notNull(),
+    dedupeKey: text("dedupe_key").notNull(),
+    recipientEmail: text("recipient_email").notNull(),
+    subject: text("subject").notNull(),
+    htmlBody: text("html_body").notNull(),
+    textBody: text("text_body").notNull(),
+    messageHeaders: jsonb("message_headers")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    status: text("status").notNull().default("queued"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    providerMessageId: text("provider_message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("email_deliveries_dedupe_uidx").on(table.dedupeKey),
+    index("email_deliveries_retry_idx").on(table.status, table.nextAttemptAt),
+    index("email_deliveries_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    check("email_deliveries_channel_check", sql`${table.channel} = 'email'`),
+    check(
+      "email_deliveries_mode_check",
+      sql`${table.mode} in ('digest', 'immediate')`,
+    ),
+    check(
+      "email_deliveries_status_check",
+      sql`${table.status} in ('queued', 'sent', 'failed', 'skipped')`,
+    ),
+    check("email_deliveries_attempts_check", sql`${table.attempts} >= 0`),
+  ],
+);
+
+export const emailDeliveryNotificationsTable = pgTable(
+  "email_delivery_notifications",
+  {
+    deliveryId: text("delivery_id")
+      .notNull()
+      .references(() => emailDeliveriesTable.id, { onDelete: "cascade" }),
+    notificationId: text("notification_id")
+      .notNull()
+      .references(() => notificationsTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.deliveryId, table.notificationId] }),
+    uniqueIndex("email_delivery_notifications_notification_uidx").on(
+      table.notificationId,
+    ),
   ],
 );
 

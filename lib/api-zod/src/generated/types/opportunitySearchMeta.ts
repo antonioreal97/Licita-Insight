@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import type { OpportunityGap } from './opportunityGap';
 import type { OpportunityInstallationIssue } from './opportunityInstallationIssue';

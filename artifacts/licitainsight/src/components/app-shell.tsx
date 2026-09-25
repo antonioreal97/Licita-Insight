@@ -262,7 +262,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 {collapsed ? <PanelLeftOpen size={19} strokeWidth={1.75} /> : <PanelLeftClose size={19} strokeWidth={1.75} />}
               </button>
-              <div className="hidden type-eyebrow text-muted-foreground sm:block">Fonte: PNCP</div>
+              <div data-testid="text-header-source" className="hidden type-eyebrow text-muted-foreground sm:block">
+                {location.startsWith('/oportunidades') ? 'Fonte: Mapas Culturais' : 'Fonte: PNCP'}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button

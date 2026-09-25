@@ -19,6 +19,9 @@ export const queryKeys = {
   me: {
     all: ['me'] as const,
     billing: ['me', 'billing'] as const,
+    notificationPreferences: ['me', 'notification-preferences'] as const,
+    /** Index state and quota of "Perguntar ao edital" for one tender (the quota is per user). */
+    askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
     savedTenders: {
       all: ['me', 'saved-tenders'] as const,
       ids: ['me', 'saved-tenders', 'ids'] as const,

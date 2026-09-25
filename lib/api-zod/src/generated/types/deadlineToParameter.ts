@@ -3,7 +3,10 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 export type DeadlineToParameter = Date;

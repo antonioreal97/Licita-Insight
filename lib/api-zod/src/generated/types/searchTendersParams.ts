@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import type { CategoryFilterParameter } from './categoryFilterParameter';
 import type { CityFilterParameter } from './cityFilterParameter';
@@ -60,9 +60,21 @@ valueMin?: ValueMinParameter;
  * @minimum 0
  */
 valueMax?: ValueMaxParameter;
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 publishedFrom?: PublishedFromParameter;
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 publishedTo?: PublishedToParameter;
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 deadlineFrom?: DeadlineFromParameter;
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 deadlineTo?: DeadlineToParameter;
 sort?: SortParameter;
 /**

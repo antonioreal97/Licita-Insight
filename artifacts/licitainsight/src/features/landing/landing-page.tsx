@@ -68,7 +68,7 @@ function LandingHeroStart() {
 const planIncludes = [
   'Busca de editais do PNCP com filtros',
   'Salvar e monitorar editais',
-  'Buscas salvas com alertas no app',
+  'Buscas salvas com alertas no app e por e-mail',
   'Oportunidades de fomento cultural',
 ];
 

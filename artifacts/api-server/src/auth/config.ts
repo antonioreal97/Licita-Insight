@@ -29,6 +29,15 @@ export const sessionSecret = (): string => {
   return secret;
 };
 
+export const emailUnsubscribeSecret = (): string => {
+  const secret = process.env.EMAIL_UNSUBSCRIBE_SECRET?.trim();
+  if (!secret) return sessionSecret();
+  if (secret.length < 32) {
+    throw new Error("EMAIL_UNSUBSCRIBE_SECRET must contain at least 32 characters");
+  }
+  return secret;
+};
+
 export const isProduction = (): boolean => process.env.NODE_ENV === "production";
 export const devLoginEnabled = (): boolean =>
   !isProduction() && process.env.AUTH_DEV_LOGIN === "true";

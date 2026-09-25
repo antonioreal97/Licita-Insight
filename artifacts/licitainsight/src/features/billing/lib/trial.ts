@@ -1,5 +1,5 @@
 import type { BillingResponse } from '@/api';
-import { parseApiDate } from '@/lib/format';
+import { formatDate, formatTime, parseApiDate } from '@/lib/format';
 
 /** The shell warns (amber badge, top banner) from this many days left. */
 export const TRIAL_WARNING_DAYS = 3;
@@ -18,6 +18,14 @@ export function trialDaysLeft(trialEndsAt: string | null | undefined, now: Date 
   if (!end) return null;
   const days = (Date.parse(saoPauloDate(end)) - Date.parse(saoPauloDate(now))) / 86_400_000;
   return Math.max(0, Math.round(days));
+}
+
+/** "hoje às 17:06" when the trial ends (or ended) today in São Paulo; otherwise "em 24 de set de 2026". */
+export function trialEndPhrase(endsAt: string, now: Date = new Date()): string {
+  const end = parseApiDate(endsAt);
+  const time = formatTime(endsAt);
+  if (end && time && saoPauloDate(end) === saoPauloDate(now)) return `hoje às ${time}`;
+  return `em ${formatDate(endsAt)}`;
 }
 
 /** "hoje", "1 dia", "5 dias". */

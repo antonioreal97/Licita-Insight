@@ -1,6 +1,10 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
+  aiAskRequestsTable,
+  aiDailyUsageTable,
   db,
+  emailDeliveriesTable,
+  emailDeliveryNotificationsTable,
   googleTrialTombstonesTable,
   notificationsTable,
   savedSearchesTable,
@@ -16,7 +20,7 @@ import { NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries, aiQuestions] =
     await Promise.all([
       db
         .select({
@@ -25,6 +29,9 @@ export async function exportAccountData(userId: string, now = new Date()) {
           name: usersTable.name,
           avatarUrl: usersTable.avatarUrl,
           trialEndsAt: usersTable.trialEndsAt,
+          emailDigest: usersTable.emailDigest,
+          emailImmediateCritical: usersTable.emailImmediateCritical,
+          emailPreferencesUpdatedAt: usersTable.emailPreferencesUpdatedAt,
           createdAt: usersTable.createdAt,
           updatedAt: usersTable.updatedAt,
         })
@@ -77,6 +84,8 @@ export async function exportAccountData(userId: string, now = new Date()) {
           tenderId: notificationsTable.tenderId,
           tenderTitle: notificationsTable.tenderTitle,
           tenderNumberShort: notificationsTable.tenderNumberShort,
+          tenderOrganizationName: notificationsTable.tenderOrganizationName,
+          tenderProposalDeadline: notificationsTable.tenderProposalDeadline,
           change: notificationsTable.change,
           savedSearchId: notificationsTable.savedSearchId,
           savedSearchName: notificationsTable.savedSearchName,
@@ -95,6 +104,35 @@ export async function exportAccountData(userId: string, now = new Date()) {
         .from(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId))
         .limit(1),
+      db
+        .select({
+          id: emailDeliveriesTable.id,
+          mode: emailDeliveriesTable.mode,
+          status: emailDeliveriesTable.status,
+          recipientEmail: emailDeliveriesTable.recipientEmail,
+          subject: emailDeliveriesTable.subject,
+          attempts: emailDeliveriesTable.attempts,
+          lastError: emailDeliveriesTable.lastError,
+          providerMessageId: emailDeliveriesTable.providerMessageId,
+          createdAt: emailDeliveriesTable.createdAt,
+          updatedAt: emailDeliveriesTable.updatedAt,
+          sentAt: emailDeliveriesTable.sentAt,
+        })
+        .from(emailDeliveriesTable)
+        .where(eq(emailDeliveriesTable.userId, userId)),
+      db
+        .select({
+          id: aiAskRequestsTable.id,
+          tenderId: aiAskRequestsTable.tenderId,
+          question: aiAskRequestsTable.question,
+          status: aiAskRequestsTable.status,
+          model: aiAskRequestsTable.responseModel,
+          inputTokens: aiAskRequestsTable.inputTokens,
+          estimatedCostUsd: aiAskRequestsTable.estimatedCostUsd,
+          createdAt: aiAskRequestsTable.createdAt,
+        })
+        .from(aiAskRequestsTable)
+        .where(eq(aiAskRequestsTable.userId, userId)),
     ]);
 
   const user = users[0];
@@ -107,6 +145,8 @@ export async function exportAccountData(userId: string, now = new Date()) {
     savedTenders,
     savedSearches,
     notifications,
+    emailDeliveries,
+    aiQuestions,
     subscription: subscriptions[0] ?? null,
   };
 }
@@ -145,9 +185,32 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx
         .delete(savedSearchesTable)
         .where(eq(savedSearchesTable.userId, userId));
+      const deliveries = await tx
+        .select({ id: emailDeliveriesTable.id })
+        .from(emailDeliveriesTable)
+        .where(eq(emailDeliveriesTable.userId, userId));
+      if (deliveries.length > 0) {
+        await tx
+          .delete(emailDeliveryNotificationsTable)
+          .where(
+            inArray(
+              emailDeliveryNotificationsTable.deliveryId,
+              deliveries.map(({ id }) => id),
+            ),
+          );
+      }
+      await tx
+        .delete(emailDeliveriesTable)
+        .where(eq(emailDeliveriesTable.userId, userId));
       await tx
         .delete(notificationsTable)
         .where(eq(notificationsTable.userId, userId));
+      await tx
+        .delete(aiAskRequestsTable)
+        .where(eq(aiAskRequestsTable.userId, userId));
+      await tx
+        .delete(aiDailyUsageTable)
+        .where(eq(aiDailyUsageTable.userId, userId));
       await tx
         .delete(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId));

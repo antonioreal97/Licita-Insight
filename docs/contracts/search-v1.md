@@ -77,8 +77,8 @@ type SearchMode = 'keyword' | 'semantic' | 'hybrid';
 | `sourceId` | string[] | — | OR |
 | `category` | string[] | — | slugs de categoria |
 | `valueMin` / `valueMax` | number | — | sobre `estimatedValue`; registros com valor `null` são excluídos quando um dos dois é enviado |
-| `publishedFrom` / `publishedTo` | date | — | inclusivo |
-| `deadlineFrom` / `deadlineTo` | date | — | sobre `proposalDeadline`, inclusivo |
+| `publishedFrom` / `publishedTo` | date | — | sobre `publishedAt`, inclusivo, horário de Brasília |
+| `deadlineFrom` / `deadlineTo` | date | — | sobre `proposalDeadline`, inclusivo, horário de Brasília |
 | `sort` | SortOption | `relevance` | |
 | `page` | int ≥ 1 | 1 | |
 | `pageSize` | int 1–100 | 20 | |

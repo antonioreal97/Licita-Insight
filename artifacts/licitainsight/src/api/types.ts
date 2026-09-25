@@ -160,7 +160,10 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   | 'CONFLICT'
   | 'SUBSCRIPTION_REQUIRED'
-  | 'BILLING_UNAVAILABLE';
+  | 'BILLING_UNAVAILABLE'
+  // ai-v1
+  | 'AI_QUOTA_EXCEEDED'
+  | 'AI_UNAVAILABLE';
 
 export type ApiErrorBody = {
   error: {
@@ -265,6 +268,38 @@ export type NotificationsResponse = { data: Notification[]; pagination: Paginati
 export type UnreadCountResponse = { unreadCount: number };
 
 export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };
+
+/** E-mail alerts (CODEX_HANDOFF-009, proposal): daily digest at 07:00 (São Paulo) and immediate mail for critical changes. */
+export type EmailPreferences = { digest: 'daily' | 'off'; immediateCritical: boolean };
+
+/** `GET/PUT /api/v1/me/notification-preferences` — outside the subscription gate. */
+export type NotificationPreferences = { email: EmailPreferences; emailAddress: string; updatedAt: string | null };
+
+/** Partial PUT body: only the fields sent change. */
+export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences> };
+
+export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
+
+/** Public `POST /api/v1/email/unsubscribe { token, scope }` (no session). Invalid token → 400 INVALID_PARAMETER. */
+export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPreferences };
+
+// AI v1 ("Perguntar ao edital") — source of truth: docs/contracts/ai-v1.md. Jev selects official passages; nothing is generated.
+
+export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported';
+
+export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ready' | 'failed' | 'unsupported' };
+
+/** Per user and day in São Paulo; `resetsAt` is the next local midnight. */
+export type AiQuota = { used: number; limit: number; resetsAt: string };
+
+/** `GET /api/v1/tenders/:id/ask-status` (session). Signed-in users with access start the indexing by calling it. */
+export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; quota: AiQuota };
+
+/** `relevance` is Jev's probability (0–1) that the passage answers the question; only passages above the threshold come back. */
+export type AskTenderPassage = { documentId: string; documentTitle: string; documentUrl: string; page: number; text: string; relevance: number };
+
+/** `POST /api/v1/tenders/:id/ask { question }` (session + CSRF + access). */
+export type AskTenderResult = { status: 'answered' | 'not_found' | 'processing'; passages: AskTenderPassage[]; model: string; quota: AiQuota };
 
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 

@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import type { FacetsParameter } from './facetsParameter';
 import type { OpportunityProgram } from './opportunityProgram';
@@ -20,7 +20,13 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+/**
+ * Inclusive lower date in America/Sao_Paulo.
+ */
 deadlineFrom?: Date;
+/**
+ * Inclusive upper date in America/Sao_Paulo.
+ */
 deadlineTo?: Date;
 /**
  * @minimum 1

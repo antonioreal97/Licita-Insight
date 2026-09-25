@@ -30,7 +30,7 @@ export function AccountDataSection() {
   const exportData = useExportAccountData();
 
   return (
-    <section id="seus-dados" aria-labelledby="settings-data" className="rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="section-account-data">
+    <section id="seus-dados" aria-labelledby="settings-data" className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="section-account-data">
       <h2 id="settings-data" className="type-section">
         Seus dados
       </h2>

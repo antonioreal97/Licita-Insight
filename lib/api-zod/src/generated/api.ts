@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import * as zod from 'zod';
 
@@ -47,10 +47,10 @@ export const SearchTendersQueryParams = zod.object({
   "category": zod.array(zod.coerce.string().min(1)).optional(),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
-  "publishedFrom": zod.date().optional(),
-  "publishedTo": zod.date().optional(),
-  "deadlineFrom": zod.date().optional(),
-  "deadlineTo": zod.date().optional(),
+  "publishedFrom": zod.date().optional().describe('Inclusive lower publication date in America/Sao_Paulo.'),
+  "publishedTo": zod.date().optional().describe('Inclusive upper publication date in America/Sao_Paulo.'),
+  "deadlineFrom": zod.date().optional().describe('Inclusive lower proposal deadline date in America/Sao_Paulo.'),
+  "deadlineTo": zod.date().optional().describe('Inclusive upper proposal deadline date in America/Sao_Paulo.'),
   "sort": zod.enum(['relevance', 'deadline_asc', 'published_desc', 'value_desc', 'value_asc']).optional(),
   "page": zod.coerce.number().int().min(1).default(searchTendersQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(searchTendersQueryPageSizeMax).default(searchTendersQueryPageSizeDefault),
@@ -299,6 +299,87 @@ export const GetTenderByIdResponse = zod.object({
 
 
 /**
+ * @summary Get or start the document index used for tender questions
+ */
+
+
+
+export const GetTenderAskStatusParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+
+export const getTenderAskStatusResponseQuotaUsedMin = 0;
+
+
+
+
+export const GetTenderAskStatusResponse = zod.object({
+  "index": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported']),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "pages": zod.number().int().min(1).nullable(),
+  "status": zod.enum(['processing', 'ready', 'failed', 'unsupported'])
+})),
+  "quota": zod.object({
+  "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin),
+  "limit": zod.number().int().min(1),
+  "resetsAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Find official passages that answer a question about a tender
+ */
+
+
+
+export const AskTenderParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const askTenderBodyQuestionMin = 3;
+export const askTenderBodyQuestionMax = 300;
+
+
+
+export const AskTenderBody = zod.object({
+  "question": zod.string().min(askTenderBodyQuestionMin).max(askTenderBodyQuestionMax)
+})
+
+
+export const askTenderResponsePassagesItemRelevanceMin = 0;
+export const askTenderResponsePassagesItemRelevanceMax = 1;
+
+export const askTenderResponsePassagesMax = 3;
+
+export const askTenderResponseQuotaUsedMin = 0;
+
+
+
+
+export const AskTenderResponse = zod.object({
+  "status": zod.enum(['answered', 'not_found', 'processing']),
+  "passages": zod.array(zod.object({
+  "documentId": zod.string(),
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string(),
+  "relevance": zod.number().min(askTenderResponsePassagesItemRelevanceMin).max(askTenderResponsePassagesItemRelevanceMax)
+})).max(askTenderResponsePassagesMax),
+  "model": zod.string(),
+  "quota": zod.object({
+  "used": zod.number().int().min(askTenderResponseQuotaUsedMin),
+  "limit": zod.number().int().min(1),
+  "resetsAt": zod.coerce.date()
+})
+})
+
+
+/**
  * @summary Get search autocomplete suggestions
  */
 export const getSearchSuggestionsQueryQMin = 2;
@@ -389,6 +470,10 @@ export const DeleteAccountResponse = zod.void()
  */
 export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
 
+export const exportAccountDataResponseEmailDeliveriesItemAttemptsMin = 0;
+
+export const exportAccountDataResponseAiQuestionsItemInputTokensMin = 0;
+
 
 
 export const ExportAccountDataResponse = zod.object({
@@ -399,6 +484,9 @@ export const ExportAccountDataResponse = zod.object({
   "name": zod.string().nullable(),
   "avatarUrl": zod.string().url().nullable(),
   "trialEndsAt": zod.coerce.date(),
+  "emailDigest": zod.enum(['daily', 'off']),
+  "emailImmediateCritical": zod.boolean(),
+  "emailPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
@@ -432,12 +520,37 @@ export const ExportAccountDataResponse = zod.object({
   "tenderId": zod.string().nullable(),
   "tenderTitle": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullable(),
+  "tenderOrganizationName": zod.string().nullable(),
+  "tenderProposalDeadline": zod.coerce.date().nullable(),
   "change": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
   "savedSearchId": zod.string().nullable(),
   "savedSearchName": zod.string().nullable(),
   "savedSearchQuery": zod.string().nullable(),
   "matchCount": zod.number().int().nullable(),
   "tenderIds": zod.array(zod.string())
+})),
+  "emailDeliveries": zod.array(zod.object({
+  "id": zod.string(),
+  "mode": zod.enum(['digest', 'immediate']),
+  "status": zod.enum(['queued', 'sent', 'failed', 'skipped']),
+  "recipientEmail": zod.string().email(),
+  "subject": zod.string(),
+  "attempts": zod.number().int().min(exportAccountDataResponseEmailDeliveriesItemAttemptsMin),
+  "lastError": zod.string().nullable(),
+  "providerMessageId": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "sentAt": zod.coerce.date().nullable()
+})),
+  "aiQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "tenderId": zod.string(),
+  "question": zod.string(),
+  "status": zod.enum(['processing', 'answered', 'not_found', 'failed']),
+  "model": zod.string().nullable(),
+  "inputTokens": zod.number().int().min(exportAccountDataResponseAiQuestionsItemInputTokensMin),
+  "estimatedCostUsd": zod.string(),
+  "createdAt": zod.coerce.date()
 })),
   "subscription": zod.union([zod.object({
   "status": zod.string(),
@@ -518,8 +631,8 @@ export const SearchOpportunitiesQueryParams = zod.object({
   "installation": zod.array(zod.coerce.string()).optional(),
   "status": zod.array(zod.enum(['open', 'upcoming', 'closed', 'undated'])).optional(),
   "program": zod.array(zod.enum(['audiovisual', 'lpg', 'fac', 'fsa'])).optional(),
-  "deadlineFrom": zod.date().optional(),
-  "deadlineTo": zod.date().optional(),
+  "deadlineFrom": zod.date().optional().describe('Inclusive lower date in America/Sao_Paulo.'),
+  "deadlineTo": zod.date().optional().describe('Inclusive upper date in America/Sao_Paulo.'),
   "page": zod.coerce.number().int().min(1).default(searchOpportunitiesQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(searchOpportunitiesQueryPageSizeMax).default(searchOpportunitiesQueryPageSizeDefault),
   "facets": zod.coerce.boolean().default(searchOpportunitiesQueryFacetsDefault)
@@ -1000,6 +1113,60 @@ export const ListNotificationsResponse = zod.object({
   "totalIsEstimate": zod.boolean()
 }),
   "unreadCount": zod.number().int().min(listNotificationsResponseUnreadCountMin)
+})
+
+
+/**
+ * @summary Read email notification preferences outside the subscription gate
+ */
+export const GetNotificationPreferencesResponse = zod.object({
+  "email": zod.object({
+  "digest": zod.enum(['daily', 'off']),
+  "immediateCritical": zod.boolean()
+}),
+  "emailAddress": zod.string().email(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Partially update email notification preferences
+ */
+export const UpdateNotificationPreferencesBody = zod.object({
+  "email": zod.object({
+  "digest": zod.enum(['daily', 'off']).optional(),
+  "immediateCritical": zod.boolean().optional()
+})
+})
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  "email": zod.object({
+  "digest": zod.enum(['daily', 'off']),
+  "immediateCritical": zod.boolean()
+}),
+  "emailAddress": zod.string().email(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Disable email notifications using an opaque signed token
+ */
+export const unsubscribeEmailBodyTokenMax = 500;
+
+
+
+export const UnsubscribeEmailBody = zod.object({
+  "token": zod.string().min(1).max(unsubscribeEmailBodyTokenMax),
+  "scope": zod.enum(['all', 'digest', 'immediate'])
+})
+
+export const UnsubscribeEmailResponse = zod.object({
+  "scope": zod.enum(['all', 'digest', 'immediate']),
+  "email": zod.object({
+  "digest": zod.enum(['daily', 'off']),
+  "immediateCritical": zod.boolean()
+})
 })
 
 

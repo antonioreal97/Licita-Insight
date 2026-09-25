@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 export interface HealthStatus {
   status: string;
@@ -104,6 +104,58 @@ export interface DeleteAccountRequest {
   confirm: DeleteAccountRequestConfirm;
 }
 
+export type EmailDigestPreference = typeof EmailDigestPreference[keyof typeof EmailDigestPreference];
+
+
+export const EmailDigestPreference = {
+  daily: 'daily',
+  off: 'off',
+} as const;
+
+export interface EmailNotificationPreferences {
+  digest: EmailDigestPreference;
+  immediateCritical: boolean;
+}
+
+export interface NotificationPreferences {
+  email: EmailNotificationPreferences;
+  emailAddress: string;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface UpdateEmailNotificationPreferences {
+  digest?: EmailDigestPreference;
+  immediateCritical?: boolean;
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  email: UpdateEmailNotificationPreferences;
+}
+
+export type EmailUnsubscribeScope = typeof EmailUnsubscribeScope[keyof typeof EmailUnsubscribeScope];
+
+
+export const EmailUnsubscribeScope = {
+  all: 'all',
+  digest: 'digest',
+  immediate: 'immediate',
+} as const;
+
+export interface EmailUnsubscribeRequest {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  token: string;
+  scope: EmailUnsubscribeScope;
+}
+
+export interface EmailUnsubscribeResponse {
+  scope: EmailUnsubscribeScope;
+  email: EmailNotificationPreferences;
+}
+
 export interface AccountExportUser {
   id: string;
   email: string;
@@ -112,6 +164,10 @@ export interface AccountExportUser {
   /** @nullable */
   avatarUrl: string | null;
   trialEndsAt: string;
+  emailDigest: EmailDigestPreference;
+  emailImmediateCritical: boolean;
+  /** @nullable */
+  emailPreferencesUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,6 +215,10 @@ export interface AccountExportNotification {
   tenderTitle: string | null;
   /** @nullable */
   tenderNumberShort: string | null;
+  /** @nullable */
+  tenderOrganizationName: string | null;
+  /** @nullable */
+  tenderProposalDeadline: string | null;
   change: AccountExportNotificationChange;
   /** @nullable */
   savedSearchId: string | null;
@@ -171,11 +231,70 @@ export interface AccountExportNotification {
   tenderIds: string[];
 }
 
+export type AccountExportEmailDeliveryMode = typeof AccountExportEmailDeliveryMode[keyof typeof AccountExportEmailDeliveryMode];
+
+
+export const AccountExportEmailDeliveryMode = {
+  digest: 'digest',
+  immediate: 'immediate',
+} as const;
+
+export type AccountExportEmailDeliveryStatus = typeof AccountExportEmailDeliveryStatus[keyof typeof AccountExportEmailDeliveryStatus];
+
+
+export const AccountExportEmailDeliveryStatus = {
+  queued: 'queued',
+  sent: 'sent',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface AccountExportEmailDelivery {
+  id: string;
+  mode: AccountExportEmailDeliveryMode;
+  status: AccountExportEmailDeliveryStatus;
+  recipientEmail: string;
+  subject: string;
+  /** @minimum 0 */
+  attempts: number;
+  /** @nullable */
+  lastError: string | null;
+  /** @nullable */
+  providerMessageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  sentAt: string | null;
+}
+
 export interface AccountExportSubscription {
   status: string;
   /** @nullable */
   currentPeriodEnd: string | null;
   updatedAt: string;
+}
+
+export type AccountExportAiQuestionStatus = typeof AccountExportAiQuestionStatus[keyof typeof AccountExportAiQuestionStatus];
+
+
+export const AccountExportAiQuestionStatus = {
+  processing: 'processing',
+  answered: 'answered',
+  not_found: 'not_found',
+  failed: 'failed',
+} as const;
+
+export interface AccountExportAiQuestion {
+  id: string;
+  tenderId: string;
+  question: string;
+  status: AccountExportAiQuestionStatus;
+  /** @nullable */
+  model: string | null;
+  /** @minimum 0 */
+  inputTokens: number;
+  estimatedCostUsd: string;
+  createdAt: string;
 }
 
 export interface AccountExport {
@@ -185,7 +304,95 @@ export interface AccountExport {
   savedTenders: AccountExportSavedTender[];
   savedSearches: AccountExportSavedSearch[];
   notifications: AccountExportNotification[];
+  emailDeliveries: AccountExportEmailDelivery[];
+  aiQuestions: AccountExportAiQuestion[];
   subscription: AccountExportSubscription | null;
+}
+
+export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof TenderAskIndexStatus];
+
+
+export const TenderAskIndexStatus = {
+  not_started: 'not_started',
+  processing: 'processing',
+  ready: 'ready',
+  failed: 'failed',
+  no_documents: 'no_documents',
+  unsupported: 'unsupported',
+} as const;
+
+export type TenderAskDocumentStatus = typeof TenderAskDocumentStatus[keyof typeof TenderAskDocumentStatus];
+
+
+export const TenderAskDocumentStatus = {
+  processing: 'processing',
+  ready: 'ready',
+  failed: 'failed',
+  unsupported: 'unsupported',
+} as const;
+
+export interface TenderAskDocument {
+  id: string;
+  title: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  pages: number | null;
+  status: TenderAskDocumentStatus;
+}
+
+export interface AiQuota {
+  /** @minimum 0 */
+  used: number;
+  /** @minimum 1 */
+  limit: number;
+  resetsAt: string;
+}
+
+export interface TenderAskStatus {
+  index: TenderAskIndexStatus;
+  documents: TenderAskDocument[];
+  quota: AiQuota;
+}
+
+export interface AskTenderRequest {
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  question: string;
+}
+
+export interface AskTenderPassage {
+  documentId: string;
+  documentTitle: string;
+  documentUrl: string;
+  /** @minimum 1 */
+  page: number;
+  text: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  relevance: number;
+}
+
+export type AskTenderResultStatus = typeof AskTenderResultStatus[keyof typeof AskTenderResultStatus];
+
+
+export const AskTenderResultStatus = {
+  answered: 'answered',
+  not_found: 'not_found',
+  processing: 'processing',
+} as const;
+
+export interface AskTenderResult {
+  status: AskTenderResultStatus;
+  /** @maxItems 3 */
+  passages: AskTenderPassage[];
+  model: string;
+  quota: AiQuota;
 }
 
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
@@ -750,6 +957,8 @@ export const ApiErrorCode = {
   CONFLICT: 'CONFLICT',
   SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
   BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
+  AI_QUOTA_EXCEEDED: 'AI_QUOTA_EXCEEDED',
+  AI_UNAVAILABLE: 'AI_UNAVAILABLE',
 } as const;
 
 export interface ApiError {
@@ -814,6 +1023,16 @@ export type BillingUnavailableResponse = ErrorResponse;
  */
 export type SubscriptionRequiredResponse = ErrorResponse;
 
+/**
+ * Daily AI question quota exhausted
+ */
+export type AiQuotaExceededResponse = ErrorResponse;
+
+/**
+ * Tender question service unavailable or not configured
+ */
+export type AiUnavailableResponse = ErrorResponse;
+
 export type QueryParameter = string;
 
 export type SearchModeParameter = SearchMode;
@@ -836,12 +1055,24 @@ export type ValueMinParameter = number;
 
 export type ValueMaxParameter = number;
 
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 export type PublishedFromParameter = string;
 
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 export type PublishedToParameter = string;
 
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 export type DeadlineFromParameter = string;
 
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 export type DeadlineToParameter = string;
 
 export type SortParameter = SortOption;
@@ -885,9 +1116,21 @@ valueMin?: ValueMinParameter;
  * @minimum 0
  */
 valueMax?: ValueMaxParameter;
+/**
+ * Inclusive lower publication date in America/Sao_Paulo.
+ */
 publishedFrom?: PublishedFromParameter;
+/**
+ * Inclusive upper publication date in America/Sao_Paulo.
+ */
 publishedTo?: PublishedToParameter;
+/**
+ * Inclusive lower proposal deadline date in America/Sao_Paulo.
+ */
 deadlineFrom?: DeadlineFromParameter;
+/**
+ * Inclusive upper proposal deadline date in America/Sao_Paulo.
+ */
 deadlineTo?: DeadlineToParameter;
 sort?: SortParameter;
 /**
@@ -931,7 +1174,13 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+/**
+ * Inclusive lower date in America/Sao_Paulo.
+ */
 deadlineFrom?: string;
+/**
+ * Inclusive upper date in America/Sao_Paulo.
+ */
 deadlineTo?: string;
 /**
  * @minimum 1

@@ -10,6 +10,10 @@ import {
 import type { OpportunityProgram, OpportunityStatus } from "../ingest/opportunity-map";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
+import {
+  onOrAfterSaoPauloDate,
+  onOrBeforeSaoPauloDate,
+} from "./postgres-date-filter";
 
 const SOURCE = "mapas-culturais";
 
@@ -112,10 +116,20 @@ const whereFor = (
     filters.push(inArray(culturalOpportunitiesTable.program, criteria.program));
   }
   if (criteria.deadlineFrom) {
-    filters.push(sql`${culturalOpportunitiesTable.registrationTo} >= ${criteria.deadlineFrom}`);
+    filters.push(
+      onOrAfterSaoPauloDate(
+        culturalOpportunitiesTable.registrationTo,
+        criteria.deadlineFrom,
+      ),
+    );
   }
   if (criteria.deadlineTo) {
-    filters.push(sql`${culturalOpportunitiesTable.registrationTo} <= ${criteria.deadlineTo}`);
+    filters.push(
+      onOrBeforeSaoPauloDate(
+        culturalOpportunitiesTable.registrationTo,
+        criteria.deadlineTo,
+      ),
+    );
   }
   return filters.length > 0 ? and(...filters) : undefined;
 };

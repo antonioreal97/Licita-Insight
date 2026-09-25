@@ -5,6 +5,7 @@ import type {
   DownloadedFile,
   ImportSavedTendersResponse,
   MarkNotificationsReadBody,
+  NotificationPreferences,
   NotificationsParams,
   NotificationsResponse,
   PublicPlan,
@@ -16,6 +17,9 @@ import type {
   SavedTendersResponse,
   SessionResponse,
   UnreadCountResponse,
+  UnsubscribeResponse,
+  UnsubscribeScope,
+  UpdateNotificationPreferencesBody,
   UpdateSavedSearchBody,
 } from '../types';
 
@@ -57,4 +61,10 @@ export interface AccountAdapter {
   listNotifications(params: NotificationsParams, signal?: AbortSignal): Promise<NotificationsResponse>;
   getUnreadCount(signal?: AbortSignal): Promise<UnreadCountResponse>;
   markNotificationsRead(body: MarkNotificationsReadBody): Promise<UnreadCountResponse>;
+
+  /** E-mail preferences: session only, no 402 gate (turning e-mail off is the user's right). */
+  getNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences>;
+  updateNotificationPreferences(body: UpdateNotificationPreferencesBody): Promise<NotificationPreferences>;
+  /** Public, no session: the signed token from the e-mail link. */
+  unsubscribe(token: string, scope: UnsubscribeScope): Promise<UnsubscribeResponse>;
 }

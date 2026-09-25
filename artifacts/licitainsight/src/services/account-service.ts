@@ -1,4 +1,13 @@
-import { accountAdapter, isApiError, type NotificationsParams, type SavedTendersParams, type TenderSearchParams, type User } from '@/api';
+import {
+  accountAdapter,
+  isApiError,
+  type NotificationsParams,
+  type SavedTendersParams,
+  type TenderSearchParams,
+  type UnsubscribeScope,
+  type UpdateNotificationPreferencesBody,
+  type User,
+} from '@/api';
 import { searchParamsToUrl } from './search-service';
 
 /** Page size the saved-tenders API accepts (1–100). */
@@ -76,4 +85,8 @@ export const accountService = {
     accountAdapter.listNotifications({ ...params, pageSize: clampPageSize(params.pageSize, 50) }, signal),
   getUnreadCount: (signal?: AbortSignal) => accountAdapter.getUnreadCount(signal),
   markNotificationsRead: (input: { ids?: string[]; all?: boolean }) => accountAdapter.markNotificationsRead(input),
+
+  getNotificationPreferences: (signal?: AbortSignal) => accountAdapter.getNotificationPreferences(signal),
+  updateNotificationPreferences: (body: UpdateNotificationPreferencesBody) => accountAdapter.updateNotificationPreferences(body),
+  unsubscribe: (token: string, scope: UnsubscribeScope) => accountAdapter.unsubscribe(token, scope),
 };

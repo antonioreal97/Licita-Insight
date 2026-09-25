@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Public Licita Insight API
- * OpenAPI spec version: 1.2.0
+ * OpenAPI spec version: 1.3.0
  */
 import type { AccountExportNotificationChange } from './accountExportNotificationChange';
 
@@ -19,6 +19,10 @@ export interface AccountExportNotification {
   tenderTitle: string | null;
   /** @nullable */
   tenderNumberShort: string | null;
+  /** @nullable */
+  tenderOrganizationName: string | null;
+  /** @nullable */
+  tenderProposalDeadline: Date | null;
   change: AccountExportNotificationChange;
   /** @nullable */
   savedSearchId: string | null;
