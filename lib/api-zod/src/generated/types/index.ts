@@ -7,6 +7,8 @@
  */
 
 export * from './accountExport';
+export * from './accountExportAiQuestion';
+export * from './accountExportAiQuestionStatus';
 export * from './accountExportEmailDelivery';
 export * from './accountExportEmailDeliveryMode';
 export * from './accountExportEmailDeliveryStatus';
@@ -17,9 +19,16 @@ export * from './accountExportSavedTender';
 export * from './accountExportSession';
 export * from './accountExportSubscription';
 export * from './accountExportUser';
+export * from './aiQuota';
+export * from './aiQuotaExceededResponse';
+export * from './aiUnavailableResponse';
 export * from './apiError';
 export * from './apiErrorCode';
 export * from './applyAsaasBillingWebhook200';
+export * from './askTenderPassage';
+export * from './askTenderRequest';
+export * from './askTenderResult';
+export * from './askTenderResultStatus';
 export * from './authSessionResponse';
 export * from './billingCheckoutResponse';
 export * from './billingEntitlementSource';
@@ -120,6 +129,10 @@ export * from './subscriptionRequiredResponse';
 export * from './suggestion';
 export * from './suggestionsResponse';
 export * from './suggestionType';
+export * from './tenderAskDocument';
+export * from './tenderAskDocumentStatus';
+export * from './tenderAskIndexStatus';
+export * from './tenderAskStatus';
 export * from './tenderDetail';
 export * from './tenderDocument';
 export * from './tenderItem';

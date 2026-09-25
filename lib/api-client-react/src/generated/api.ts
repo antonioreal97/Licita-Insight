@@ -21,7 +21,11 @@ import type {
 
 import type {
   AccountExport,
+  AiQuotaExceededResponse,
+  AiUnavailableResponse,
   ApplyAsaasBillingWebhook200,
+  AskTenderRequest,
+  AskTenderResult,
   AuthSessionResponse,
   BillingCheckoutResponse,
   BillingPlanResponse,
@@ -62,6 +66,7 @@ import type {
   StartGoogleAuthParams,
   SubscriptionRequiredResponse,
   SuggestionsResponse,
+  TenderAskStatus,
   TenderDetail,
   UnauthenticatedResponse,
   UnreadNotificationCount,
@@ -341,6 +346,176 @@ export function useGetTenderById<TData = Awaited<ReturnType<typeof getTenderById
 
 
 
+
+export const getGetTenderAskStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/ask-status`
+}
+
+/**
+ * @summary Get or start the document index used for tender questions
+ */
+export const getTenderAskStatus = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TenderAskStatus> => {
+
+  return customFetch<TenderAskStatus>(getGetTenderAskStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderAskStatusQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/ask-status`
+    ] as const;
+    }
+
+
+export const getGetTenderAskStatusQueryOptions = <TData = Awaited<ReturnType<typeof getTenderAskStatus>>, TError = ErrorType<UnauthenticatedResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderAskStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderAskStatus>>> = ({ signal }) => getTenderAskStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderAskStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderAskStatus>>>
+export type GetTenderAskStatusQueryError = ErrorType<UnauthenticatedResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get or start the document index used for tender questions
+ */
+
+export function useGetTenderAskStatus<TData = Awaited<ReturnType<typeof getTenderAskStatus>>, TError = ErrorType<UnauthenticatedResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAskStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderAskStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAskTenderUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/ask`
+}
+
+/**
+ * @summary Find official passages that answer a question about a tender
+ */
+export const askTender = async (id: string,
+    askTenderRequest: AskTenderRequest, options?: Parameters<typeof customFetch>[1]): Promise<AskTenderResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) {
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
+    }
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AskTenderResult>(getAskTenderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(askTenderRequest)
+  }
+);}
+
+
+
+
+
+export const getAskTenderMutationKey = () => ['askTender'] as const;
+
+export const getAskTenderMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext> => {
+
+const mutationKey = getAskTenderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askTender>>, AskTenderMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  askTender(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AskTenderMutationResult = NonNullable<Awaited<ReturnType<typeof askTender>>>
+    export type AskTenderMutationBody = BodyType<AskTenderRequest>
+    export type AskTenderMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>
+    export type AskTenderMutationVariables = {id: string;data: BodyType<AskTenderRequest>}
+
+    /**
+ * @summary Find official passages that answer a question about a tender
+ */
+export const useAskTender = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askTender>>, TError,AskTenderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof askTender>>,
+        TError,
+        AskTenderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAskTenderMutationOptions(options));
+    }
 
 export const getGetSearchSuggestionsUrl = (params: GetSearchSuggestionsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -754,9 +929,9 @@ export const devLogin = async (devLoginRequest: DevLoginRequest, options?: Param
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -846,9 +1021,9 @@ export const deleteAccount = async (deleteAccountRequest: DeleteAccountRequest, 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -1706,9 +1881,9 @@ export const importSavedTenders = async (importSavedTendersRequest: ImportSavedT
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -1793,9 +1968,9 @@ export const putSavedTender = async (tenderId: string,
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2018,9 +2193,9 @@ export const createSavedSearch = async (createSavedSearchRequest: CreateSavedSea
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2105,9 +2280,9 @@ export const updateSavedSearch = async (id: string,
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2559,9 +2734,9 @@ export const updateNotificationPreferences = async (updateNotificationPreference
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2651,9 +2826,9 @@ export const unsubscribeEmail = async (emailUnsubscribeRequest: EmailUnsubscribe
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(
@@ -2811,9 +2986,9 @@ export const markNotificationsRead = async (markNotificationsReadRequest: MarkNo
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) {
-      const headers: Record<string, string> = {};
-      h.forEach((value, name) => { headers[name] = value; });
-      return headers;
+      const entries: [string, string][] = [];
+      h.forEach((value, name) => entries.push([name, value]));
+      return Object.fromEntries(entries);
     }
     if (Symbol.iterator in h) {
       return Object.fromEntries(

@@ -29,6 +29,13 @@
       "when": 1790391600000,
       "tag": "0004_email_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790395200000,
+      "tag": "0005_ask_tender",
+      "breakpoints": true
     }
   ]
 }

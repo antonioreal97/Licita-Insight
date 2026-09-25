@@ -14,6 +14,8 @@ tags:
     description: Tender discovery operations
   - name: account
     description: Authentication and personal account operations
+  - name: ai
+    description: Evidence-only tender document questions
   - name: opportunities
     description: Cultural funding opportunity operations
 paths:
@@ -92,6 +94,66 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /v1/tenders/{id}/ask-status:
+    get:
+      operationId: getTenderAskStatus
+      tags: [ai]
+      summary: Get or start the document index used for tender questions
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Current index and daily quota status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderAskStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/tenders/{id}/ask:
+    post:
+      operationId: askTender
+      tags: [ai]
+      summary: Find official passages that answer a question about a tender
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AskTenderRequest"
+      responses:
+        "200":
+          description: Evidence passages, an explicit no-result, or an indexing state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AskTenderResult"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/AiQuotaExceeded"
+        "503":
+          $ref: "#/components/responses/AiUnavailable"
   /v1/search/suggestions:
     get:
       operationId: getSearchSuggestions
@@ -996,6 +1058,18 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    AiQuotaExceeded:
+      description: Daily AI question quota exhausted
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    AiUnavailable:
+      description: Tender question service unavailable or not configured
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -1231,6 +1305,18 @@ components:
         currentPeriodEnd: { type: [string, "null"], format: date-time }
         updatedAt: { type: string, format: date-time }
       required: [status, currentPeriodEnd, updatedAt]
+    AccountExportAiQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        tenderId: { type: string }
+        question: { type: string }
+        status: { type: string, enum: [processing, answered, not_found, failed] }
+        model: { type: [string, "null"] }
+        inputTokens: { type: integer, minimum: 0 }
+        estimatedCostUsd: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, tenderId, question, status, model, inputTokens, estimatedCostUsd, createdAt]
     AccountExport:
       type: object
       properties:
@@ -1257,11 +1343,74 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountExportEmailDelivery"
+        aiQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportAiQuestion"
         subscription:
           anyOf:
             - $ref: "#/components/schemas/AccountExportSubscription"
             - type: "null"
-      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, emailDeliveries, subscription]
+      required: [exportedAt, user, sessions, savedTenders, savedSearches, notifications, emailDeliveries, aiQuestions, subscription]
+    TenderAskIndexStatus:
+      type: string
+      enum: [not_started, processing, ready, failed, no_documents, unsupported]
+    TenderAskDocument:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        pages: { type: [integer, "null"], minimum: 1 }
+        status: { type: string, enum: [processing, ready, failed, unsupported] }
+      required: [id, title, pages, status]
+    AiQuota:
+      type: object
+      properties:
+        used: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1 }
+        resetsAt: { type: string, format: date-time }
+      required: [used, limit, resetsAt]
+    TenderAskStatus:
+      type: object
+      properties:
+        index:
+          $ref: "#/components/schemas/TenderAskIndexStatus"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenderAskDocument"
+        quota:
+          $ref: "#/components/schemas/AiQuota"
+      required: [index, documents, quota]
+    AskTenderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        question: { type: string, minLength: 3, maxLength: 300 }
+      required: [question]
+    AskTenderPassage:
+      type: object
+      properties:
+        documentId: { type: string }
+        documentTitle: { type: string }
+        documentUrl: { type: string, format: uri }
+        page: { type: integer, minimum: 1 }
+        text: { type: string }
+        relevance: { type: number, minimum: 0, maximum: 1 }
+      required: [documentId, documentTitle, documentUrl, page, text, relevance]
+    AskTenderResult:
+      type: object
+      properties:
+        status: { type: string, enum: [answered, not_found, processing] }
+        passages:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/AskTenderPassage"
+        model: { type: string }
+        quota:
+          $ref: "#/components/schemas/AiQuota"
+      required: [status, passages, model, quota]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -1980,6 +2129,8 @@ components:
               CONFLICT,
               SUBSCRIPTION_REQUIRED,
               BILLING_UNAVAILABLE,
+              AI_QUOTA_EXCEEDED,
+              AI_UNAVAILABLE,
             ]
         message:
           type: string

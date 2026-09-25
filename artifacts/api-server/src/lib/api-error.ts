@@ -9,7 +9,9 @@ export type ApiErrorCode =
   | "FORBIDDEN"
   | "CONFLICT"
   | "SUBSCRIPTION_REQUIRED"
-  | "BILLING_UNAVAILABLE";
+  | "BILLING_UNAVAILABLE"
+  | "AI_QUOTA_EXCEEDED"
+  | "AI_UNAVAILABLE";
 
 export interface ApiErrorDetail {
   field: string;
@@ -68,5 +70,17 @@ export class SubscriptionRequiredError extends ApiError {
 export class BillingUnavailableError extends ApiError {
   constructor(message: string) {
     super(503, "BILLING_UNAVAILABLE", message);
+  }
+}
+
+export class AiQuotaExceededError extends ApiError {
+  constructor(message = "The daily AI question limit has been reached") {
+    super(429, "AI_QUOTA_EXCEEDED", message);
+  }
+}
+
+export class AiUnavailableError extends ApiError {
+  constructor(message = "The tender question service is temporarily unavailable") {
+    super(503, "AI_UNAVAILABLE", message);
   }
 }

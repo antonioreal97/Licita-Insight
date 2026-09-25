@@ -5,6 +5,7 @@
  * Public Licita Insight API
  * OpenAPI spec version: 1.3.0
  */
+import type { AccountExportAiQuestion } from './accountExportAiQuestion';
 import type { AccountExportEmailDelivery } from './accountExportEmailDelivery';
 import type { AccountExportNotification } from './accountExportNotification';
 import type { AccountExportSavedSearch } from './accountExportSavedSearch';
@@ -21,5 +22,6 @@ export interface AccountExport {
   savedSearches: AccountExportSavedSearch[];
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
+  aiQuestions: AccountExportAiQuestion[];
   subscription: AccountExportSubscription | null;
 }

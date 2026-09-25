@@ -274,6 +274,29 @@ export interface AccountExportSubscription {
   updatedAt: string;
 }
 
+export type AccountExportAiQuestionStatus = typeof AccountExportAiQuestionStatus[keyof typeof AccountExportAiQuestionStatus];
+
+
+export const AccountExportAiQuestionStatus = {
+  processing: 'processing',
+  answered: 'answered',
+  not_found: 'not_found',
+  failed: 'failed',
+} as const;
+
+export interface AccountExportAiQuestion {
+  id: string;
+  tenderId: string;
+  question: string;
+  status: AccountExportAiQuestionStatus;
+  /** @nullable */
+  model: string | null;
+  /** @minimum 0 */
+  inputTokens: number;
+  estimatedCostUsd: string;
+  createdAt: string;
+}
+
 export interface AccountExport {
   exportedAt: string;
   user: AccountExportUser;
@@ -282,7 +305,94 @@ export interface AccountExport {
   savedSearches: AccountExportSavedSearch[];
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
+  aiQuestions: AccountExportAiQuestion[];
   subscription: AccountExportSubscription | null;
+}
+
+export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof TenderAskIndexStatus];
+
+
+export const TenderAskIndexStatus = {
+  not_started: 'not_started',
+  processing: 'processing',
+  ready: 'ready',
+  failed: 'failed',
+  no_documents: 'no_documents',
+  unsupported: 'unsupported',
+} as const;
+
+export type TenderAskDocumentStatus = typeof TenderAskDocumentStatus[keyof typeof TenderAskDocumentStatus];
+
+
+export const TenderAskDocumentStatus = {
+  processing: 'processing',
+  ready: 'ready',
+  failed: 'failed',
+  unsupported: 'unsupported',
+} as const;
+
+export interface TenderAskDocument {
+  id: string;
+  title: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  pages: number | null;
+  status: TenderAskDocumentStatus;
+}
+
+export interface AiQuota {
+  /** @minimum 0 */
+  used: number;
+  /** @minimum 1 */
+  limit: number;
+  resetsAt: string;
+}
+
+export interface TenderAskStatus {
+  index: TenderAskIndexStatus;
+  documents: TenderAskDocument[];
+  quota: AiQuota;
+}
+
+export interface AskTenderRequest {
+  /**
+     * @minLength 3
+     * @maxLength 300
+     */
+  question: string;
+}
+
+export interface AskTenderPassage {
+  documentId: string;
+  documentTitle: string;
+  documentUrl: string;
+  /** @minimum 1 */
+  page: number;
+  text: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  relevance: number;
+}
+
+export type AskTenderResultStatus = typeof AskTenderResultStatus[keyof typeof AskTenderResultStatus];
+
+
+export const AskTenderResultStatus = {
+  answered: 'answered',
+  not_found: 'not_found',
+  processing: 'processing',
+} as const;
+
+export interface AskTenderResult {
+  status: AskTenderResultStatus;
+  /** @maxItems 3 */
+  passages: AskTenderPassage[];
+  model: string;
+  quota: AiQuota;
 }
 
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
@@ -847,6 +957,8 @@ export const ApiErrorCode = {
   CONFLICT: 'CONFLICT',
   SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
   BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
+  AI_QUOTA_EXCEEDED: 'AI_QUOTA_EXCEEDED',
+  AI_UNAVAILABLE: 'AI_UNAVAILABLE',
 } as const;
 
 export interface ApiError {
@@ -910,6 +1022,16 @@ export type BillingUnavailableResponse = ErrorResponse;
  * An active subscription or development entitlement is required
  */
 export type SubscriptionRequiredResponse = ErrorResponse;
+
+/**
+ * Daily AI question quota exhausted
+ */
+export type AiQuotaExceededResponse = ErrorResponse;
+
+/**
+ * Tender question service unavailable or not configured
+ */
+export type AiUnavailableResponse = ErrorResponse;
 
 export type QueryParameter = string;
 

@@ -299,6 +299,87 @@ export const GetTenderByIdResponse = zod.object({
 
 
 /**
+ * @summary Get or start the document index used for tender questions
+ */
+
+
+
+export const GetTenderAskStatusParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+
+export const getTenderAskStatusResponseQuotaUsedMin = 0;
+
+
+
+
+export const GetTenderAskStatusResponse = zod.object({
+  "index": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported']),
+  "documents": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "pages": zod.number().int().min(1).nullable(),
+  "status": zod.enum(['processing', 'ready', 'failed', 'unsupported'])
+})),
+  "quota": zod.object({
+  "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin),
+  "limit": zod.number().int().min(1),
+  "resetsAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Find official passages that answer a question about a tender
+ */
+
+
+
+export const AskTenderParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const askTenderBodyQuestionMin = 3;
+export const askTenderBodyQuestionMax = 300;
+
+
+
+export const AskTenderBody = zod.object({
+  "question": zod.string().min(askTenderBodyQuestionMin).max(askTenderBodyQuestionMax)
+})
+
+
+export const askTenderResponsePassagesItemRelevanceMin = 0;
+export const askTenderResponsePassagesItemRelevanceMax = 1;
+
+export const askTenderResponsePassagesMax = 3;
+
+export const askTenderResponseQuotaUsedMin = 0;
+
+
+
+
+export const AskTenderResponse = zod.object({
+  "status": zod.enum(['answered', 'not_found', 'processing']),
+  "passages": zod.array(zod.object({
+  "documentId": zod.string(),
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string(),
+  "relevance": zod.number().min(askTenderResponsePassagesItemRelevanceMin).max(askTenderResponsePassagesItemRelevanceMax)
+})).max(askTenderResponsePassagesMax),
+  "model": zod.string(),
+  "quota": zod.object({
+  "used": zod.number().int().min(askTenderResponseQuotaUsedMin),
+  "limit": zod.number().int().min(1),
+  "resetsAt": zod.coerce.date()
+})
+})
+
+
+/**
  * @summary Get search autocomplete suggestions
  */
 export const getSearchSuggestionsQueryQMin = 2;
@@ -391,6 +472,8 @@ export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
 
 export const exportAccountDataResponseEmailDeliveriesItemAttemptsMin = 0;
 
+export const exportAccountDataResponseAiQuestionsItemInputTokensMin = 0;
+
 
 
 export const ExportAccountDataResponse = zod.object({
@@ -458,6 +541,16 @@ export const ExportAccountDataResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "sentAt": zod.coerce.date().nullable()
+})),
+  "aiQuestions": zod.array(zod.object({
+  "id": zod.string(),
+  "tenderId": zod.string(),
+  "question": zod.string(),
+  "status": zod.enum(['processing', 'answered', 'not_found', 'failed']),
+  "model": zod.string().nullable(),
+  "inputTokens": zod.number().int().min(exportAccountDataResponseAiQuestionsItemInputTokensMin),
+  "estimatedCostUsd": zod.string(),
+  "createdAt": zod.coerce.date()
 })),
   "subscription": zod.union([zod.object({
   "status": zod.string(),

@@ -1,5 +1,7 @@
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
+  aiAskRequestsTable,
+  aiDailyUsageTable,
   db,
   emailDeliveriesTable,
   emailDeliveryNotificationsTable,
@@ -18,7 +20,7 @@ import { NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries, aiQuestions] =
     await Promise.all([
       db
         .select({
@@ -118,6 +120,19 @@ export async function exportAccountData(userId: string, now = new Date()) {
         })
         .from(emailDeliveriesTable)
         .where(eq(emailDeliveriesTable.userId, userId)),
+      db
+        .select({
+          id: aiAskRequestsTable.id,
+          tenderId: aiAskRequestsTable.tenderId,
+          question: aiAskRequestsTable.question,
+          status: aiAskRequestsTable.status,
+          model: aiAskRequestsTable.responseModel,
+          inputTokens: aiAskRequestsTable.inputTokens,
+          estimatedCostUsd: aiAskRequestsTable.estimatedCostUsd,
+          createdAt: aiAskRequestsTable.createdAt,
+        })
+        .from(aiAskRequestsTable)
+        .where(eq(aiAskRequestsTable.userId, userId)),
     ]);
 
   const user = users[0];
@@ -131,6 +146,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
     savedSearches,
     notifications,
     emailDeliveries,
+    aiQuestions,
     subscription: subscriptions[0] ?? null,
   };
 }
@@ -189,6 +205,12 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx
         .delete(notificationsTable)
         .where(eq(notificationsTable.userId, userId));
+      await tx
+        .delete(aiAskRequestsTable)
+        .where(eq(aiAskRequestsTable.userId, userId));
+      await tx
+        .delete(aiDailyUsageTable)
+        .where(eq(aiDailyUsageTable.userId, userId));
       await tx
         .delete(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId));

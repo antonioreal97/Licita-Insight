@@ -24,8 +24,11 @@ test(
     delete process.env.RESEND_API_KEY;
     delete process.env.MAIL_FROM;
     delete process.env.MAIL_REPLY_TO;
+    delete process.env.JEV_API_KEY;
 
     const {
+      aiAskRequestsTable,
+      aiDailyUsageTable,
       db,
       culturalOpportunitiesTable,
       emailDeliveriesTable,
@@ -37,6 +40,9 @@ test(
       savedTendersTable,
       sessionsTable,
       subscriptionsTable,
+      tenderAiDocumentsTable,
+      tenderAiIndexesTable,
+      tenderAiPassagesTable,
       usersTable,
     } = await import("@workspace/db");
     const { eq, inArray } = await import("drizzle-orm");
@@ -71,6 +77,11 @@ test(
       "subscriptions",
       "email_deliveries",
       "email_delivery_notifications",
+      "ai_daily_usage",
+      "ai_ask_requests",
+      "tender_ai_indexes",
+      "tender_ai_documents",
+      "tender_ai_passages",
     ]) {
       await pool.query(
         `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
@@ -523,6 +534,59 @@ test(
     await upsertPublications([first], new Date("2026-09-23T13:00:00Z"));
     const tenderId = "00394460000141-1-000123-2026";
 
+    await t.test("enforces ask-tender authentication, entitlement, validation, and availability", async () => {
+      assert.equal((await request(`/v1/tenders/${tenderId}/ask-status`)).status, 401);
+      const status = await request(`/v1/tenders/${tenderId}/ask-status`, {}, authenticatedCookie);
+      assert.equal(status.status, 200);
+      assert.equal(((await status.json()) as { index: string }).index, "no_documents");
+
+      const expiredCookie = await login("ask-expired@example.test", false);
+      const expiredSession = await request("/v1/auth/session", {}, expiredCookie);
+      const expiredUserId = ((await expiredSession.json()) as { user: { id: string } }).user.id;
+      await db.update(usersTable).set({ trialEndsAt: new Date(0) }).where(eq(usersTable.id, expiredUserId));
+      assert.equal((await request(`/v1/tenders/${tenderId}/ask`, {
+        method: "POST", headers: csrf, body: JSON.stringify({ question: "Qual o prazo?" }),
+      }, expiredCookie)).status, 402);
+
+      const unavailable = await request(`/v1/tenders/${tenderId}/ask`, {
+        method: "POST", headers: csrf, body: JSON.stringify({ question: "Qual o prazo?" }),
+      }, authenticatedCookie);
+      assert.equal(unavailable.status, 503);
+      assert.equal(((await unavailable.json()) as { error: { code: string } }).error.code, "AI_UNAVAILABLE");
+
+      const invalid = await request(`/v1/tenders/${tenderId}/ask`, {
+        method: "POST", headers: csrf, body: JSON.stringify({ question: "x" }),
+      }, authenticatedCookie);
+      assert.equal(invalid.status, 400);
+
+      process.env.JEV_API_KEY = "TEST KEY";
+      assert.equal((await request("/v1/tenders/missing/ask", {
+        method: "POST", headers: csrf, body: JSON.stringify({ question: "Qual o prazo?" }),
+      }, authenticatedCookie)).status, 404);
+      const [askUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "user-a@example.test"));
+      await db.update(tenderAiIndexesTable).set({ status: "ready" }).where(eq(tenderAiIndexesTable.tenderId, tenderId));
+      await db.insert(tenderAiDocumentsTable).values({
+        id: "ask-quota-document", tenderId, sourceDocumentId: "test", title: "TEST DATA edital.pdf",
+        sourceUrl: "https://example.test/edital.pdf", pages: 1, status: "ready",
+      });
+      await db.insert(tenderAiPassagesTable).values({
+        id: "ask-quota-passage", tenderId, documentId: "ask-quota-document", indexVersion: 1,
+        page: 1, passageOrder: 0, text: "O prazo para envio da proposta e de tres dias.",
+      });
+      const { dateInSaoPaulo } = await import("../lib/sao-paulo-date");
+      await db.insert(aiDailyUsageTable).values({ userId: askUser!.id, quotaDay: dateInSaoPaulo(new Date()), used: 1 }).onConflictDoUpdate({
+        target: [aiDailyUsageTable.userId, aiDailyUsageTable.quotaDay], set: { used: 1 },
+      });
+      process.env.AI_DAILY_ASK_LIMIT_PAID = "1";
+      const limited = await request(`/v1/tenders/${tenderId}/ask`, {
+        method: "POST", headers: csrf, body: JSON.stringify({ question: "Qual o prazo?" }),
+      }, authenticatedCookie);
+      assert.equal(limited.status, 429);
+      assert.equal(((await limited.json()) as { error: { code: string } }).error.code, "AI_QUOTA_EXCEEDED");
+      delete process.env.AI_DAILY_ASK_LIMIT_PAID;
+      delete process.env.JEV_API_KEY;
+    });
+
     await t.test("preserves monitor state and isolates users", async () => {
       assert.equal(
         Number(
@@ -871,6 +935,21 @@ test(
     });
 
     await t.test("exports only the authenticated user's retained data without secrets", async () => {
+      const [exportUser] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, "user-a@example.test"));
+      await db.insert(aiAskRequestsTable).values({
+        id: "export-ai-question",
+        userId: exportUser!.id,
+        tenderId,
+        question: "TEST DATA Qual e o prazo?",
+        normalizedQuestion: "test data qual e o prazo?",
+        indexVersion: 1,
+        requestedModel: "jev-1.13.0",
+        responseModel: "jev-1.13.0",
+        status: "not_found",
+      });
       const response = await request("/v1/me/export", {}, authenticatedCookie);
       assert.equal(response.status, 200);
       assert.match(
@@ -889,11 +968,15 @@ test(
         savedTenders: { tenderId: string }[];
         savedSearches: { deletedAt: string | null }[];
         emailDeliveries: unknown[];
+        aiQuestions: { question: string }[];
       };
       assert.equal(body.user.email, "user-a@example.test");
       assert.equal(body.user.emailDigest, "daily");
       assert.equal(body.user.emailImmediateCritical, true);
       assert.deepEqual(body.emailDeliveries, []);
+      assert.deepEqual(body.aiQuestions.map(({ question }) => question), [
+        "TEST DATA Qual e o prazo?",
+      ]);
       assert.ok(body.sessions.length > 0);
       assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
       assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
@@ -945,6 +1028,21 @@ test(
         deliveryId: "delete-route-delivery",
         notificationId: "delete-route-notification",
       });
+      await db.insert(aiDailyUsageTable).values({
+        userId: user.id,
+        quotaDay: "2026-09-25",
+        used: 1,
+      });
+      await db.insert(aiAskRequestsTable).values({
+        id: "delete-route-ai-question",
+        userId: user.id,
+        tenderId,
+        question: "TEST DATA pergunta pessoal",
+        normalizedQuestion: "test data pergunta pessoal",
+        indexVersion: 1,
+        requestedModel: "jev-1.13.0",
+        status: "not_found",
+      });
 
       const missingConfirmation = await request(
         "/v1/me",
@@ -988,6 +1086,8 @@ test(
         "notifications",
         "subscriptions",
         "email_deliveries",
+        "ai_daily_usage",
+        "ai_ask_requests",
       ]) {
         const result = await pool.query(
           `SELECT count(*) AS count FROM ${table} WHERE ${
