@@ -197,6 +197,8 @@ Em 25 set 2026, aderência (3.6): perfil da empresa com **6 campos** (o que forn
 
 Limiares da aderência aprovados em 25 set 2026, após a calibração (3 perfis × 30 editais reais): **alta ≥ 0,75**, **média ≥ 0,55**.
 
+Ciclo 6 (25 set 2026): **ficha do edital (3.5)**. Campo sem trecho fica "não encontrado nos documentos"; ausência nunca vira resposta ("não exige").
+
 Pendentes:
 1. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
 
