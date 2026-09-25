@@ -244,7 +244,21 @@ export type CreateSavedSearchBody = { name: string; query: string; alertsEnabled
 export type UpdateSavedSearchBody = { name?: string; query?: string; alertsEnabled?: boolean };
 
 export type NotificationType =
-  'tender_deadline_changed' | 'tender_status_changed' | 'tender_document_added' | 'tender_value_changed' | 'saved_search_new_matches' | 'trial_ending';
+  | 'tender_deadline_changed'
+  | 'tender_status_changed'
+  | 'tender_document_added'
+  | 'tender_value_changed'
+  | 'saved_search_new_matches'
+  | 'profile_new_matches'
+  | 'trial_ending';
+
+export type ProfileMatchNotification = {
+  id: string;
+  title: string;
+  organizationName: string;
+  proposalDeadline: string | null;
+  level: 'high';
+};
 
 export type Notification = {
   id: string;
@@ -259,6 +273,8 @@ export type Notification = {
   matchCount: number | null;
   /** Up to 20 ids of the new tenders (saved_search_new_matches). */
   tenderIds: string[];
+  /** Up to five high-fit tender snapshots (profile_new_matches). */
+  profileMatches: ProfileMatchNotification[];
 };
 
 export type NotificationsParams = { unreadOnly?: boolean; page?: number; pageSize?: number };
@@ -273,10 +289,10 @@ export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };
 export type EmailPreferences = { digest: 'daily' | 'off'; immediateCritical: boolean };
 
 /** `GET/PUT /api/v1/me/notification-preferences` — outside the subscription gate. */
-export type NotificationPreferences = { email: EmailPreferences; emailAddress: string; updatedAt: string | null };
+export type NotificationPreferences = { email: EmailPreferences; profileAlerts: boolean; emailAddress: string; updatedAt: string | null };
 
 /** Partial PUT body: only the fields sent change. */
-export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences> };
+export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences>; profileAlerts?: boolean };
 
 export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 

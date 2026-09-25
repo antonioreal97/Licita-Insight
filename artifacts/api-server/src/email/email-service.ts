@@ -82,6 +82,7 @@ const notificationSelection = {
   savedSearchName: notificationsTable.savedSearchName,
   savedSearchQuery: notificationsTable.savedSearchQuery,
   matchCount: notificationsTable.matchCount,
+  profileMatches: notificationsTable.profileMatches,
   userId: usersTable.id,
   email: usersTable.email,
   unsubscribeId: usersTable.emailUnsubscribeId,

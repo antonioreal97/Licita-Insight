@@ -114,4 +114,39 @@ describe("notification email template", () => {
       /Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados\./,
     );
   });
+
+  it("includes profile-fit highlights in the existing daily digest", () => {
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [
+        {
+          id: "profile-fit-1",
+          type: "profile_new_matches",
+          createdAt: new Date("2026-09-24T12:00:00Z"),
+          tenderId: null,
+          tenderTitle: null,
+          tenderOrganizationName: null,
+          tenderProposalDeadline: null,
+          change: null,
+          savedSearchName: null,
+          savedSearchQuery: null,
+          matchCount: 2,
+          profileMatches: [
+            {
+              id: "tender/fit",
+              title: "Aquisição de servidores",
+              organizationName: "Órgão de teste",
+              proposalDeadline: null,
+              level: "high",
+            },
+          ],
+        },
+      ],
+    });
+    assert.match(rendered.text, /2 novos editais com alta aderência/);
+    assert.match(rendered.html, /Aquisição de servidores/);
+    assert.match(rendered.html, /tender%2Ffit/);
+  });
 });

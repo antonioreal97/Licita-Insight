@@ -1,4 +1,7 @@
-import type { NotificationChangeRecord } from "@workspace/db/schema";
+import type {
+  NotificationChangeRecord,
+  ProfileMatchNotificationRecord,
+} from "@workspace/db/schema";
 
 export type EmailNotificationSnapshot = {
   id: string;
@@ -12,6 +15,7 @@ export type EmailNotificationSnapshot = {
   savedSearchName: string | null;
   savedSearchQuery: string | null;
   matchCount: number | null;
+  profileMatches?: ProfileMatchNotificationRecord[];
 };
 
 const escapeHtml = (value: string): string =>
@@ -25,11 +29,8 @@ const escapeHtml = (value: string): string =>
 const truncate = (value: string, maximum = 220): string =>
   value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 
-const quantity = (
-  count: number,
-  singular: string,
-  plural: string,
-): string => `${count} ${count === 1 ? singular : plural}`;
+const quantity = (count: number, singular: string, plural: string): string =>
+  `${count} ${count === 1 ? singular : plural}`;
 
 const dateTime = (value: Date): string =>
   new Intl.DateTimeFormat("pt-BR", {
@@ -46,9 +47,7 @@ const changeDescription = (
     const previous = change?.from
       ? dateTime(new Date(String(change.from)))
       : null;
-    const next = change?.to
-      ? dateTime(new Date(String(change.to)))
-      : null;
+    const next = change?.to ? dateTime(new Date(String(change.to))) : null;
     if (previous && next) return `Prazo alterado: ${previous} → ${next}`;
     if (next) return `Novo prazo: ${next}`;
     return "O prazo foi alterado.";
@@ -63,7 +62,8 @@ const changeDescription = (
     };
     return `Novo status: ${labels[String(change?.to)] ?? String(change?.to ?? "alterado")}`;
   }
-  if (type === "tender_document_added") return "Novos documentos foram publicados.";
+  if (type === "tender_document_added")
+    return "Novos documentos foram publicados.";
   if (type === "tender_value_changed") return "O valor estimado foi alterado.";
   if (type === "trial_ending") {
     return change?.to
@@ -84,10 +84,14 @@ const notificationLink = (
     const query = notification.savedSearchQuery.replace(/^\?/, "");
     return `${origin}/search${query ? `?${query}` : ""}`;
   }
+  if (notification.type === "profile_new_matches") return `${origin}/search`;
   return `${origin}/settings#notificacoes`;
 };
 
-const itemText = (notification: EmailNotificationSnapshot, origin: string): string => {
+const itemText = (
+  notification: EmailNotificationSnapshot,
+  origin: string,
+): string => {
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
     return [
@@ -96,8 +100,25 @@ const itemText = (notification: EmailNotificationSnapshot, origin: string): stri
       notificationLink(notification, origin),
     ].join("\n");
   }
+  if (notification.type === "profile_new_matches") {
+    const matches = notification.profileMatches ?? [];
+    const matchCount = notification.matchCount ?? matches.length;
+    const first = matches[0];
+    return [
+      quantity(
+        matchCount,
+        "novo edital com alta aderência",
+        "novos editais com alta aderência",
+      ),
+      ...(first ? [`Destaque: ${truncate(first.title)}`] : []),
+      notificationLink(notification, origin),
+    ].join("\n");
+  }
   if (notification.type === "trial_ending") {
-    return [changeDescription(notification.type, notification.change), notificationLink(notification, origin)].join("\n");
+    return [
+      changeDescription(notification.type, notification.change),
+      notificationLink(notification, origin),
+    ].join("\n");
   }
   const details = [
     truncate(notification.tenderTitle ?? "Edital monitorado"),
@@ -117,11 +138,26 @@ const itemText = (notification: EmailNotificationSnapshot, origin: string): stri
   return details.join("\n");
 };
 
-const itemHtml = (notification: EmailNotificationSnapshot, origin: string): string => {
+const itemHtml = (
+  notification: EmailNotificationSnapshot,
+  origin: string,
+): string => {
   const link = escapeHtml(notificationLink(notification, origin));
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
     return `<li style="margin-bottom:20px"><strong>${escapeHtml(notification.savedSearchName ?? "Busca salva")}</strong><br>${quantity(matchCount, "novo resultado", "novos resultados")}<br><a href="${link}">Ver resultados</a></li>`;
+  }
+  if (notification.type === "profile_new_matches") {
+    const matches = notification.profileMatches ?? [];
+    const matchCount = notification.matchCount ?? matches.length;
+    const highlights = matches
+      .slice(0, 5)
+      .map(
+        (match) =>
+          `<li><a href="${escapeHtml(`${origin}/tenders/${encodeURIComponent(match.id)}`)}">${escapeHtml(truncate(match.title))}</a> — ${escapeHtml(match.organizationName)}</li>`,
+      )
+      .join("");
+    return `<li style="margin-bottom:20px"><strong>${quantity(matchCount, "novo edital com alta aderência", "novos editais com alta aderência")}</strong>${highlights ? `<ul>${highlights}</ul>` : ""}<a href="${link}">Ver oportunidades</a></li>`;
   }
   if (notification.type === "trial_ending") {
     return `<li style="margin-bottom:20px"><strong>Seu teste está terminando</strong><br>${escapeHtml(changeDescription(notification.type, notification.change))}<br><a href="${link}">Ver assinatura</a></li>`;

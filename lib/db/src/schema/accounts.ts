@@ -20,6 +20,14 @@ export type NotificationChangeRecord = {
   to: string | number | null;
 };
 
+export type ProfileMatchNotificationRecord = {
+  id: string;
+  title: string;
+  organizationName: string;
+  proposalDeadline: Date | null;
+  level: "high";
+};
+
 export const usersTable = pgTable(
   "users",
   {
@@ -35,12 +43,11 @@ export const usersTable = pgTable(
     emailImmediateCritical: boolean("email_immediate_critical")
       .notNull()
       .default(true),
+    profileAlerts: boolean("profile_alerts").notNull().default(true),
     emailPreferencesUpdatedAt: timestamp("email_preferences_updated_at", {
       withTimezone: true,
     }),
-    emailUnsubscribeId: uuid("email_unsubscribe_id")
-      .notNull()
-      .defaultRandom(),
+    emailUnsubscribeId: uuid("email_unsubscribe_id").notNull().defaultRandom(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -54,7 +61,10 @@ export const usersTable = pgTable(
       .where(sql`${table.googleSub} is not null`),
     uniqueIndex("users_email_uidx").on(table.email),
     uniqueIndex("users_email_unsubscribe_uidx").on(table.emailUnsubscribeId),
-    check("users_email_digest_check", sql`${table.emailDigest} in ('daily', 'off')`),
+    check(
+      "users_email_digest_check",
+      sql`${table.emailDigest} in ('daily', 'off')`,
+    ),
   ],
 );
 
@@ -173,6 +183,10 @@ export const notificationsTable = pgTable(
     matchCount: integer("match_count"),
     tenderIds: jsonb("tender_ids")
       .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    profileMatches: jsonb("profile_matches")
+      .$type<ProfileMatchNotificationRecord[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
   },

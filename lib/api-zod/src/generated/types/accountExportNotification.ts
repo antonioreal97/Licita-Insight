@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { AccountExportNotificationChange } from './accountExportNotificationChange';
+import type { ProfileMatchNotification } from './profileMatchNotification';
 
 export interface AccountExportNotification {
   id: string;
@@ -33,4 +34,5 @@ export interface AccountExportNotification {
   /** @nullable */
   matchCount: number | null;
   tenderIds: string[];
+  profileMatches: ProfileMatchNotification[];
 }

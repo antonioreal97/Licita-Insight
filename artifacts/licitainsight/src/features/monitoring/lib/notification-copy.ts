@@ -26,6 +26,10 @@ export function notificationTitle(n: Notification): string {
       const name = n.savedSearch?.name ?? 'sua busca salva';
       return count === 1 ? `1 edital novo em “${name}”` : `${formatNumber(count)} editais novos em “${name}”`;
     }
+    case 'profile_new_matches': {
+      const count = n.matchCount ?? n.profileMatches.length;
+      return count === 1 ? '1 edital novo com alta aderência' : `${formatNumber(count)} editais novos com alta aderência`;
+    }
     default:
       return 'Atualização';
   }
@@ -42,6 +46,10 @@ function trialEndOf(n: Notification): string | null {
 
 /** What the notification is about: "90012/2026 · Pavimentação de vias…" for tenders; `null` for saved searches (the title names it). */
 export function notificationSubject(n: Notification): string | null {
+  if (n.type === 'profile_new_matches') {
+    const first = n.profileMatches[0];
+    return first ? `${first.title} · ${first.organizationName}` : null;
+  }
   if (!n.tender) return null;
   return n.tender.tenderNumberShort ? `${n.tender.tenderNumberShort} · ${n.tender.title}` : n.tender.title;
 }
@@ -57,6 +65,9 @@ function formatChangeValue(n: Notification, value: string | number | null): stri
 /** The change itself ("De 05 de out de 2026, 18:00 para 12 de out…"), or `null` when the API sent no details. */
 export function notificationDescription(n: Notification): string | null {
   if (n.type === 'saved_search_new_matches') return null;
+  if (n.type === 'profile_new_matches') {
+    return n.profileMatches.length > 1 ? `E mais ${formatNumber(n.profileMatches.length - 1)} em destaque.` : null;
+  }
   if (n.type === 'trial_ending') {
     const end = trialEndOf(n);
     return `${end ? `Termina em ${formatDate(end)}. ` : ''}Assine para continuar salvando e monitorando editais.`;
@@ -70,6 +81,7 @@ export function notificationDescription(n: Notification): string | null {
 export function notificationHref(n: Notification): string | null {
   if (n.type === 'trial_ending') return BILLING_HREF;
   if (n.type === 'saved_search_new_matches') return n.savedSearch ? `/search${n.savedSearch.query ? `?${n.savedSearch.query}` : ''}` : null;
+  if (n.type === 'profile_new_matches') return n.profileMatches[0] ? `/tenders/${encodeURIComponent(n.profileMatches[0].id)}` : '/search';
   return n.tender ? `/tenders/${encodeURIComponent(n.tender.id)}` : null;
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { aiDailyLimit, aiQuotaResetsAt, completedIndexStatus, lexicalSearchQuery, selectEvidencePassages } from "./policy";
-import { scoreTenderPassage } from "./jev-client";
+import { scoreCompanyFit, scoreTenderPassage } from "./jev-client";
 
 const originalEnv = { ...process.env };
 afterEach(() => {
@@ -68,4 +68,35 @@ test("Jev client uses explicit key and parses a mocked noul response", async () 
     model: "jev-1.13.0",
     inputTokens: 123,
   });
+});
+
+test("company fit uses one Jev request for score and optional exclusion", async () => {
+  process.env.JEV_API_KEY = "test-key";
+  let calls = 0;
+  const mockedFetch: typeof fetch = async (_input, init) => {
+    calls += 1;
+    const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string }> };
+    assert.equal(body.questions.aderencia?.type, "score");
+    assert.equal(body.questions.excluido?.type, "noul");
+    return new Response(JSON.stringify({
+      model: "jev-1.13.0",
+      answers: {
+        aderencia: { type: "score", score: 2.7, confidence: 0.9, legend: {}, probabilities: {} },
+        excluido: { type: "noul", noul: 0.12 },
+      },
+      usage: { input_tokens: 321, output_tokens: 0 },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  assert.deepEqual(await scoreCompanyFit({
+    description: "Fornecemos servidores e suporte.",
+    offerings: ["servidores"],
+    exclusions: ["obra civil"],
+    tenderText: "Aquisição de servidores.",
+  }, mockedFetch), {
+    fitScore: 2.7,
+    excludedProbability: 0.12,
+    model: "jev-1.13.0",
+    inputTokens: 321,
+  });
+  assert.equal(calls, 1);
 });

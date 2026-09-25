@@ -1,0 +1,170 @@
+import { sql } from "drizzle-orm";
+import {
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { usersTable } from "./accounts";
+import { tendersTable } from "./tenders";
+
+export type CompanyCoverageScope = "national" | "states";
+export type CompanySize = "me_epp" | "cooperative" | "other";
+
+export type FitEvidenceRecord = {
+  documentTitle: string;
+  documentUrl: string;
+  page: number;
+  text: string;
+};
+
+export type FitReasonRecord =
+  | { kind: "offering_match"; terms: string[] }
+  | { kind: "exclusion"; terms: string[] }
+  | { kind: "out_of_coverage"; state: string | null }
+  | { kind: "out_of_value_range"; estimatedValue: number }
+  | { kind: "value_not_published" }
+  | {
+      kind: "size_restricted";
+      restriction: "me_epp_exclusive" | "me_epp_quota";
+      evidence: FitEvidenceRecord;
+    };
+
+export const companyProfilesTable = pgTable(
+  "company_profiles",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    offerings: jsonb("offerings").$type<string[]>().notNull(),
+    exclusions: jsonb("exclusions")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    coverageScope: text("coverage_scope").notNull(),
+    coverageStates: jsonb("coverage_states")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    valueMin: numeric("value_min", { precision: 18, scale: 2 }),
+    valueMax: numeric("value_max", { precision: 18, scale: 2 }),
+    size: text("size").notNull(),
+    version: integer("version").notNull().default(1),
+    lastAlertAt: timestamp("last_alert_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "company_profiles_coverage_scope_check",
+      sql`${table.coverageScope} in ('national', 'states')`,
+    ),
+    check(
+      "company_profiles_size_check",
+      sql`${table.size} in ('me_epp', 'cooperative', 'other')`,
+    ),
+    check("company_profiles_version_check", sql`${table.version} >= 1`),
+    check(
+      "company_profiles_value_range_check",
+      sql`${table.valueMin} is null or ${table.valueMax} is null or ${table.valueMin} <= ${table.valueMax}`,
+    ),
+    index("company_profiles_alert_idx").on(table.lastAlertAt),
+  ],
+);
+
+export const companyTenderFitsTable = pgTable(
+  "company_tender_fits",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    tenderId: text("tender_id")
+      .notNull()
+      .references(() => tendersTable.id, { onDelete: "cascade" }),
+    profileVersion: integer("profile_version").notNull(),
+    tenderFingerprint: text("tender_fingerprint").notNull(),
+    requestedModel: text("requested_model").notNull(),
+    promptVersion: integer("prompt_version").notNull(),
+    status: text("status").notNull(),
+    level: text("level"),
+    score: numeric("score", { precision: 8, scale: 7 }),
+    reasons: jsonb("reasons")
+      .$type<FitReasonRecord[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    responseModel: text("response_model"),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    estimatedCostUsd: numeric("estimated_cost_usd", { precision: 14, scale: 8 })
+      .notNull()
+      .default("0"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("company_tender_fits_cache_uidx").on(
+      table.userId,
+      table.profileVersion,
+      table.tenderId,
+      table.requestedModel,
+      table.promptVersion,
+    ),
+    index("company_tender_fits_user_checked_idx").on(
+      table.userId,
+      table.checkedAt,
+    ),
+    check(
+      "company_tender_fits_status_check",
+      sql`${table.status} in ('processing', 'ready', 'filtered', 'failed')`,
+    ),
+    check(
+      "company_tender_fits_level_check",
+      sql`${table.level} is null or ${table.level} in ('high', 'medium', 'low')`,
+    ),
+    check(
+      "company_tender_fits_score_check",
+      sql`${table.score} is null or (${table.score} >= 0 and ${table.score} <= 1)`,
+    ),
+  ],
+);
+
+export const aiFitDailyUsageTable = pgTable(
+  "ai_fit_daily_usage",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    quotaDay: date("quota_day", { mode: "string" }).notNull(),
+    used: integer("used").notNull().default(0),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    estimatedCostUsd: numeric("estimated_cost_usd", { precision: 14, scale: 8 })
+      .notNull()
+      .default("0"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.quotaDay] }),
+    check("ai_fit_daily_usage_used_check", sql`${table.used} >= 0`),
+  ],
+);

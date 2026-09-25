@@ -17,6 +17,7 @@ export interface AccountExportUser {
   trialEndsAt: Date;
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
+  profileAlerts: boolean;
   /** @nullable */
   emailPreferencesUpdatedAt: Date | null;
   createdAt: Date;

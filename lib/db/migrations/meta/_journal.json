@@ -36,6 +36,13 @@
       "when": 1790395200000,
       "tag": "0005_ask_tender",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790402400000,
+      "tag": "0006_company_fit",
+      "breakpoints": true
     }
   ]
 }

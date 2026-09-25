@@ -15,5 +15,6 @@ export const NotificationType = {
   tender_document_added: 'tender_document_added',
   tender_value_changed: 'tender_value_changed',
   saved_search_new_matches: 'saved_search_new_matches',
+  profile_new_matches: 'profile_new_matches',
   trial_ending: 'trial_ending',
 } as const;

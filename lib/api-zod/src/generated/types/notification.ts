@@ -9,6 +9,7 @@ import type { NotificationChange } from './notificationChange';
 import type { NotificationSavedSearch } from './notificationSavedSearch';
 import type { NotificationTender } from './notificationTender';
 import type { NotificationType } from './notificationType';
+import type { ProfileMatchNotification } from './profileMatchNotification';
 
 export interface Notification {
   id: string;
@@ -23,4 +24,6 @@ export interface Notification {
   matchCount: number | null;
   /** @maxItems 20 */
   tenderIds: string[];
+  /** @maxItems 5 */
+  profileMatches: ProfileMatchNotification[];
 }

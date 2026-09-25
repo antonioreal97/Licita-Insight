@@ -1,0 +1,9 @@
+{
+  "status": "pending_environment",
+  "generatedAt": null,
+  "source": "No tender data was fabricated.",
+  "requiredEnvironment": ["DATABASE_URL", "JEV_API_KEY"],
+  "command": "pnpm --filter @workspace/api-server run calibrate:company-fit",
+  "profiles": [],
+  "note": "The reproducible calibration runner is committed, but the required database and Jev credential were not available in this workspace session. Running the command replaces this file with 3 profiles x 30 real PostgreSQL tenders, including scores, levels, reasons, tokens and estimated cost."
+}

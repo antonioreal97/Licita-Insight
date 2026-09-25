@@ -29,6 +29,9 @@ test(
     const {
       aiAskRequestsTable,
       aiDailyUsageTable,
+      aiFitDailyUsageTable,
+      companyProfilesTable,
+      companyTenderFitsTable,
       db,
       culturalOpportunitiesTable,
       emailDeliveriesTable,
@@ -82,6 +85,9 @@ test(
       "tender_ai_indexes",
       "tender_ai_documents",
       "tender_ai_passages",
+      "company_profiles",
+      "company_tender_fits",
+      "ai_fit_daily_usage",
     ]) {
       await pool.query(
         `CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`,
@@ -355,6 +361,7 @@ test(
       assert.equal(defaults.status, 200);
       assert.deepEqual(await defaults.json(), {
         email: { digest: "daily", immediateCritical: true },
+        profileAlerts: true,
         emailAddress: "email-preferences@example.test",
         updatedAt: null,
       });
@@ -390,6 +397,13 @@ test(
         digest: "off",
         immediateCritical: true,
       });
+      const profileAlerts = await request(
+        "/v1/me/notification-preferences",
+        { method: "PUT", headers: csrf, body: JSON.stringify({ profileAlerts: false }) },
+        cookie,
+      );
+      assert.equal(profileAlerts.status, 200);
+      assert.equal(((await profileAlerts.json()) as { profileAlerts: boolean }).profileAlerts, false);
       assert.ok(partialBody.updatedAt);
 
       const [user] = await db
@@ -585,6 +599,66 @@ test(
       assert.equal(((await limited.json()) as { error: { code: string } }).error.code, "AI_QUOTA_EXCEEDED");
       delete process.env.AI_DAILY_ASK_LIMIT_PAID;
       delete process.env.JEV_API_KEY;
+    });
+
+    await t.test("manages company profile, deterministic fit, version invalidation, and access", async () => {
+      assert.equal((await request("/v1/me/company-profile")).status, 401);
+      const empty = await request("/v1/me/company-profile", {}, authenticatedCookie);
+      assert.equal(empty.status, 200);
+      assert.deepEqual(await empty.json(), { profile: null });
+
+      const profile = {
+        description: "Fornecemos equipamentos de informática e suporte técnico corporativo.",
+        offerings: ["computadores", "suporte técnico"],
+        exclusions: [],
+        coverage: { scope: "states", states: ["SP"] },
+        valueRange: { min: null, max: 1000 },
+        size: "other",
+      };
+      assert.equal((await request("/v1/me/company-profile", {
+        method: "PUT", body: JSON.stringify(profile),
+      }, authenticatedCookie)).status, 403);
+      const invalid = await request("/v1/me/company-profile", {
+        method: "PUT", headers: csrf, body: JSON.stringify({ ...profile, offerings: ["Solução", "solucao"] }),
+      }, authenticatedCookie);
+      assert.equal(invalid.status, 400);
+
+      const saved = await request("/v1/me/company-profile", {
+        method: "PUT", headers: csrf, body: JSON.stringify(profile),
+      }, authenticatedCookie);
+      assert.equal(saved.status, 200);
+      assert.equal(((await saved.json()) as { profile: { version: number } }).profile.version, 1);
+      const fit = await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, authenticatedCookie);
+      assert.equal(fit.status, 200);
+      const fitBody = (await fit.json()) as { profileVersion: number; results: Record<string, { status: string; level: string; reasons: Array<{ kind: string }> }> };
+      assert.equal(fitBody.profileVersion, 1);
+      assert.equal(fitBody.results[tenderId]?.status, "filtered");
+      assert.equal(fitBody.results[tenderId]?.level, "low");
+      assert.equal(fitBody.results[tenderId]?.reasons[0]?.kind, "out_of_coverage");
+
+      const replaced = await request("/v1/me/company-profile", {
+        method: "PUT", headers: csrf, body: JSON.stringify({ ...profile, coverage: { scope: "national" } }),
+      }, authenticatedCookie);
+      assert.equal(((await replaced.json()) as { profile: { version: number } }).profile.version, 2);
+      const session = await request("/v1/auth/session", {}, authenticatedCookie);
+      const userId = ((await session.json()) as { user: { id: string } }).user.id;
+      assert.equal((await db.select().from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId))).length, 0);
+
+      const expiredCookie = await login("fit-expired@example.test", false);
+      const expiredSession = await request("/v1/auth/session", {}, expiredCookie);
+      const expiredUserId = ((await expiredSession.json()) as { user: { id: string } }).user.id;
+      await db.update(usersTable).set({ trialEndsAt: new Date(0) }).where(eq(usersTable.id, expiredUserId));
+      const noProfileFit = await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, expiredCookie);
+      assert.equal(noProfileFit.status, 200);
+      assert.deepEqual(await noProfileFit.json(), { profileVersion: null, results: {} });
+      assert.equal((await request("/v1/me/company-profile", {
+        method: "PUT", headers: csrf, body: JSON.stringify(profile),
+      }, expiredCookie)).status, 200);
+      assert.equal((await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, expiredCookie)).status, 402);
+
+      assert.equal((await request("/v1/me/company-profile", { method: "DELETE", headers: csrf }, authenticatedCookie)).status, 204);
+      assert.equal((await db.select().from(companyProfilesTable).where(eq(companyProfilesTable.userId, userId))).length, 0);
+      assert.equal((await db.select().from(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId))).length, 0);
     });
 
     await t.test("preserves monitor state and isolates users", async () => {
