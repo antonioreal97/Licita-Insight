@@ -195,6 +195,8 @@ Também em 24 set 2026: e-mail pelo **Resend**; alertas com **digest diário + i
 
 Em 25 set 2026, aderência (3.6): perfil da empresa com **6 campos** (o que fornece, produtos/serviços, o que não atende, área de atuação com opção **Brasil inteiro**, faixa de valor, porte). **Porte só pesa com trecho citado** do edital. **Um perfil por conta**. Superfície: **selo de aderência** na busca e no detalhe primeiro, depois **alerta diário de editais para o perfil**; reordenar a busca (`mode=semantic`) fica para depois, opcional. Formulário em **Configurações** com convite no painel inicial, sem wizard bloqueante.
 
+Limiares da aderência aprovados em 25 set 2026, após a calibração (3 perfis × 30 editais reais): **alta ≥ 0,75**, **média ≥ 0,55**.
+
 Pendentes:
 1. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
 

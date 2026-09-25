@@ -79,8 +79,9 @@ test("devolve todos os campos inválidos no mesmo erro", () => {
 
 test("cota ME/EPP é informativa e só exclusividade força nível baixo", () => {
   assert.equal(fitLevel(0.75), "high");
-  assert.equal(fitLevel(0.5), "medium");
-  assert.equal(fitLevel(0.49), "low");
+  assert.equal(fitLevel(0.74), "medium");
+  assert.equal(fitLevel(0.55), "medium");
+  assert.equal(fitLevel(0.54), "low");
   assert.equal(fitLevel(0.99, true), "low");
   assert.equal(fitLevel(0.99, false, "me_epp_exclusive"), "low");
   assert.equal(fitLevel(0.99, false, "me_epp_quota"), "high");

@@ -398,7 +398,12 @@ const publicFit = (
     row.status === "ready" || row.status === "filtered"
       ? row.status
       : "pending",
-  level: row.level as TenderFit["level"],
+  // Level is derived from the stored score so a cut-off change applies to cached fits without a new Jev call.
+  // A stored "low" stays low: it may have been forced by an exclusion or ME/EPP exclusivity.
+  level:
+    row.status === "ready" && row.score !== null && row.level !== "low"
+      ? fitLevel(Number(row.score))
+      : (row.level as TenderFit["level"]),
   score: row.score === null ? null : Number(row.score),
   reasons: row.reasons,
   model: row.responseModel,

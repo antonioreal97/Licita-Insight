@@ -175,6 +175,10 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
 
 export type SizeRestriction = "me_epp_exclusive" | "me_epp_quota";
 
+/** Level cut-offs on the normalized 0–1 score (owner decision, 25 set 2026, after calibration). */
+export const FIT_HIGH_MIN = 0.75;
+export const FIT_MEDIUM_MIN = 0.55;
+
 export const fitLevel = (
   score: number,
   excluded = false,
@@ -182,9 +186,9 @@ export const fitLevel = (
 ): "high" | "medium" | "low" =>
   excluded || sizeRestriction === "me_epp_exclusive"
     ? "low"
-    : score >= 0.75
+    : score >= FIT_HIGH_MIN
       ? "high"
-      : score >= 0.5
+      : score >= FIT_MEDIUM_MIN
         ? "medium"
         : "low";
 

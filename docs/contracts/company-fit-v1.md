@@ -52,7 +52,7 @@ O score semântico Jev usa uma rubrica concreta de 0–3 e é normalizado para 0
 - `2`: a empresa fornece parte relevante dos itens, mas não o objeto principal;
 - `3`: a empresa fornece o objeto principal da licitação.
 
-Nível alto é `>= 0.75`, médio é `>= 0.50`; abaixo disso é baixo. Uma exclusão só é confirmada quando o próprio objeto principal é a compra ou prestação do item excluído; insumos de um serviço que a empresa presta não contam como exclusão. Cada termo excluído é avaliado separadamente e somente os termos confirmados aparecem no motivo.
+Nível alto é `>= 0.75`, médio é `>= 0.55`; abaixo disso é baixo (limiares aprovados pelo owner em 25 set 2026, após a calibração). O nível de fits em cache é derivado da nota gravada, então uma mudança de limiar vale sem reavaliar no Jev; um nível baixo forçado por exclusão ou exclusividade ME/EPP permanece baixo. Uma exclusão só é confirmada quando o próprio objeto principal é a compra ou prestação do item excluído; insumos de um serviço que a empresa presta não contam como exclusão. Cada termo excluído é avaliado separadamente e somente os termos confirmados aparecem no motivo.
 
 Para empresa de porte `other`, participação exclusiva de ME/EPP força nível baixo. Cota reservada para ME/EPP é apenas informativa, pois a cota principal permanece aberta a outros portes; benefícios como preferência pós-lances, empate ficto e regularidade fiscal tardia não geram motivo de restrição. No máximo quatro razões verificáveis são retornadas. A verificação de porte só consulta um índice documental já pronto e nunca inicia indexação.
 
