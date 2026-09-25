@@ -8,6 +8,7 @@ import { useBilling } from '@/features/billing/hooks/use-billing';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { cn } from '@/lib/utils';
 import { useTenderSheet } from '../hooks/use-tender-sheet';
+import { sheetExcerpt } from '../lib/sheet-excerpt';
 
 type FieldCopy = { label: string; answers?: Record<string, string> };
 
@@ -59,6 +60,12 @@ function SourceLink({ field }: { field: SheetField }) {
   );
 }
 
+/** Collapsed preview: from the sentence about this field, with an ellipsis when the start was skipped. Expanding shows it all. */
+function PreviewText({ field }: { field: SheetField }) {
+  const excerpt = sheetExcerpt(field.id, field.evidence!.text);
+  return <>{excerpt.trimmed ? `…${excerpt.text}` : excerpt.text}</>;
+}
+
 function FieldRow({ field }: { field: SheetField }) {
   const [open, setOpen] = useState(false);
   const passageId = useId();
@@ -81,8 +88,8 @@ function FieldRow({ field }: { field: SheetField }) {
                   {answer}
                 </span>
               ) : !categorical ? (
-                <span id={passageId} className={cn('min-w-0 flex-1 type-meta break-words text-foreground/90', !open && 'line-clamp-2')}>
-                  {field.evidence.text}
+                <span id={passageId} className={cn('min-w-0 flex-1 type-meta break-words text-foreground/90', !open && 'line-clamp-3')}>
+                  {open ? field.evidence.text : <PreviewText field={field} />}
                 </span>
               ) : (
                 // Found a passage but the category was unclear: show the text, do not guess.
