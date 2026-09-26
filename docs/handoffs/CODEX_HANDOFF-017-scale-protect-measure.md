@@ -65,8 +65,12 @@ Sem mudar contrato público (rotas, formatos, erros existentes). O frontend não
      agora em memória): chave = usuário da sessão quando há cookie válido, senão IP. Respeitar
      `TRUST_PROXY` (env; padrão desligado) para ler o IP real atrás de balanceador/CDN. Padrões
      configuráveis: busca/detalhe/sugestões/oportunidades anônimos 60/min por IP; autenticados 240/min por
-     usuário; rotas de autenticação (login, callback) 20/min por IP; webhook do Asaas e ingestão do n8n
-     ficam FORA do limite (têm token próprio). Resposta `429` com o envelope de erro existente
+     usuário; rotas de autenticação (login, callback) 20/min por IP; o webhook do Asaas (valida
+     o token `asaas-access-token`; CONFIRME lendo o código antes de isentar) fica fora do limite por janela.
+     ATENÇÃO, CORREÇÃO (26 set 2026): as rotas `POST/GET /v1/ingest/pncp` e `/v1/ingest/opportunities`
+     NÃO têm autenticação nenhuma (routes/ingest.ts) e o corpo escolhe a janela de coleta. Elas NÃO são
+     isentas: aplique limite estrito (sugestão 3/min por IP) e NÃO as trate como confiáveis. A correção
+     de fundo (token de serviço) fica fora deste handoff, depende de decisão do owner (afeta o n8n). Resposta `429` com o envelope de erro existente
      (`RATE_LIMITED`) e `Retry-After`. Cabeçalhos `RateLimit-*` opcionais.
    - Cache HTTP nas leituras públicas (busca, detalhe, sugestões, oportunidades): para requisições SEM cookie
      de sessão, `Cache-Control: public, max-age=30, stale-while-revalidate=120`, ETag fraco e 304; com
