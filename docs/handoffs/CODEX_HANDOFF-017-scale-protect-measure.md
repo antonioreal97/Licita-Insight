@@ -77,10 +77,48 @@ Sem mudar contrato público (rotas, formatos, erros existentes). O frontend não
    - `helmet` com o mínimo compatível com a API (sem CSP para uma API JSON).
    - Documente a configuração recomendada de CDN (chave de cache sem cookie para anônimos).
 
+5. Rajada do mesmo cliente e timeouts (pedido do owner em 26 set 2026, durante a execução)
+   Objetivo: um único cliente/conexão com muitas requisições simultâneas não pode sobrecarregar a API nem
+   o banco, e uma requisição pendurada não pode segurar recursos para sempre. O limite por janela do item 4
+   NÃO cobre isso (60 req/min podem chegar todas no mesmo segundo).
+   a. Limite de concorrência por cliente (requisições EM ANDAMENTO), mesma chave do item 4 (usuário da
+      sessão, senão IP): padrão 10 anônimo e 20 autenticado (`MAX_INFLIGHT_PER_ANON`, `MAX_INFLIGHT_PER_USER`).
+      Acima do limite, resposta imediata `429` com o envelope de erro e `Retry-After: 1`. Não enfileirar
+      (fila ilimitada é o problema). A vaga é liberada ao terminar, ao dar timeout OU se o cliente desconectar.
+   b. Limite global de requisições em andamento (`MAX_INFLIGHT_GLOBAL`, padrão 200): acima disso, descartar
+      com `503` + `Retry-After` (load shedding), começando pelas anônimas. `/api/healthz` e `/api/readyz`
+      nunca são descartadas. Opcional: descartar também quando o atraso do event loop
+      (`perf_hooks.monitorEventLoopDelay`) passar de um limite configurável.
+   c. Timeout de requisição na aplicação (`REQUEST_TIMEOUT_MS`, padrão 30000; rotas que legitimamente demoram,
+      como exportação de dados e ingestão do n8n, com valor próprio configurável): responde `503` (ou `504`)
+      com envelope de erro e libera a vaga. Garanta que `statement_timeout` (item 3) seja MENOR que esse
+      valor para que o banco não continue trabalhando depois que o cliente já recebeu o erro. Se surgir um
+      código de erro novo (ex.: `REQUEST_TIMEOUT`), é aditivo: documente no OpenAPI e avise no CLAUDE_HANDOFF
+      (o frontend trata status >= 500 como transitório; o Claude ajusta os tipos).
+   d. Timeouts do servidor HTTP do Node, por env com padrões seguros: `headersTimeout`, `requestTimeout`
+      (recepção da requisição; protege de conexão lenta/slowloris), `keepAliveTimeout` (maior que o idle do
+      balanceador, sugestão 65 s), `server.maxRequestsPerSocket` (sugestão 1000) e `server.maxConnections`.
+      Limite de conexões por IP não se resolve no Node: documente que fica no balanceador/CDN.
+   e. Limites de corpo explícitos (`express.json({ limit })` e urlencoded) com `413` no envelope de erro.
+   f. Timeouts de chamadas de SAÍDA: audite todo `fetch`/cliente externo (PNCP, Mapas Culturais, Asaas,
+      Google OAuth, Resend, Jev) e garanta `AbortSignal.timeout` ou o timeout do SDK, configurável por env.
+      Uma chamada externa pendurada segura a requisição e a vaga de concorrência.
+   g. Espera por conexão do pool (`DB_CONNECTION_TIMEOUT_MS`, item 3) deve virar `503` rápido no envelope de
+      erro, não travar a requisição até o timeout geral.
+   Cenário de carga NOVO no harness: rajada de 500 requisições simultâneas de UM cliente contra a busca
+   enquanto um segundo cliente faz requisições normais. Reporte, antes e depois: latência p95 do segundo
+   cliente (justiça), quantas do primeiro receberam 429, memória e event loop lag da API, sem erros 5xx
+   inesperados.
+
 Não faça (ficam para os HANDOFFs 018/019): separar processos api/worker, fila durável, ledger de custo,
 semáforo do Jev, particionamento, métricas Prometheus, Redis.
 
 Acceptance criteria:
+  - testes do item 5: o (N+1)º pedido simultâneo do mesmo cliente recebe 429 enquanto os N estão em
+    andamento e a vaga volta ao terminar/timeout/desconexão; descarte global com 503 sem afetar
+    /healthz e /readyz; timeout de requisição responde no envelope e libera a vaga; conexão com cabeçalhos
+    lentos é fechada (`headersTimeout`); `maxRequestsPerSocket`; corpo acima do limite dá 413; chamadas de
+    saída com timeout (fetch simulado que nunca responde).
   - testes: limitador (janela, chave por usuário vs IP, 429 com Retry-After, rotas isentas), cache (anônimo
     público com ETag e 304, com sessão privado, rotas de conta no-store), readyz (200 e 503 com banco
     fora), desligamento (SIGTERM com requisição em curso), pool via env; testes existentes intactos.
