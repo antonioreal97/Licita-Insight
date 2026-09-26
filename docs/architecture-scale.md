@@ -94,3 +94,5 @@ Gatilhos são métricas, não datas: p95 de busca, profundidade da fila, tokens/
 | CODEX_HANDOFF-019 (Fase 2) | fila durável no Postgres para extração de documentos, fit e ficha (tira esse trabalho do processo da API e o move para o worker); disjuntor de orçamento; métricas e alertas | depende das decisões 1, 2 e 4 |
 
 **Fronteira do 018:** os papéis separam apenas os agendadores. O trabalho disparado por uma requisição (download e extração de PDF, fila do fit, geração da ficha) continua no processo da API até o 019. Filtro lexical do fit: um filtro rígido cortaria 61% das chamadas de nível baixo, mas perderia 3 de 19 editais alta/média (recall 84%) na calibração do ciclo 5; por isso ele nasce em modo sombra e só liga com recall medido (≥ 97% em ≥ 500 avaliações).
+
+`APP_ROLE=all` preserva o processo único de desenvolvimento; `api` serve somente HTTP e `worker` inicia somente os agendadores. O worker pode expor apenas `/api/healthz` e `/api/readyz` quando `WORKER_HEALTH_PORT` estiver definido. O profile `scale` do Compose adiciona o worker sem alterar a topologia padrão.

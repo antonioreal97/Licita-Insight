@@ -36,7 +36,7 @@ export const configureHttpServer = (server: Server, config: HttpServerConfig): v
 };
 
 export const installGracefulShutdown = (options: {
-  server: Server;
+  server?: Server;
   stopSchedulers: () => void;
   closePool: () => Promise<void>;
   timeoutMs: number;
@@ -50,11 +50,17 @@ export const installGracefulShutdown = (options: {
     logger.info({ timeoutMs: options.timeoutMs }, "Graceful shutdown started");
     options.stopSchedulers();
     let timer: NodeJS.Timeout | undefined;
-    const closed = new Promise<void>((resolve) => options.server.close(() => resolve()));
+    const closed = new Promise<void>((resolve) => {
+      if (!options.server?.listening) {
+        resolve();
+        return;
+      }
+      options.server.close(() => resolve());
+    });
     const deadline = new Promise<void>((resolve) => {
       timer = setTimeout(() => {
         logger.warn("Graceful shutdown deadline reached; closing active connections");
-        options.server.closeAllConnections?.();
+        options.server?.closeAllConnections?.();
         resolve();
       }, options.timeoutMs);
       timer.unref();

@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "export NODE_ENV=development && node ./build.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
+    "dev:worker": "export NODE_ENV=development APP_ROLE=worker && node ./build.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "build": "node ./build.mjs",
     "start": "node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
+    "start:worker": "export APP_ROLE=worker && node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
     "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
