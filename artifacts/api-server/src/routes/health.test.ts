@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import test from "node:test";
 import express from "express";
-import { createReadinessHandler } from "./health";
+import { createReadinessHandler } from "../lib/readiness";
 
 const request = async (handler: ReturnType<typeof createReadinessHandler>) => {
   const app = express();

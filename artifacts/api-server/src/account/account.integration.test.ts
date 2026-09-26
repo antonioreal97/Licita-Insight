@@ -17,6 +17,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   process.env.SESSION_SECRET = "account-integration-secret-at-least-32-characters";
   process.env.NODE_ENV = "test";
   process.env.LOG_LEVEL = "silent";
+  process.env.RATE_LIMIT_AUTH_PER_MINUTE = "1000";
   delete process.env.BILLING_MONTHLY_BRL;
   delete process.env.RESEND_API_KEY;
   delete process.env.MAIL_FROM;
