@@ -2,11 +2,11 @@
 
 ## Foco agora
 
-Ondas 0 a 3 entregues no `main` (PR #8 do ciclo 6, `524f083`): cobrança, teste de 7 dias, e-mail (Resend), Perguntar ao edital, aderência ao perfil, ficha do edital com leitura parcial e retentativa, landing nova. Próxima: Onda 4 (funil/CRM) ou preparar o lançamento; decisão do owner pendente.
+Ciclo 7 (branch `antonioreal97/cycle7`, commits locais, sem push nem PR): arquitetura de escala e custo por usuário. Diagnóstico e plano em `docs/architecture-scale.md`. Fase 1a (HANDOFF-017) entregue e validada: harness de carga (`scale-*`), índice `pg_trgm` na busca (busca rara em 300k linhas: p95 8.349 → 90 ms, buffers −99%), pool/timeouts/`/readyz`/desligamento limpo, limite de taxa e de concorrência, cache HTTP público com ETag/304, helmet, compressão (`docs/contracts/scale-protection-v1.md`, relatório `docs/reviews/scale-baseline.md`). Limites conhecidos: termo comum (50% da tabela), contagem exata, sugestões e paginação profunda seguem lentos; carga só até 300k linhas; sem CDN real.
 
-Pendências conhecidas: login Google no Docker não testado; nomes de arquivo em ZIP com caracteres trocados (CP437/CP850); PDF escaneado e planilhas sem leitura (OCR fora do escopo); visão em tabela da busca sem selo de aderência; calibração da ficha com só 3 editais (limiares 0,5/0,6 a rever).
+Pendente: Fase 1b (HANDOFF-018: papéis api/worker, ledger de custo de IA por usuário, semáforo do Jev com faixas, filtro lexical no fit) e Fase 2 (fila durável, disjuntor de orçamento, métricas), que dependem de 5 decisões do owner (hospedagem e orçamento, metas de usuários, preço do plano, comportamento no limite de IA, retenção). Segurança: o agente Hermes gerou `docs/reviews/security-audit-2026-09-26.md` (não commitado, não decidido pelo owner); confirmei que as rotas de ingestão não têm autenticação (hoje só limite de 3/min) e que a indexação de documentos não tem teto global. O owner respondeu "ainda não" ao handoff de segurança P0.
 
-Ambiente: o Docker precisa de `JEV_API_KEY`, `RESEND_API_KEY`/`MAIL_FROM` e `BILLING_MONTHLY_BRL` no `.env` para o produto completo. Bancos de teste `licita_cycle4` (stack `licita-insight`) e `licita_cycle5` (volume `main_licita_pg`) podem ser apagados.
+Ambiente: Docker Desktop e o Postgres do stack `licita-insight` (com `licita_cycle4`) ligados; API e web desse stack desligados.
 
 ## O que está na mesa
 
