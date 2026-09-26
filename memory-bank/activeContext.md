@@ -2,11 +2,15 @@
 
 ## Foco agora
 
-Ciclo 7 (branch `antonioreal97/cycle7`, commits locais, sem push nem PR): arquitetura de escala e custo por usuário. Diagnóstico e plano em `docs/architecture-scale.md`. Fase 1a (HANDOFF-017) entregue e validada: harness de carga (`scale-*`), índice `pg_trgm` na busca (busca rara em 300k linhas: p95 8.349 → 90 ms, buffers −99%), pool/timeouts/`/readyz`/desligamento limpo, limite de taxa e de concorrência, cache HTTP público com ETag/304, helmet, compressão (`docs/contracts/scale-protection-v1.md`, relatório `docs/reviews/scale-baseline.md`). Limites conhecidos: termo comum (50% da tabela), contagem exata, sugestões e paginação profunda seguem lentos; carga só até 300k linhas; sem CDN real.
+Ciclo 8 (branch `antonioreal97/cycle8`, commits locais, sem push nem PR): Fase 1b de escala, custo e isolamento (HANDOFF-018), entregue e validada. Ciclo 7 (Fase 1a, PR #9) está no `main`. Plano completo em `docs/architecture-scale.md`.
 
-Pendente: Fase 1b (HANDOFF-018: papéis api/worker, ledger de custo de IA por usuário, semáforo do Jev com faixas, filtro lexical no fit) e Fase 2 (fila durável, disjuntor de orçamento, métricas), que dependem de 5 decisões do owner (hospedagem e orçamento, metas de usuários, preço do plano, comportamento no limite de IA, retenção). Segurança: o agente Hermes gerou `docs/reviews/security-audit-2026-09-26.md` (não commitado, não decidido pelo owner); confirmei que as rotas de ingestão não têm autenticação (hoje só limite de 3/min) e que a indexação de documentos não tem teto global. O owner respondeu "ainda não" ao handoff de segurança P0.
+Entregue no 018: `APP_ROLE=all|api|worker` (worker com porta de saúde opcional; o serviço `worker` do Compose só sobe com `--profile scale`); ciclos dos jobs protegidos por `pg_try_advisory_lock` + auditoria em `job_run_audit`; view `ai_usage_ledger` e `report:ai-cost` (bate com as tabelas de origem); faixas interativo/lote no cliente Jev (`jev-scheduler.ts`); filtro lexical do fit em modo sombra (`AI_FIT_LEXICAL_GATE=shadow`, `report:fit-gate`). Validado ao vivo com o Jev real: pergunta e fit passam pelo scheduler, espera p95 do interativo 0 ms e do lote 640 ms, desligamento em < 1 s sem travas presas.
 
-Ambiente: Docker Desktop e o Postgres do stack `licita-insight` (com `licita_cycle4`) ligados; API e web desse stack desligados.
+Filtro lexical: fica em `shadow`. Na calibração antiga um filtro rígido perdia 3 de 19 alta/média; na amostra nova de 24 editais sem relação cortaria 67% das chamadas com recall 100% (só 3 altos). Ligar (`on`) exige ≥ 500 medições e recall ≥ 97%: decisão do owner.
+
+Fronteira: o trabalho disparado por request (download e extração de PDF, fila do fit, geração da ficha) ainda roda no processo da API; a fila durável que o move para o worker é o HANDOFF-019, que depende de 5 decisões do owner (hospedagem e orçamento, metas de usuários, preço do plano, comportamento no limite de IA, retenção). Segurança: rotas de ingestão ainda sem autenticação (só limite de 3/min) e sem teto global de indexação; o owner respondeu "ainda não" ao handoff de segurança P0; relatório do agente Hermes em `docs/reviews/security-audit-2026-09-26.md` (não commitado).
+
+Ambiente: Docker Desktop reinicia sozinho e derruba o stack `licita-insight`; só o container do Postgres é religado à mão. `licita_cycle4` está com o esquema atual (migrations até 0012) e dados de teste do usuário qa-018.
 
 ## O que está na mesa
 
