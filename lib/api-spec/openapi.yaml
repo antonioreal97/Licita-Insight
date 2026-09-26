@@ -1599,7 +1599,7 @@ components:
         ]
     TenderAskIndexStatus:
       type: string
-      enum: [not_started, processing, ready, failed, no_documents, unsupported]
+      enum: [not_started, processing, ready, failed, no_documents, unsupported, expired]
     TenderAskDocument:
       type: object
       properties:

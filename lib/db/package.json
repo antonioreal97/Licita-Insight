@@ -17,6 +17,7 @@
     "verify:ai-ledger": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-ledger.ts",
     "verify:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/verify-fit-gate.ts",
     "verify:ai-jobs": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-jobs.ts",
+    "verify:ai-purged-at": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-purged-at.ts",
     "verify:search-index": "node --env-file-if-exists=../../.env --import tsx scripts/verify-search-index.ts"
   },
   "dependencies": {

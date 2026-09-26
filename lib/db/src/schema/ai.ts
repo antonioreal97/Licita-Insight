@@ -66,6 +66,7 @@ export const tenderAiIndexesTable = pgTable("tender_ai_indexes", {
   error: text("error"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  purgedAt: timestamp("purged_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

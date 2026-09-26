@@ -19,6 +19,7 @@ import {
 import { createWorkerHealthApp } from "./worker-health";
 import { tryRunSingletonJob } from "./jobs/job-lock";
 import { startAiJobWorker } from "./ai/ai-job-queue";
+import { startAiDocumentRetentionScheduler } from "./ai/ai-document-retention";
 
 const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT", required: boolean): number | undefined => {
   const raw = process.env[name]?.trim();
@@ -47,6 +48,7 @@ const startHttpServer = (port: number, healthOnly: boolean): Server => {
 
 const startSchedulers = (): Array<() => void> => [
   startAiJobWorker(),
+  startAiDocumentRetentionScheduler(),
   startTrialNotificationScheduler(),
   startEmailNotificationJobs(),
   startAiRetentionScheduler(),

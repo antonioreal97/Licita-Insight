@@ -34,7 +34,8 @@ type SheetStatus =
   | "ready"
   | "failed"
   | "no_documents"
-  | "unsupported";
+  | "unsupported"
+  | "expired";
 
 export type TenderSheetResponse = {
   status: SheetStatus;
@@ -276,6 +277,16 @@ export async function getTenderSheet(
 ): Promise<TenderSheetResponse> {
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   const unreadDocuments = await unreadDocumentCount(tenderId);
+  if (indexStatus === "expired") {
+    const [cachedSheet] = await db.select().from(tenderAiSheetsTable)
+      .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
+      .limit(1);
+    if (cachedSheet) return {
+      status: "ready", fields: cachedSheet.fields, unreadDocuments: cachedSheet.unreadDocuments,
+      model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
+      generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
+    };
+  }
   if (indexStatus !== "ready")
     return EMPTY_RESPONSE(indexStatus, unreadDocuments);
 

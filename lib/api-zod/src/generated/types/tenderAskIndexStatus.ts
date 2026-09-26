@@ -16,4 +16,5 @@ export const TenderAskIndexStatus = {
   failed: 'failed',
   no_documents: 'no_documents',
   unsupported: 'unsupported',
+  expired: 'expired',
 } as const;

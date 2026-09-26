@@ -51,7 +51,8 @@ type TenderSheet = {
     | "ready"
     | "failed"
     | "no_documents"
-    | "unsupported";
+    | "unsupported"
+    | "expired";
   fields: SheetField[];
   unreadDocuments: number;
   model: string | null;
@@ -100,3 +101,5 @@ A ficha é cache público global por `(tender, indexVersion, model, promptVersio
 ## Privacidade e retenção
 
 Somente pergunta e trechos do edital são enviados ao Jev. Perguntas ficam no export LGPD, são excluídas com a conta e expiram após 90 dias. Respostas em cache do próprio usuário não consomem nova cota.
+
+Trechos, documentos extraídos e o índice são purgados 90 dias após `proposalDeadline`, exceto quando algum usuário salvou o edital. O edital permanece na base e o índice recebe um tombstone. `ask-status` e ficha sem cache retornam `expired`; ficha já pronta continua `ready`. `POST ask` retorna `409 CONFLICT` com `details: [{ "field": "index", "issue": "index_expired" }]`. Salvar o edital depois do purge permite uma nova indexação para o usuário que o salvou.

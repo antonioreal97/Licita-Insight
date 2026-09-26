@@ -12,7 +12,7 @@ import {
   type AiPassageRecord,
 } from "@workspace/db";
 import { entitlementSource, type EntitlementSource } from "../billing/billing-access";
-import { AiQuotaExceededError, AiUnavailableError } from "../lib/api-error";
+import { AiQuotaExceededError, AiUnavailableError, ConflictError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
@@ -149,6 +149,11 @@ export async function askTender(
   const config = aiConfig();
   if (!config.apiKey) throw new AiUnavailableError();
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
+  if (indexStatus === "expired") {
+    throw new ConflictError("The tender document index has expired", [
+      { field: "index", issue: "index_expired" },
+    ]);
+  }
   if (indexStatus === "processing")
     return {
       status: "processing",

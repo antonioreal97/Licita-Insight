@@ -6,6 +6,7 @@ import {
   tenderAiIndexesTable,
   tenderAiPassagesTable,
   tendersTable,
+  savedTendersTable,
   type TenderDocumentRecord,
 } from "@workspace/db";
 import { NotFoundError } from "../lib/api-error";
@@ -32,8 +33,9 @@ export type IndexStatus =
   | "ready"
   | "failed"
   | "no_documents"
-  | "unsupported";
-type StoredIndexStatus = Exclude<IndexStatus, "not_started">;
+  | "unsupported"
+  | "expired";
+type StoredIndexStatus = Exclude<IndexStatus, "not_started" | "expired">;
 
 const EXTRACTOR_VERSION = 3;
 const STALE_PROCESSING_MS = 15 * 60_000;
@@ -541,8 +543,19 @@ export async function ensureTenderIndex(
     .from(tenderAiIndexesTable)
     .where(eq(tenderAiIndexesTable.tenderId, tenderId))
     .limit(1);
+  let forceReindex = false;
+  if (existing?.purgedAt) {
+    const saved = options.userId
+      ? await db.select({ tenderId: savedTendersTable.tenderId }).from(savedTendersTable)
+          .where(and(eq(savedTendersTable.userId, options.userId), eq(savedTendersTable.tenderId, tenderId))).limit(1)
+      : [];
+    if (saved.length === 0) return "expired";
+    forceReindex = true;
+    await db.update(tenderAiIndexesTable).set({ purgedAt: null, updatedAt: new Date() })
+      .where(eq(tenderAiIndexesTable.tenderId, tenderId));
+  }
 
-  if (existing && existing.sourceFingerprint === currentFingerprint) {
+  if (existing && existing.sourceFingerprint === currentFingerprint && !forceReindex) {
     const status = existing.status as StoredIndexStatus;
     return status;
   }

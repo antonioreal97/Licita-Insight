@@ -325,7 +325,7 @@ export const getTenderAskStatusResponseQuotaUsedMin = 0;
 
 
 export const GetTenderAskStatusResponse = zod.object({
-  "index": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported']),
+  "index": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported', 'expired']),
   "documents": zod.array(zod.object({
   "id": zod.string(),
   "title": zod.string(),
@@ -411,7 +411,7 @@ export const getTenderSheetResponseUnreadDocumentsMin = 0;
 
 
 export const GetTenderSheetResponse = zod.object({
-  "status": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported']),
+  "status": zod.enum(['not_started', 'processing', 'ready', 'failed', 'no_documents', 'unsupported', 'expired']),
   "fields": zod.array(zod.object({
   "id": zod.enum(['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples', 'bid_guarantee', 'contract_guarantee', 'penalties', 'technical_qualification', 'financial_qualification', 'contract_term', 'delivery_term', 'price_adjustment']),
   "status": zod.enum(['found', 'not_found']),
