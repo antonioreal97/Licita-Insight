@@ -23,6 +23,8 @@ import {
   type ExtractedDocument,
 } from "./document-extractor";
 import { completedIndexStatus } from "./policy";
+import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
+import { appRoleFromEnv } from "../app-role";
 
 export type IndexStatus =
   | "not_started"
@@ -37,7 +39,6 @@ const EXTRACTOR_VERSION = 3;
 const STALE_PROCESSING_MS = 15 * 60_000;
 const RETRY_JOB_BATCH_SIZE = 10;
 const RETRY_CLAIM_MS = 5 * 60_000;
-const runningIndexes = new Map<string, Promise<void>>();
 
 const fingerprint = (documents: TenderDocumentRecord[]): string =>
   createHash("sha256")
@@ -503,12 +504,29 @@ const processIndex = async (
       })
       .where(eq(tenderAiIndexesTable.tenderId, tenderId));
     logger.error({ err: error, tenderId }, "Tender AI indexing failed");
+    throw error;
   }
 };
+
+export async function executeTenderIndexJob(
+  tenderId: string,
+  version: number,
+  previousVersion: number,
+): Promise<void> {
+  const [tender, index] = await Promise.all([
+    db.select({ documents: tendersTable.documents }).from(tendersTable)
+      .where(eq(tendersTable.id, tenderId)).limit(1),
+    db.select({ version: tenderAiIndexesTable.version }).from(tenderAiIndexesTable)
+      .where(eq(tenderAiIndexesTable.tenderId, tenderId)).limit(1),
+  ]);
+  if (!tender[0] || index[0]?.version !== version) return;
+  await processIndex(tenderId, tender[0].documents, version, previousVersion);
+}
 
 export async function ensureTenderIndex(
   tenderId: string,
   trigger: boolean,
+  options: { userId?: string; lane?: "interactive" | "batch" } = {},
 ): Promise<IndexStatus> {
   const [tender] = await db
     .select({ documents: tendersTable.documents })
@@ -526,25 +544,7 @@ export async function ensureTenderIndex(
 
   if (existing && existing.sourceFingerprint === currentFingerprint) {
     const status = existing.status as StoredIndexStatus;
-    const staleProcessing =
-      status === "processing" &&
-      existing.updatedAt.getTime() < Date.now() - STALE_PROCESSING_MS;
-    if (!staleProcessing || !trigger || runningIndexes.has(tenderId)) {
-      return status;
-    }
-    const now = new Date();
-    await db
-      .update(tenderAiIndexesTable)
-      .set({ error: null, startedAt: now, updatedAt: now })
-      .where(eq(tenderAiIndexesTable.tenderId, tenderId));
-    const task = processIndex(
-      tenderId,
-      documents,
-      existing.version,
-      existing.version,
-    ).finally(() => runningIndexes.delete(tenderId));
-    runningIndexes.set(tenderId, task);
-    return "processing";
+    return status;
   }
 
   if (!trigger) return (existing?.status as StoredIndexStatus) ?? "not_started";
@@ -581,14 +581,22 @@ export async function ensureTenderIndex(
     await db
       .delete(tenderAiDocumentsTable)
       .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
-  } else if (!runningIndexes.has(tenderId)) {
-    const task = processIndex(
+  } else {
+    const dedupeKey = `index:${tenderId}:${currentFingerprint}`;
+    const queued = await enqueueAiJob({
+      kind: "index",
+      dedupeKey,
       tenderId,
-      documents,
-      version,
-      previousVersion,
-    ).finally(() => runningIndexes.delete(tenderId));
-    runningIndexes.set(tenderId, task);
+      userId: options.userId,
+      payload: { version, previousVersion },
+      lane: options.lane ?? "interactive",
+      enforceIndexUserRate: Boolean(options.userId),
+    });
+    if (queued.reason === "queue_full" || queued.reason === "user_rate_limited") {
+      await db.delete(tenderAiIndexesTable).where(eq(tenderAiIndexesTable.tenderId, tenderId));
+      return "not_started";
+    }
+    if (appRoleFromEnv() === "all") void runEnqueuedAiJobNow(dedupeKey);
   }
   return status;
 }
@@ -799,7 +807,6 @@ export async function runDocumentRetryBatch(
   let attempted = 0;
   let recovered = 0;
   for (const candidate of due) {
-    if (runningIndexes.has(candidate.tenderId)) continue;
     const [claimed] = await db
       .update(tenderAiDocumentsTable)
       .set({ nextRetryAt: new Date(now.getTime() + RETRY_CLAIM_MS) })
@@ -820,18 +827,9 @@ export async function runDocumentRetryBatch(
       candidate.attemptCount,
       now,
     );
-    runningIndexes.set(
-      candidate.tenderId,
-      task.then(
-        () => undefined,
-        () => undefined,
-      ),
-    );
     try {
       if (await task) recovered += 1;
-    } finally {
-      runningIndexes.delete(candidate.tenderId);
-    }
+    } finally { /* claim timestamp prevents duplicate retry cycles */ }
   }
   return { attempted, recovered };
 }

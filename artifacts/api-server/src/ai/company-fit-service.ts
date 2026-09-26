@@ -31,6 +31,8 @@ import {
   scoreSizeRestriction,
 } from "./jev-client";
 import { fitLexicalGateMode } from "./fit-lexical-gate";
+import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
+import { appRoleFromEnv } from "../app-role";
 
 export { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 export type { CompanyProfileInput, CompanySize } from "./company-fit-policy";
@@ -48,7 +50,6 @@ export type TenderFit = {
 };
 
 export const COMPANY_FIT_PROMPT_VERSION = 2;
-const runningFits = new Map<string, Promise<void>>();
 
 const toProfile = (
   row: typeof companyProfilesTable.$inferSelect,
@@ -408,8 +409,29 @@ async function processFit(
       { err: error, userId, tenderId: tender.id },
       "Company fit evaluation failed",
     );
-    if (error instanceof JevUnavailableError) return;
+    throw error;
   }
+}
+
+export async function executeCompanyFitJob(fitId: string): Promise<void> {
+  const [fit] = await db.select().from(companyTenderFitsTable)
+    .where(eq(companyTenderFitsTable.id, fitId)).limit(1);
+  if (!fit || fit.status === "ready" || fit.status === "filtered") return;
+  const [profile, tender] = await Promise.all([
+    getCompanyProfile(fit.userId),
+    db.select({
+      id: tendersTable.id,
+      title: tendersTable.title,
+      objectSummary: tendersTable.objectSummary,
+      description: tendersTable.description,
+      organizationName: tendersTable.organizationName,
+      estimatedValue: tendersTable.estimatedValue,
+      state: tendersTable.state,
+      items: tendersTable.items,
+    }).from(tendersTable).where(eq(tendersTable.id, fit.tenderId)).limit(1),
+  ]);
+  if (!profile || !tender[0] || profile.version !== fit.profileVersion) return;
+  await processFit(fit.id, fit.userId, profile, tender[0]);
 }
 
 const publicFit = (
@@ -464,17 +486,7 @@ async function ensureFit(
     existing?.tenderFingerprint === fingerprint &&
     (existing.status === "processing" || existing.status === "failed")
   ) {
-    const active = runningFits.get(key);
-    if (active && wait) {
-      await active;
-      const [completed] = await db
-        .select()
-        .from(companyTenderFitsTable)
-        .where(eq(companyTenderFitsTable.id, existing.id))
-        .limit(1);
-      return completed ? publicFit(completed) : publicFit(existing);
-    }
-    if (active || existing.updatedAt.getTime() > Date.now() - 5 * 60_000)
+    if (existing.updatedAt.getTime() > Date.now() - 5 * 60_000)
       return publicFit(existing);
   }
   const id = existing?.id ?? randomUUID();
@@ -602,15 +614,29 @@ async function ensureFit(
       },
     })
     .returning();
-  let task = runningFits.get(key);
-  if (!task) {
-    task = processFit(row!.id, userId, profile, tender).finally(() =>
-      runningFits.delete(key),
-    );
-    runningFits.set(key, task);
+  const queued = await enqueueAiJob({
+    kind: "fit",
+    dedupeKey: `fit:${key}`,
+    tenderId: tender.id,
+    userId,
+    payload: { fitId: row!.id },
+    lane: "batch",
+  });
+  if (queued.reason === "queue_full") {
+    await db.update(companyTenderFitsTable).set({ status: "failed", updatedAt: new Date() })
+      .where(eq(companyTenderFitsTable.id, row!.id));
   }
   if (wait) {
-    await task;
+    if (appRoleFromEnv() === "all") {
+      await runEnqueuedAiJobNow(`fit:${key}`);
+    } else {
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        const [current] = await db.select({ status: companyTenderFitsTable.status })
+          .from(companyTenderFitsTable).where(eq(companyTenderFitsTable.id, row!.id)).limit(1);
+        if (current?.status === "ready" || current?.status === "filtered" || current?.status === "failed") break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     const [completed] = await db
       .select()
       .from(companyTenderFitsTable)

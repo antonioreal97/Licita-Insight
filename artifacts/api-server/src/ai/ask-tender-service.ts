@@ -99,7 +99,7 @@ async function reserveQuota(userId: string, now: Date): Promise<Quota> {
 }
 
 export async function getAskStatus(userId: string, tenderId: string, trigger: boolean, now = new Date()): Promise<AskStatus> {
-  const index = await ensureTenderIndex(tenderId, trigger);
+  const index = await ensureTenderIndex(tenderId, trigger, { userId, lane: "interactive" });
   const documents = await db
     .select({
       id: tenderAiDocumentsTable.id,
@@ -148,7 +148,7 @@ export async function askTender(
 }> {
   const config = aiConfig();
   if (!config.apiKey) throw new AiUnavailableError();
-  const indexStatus = await ensureTenderIndex(tenderId, true);
+  const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   if (indexStatus === "processing")
     return {
       status: "processing",
