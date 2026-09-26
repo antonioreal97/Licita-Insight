@@ -255,6 +255,38 @@ test("public cache emits weak ETag/304 and session requests are private", async 
   }
 });
 
+test("ETag ignores the per-request server timing so conditional requests still hit", async () => {
+  const app = express();
+  app.use(cookieParser());
+  let call = 0;
+  // Same content, but `meta.tookMs` changes on every request, like the real search response.
+  app.get("/search", publicHttpCache, (_req, res) => {
+    call += 1;
+    res.json({ data: [{ id: "a" }], meta: { total: 1, tookMs: 10 + call } });
+  });
+  const { server, baseUrl } = await listen(app);
+  try {
+    const first = await fetch(`${baseUrl}/search`);
+    const etag = first.headers.get("etag");
+    assert.match(etag ?? "", /^W\//);
+    const second = await fetch(`${baseUrl}/search`, { headers: { "if-none-match": etag! } });
+    assert.equal(second.status, 304);
+    // A real content change still gets a new ETag.
+    const changed = express();
+    changed.use(cookieParser());
+    changed.get("/search", publicHttpCache, (_req, res) => res.json({ data: [{ id: "b" }], meta: { total: 1, tookMs: 10 } }));
+    const other = await listen(changed);
+    try {
+      const third = await fetch(`${other.baseUrl}/search`);
+      assert.notEqual(third.headers.get("etag"), etag);
+    } finally {
+      other.server.close();
+    }
+  } finally {
+    server.close();
+  }
+});
+
 test("oversized JSON body returns the existing envelope shape with 413", async () => {
   const app = express();
   app.use(requestContext, express.json({ limit: "32b" }));

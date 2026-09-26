@@ -166,6 +166,21 @@ export const createRequestProtection = (
   };
 };
 
+/**
+ * Body used for the ETag. `meta.tookMs` (server timing) differs on every request even when the content is the same,
+ * so hashing it would give each response a new ETag and no conditional request would ever return 304.
+ */
+const etagPayload = (body: unknown): string => {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const { meta, ...rest } = body as { meta?: unknown };
+    if (meta && typeof meta === "object" && !Array.isArray(meta)) {
+      const { tookMs: _tookMs, ...stableMeta } = meta as Record<string, unknown>;
+      return JSON.stringify({ ...rest, meta: stableMeta });
+    }
+  }
+  return JSON.stringify(body);
+};
+
 export const publicHttpCache: RequestHandler = (req, res, next) => {
   const hasSessionCookie = Boolean((req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE]);
   res.vary("Cookie");
@@ -177,8 +192,7 @@ export const publicHttpCache: RequestHandler = (req, res, next) => {
         "Cache-Control",
         hasSessionCookie ? "private, no-cache" : "public, max-age=30, stale-while-revalidate=120",
       );
-      const payload = JSON.stringify(body);
-      const etag = `W/"${createHash("sha1").update(payload).digest("base64url")}"`;
+      const etag = `W/"${createHash("sha1").update(etagPayload(body)).digest("base64url")}"`;
       res.setHeader("ETag", etag);
       if (req.header("if-none-match") === etag) {
         res.status(304).end();
