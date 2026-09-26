@@ -135,7 +135,11 @@ export const aiDailyUsageTable = pgTable(
       .default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.quotaDay] }), check("ai_daily_usage_used_check", sql`${table.used} >= 0`)],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.quotaDay] }),
+    index("ai_daily_usage_day_idx").on(table.quotaDay),
+    check("ai_daily_usage_used_check", sql`${table.used} >= 0`),
+  ],
 );
 
 export const aiAskRequestsTable = pgTable(

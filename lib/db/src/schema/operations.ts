@@ -84,7 +84,7 @@ export const jobRunAuditTable = pgTable(
     index("job_run_audit_job_started_idx").on(table.jobKey, table.startedAt),
     check(
       "job_run_audit_status_check",
-      sql`${table.status} in ('running', 'skipped_locked', 'succeeded', 'failed')`,
+      sql`${table.status} in ('running', 'skipped_locked', 'skipped_budget', 'succeeded', 'failed')`,
     ),
   ],
 );

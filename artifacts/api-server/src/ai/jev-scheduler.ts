@@ -71,6 +71,7 @@ export class JevScheduler {
   private tokens: number;
   private lastRefill = Date.now();
   private batchPausedUntil = 0;
+  private batchBudgetPaused = false;
   private drainTimer?: NodeJS.Timeout;
   private readonly metricsTimer: NodeJS.Timeout;
 
@@ -108,6 +109,12 @@ export class JevScheduler {
     if (lane === "batch") this.pauseBatch(retryAfterMs);
   }
 
+  setBatchBudgetPaused(paused: boolean): void {
+    if (this.batchBudgetPaused === paused) return;
+    this.batchBudgetPaused = paused;
+    if (!paused) this.drain();
+  }
+
   snapshot() {
     const waitP95 = (lane: JevLane): number => {
       const waits = [...this.stats[lane].waits].sort((a, b) => a - b);
@@ -120,6 +127,7 @@ export class JevScheduler {
       limited: { interactive: this.stats.interactive.limited, batch: this.stats.batch.limited },
       waitP95Ms: { interactive: waitP95("interactive"), batch: waitP95("batch") },
       batchPausedUntil: this.batchPausedUntil,
+      batchBudgetPaused: this.batchBudgetPaused,
     };
   }
 
@@ -141,7 +149,7 @@ export class JevScheduler {
     if (this.tokens < 1) return false;
     if (lane === "batch") {
       const batchLimit = Math.max(1, Math.floor(this.config.maxConcurrency * this.config.batchMaxShare));
-      if (this.inFlight.batch >= batchLimit || Date.now() < this.batchPausedUntil) return false;
+      if (this.batchBudgetPaused || this.inFlight.batch >= batchLimit || Date.now() < this.batchPausedUntil) return false;
       if (this.tokens - 1 < this.config.interactiveReserveRpm) return false;
     }
     return true;
@@ -168,7 +176,7 @@ export class JevScheduler {
       const tokenDelay = this.tokens < 1 ? Math.ceil(60_000 / this.config.rpmLimit) : 10;
       const pauseDelay = this.queues.interactive.length === 0 && Date.now() < this.batchPausedUntil
         ? this.batchPausedUntil - Date.now() : tokenDelay;
-      this.armDrain(Math.max(1, pauseDelay));
+      if (!this.batchBudgetPaused || this.queues.interactive.length > 0) this.armDrain(Math.max(1, pauseDelay));
     }
   };
 

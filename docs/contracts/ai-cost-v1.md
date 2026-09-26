@@ -17,3 +17,9 @@ Usuário ativo é um usuário com pelo menos uma linha `ask` ou `fit` no períod
 O total e a tendência diária incluem ficha. O bloco `platform` isola `sheet`; `userAttributed` soma `ask` e `fit`. `--user` filtra as linhas atribuídas ao usuário, enquanto custos de ficha não são atribuídos a ele. Os contadores de teto usam `ai_daily_usage` e `ai_fit_daily_usage`; para perguntas, a assinatura vigente distingue o limite pago do limite de teste. Essa leitura de assinatura é uma aproximação para períodos históricos.
 
 A projeção mensal é `custo do período / dias solicitados × 30`. Ela é uma extrapolação simples, não uma previsão, e não incorpora sazonalidade, mudança de preço do modelo nem dias sem operação.
+
+## Disjuntor diário
+
+`AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `fit` e `sheet` no dia de `America/Sao_Paulo`. A leitura usa os três contadores diários e cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso.
+
+Ao atingir o teto, somente o lote é pausado: jobs `fit` permanecem `queued` e o alerta de perfil registra `skipped_budget`. Perguntas e fichas continuam. A fila retoma automaticamente após a virada do dia ou aumento do teto.

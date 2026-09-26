@@ -168,6 +168,7 @@ export const aiFitDailyUsageTable = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.quotaDay] }),
+    index("ai_fit_daily_usage_day_idx").on(table.quotaDay),
     check("ai_fit_daily_usage_used_check", sql`${table.used} >= 0`),
   ],
 );

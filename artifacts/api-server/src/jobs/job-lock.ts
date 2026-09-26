@@ -18,6 +18,18 @@ export type SingletonJobResult<T> =
 const workerId = (): string =>
   `${process.env.DB_APPLICATION_NAME?.trim() || "licitai-worker"}:${hostname()}:${process.pid}`;
 
+export async function recordSkippedJobRun(
+  jobKey: string,
+  status: "skipped_budget",
+): Promise<void> {
+  const { pool } = await import("@workspace/db");
+  await pool.query(
+    `insert into job_run_audit (job_key, status, worker_id, duration_ms, finished_at)
+     values ($1, $2, $3, 0, now())`,
+    [jobKey, status, workerId()],
+  );
+}
+
 const errorText = (error: unknown): string =>
   error instanceof Error ? `${error.name}: ${error.message}`.slice(0, 4_000) : String(error).slice(0, 4_000);
 

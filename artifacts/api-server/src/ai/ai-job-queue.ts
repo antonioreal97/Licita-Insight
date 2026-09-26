@@ -298,7 +298,10 @@ export function startAiJobWorker(options: {
         recovering = false;
       });
     }
+    const { isAiBatchBudgetPaused } = await import("./ai-budget");
+    const budgetPaused = await isAiBatchBudgetPaused();
     for (const kind of ["index", "sheet", "fit"] as const) {
+      if (kind === "fit" && budgetPaused) continue;
       const available = config.concurrency[kind] - activeByKind[kind];
       if (available < 1) continue;
       const claimed = await claimAiJobs([kind], available, workerId);

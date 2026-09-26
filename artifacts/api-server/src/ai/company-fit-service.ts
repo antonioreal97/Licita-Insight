@@ -33,6 +33,8 @@ import {
 import { fitLexicalGateMode } from "./fit-lexical-gate";
 import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
+import { isAiBatchBudgetPaused } from "./ai-budget";
+import { recordSkippedJobRun } from "../jobs/job-lock";
 
 export { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 export type { CompanyProfileInput, CompanySize } from "./company-fit-policy";
@@ -689,6 +691,10 @@ export async function getTenderFits(
 export async function evaluateProfileAlertNotifications(
   completedAt = new Date(),
 ): Promise<number> {
+  if (await isAiBatchBudgetPaused()) {
+    await recordSkippedJobRun("profile_alerts", "skipped_budget");
+    return 0;
+  }
   const profiles = await db
     .select({
       userId: companyProfilesTable.userId,

@@ -46,6 +46,19 @@ test("batch pause does not pause interactive work", async () => {
   scheduler.dispose();
 });
 
+test("daily budget pause blocks batch while interactive keeps running", async () => {
+  const scheduler = new JevScheduler(config());
+  scheduler.setBatchBudgetPaused(true);
+  let batchRan = false;
+  const batch = scheduler.schedule("batch", async () => { batchRan = true; return "batch"; });
+  assert.equal(await scheduler.schedule("interactive", async () => "interactive"), "interactive");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(batchRan, false);
+  scheduler.setBatchBudgetPaused(false);
+  assert.equal(await batch, "batch");
+  scheduler.dispose();
+});
+
 test("interactive queue times out instead of hanging", async () => {
   const scheduler = new JevScheduler(config({ maxConcurrency: 1, interactiveQueueTimeoutMs: 15 }));
   let release!: () => void;
