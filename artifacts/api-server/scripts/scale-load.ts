@@ -131,9 +131,9 @@ if (
   throw new Error(`Unknown scenarios: ${unknown.join(", ")}`);
 }
 
-type MeasuredResult = Result & { measuredP95: number };
-const percentile = (values: number[], ratio: number): number => {
-  if (values.length === 0) return 0;
+type MeasuredResult = Result & { measuredP95: number | null };
+const percentile = (values: number[], ratio: number): number | null => {
+  if (values.length === 0) return null;
   values.sort((left, right) => left - right);
   return (
     values[Math.min(values.length - 1, Math.ceil(values.length * ratio) - 1)] ??
@@ -265,9 +265,10 @@ try {
         scenario: scenario.name,
         concurrency,
         rps: result.requests.average,
-        p50Ms: result.latency.p50,
+        p50Ms: result.requests.total > 0 ? result.latency.p50 : null,
         p95Ms: result.measuredP95,
-        p99Ms: result.latency.p99,
+        p99Ms: result.requests.total > 0 ? result.latency.p99 : null,
+        censored: result.requests.total === 0,
         errors: result.errors,
         timeouts: result.timeouts,
         non2xx: result.non2xx,
@@ -295,9 +296,10 @@ try {
       scenario: "rajada-cliente-a",
       concurrency: 500,
       rps: burst.requests.average,
-      p50Ms: burst.latency.p50,
+      p50Ms: burst.requests.total > 0 ? burst.latency.p50 : null,
       p95Ms: burst.measuredP95,
-      p99Ms: burst.latency.p99,
+      p99Ms: burst.requests.total > 0 ? burst.latency.p99 : null,
+      censored: burst.requests.total === 0,
       errors: burst.errors,
       timeouts: burst.timeouts,
       non2xx: burst.non2xx,
@@ -308,9 +310,10 @@ try {
       scenario: "cliente-b-durante-rajada",
       concurrency: 10,
       rps: normal.requests.average,
-      p50Ms: normal.latency.p50,
+      p50Ms: normal.requests.total > 0 ? normal.latency.p50 : null,
       p95Ms: normal.measuredP95,
-      p99Ms: normal.latency.p99,
+      p99Ms: normal.requests.total > 0 ? normal.latency.p99 : null,
+      censored: normal.requests.total === 0,
       errors: normal.errors,
       timeouts: normal.timeouts,
       non2xx: normal.non2xx,
@@ -350,10 +353,12 @@ const report = {
 const jsonPath = path.join(outputDir, `scale-${label}.json`);
 const mdPath = path.join(outputDir, `scale-${label}.md`);
 await writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+const latency = (value: unknown): unknown =>
+  value === null ? `>${duration * 1_000}` : value;
 const table = results
   .map(
     (row) =>
-      `| ${row.scenario} | ${row.concurrency} | ${row.rps} | ${row.p50Ms} | ${row.p95Ms} | ${row.p99Ms} | ${row.errors} | ${row.non2xx} |`,
+      `| ${row.scenario} | ${row.concurrency} | ${row.rps} | ${latency(row.p50Ms)} | ${latency(row.p95Ms)} | ${latency(row.p99Ms)} | ${row.errors} | ${row.non2xx} |`,
   )
   .join("\n");
 const plans = Object.entries(explains)
