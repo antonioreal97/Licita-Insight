@@ -56,6 +56,12 @@ function describe(error: unknown) {
         title: 'Muitas consultas seguidas',
         detail: error.retryAfterSeconds ? `Aguarde ${error.retryAfterSeconds}s e tente novamente.` : 'Aguarde alguns segundos e tente novamente.',
       };
+    case 'SERVICE_OVERLOADED':
+      return { title: 'Sistema com muito acesso agora', detail: 'Estamos com muitos acessos ao mesmo tempo. Tente de novo em alguns segundos.' };
+    case 'REQUEST_TIMEOUT':
+      return { title: 'A consulta demorou demais', detail: 'Tente de novo. Se persistir, refine a busca com mais termos ou filtros.' };
+    case 'PAYLOAD_TOO_LARGE':
+      return { title: 'Envio grande demais', detail: 'Reduza o tamanho do que está sendo enviado e tente novamente.' };
     case 'NOT_FOUND':
       return { title: 'Licitação não encontrada', detail: 'Ela pode ter sido removida da fonte original.' };
     case 'INVALID_PARAMETER':

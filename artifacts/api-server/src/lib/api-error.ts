@@ -11,7 +11,10 @@ export type ApiErrorCode =
   | "SUBSCRIPTION_REQUIRED"
   | "BILLING_UNAVAILABLE"
   | "AI_QUOTA_EXCEEDED"
-  | "AI_UNAVAILABLE";
+  | "AI_UNAVAILABLE"
+  | "SERVICE_OVERLOADED"
+  | "REQUEST_TIMEOUT"
+  | "PAYLOAD_TOO_LARGE";
 
 export interface ApiErrorDetail {
   field: string;

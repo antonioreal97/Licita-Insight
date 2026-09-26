@@ -2,20 +2,11 @@
 
 ## Foco agora
 
-Ciclo 6 (branch `antonioreal97/cycle6`, sobre o merge do PR #7): ficha do edital (3.5). Backend em CODEX_HANDOFF-015; frontend pronto contra a proposta (`features/tenders/components/tender-sheet-panel.tsx`), QA em `docs/reviews/onda3-sheet-frontend.md`. Regra: ausência de trecho é "não encontrado", nunca um "não".
+Ciclo 7 (branch `antonioreal97/cycle7`, commits locais, sem push nem PR): arquitetura de escala e custo por usuário. Diagnóstico e plano em `docs/architecture-scale.md`. Fase 1a (HANDOFF-017) entregue e validada: harness de carga (`scale-*`), índice `pg_trgm` na busca (busca rara em 300k linhas: p95 8.349 → 90 ms, buffers −99%), pool/timeouts/`/readyz`/desligamento limpo, limite de taxa e de concorrência, cache HTTP público com ETag/304, helmet, compressão (`docs/contracts/scale-protection-v1.md`, relatório `docs/reviews/scale-baseline.md`). Limites conhecidos: termo comum (50% da tabela), contagem exata, sugestões e paginação profunda seguem lentos; carga só até 300k linhas; sem CDN real.
 
-Ambiente em 25 set 2026 (noite): o Compose ativo voltou a ser o `licita-insight` (checkout CODE/MY, `main` atualizado); o `main` deste worktree está parado. Banco de teste com os 8.431 editais: `licita_cycle4` no Postgres do `licita-insight`; o `licita_cycle5` ficou no volume `main_licita_pg`. Este worktree agora tem `.env` (gitignored) com `BILLING_DEV_ENTITLED`.
+Pendente: Fase 1b (HANDOFF-018: papéis api/worker, ledger de custo de IA por usuário, semáforo do Jev com faixas, filtro lexical no fit) e Fase 2 (fila durável, disjuntor de orçamento, métricas), que dependem de 5 decisões do owner (hospedagem e orçamento, metas de usuários, preço do plano, comportamento no limite de IA, retenção). Segurança: o agente Hermes gerou `docs/reviews/security-audit-2026-09-26.md` (não commitado, não decidido pelo owner); confirmei que as rotas de ingestão não têm autenticação (hoje só limite de 3/min) e que a indexação de documentos não tem teto global. O owner respondeu "ainda não" ao handoff de segurança P0.
 
-Ciclo 5 (branch `antonioreal97/cycle5`, sobre o merge do PR #6): aderência edital × perfil da empresa (roadmap 3.6). Decisões do owner de 25 set 2026 no roadmap. Backend em CODEX_HANDOFF-013 (perfil, `GET /me/fit`, calibração, depois alerta diário). Frontend já feito contra a proposta (`features/company-profile/`), verificado com rotas simuladas: `docs/reviews/onda3-fit-frontend.md`.
-Backend `5fcc392` + correções `d18f840` (HANDOFF-014): exclusão por termo e só do objeto principal, cota ME/EPP informativa, cache sem `updatedAt`, rubrica concreta. Retestado com Jev real; calibração 15/15 "Alta" corretos. Limiares aprovados em 25 set 2026: alta ≥ 0,75, média ≥ 0,55 (nível em cache derivado da nota). PR #7 aberto (cycle5 → main).
-
-Ambiente em 25 set 2026: o Compose ativo é o projeto `main` (este worktree, volume `main_licita_pg`, banco `licita` vazio). O stack antigo `licita-insight` (volume com 8.431 editais) está parado. Para QA, os editais foram copiados para o banco `licita_cycle5` no Postgres do `main` (autorizado pelo owner, leitura temporária do volume antigo).
-
-Onda 3, fatia 1 ("Perguntar ao edital" com o Jev) pronta: backend `fb9310a` + `7ce9ef4` (HANDOFF-012) e painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). Retestada pelo caminho do Docker (`dist/`) em 25 set 2026; QA em `docs/reviews/onda3-ask-qa.md`. `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`. Próximo na Onda 3: fatia 2 (ficha estruturada 3.5 e aderência 3.6).
-
-Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.
-
-O stack Docker em execução no checkout `main` é do cycle3: depois do merge, `docker compose up --build`.
+Ambiente: Docker Desktop e o Postgres do stack `licita-insight` (com `licita_cycle4`) ligados; API e web desse stack desligados.
 
 ## O que está na mesa
 

@@ -48,14 +48,14 @@ export const runSavedSearchEvaluationJob = async (
   now = new Date(),
 ): Promise<void> => evaluateSavedSearchNotifications(now);
 
-export function startEmailNotificationJobs(): void {
+export function startEmailNotificationJobs(): () => void {
   if (process.env.EMAIL_JOBS_ENABLED === "false") {
     logger.info("Email notification jobs are disabled");
-    return;
+    return () => undefined;
   }
   if (!process.env.DATABASE_URL) {
     logger.error("DATABASE_URL is not set; email notification jobs will not start");
-    return;
+    return () => undefined;
   }
 
   const digestHour = integerEnv("EMAIL_DIGEST_HOUR", 7, 0, 23);
@@ -112,19 +112,28 @@ export function startEmailNotificationJobs(): void {
   );
   savedSearchTimer.unref();
 
+  let digestTimer: NodeJS.Timeout | undefined;
+  let stopped = false;
   const armDigest = () => {
+    if (stopped) return;
     const delay = millisecondsUntilSaoPauloHour(digestHour);
     logger.info(
       { hour: digestHour, timeZone: TIME_ZONE, delayMs: delay },
       "Next email digest scheduled",
     );
-    const timer = setTimeout(() => {
+    digestTimer = setTimeout(() => {
       void runDigest().finally(armDigest);
     }, delay);
-    timer.unref();
+    digestTimer.unref();
   };
 
   void runImmediate();
   void runSavedSearches();
   armDigest();
+  return () => {
+    stopped = true;
+    clearInterval(immediateTimer);
+    clearInterval(savedSearchTimer);
+    if (digestTimer) clearTimeout(digestTimer);
+  };
 }

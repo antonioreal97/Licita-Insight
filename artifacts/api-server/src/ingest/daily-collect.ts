@@ -45,14 +45,14 @@ const msUntilHour = (hour: number, now = new Date()): number => {
   return Math.max(1_000, target.getTime() - now.getTime());
 };
 
-export function startDailyPncpCollect(): void {
+export function startDailyPncpCollect(): () => void {
   if (process.env.PNCP_DAILY_COLLECT === "false") {
     logger.info("Daily PNCP collect is disabled");
-    return;
+    return () => undefined;
   }
   if (!process.env.DATABASE_URL) {
     logger.error("DATABASE_URL is not set; daily PNCP collect will not start");
-    return;
+    return () => undefined;
   }
 
   const hour = dailyHour();
@@ -77,26 +77,34 @@ export function startDailyPncpCollect(): void {
     }
   };
 
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
   const arm = () => {
+    if (stopped) return;
     const delay = msUntilHour(hour);
     logger.info({ hour, delayMs: delay }, "Next PNCP collect scheduled");
-    setTimeout(() => {
+    timer = setTimeout(() => {
       void run("schedule").finally(arm);
     }, delay);
+    timer.unref();
   };
 
   void run("startup");
   arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
 }
 
-export function startDailyCultureCollect(): void {
+export function startDailyCultureCollect(): () => void {
   if (process.env.CULTURE_DAILY_COLLECT === "false") {
     logger.info("Daily cultural opportunities collect is disabled");
-    return;
+    return () => undefined;
   }
   if (!process.env.DATABASE_URL) {
     logger.error("DATABASE_URL is not set; daily cultural opportunities collect will not start");
-    return;
+    return () => undefined;
   }
 
   const hour = dailyHour();
@@ -125,14 +133,22 @@ export function startDailyCultureCollect(): void {
     }
   };
 
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
   const arm = () => {
+    if (stopped) return;
     const delay = msUntilHour(hour);
     logger.info({ hour, delayMs: delay }, "Next cultural opportunities collect scheduled");
-    setTimeout(() => {
+    timer = setTimeout(() => {
       void run("schedule").finally(arm);
     }, delay);
+    timer.unref();
   };
 
   void run("startup");
   arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
 }

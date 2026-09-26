@@ -1,3 +1,5 @@
+import { timeoutSignal } from "../lib/http-timeout";
+
 const PNCP_CONSULTA = "https://pncp.gov.br/api/consulta/v1";
 
 export const PNCP_UFS = [
@@ -73,7 +75,7 @@ async function pncpGet(url: string): Promise<unknown> {
           Accept: "application/json",
           "User-Agent": "LicitaInsight/0.1 (coleta de dados abertos do PNCP)",
         },
-        signal: AbortSignal.timeout(60_000),
+        signal: timeoutSignal("PNCP_HTTP_TIMEOUT_MS", 60_000),
       });
       const body = await response.text();
 

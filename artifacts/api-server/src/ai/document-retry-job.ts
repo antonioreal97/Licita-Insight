@@ -24,11 +24,13 @@ export async function runDocumentRetryJob(now = new Date()): Promise<void> {
   }
 }
 
-export function startDocumentRetryJob(): void {
+export function startDocumentRetryJob(): () => void {
   if (!process.env.DATABASE_URL) {
     logger.error("DATABASE_URL is not set; document retry job will not start");
-    return;
+    return () => undefined;
   }
   void runDocumentRetryJob();
-  setInterval(() => void runDocumentRetryJob(), JOB_INTERVAL_MS).unref();
+  const timer = setInterval(() => void runDocumentRetryJob(), JOB_INTERVAL_MS);
+  timer.unref();
+  return () => clearInterval(timer);
 }

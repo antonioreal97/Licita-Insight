@@ -31,6 +31,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /readyz:
+    get:
+      operationId: readinessCheck
+      tags: [health]
+      summary: PostgreSQL readiness check (2 second deadline)
+      responses:
+        "200":
+          description: Ready to serve traffic
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+        "503":
+          description: PostgreSQL is unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: unavailable }
   /v1/tenders/search:
     get:
       operationId: searchTenders
@@ -2614,6 +2638,9 @@ components:
               BILLING_UNAVAILABLE,
               AI_QUOTA_EXCEEDED,
               AI_UNAVAILABLE,
+              SERVICE_OVERLOADED,
+              REQUEST_TIMEOUT,
+              PAYLOAD_TOO_LARGE,
             ]
         message:
           type: string

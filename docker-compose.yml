@@ -32,7 +32,9 @@ services:
     <<: *app
     environment:
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
-    command: pnpm --filter @workspace/db run push-force
+    command: >-
+      sh -c "pnpm --filter @workspace/db run prepare-extensions &&
+      pnpm --filter @workspace/db run push-force"
     depends_on:
       postgres:
         condition: service_healthy

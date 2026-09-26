@@ -3,10 +3,10 @@ import { createTrialEndingNotifications } from "./notification-service";
 
 const INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-export function startTrialNotificationScheduler(): void {
+export function startTrialNotificationScheduler(): () => void {
   if (!process.env.DATABASE_URL) {
     logger.error("DATABASE_URL is not set; trial notification scheduler will not start");
-    return;
+    return () => undefined;
   }
 
   const run = async () => {
@@ -28,4 +28,5 @@ export function startTrialNotificationScheduler(): void {
   void run();
   const timer = setInterval(() => void run(), INTERVAL_MS);
   timer.unref();
+  return () => clearInterval(timer);
 }

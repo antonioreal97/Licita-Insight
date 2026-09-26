@@ -163,7 +163,11 @@ export type ApiErrorCode =
   | 'BILLING_UNAVAILABLE'
   // ai-v1
   | 'AI_QUOTA_EXCEEDED'
-  | 'AI_UNAVAILABLE';
+  | 'AI_UNAVAILABLE'
+  // scale-protection-v1: overload protection (all transient, retryable)
+  | 'SERVICE_OVERLOADED'
+  | 'REQUEST_TIMEOUT'
+  | 'PAYLOAD_TOO_LARGE';
 
 export type ApiErrorBody = {
   error: {

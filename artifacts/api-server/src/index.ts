@@ -8,6 +8,12 @@ import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
+import {
+  configureHttpServer,
+  httpServerConfig,
+  installGracefulShutdown,
+} from "./server-runtime";
 
 const rawPort = process.env["PORT"];
 
@@ -38,19 +44,28 @@ const start = async (): Promise<void> => {
     logger.error({ err: error }, "Failed to reconcile stale PNCP ingest runs");
   }
 
-  app.listen(port, (err) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-
+  const server = app.listen(port, () => {
     logger.info({ port }, "Server listening");
-    startTrialNotificationScheduler();
-    startEmailNotificationJobs();
-    startAiRetentionScheduler();
-    startDocumentRetryJob();
-    startDailyPncpCollect();
-    startDailyCultureCollect();
+    const stops = [
+      startTrialNotificationScheduler(),
+      startEmailNotificationJobs(),
+      startAiRetentionScheduler(),
+      startDocumentRetryJob(),
+      startDailyPncpCollect(),
+      startDailyCultureCollect(),
+    ];
+    installGracefulShutdown({
+      server,
+      stopSchedulers: () => stops.forEach((stop) => stop()),
+      closePool: () => pool.end(),
+      timeoutMs: config.shutdownTimeoutMs,
+    });
+  });
+  const config = httpServerConfig();
+  configureHttpServer(server, config);
+  server.once("error", (error) => {
+    logger.error({ err: error }, "Error listening on port");
+    process.exit(1);
   });
 };
 

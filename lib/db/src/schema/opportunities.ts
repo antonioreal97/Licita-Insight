@@ -42,5 +42,9 @@ export const culturalOpportunitiesTable = pgTable(
     index("cultural_opportunities_registration_to_idx").on(table.registrationTo),
     index("cultural_opportunities_installation_idx").on(table.installationId),
     index("cultural_opportunities_fetched_at_idx").on(table.fetchedAt),
+    index("cultural_opportunities_search_text_trgm_idx").using(
+      "gin",
+      table.searchText.asc().op("gin_trgm_ops"),
+    ),
   ],
 );
