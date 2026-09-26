@@ -4,9 +4,11 @@ import { requireSubscription } from "../billing/require-subscription";
 import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { parseOpportunityQuery } from "../lib/opportunity-query";
+import { publicHttpCache } from "../middlewares/request-protection";
 
 const router: IRouter = Router();
 router.use("/v1/opportunities", requireAuth, requireSubscription);
+router.use("/v1/opportunities", publicHttpCache);
 
 const errorCode = (error: unknown): string | undefined => {
   if (!error || typeof error !== "object") return undefined;

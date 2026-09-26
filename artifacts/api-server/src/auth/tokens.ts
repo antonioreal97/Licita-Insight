@@ -7,6 +7,7 @@ import {
   verify,
 } from "node:crypto";
 import type { webcrypto } from "node:crypto";
+import { timeoutSignal } from "../lib/http-timeout";
 
 const encodeJson = (value: unknown): string =>
   Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -85,7 +86,7 @@ const googleJwks = async (): Promise<GoogleJwkSet> => {
   if (cachedJwks && cachedJwks.expiresAt > now) return cachedJwks.value;
   const response = await fetch("https://www.googleapis.com/oauth2/v3/certs", {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10_000),
+    signal: timeoutSignal("GOOGLE_HTTP_TIMEOUT_MS", 15_000),
   });
   if (!response.ok) throw new Error(`Google JWKS returned ${response.status}`);
   const value = (await response.json()) as GoogleJwkSet;

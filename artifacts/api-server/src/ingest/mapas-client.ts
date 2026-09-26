@@ -1,4 +1,5 @@
 import { logger } from "../lib/logger";
+import { timeoutSignal } from "../lib/http-timeout";
 import type { MapasInstallation } from "./cultural-installations";
 import {
   mapOpportunity,
@@ -87,7 +88,7 @@ async function defaultFetch(url: string): Promise<{ status: number; body: string
       Accept: "application/json",
       "User-Agent": "LicitaInsight/0.1 (coleta de oportunidades do Mapas Culturais)",
     },
-    signal: AbortSignal.timeout(30_000),
+    signal: timeoutSignal("MAPAS_HTTP_TIMEOUT_MS", 30_000),
   });
   return {
     status: response.status,

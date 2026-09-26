@@ -264,7 +264,7 @@ export async function purgeExpiredAiQuestions(now = new Date()): Promise<number>
   return deleted.length;
 }
 
-export function startAiRetentionScheduler(): void {
+export function startAiRetentionScheduler(): () => void {
   const run = () => {
     void purgeExpiredAiQuestions()
       .then((deleted) => {
@@ -273,5 +273,7 @@ export function startAiRetentionScheduler(): void {
       .catch((error) => logger.error({ err: error }, "AI question retention cleanup failed"));
   };
   run();
-  setInterval(run, 24 * 60 * 60 * 1000).unref();
+  const timer = setInterval(run, 24 * 60 * 60 * 1000);
+  timer.unref();
+  return () => clearInterval(timer);
 }

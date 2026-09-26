@@ -4,6 +4,7 @@ import {
   publicAppOrigin,
 } from "./config";
 import { verifyGoogleIdToken, type GoogleIdentity } from "./tokens";
+import { timeoutSignal } from "../lib/http-timeout";
 
 export const googleRedirectUri = (): string =>
   `${publicAppOrigin()}/api/v1/auth/google/callback`;
@@ -43,7 +44,7 @@ export const exchangeGoogleCode = async (input: {
       grant_type: "authorization_code",
       code_verifier: input.verifier,
     }),
-    signal: AbortSignal.timeout(15_000),
+    signal: timeoutSignal("GOOGLE_HTTP_TIMEOUT_MS", 15_000),
   });
   const body = (await response.json()) as Record<string, unknown>;
   if (!response.ok || typeof body.id_token !== "string") {

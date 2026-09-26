@@ -1,5 +1,6 @@
 import { BillingUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
+import { timeoutSignal } from "../lib/http-timeout";
 
 const USER_AGENT = "LicitaInsight/1.0";
 
@@ -132,6 +133,7 @@ async function asaas<T>(
         ...(init.body ? { "Content-Type": "application/json" } : {}),
       },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      signal: timeoutSignal("ASAAS_HTTP_TIMEOUT_MS", 15_000),
     });
   } catch (error) {
     logger.error({ err: error, path }, "Asaas request failed");

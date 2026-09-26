@@ -66,6 +66,10 @@ export const requireCsrf: RequestHandler = (req, _res, next) => {
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
+    if (res.locals.auth) {
+      next();
+      return;
+    }
     const token = sessionToken(req);
     const session = await readSession(token);
     if (!token || !session) {
@@ -76,6 +80,28 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     if (session.renewedUntil) {
       setSessionCookie(res, token, session.renewedUntil);
     }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** Resolves a valid session when present without requiring authentication. */
+export const optionalAuth: RequestHandler = async (req, res, next) => {
+  try {
+    const token = sessionToken(req);
+    if (!token) {
+      next();
+      return;
+    }
+    const session = await readSession(token);
+    if (!session) {
+      clearSessionCookie(res);
+      next();
+      return;
+    }
+    res.locals.auth = session.context;
+    if (session.renewedUntil) setSessionCookie(res, token, session.renewedUntil);
     next();
   } catch (error) {
     next(error);

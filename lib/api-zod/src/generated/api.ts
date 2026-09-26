@@ -17,6 +17,14 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary PostgreSQL readiness check (2 second deadline)
+ */
+export const ReadinessCheckResponse = zod.object({
+  "status": zod.literal("ok")
+})
+
+
+/**
  * @summary Search tenders
  */
 export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');

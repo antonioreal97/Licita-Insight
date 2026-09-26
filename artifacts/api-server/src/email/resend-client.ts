@@ -1,4 +1,5 @@
 import { logger } from "../lib/logger";
+import { timeoutSignal } from "../lib/http-timeout";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 
@@ -74,7 +75,7 @@ export const sendWithResend = async (
           ? { reply_to: env.MAIL_REPLY_TO.trim() }
           : {}),
       }),
-      signal: AbortSignal.timeout(15_000),
+      signal: timeoutSignal("RESEND_HTTP_TIMEOUT_MS", 15_000),
     });
     if (!response.ok) {
       return {

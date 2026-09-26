@@ -8,6 +8,7 @@ import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { parseSearchQuery, parseSuggestionsQuery } from "../lib/query-parser";
 import { getSearchBackend } from "../services/search-backend";
+import { publicHttpCache } from "../middlewares/request-protection";
 
 const router: IRouter = Router();
 
@@ -44,7 +45,7 @@ const exposeSearchError = (error: unknown): unknown => {
   return error;
 };
 
-router.get("/v1/tenders/search", async (req, res, next) => {
+router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
   try {
     const criteria = parseSearchQuery(req.query);
     const backend = await getSearchBackend();
@@ -54,12 +55,13 @@ router.get("/v1/tenders/search", async (req, res, next) => {
   }
 });
 
-router.get("/v1/tenders/:id", async (req, res, next) => {
+router.get("/v1/tenders/:id", publicHttpCache, async (req, res, next) => {
   try {
     const backend = await getSearchBackend();
-    const tender = await backend.findById(req.params.id);
+    const tenderId = String(req.params.id);
+    const tender = await backend.findById(tenderId);
     if (!tender) {
-      throw new NotFoundError(`Tender ${req.params.id} was not found`);
+      throw new NotFoundError(`Tender ${tenderId} was not found`);
     }
     res.json(GetTenderByIdResponse.parse(tender));
   } catch (error) {
@@ -67,7 +69,7 @@ router.get("/v1/tenders/:id", async (req, res, next) => {
   }
 });
 
-router.get("/v1/search/suggestions", async (req, res, next) => {
+router.get("/v1/search/suggestions", publicHttpCache, async (req, res, next) => {
   try {
     const { query, limit } = parseSuggestionsQuery(req.query);
     const backend = await getSearchBackend();

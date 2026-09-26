@@ -1220,6 +1220,9 @@ export const ApiErrorCode = {
   BILLING_UNAVAILABLE: 'BILLING_UNAVAILABLE',
   AI_QUOTA_EXCEEDED: 'AI_QUOTA_EXCEEDED',
   AI_UNAVAILABLE: 'AI_UNAVAILABLE',
+  SERVICE_OVERLOADED: 'SERVICE_OVERLOADED',
+  REQUEST_TIMEOUT: 'REQUEST_TIMEOUT',
+  PAYLOAD_TOO_LARGE: 'PAYLOAD_TOO_LARGE',
 } as const;
 
 export interface ApiError {
@@ -1343,6 +1346,14 @@ export type PageParameter = number;
 export type PageSizeParameter = number;
 
 export type FacetsParameter = boolean;
+
+export type ReadinessCheck200 = {
+  status: 'ok';
+};
+
+export type ReadinessCheck503 = {
+  status: 'unavailable';
+};
 
 export type SearchTendersParams = {
 q?: QueryParameter;

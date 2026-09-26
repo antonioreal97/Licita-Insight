@@ -113,6 +113,8 @@ export * from './publishedToParameter';
 export * from './putSavedTenderRequest';
 export * from './queryParameter';
 export * from './rateLimitedResponse';
+export * from './readinessCheck200';
+export * from './readinessCheck503';
 export * from './relevance';
 export * from './savedSearch';
 export * from './savedSearchList';
