@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger";
 import { runDocumentRetryBatch } from "./tender-index-service";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 
 const JOB_INTERVAL_MS = 60_000;
 let running = false;
@@ -13,7 +14,9 @@ export async function runDocumentRetryJob(now = new Date()): Promise<void> {
   }
   running = true;
   try {
-    const result = await runDocumentRetryBatch(now);
+    const locked = await tryRunSingletonJob("document_retry", () => runDocumentRetryBatch(now));
+    if (!locked.acquired) return;
+    const result = locked.value;
     if (result.attempted > 0) {
       logger.info(result, "Document retry job completed");
     }

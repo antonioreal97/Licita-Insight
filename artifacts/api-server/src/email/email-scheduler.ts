@@ -1,6 +1,7 @@
 import { evaluateSavedSearchNotifications } from "../account/notification-service";
 import { evaluateProfileAlertNotifications } from "../ai/company-fit-service";
 import { logger } from "../lib/logger";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
   logEmailJobResult,
@@ -35,7 +36,7 @@ const protectedJob = (operation: string, job: () => Promise<void>) => {
     }
     running = true;
     try {
-      await job();
+      await tryRunSingletonJob(operation, job);
     } catch (error) {
       logger.error({ err: error, operation }, "Notification job failed");
     } finally {

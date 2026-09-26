@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger";
 import { createTrialEndingNotifications } from "./notification-service";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 
 const INTERVAL_MS = 6 * 60 * 60 * 1000;
 
@@ -12,7 +13,9 @@ export function startTrialNotificationScheduler(): () => void {
   const run = async () => {
     const startedAt = Date.now();
     try {
-      const created = await createTrialEndingNotifications();
+      const result = await tryRunSingletonJob("trial_notifications", () => createTrialEndingNotifications());
+      if (!result.acquired) return;
+      const created = result.value;
       logger.info(
         { created, durationMs: Date.now() - startedAt },
         "Trial ending notifications evaluated",

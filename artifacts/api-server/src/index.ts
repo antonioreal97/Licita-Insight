@@ -17,6 +17,7 @@ import {
   installGracefulShutdown,
 } from "./server-runtime";
 import { createWorkerHealthApp } from "./worker-health";
+import { tryRunSingletonJob } from "./jobs/job-lock";
 
 const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT", required: boolean): number | undefined => {
   const raw = process.env[name]?.trim();
@@ -70,8 +71,10 @@ const start = async (): Promise<void> => {
 
   if (runsJobs) {
     try {
-      await abandonStalePncpRuns();
-      await abandonStaleCultureRuns();
+      await tryRunSingletonJob("ingest_reconciliation", async () => {
+        await abandonStalePncpRuns();
+        await abandonStaleCultureRuns();
+      });
     } catch (error) {
       logger.error({ err: error }, "Failed to reconcile stale ingest runs");
     }

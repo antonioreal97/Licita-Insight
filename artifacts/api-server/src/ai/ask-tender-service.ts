@@ -14,6 +14,7 @@ import {
 import { entitlementSource, type EntitlementSource } from "../billing/billing-access";
 import { AiQuotaExceededError, AiUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { aiConfig } from "./config";
 import { JevUnavailableError, scoreTenderPassage } from "./jev-client";
@@ -266,9 +267,11 @@ export async function purgeExpiredAiQuestions(now = new Date()): Promise<number>
 
 export function startAiRetentionScheduler(): () => void {
   const run = () => {
-    void purgeExpiredAiQuestions()
-      .then((deleted) => {
-        if (deleted > 0) logger.info({ deleted }, "Expired AI questions purged");
+    void tryRunSingletonJob("ai_question_retention", () => purgeExpiredAiQuestions())
+      .then((result) => {
+        if (result.acquired && result.value > 0) {
+          logger.info({ deleted: result.value }, "Expired AI questions purged");
+        }
       })
       .catch((error) => logger.error({ err: error }, "AI question retention cleanup failed"));
   };
