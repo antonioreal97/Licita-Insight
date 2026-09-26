@@ -199,8 +199,7 @@ Limiares da aderência aprovados em 25 set 2026, após a calibração (3 perfis 
 
 Ciclo 6 (25 set 2026): **ficha do edital (3.5)**. Campo sem trecho fica "não encontrado nos documentos"; ausência nunca vira resposta ("não exige").
 
-Pendentes:
-1. **Valor do plano:** `BILLING_MONTHLY_BRL` ainda precisa ser definido no `.env` de produção.
+Em 26 set 2026: **valor do plano R$ 49,90/mês** (`BILLING_MONTHLY_BRL=49.90` no `.env` de produção), para ficar bem abaixo da concorrência; reajuste se o custo por assinante passar de R$ 25. Conta de margem, hospedagem, metas, limite de IA e retenção em `docs/architecture-scale.md`, seção 7.
 
 ---
 
