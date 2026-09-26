@@ -10,10 +10,11 @@
   },
   "scripts": {
     "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts",
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "push": "drizzle-kit push --config ./drizzle.config.ts && node --import tsx scripts/apply-ai-ledger.ts",
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts && node --import tsx scripts/apply-ai-ledger.ts",
     "prepare-extensions": "node --env-file-if-exists=../../.env --import tsx scripts/prepare-extensions.ts",
     "verify:ai-push": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-push.ts",
+    "verify:ai-ledger": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-ledger.ts",
     "verify:search-index": "node --env-file-if-exists=../../.env --import tsx scripts/verify-search-index.ts"
   },
   "dependencies": {

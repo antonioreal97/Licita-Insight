@@ -17,6 +17,7 @@
     "scale:seed": "node --env-file-if-exists=../../.env --import tsx scripts/scale-seed.ts",
     "scale:load": "node --env-file-if-exists=../../.env --import tsx scripts/scale-load.ts",
     "scale:drop": "node --env-file-if-exists=../../.env --import tsx scripts/scale-drop.ts",
+    "report:ai-cost": "node --env-file-if-exists=../../.env --import tsx scripts/report-ai-cost.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test:dist-sheet": "node ./build.mjs && node scripts/verify-dist-sheet.mjs",
     "test": "tsx --test src/**/*.test.ts && pnpm run test:dist-sheet",
