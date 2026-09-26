@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { JevQueueTimeoutError, JevScheduler } from "./jev-scheduler";
+import { JevQueueTimeoutError, JevScheduler, jevSchedulerConfig } from "./jev-scheduler";
 
 const config = (overrides: Partial<ConstructorParameters<typeof JevScheduler>[0]> = {}) => ({
   maxConcurrency: 4, batchMaxShare: 0.5, rpmLimit: 10_000,
@@ -89,4 +89,25 @@ test("real concurrent mix respects 50% batch and global ceilings", async () => {
   assert.equal(scheduler.snapshot().queued.batch, 0);
   assert.equal(scheduler.snapshot().queued.interactive, 0);
   scheduler.dispose();
+});
+
+test("RPM is statically partitioned by app role while all keeps the legacy ceiling", () => {
+  const previous = { ...process.env };
+  try {
+    delete process.env.JEV_INTERACTIVE_RESERVE_RPM;
+    process.env.JEV_RPM_LIMIT_API = "300";
+    process.env.JEV_RPM_LIMIT_WORKER = "600";
+    process.env.JEV_RPM_LIMIT = "900";
+    process.env.APP_ROLE = "api";
+    assert.equal(jevSchedulerConfig().rpmLimit, 300);
+    process.env.APP_ROLE = "worker";
+    assert.equal(jevSchedulerConfig().rpmLimit, 600);
+    process.env.APP_ROLE = "all";
+    assert.equal(jevSchedulerConfig().rpmLimit, 900);
+    process.env.JEV_RPM_LIMIT_API = "700";
+    process.env.JEV_RPM_LIMIT_WORKER = "600";
+    assert.throws(() => jevSchedulerConfig(), /must not exceed/);
+  } finally {
+    process.env = previous;
+  }
 });

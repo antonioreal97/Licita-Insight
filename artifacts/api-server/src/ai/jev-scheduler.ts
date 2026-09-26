@@ -36,8 +36,15 @@ const share = (): number => {
 };
 
 export const jevSchedulerConfig = (): JevSchedulerConfig => {
-  const rpmLimit = integer("JEV_RPM_LIMIT", 900);
-  const interactiveReserveRpm = integer("JEV_INTERACTIVE_RESERVE_RPM", 300, 0);
+  const role = process.env.APP_ROLE?.trim() || "all";
+  const apiRpm = integer("JEV_RPM_LIMIT_API", 300);
+  const workerRpm = integer("JEV_RPM_LIMIT_WORKER", 600);
+  if (apiRpm + workerRpm > 1_200) {
+    throw new Error("JEV_RPM_LIMIT_API + JEV_RPM_LIMIT_WORKER must not exceed the Jev account limit of 1200 RPM");
+  }
+  const rpmLimit = role === "api" ? apiRpm : role === "worker" ? workerRpm : integer("JEV_RPM_LIMIT", 900);
+  const defaultReserve = role === "api" ? 0 : Math.min(300, rpmLimit - 1);
+  const interactiveReserveRpm = integer("JEV_INTERACTIVE_RESERVE_RPM", defaultReserve, 0);
   if (interactiveReserveRpm >= rpmLimit) throw new Error("JEV_INTERACTIVE_RESERVE_RPM must be lower than JEV_RPM_LIMIT");
   return {
     maxConcurrency: integer("JEV_MAX_CONCURRENCY", 16),

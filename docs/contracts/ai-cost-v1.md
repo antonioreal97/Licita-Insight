@@ -23,3 +23,7 @@ A projeção mensal é `custo do período / dias solicitados × 30`. Ela é uma 
 `AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `fit` e `sheet` no dia de `America/Sao_Paulo`. A leitura usa os três contadores diários e cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso.
 
 Ao atingir o teto, somente o lote é pausado: jobs `fit` permanecem `queued` e o alerta de perfil registra `skipped_budget`. Perguntas e fichas continuam. A fila retoma automaticamente após a virada do dia ou aumento do teto.
+
+## Partição do limite Jev
+
+Processos `api` usam `JEV_RPM_LIMIT_API=300` e processos `worker` usam `JEV_RPM_LIMIT_WORKER=600`; a soma configurada não pode exceder 1.200 RPM. `APP_ROLE=all` mantém `JEV_RPM_LIMIT=900`. A divisão estática pode subutilizar uma faixa quando o outro papel está ocioso, mas impede excesso entre réplicas sem coordenação distribuída. Um balde compartilhado no PostgreSQL é a alternativa futura e não faz parte deste contrato.
