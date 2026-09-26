@@ -54,10 +54,13 @@ function askErrorMessage(error: unknown, limit: number | undefined) {
   }
 }
 
-/** Documents the index could not read, so a "not found" is read with that in mind. */
+/** Documents the index could not read: a "not found" (and any answer) is read with that in mind. */
 function unreadDocuments(status: TenderAskStatus | undefined) {
-  return status?.documents.filter((doc) => doc.status === 'unsupported' || doc.status === 'failed').length ?? 0;
+  return status?.unreadDocuments ?? 0;
 }
+
+const unreadNote = (count: number) =>
+  count === 1 ? '1 documento não pôde ser lido' : `${count} documentos não puderam ser lidos`;
 
 function Passage({ passage, stems }: { passage: AskTenderPassage; stems: Set<string> }) {
   const pct = Math.round(Math.min(1, Math.max(0, passage.relevance)) * 100);
@@ -161,8 +164,7 @@ function Answer({ entry, status }: { entry: Entry; status: TenderAskStatus | und
           <span>
             <span className="font-semibold">Não encontrei isso no edital.</span> Nenhum trecho dos documentos responde com segurança. Tente outras palavras ou
             confira os documentos.
-            {unreadDocuments(status) === 1 && ' 1 documento não pôde ser lido e ficou de fora.'}
-            {unreadDocuments(status) > 1 && ` ${unreadDocuments(status)} documentos não puderam ser lidos e ficaram de fora.`}
+            {unreadDocuments(status) > 0 && ` ${unreadNote(unreadDocuments(status))} e ficaram de fora.`}
           </span>
         </div>
       )}
@@ -234,6 +236,13 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
           ? 'Você usou todas as perguntas de hoje. A cota renova à meia-noite (horário de Brasília).'
           : `${quotaLabel(status.quota)}. Repetir uma pergunta já feita não gasta cota.`}
       </p>
+
+      {status.unreadDocuments > 0 && (
+        <p className="mt-2 flex gap-1.5 type-meta text-muted-foreground" data-testid="text-ask-partial">
+          <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
+          {unreadNote(status.unreadDocuments)}; as respostas vêm só dos demais e podem estar incompletas.
+        </p>
+      )}
 
       {history.length === 0 && !exhausted && (
         <ul aria-label="Sugestões de pergunta" className="mt-4 flex flex-wrap gap-2">

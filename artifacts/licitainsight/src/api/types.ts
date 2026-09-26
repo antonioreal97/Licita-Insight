@@ -309,7 +309,8 @@ export type TenderAskDocument = { id: string; title: string; pages: number | nul
 export type AiQuota = { used: number; limit: number; resetsAt: string };
 
 /** `GET /api/v1/tenders/:id/ask-status` (session). Signed-in users with access start the indexing by calling it. */
-export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; quota: AiQuota };
+/** `unreadDocuments`: documents that failed or could not be read. The index is `ready` with a partial reading, so answers may be incomplete. */
+export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; unreadDocuments: number; quota: AiQuota };
 
 /** `relevance` is Jev's probability (0–1) that the passage answers the question; only passages above the threshold come back. */
 export type AskTenderPassage = { documentId: string; documentTitle: string; documentUrl: string; page: number; text: string; relevance: number };
