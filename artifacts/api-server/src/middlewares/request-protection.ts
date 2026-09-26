@@ -39,6 +39,8 @@ export type ProtectionConfig = {
   authenticatedPerMinute: number;
   authPerMinute: number;
   ingestPerMinute: number;
+  /** Cap on session lookups per IP: a request carrying a `licita_session` cookie costs one DB read before it can be limited. */
+  preAuthPerMinute: number;
   maxInflightAnonymous: number;
   maxInflightAuthenticated: number;
   maxInflightGlobal: number;
@@ -51,6 +53,7 @@ export const protectionConfig = (): ProtectionConfig => ({
   authenticatedPerMinute: positiveInteger("RATE_LIMIT_USER_PER_MINUTE", 240),
   authPerMinute: positiveInteger("RATE_LIMIT_AUTH_PER_MINUTE", 20),
   ingestPerMinute: positiveInteger("RATE_LIMIT_INGEST_PER_MINUTE", 3),
+  preAuthPerMinute: positiveInteger("RATE_LIMIT_PREAUTH_PER_MINUTE", 600),
   maxInflightAnonymous: positiveInteger("MAX_INFLIGHT_PER_ANON", 10),
   maxInflightAuthenticated: positiveInteger("MAX_INFLIGHT_PER_USER", 20),
   maxInflightGlobal: positiveInteger("MAX_INFLIGHT_GLOBAL", 200),
@@ -88,6 +91,7 @@ export const createRequestProtection = (
   config = protectionConfig(),
   store: RateLimitStore = new MemoryRateLimitStore(),
   now: () => number = Date.now,
+  resolveAuth: RequestHandler = resolveOptionalAuth,
 ): RequestHandler => {
   const inflightByClient = new Map<string, number>();
   let inflightGlobal = 0;
@@ -97,7 +101,18 @@ export const createRequestProtection = (
       next();
       return;
     }
-    resolveOptionalAuth(req, res, (sessionError?: unknown) => {
+    // The session token is random and checked against the database, so ANY cookie value (forged or not) costs a DB
+    // read before the per-client limits below can apply. Cap those lookups per IP first; the bucket is generous and
+    // separate from the public-read one, so real users behind a shared IP are not charged twice.
+    if (!auth(res) && !isExempt(req.path) && (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE]) {
+      const lookup = store.consume(`preauth:ip:${req.ip}`, config.preAuthPerMinute, 60_000, now());
+      if (!lookup.allowed) {
+        res.setHeader("Retry-After", String(Math.max(1, Math.ceil((lookup.resetAt - now()) / 1000))));
+        next(new ApiError(429, "RATE_LIMITED", "Request rate limit exceeded"));
+        return;
+      }
+    }
+    resolveAuth(req, res, (sessionError?: unknown) => {
       if (sessionError) {
         next(sessionError);
         return;

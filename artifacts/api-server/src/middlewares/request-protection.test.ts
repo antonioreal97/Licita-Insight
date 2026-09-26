@@ -18,6 +18,7 @@ const defaults: ProtectionConfig = {
   authenticatedPerMinute: 240,
   authPerMinute: 20,
   ingestPerMinute: 3,
+  preAuthPerMinute: 600,
   maxInflightAnonymous: 10,
   maxInflightAuthenticated: 20,
   maxInflightGlobal: 200,
@@ -250,6 +251,42 @@ test("public cache emits weak ETag/304 and session requests are private", async 
       "private, no-cache",
     );
     assert.match(privateResponse.headers.get("vary") ?? "", /Cookie/);
+  } finally {
+    server.close();
+  }
+});
+
+test("a forged session cookie cannot force unlimited session lookups", async () => {
+  let lookups = 0;
+  const app = express();
+  app.set("trust proxy", true);
+  app.use(requestContext, cookieParser());
+  app.use(
+    createRequestProtection(
+      { ...defaults, preAuthPerMinute: 3 },
+      new MemoryRateLimitStore(),
+      Date.now,
+      // Stand-in for the real resolver: it only reads the DB when a session cookie is present.
+      (req, _res, next) => {
+        if ((req.cookies as Record<string, unknown> | undefined)?.licita_session) lookups += 1;
+        next();
+      },
+    ),
+  );
+  app.get("/api/v1/tenders/search", (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const withCookie = { headers: { cookie: "licita_session=forged" } };
+    const statuses: number[] = [];
+    for (let i = 0; i < 5; i += 1)
+      statuses.push((await fetch(`${baseUrl}/api/v1/tenders/search`, withCookie)).status);
+    assert.deepEqual(statuses, [200, 200, 200, 429, 429]);
+    assert.equal(lookups, 3, "requests over the pre-auth limit must not reach the session lookup");
+    // Requests without a cookie never touch the session lookup or the pre-auth bucket.
+    const before = lookups;
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/search`)).status, 200);
+    assert.equal(lookups, before);
   } finally {
     server.close();
   }
