@@ -1,0 +1,477 @@
+{
+  "label": "before-100k-clean",
+  "rows": 100000,
+  "durationSeconds": 10,
+  "generatedAt": "2026-09-26T14:02:37.630Z",
+  "machine": {
+    "platform": "darwin 25.5.0 arm64",
+    "cpus": 10,
+    "totalMemoryBytes": 17179869184
+  },
+  "postgres": {
+    "version": "16.15 (Debian 16.15-1.pgdg13+2)",
+    "settings": {
+      "effective_cache_size": "5242888kB",
+      "max_connections": "100",
+      "random_page_cost": "4",
+      "shared_buffers": "163848kB",
+      "work_mem": "4096kB"
+    }
+  },
+  "server": {
+    "cwd": "/tmp/licitai-scale-before.fcPHD3/artifacts/api-server",
+    "script": "scripts/scale-server.ts",
+    "stderr": "",
+    "stdout": "\u001b[35mreq\u001b[39m: {\n      \"id\": \"28de9e8e-5bb7-4e46-94d8-d936d0160a35\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10012\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"4ccf7796-1a78-49c3-b8e0-95e689601c1e\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10013\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"7afa492b-4cbc-4e0d-8522-9337240f4823\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10013\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"af985928-5d63-4be7-a404-96e9d687aa70\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10013\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"f2d3f318-9527-4c18-8aae-d476ea608ace\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"c80b08d5-3f2c-44d4-b78b-04cb510ba3e7\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"80fa41e6-2049-45da-bfc6-c0ec55998616\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"d5403b14-1d40-4878-98da-b7070315f965\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"dfcb22f9-94c6-46a6-86cb-613487103023\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"9afbe350-9b6c-4720-bb76-94ccf8059a96\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"9c452823-546d-4bc5-9819-3a33daaaf0ae\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"e927cb6c-b777-47df-9954-2784cc8f242a\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"570f1b0a-95e8-4450-a6c3-e7a15d14cd50\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"016449f4-bf60-43a6-83d6-b77fc62622f4\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"88066091-146c-4b95-ae7f-738313c8e671\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"3ae656b3-a78b-438f-8fa8-6aa35b9502a9\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"f3101e0a-62a9-4d04-8eaf-d1480a0f5b5f\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"2e95c14d-1ba0-4e56-8ee8-3f869d39ff0e\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"74fbbd96-838f-44c3-8c1b-f2bfc0221cc6\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"1b2b92ce-7642-4583-b9e2-d8d028cfa5f1\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"b64b798e-5876-4fa6-810b-063b892c05f3\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"78354dce-580d-472d-9f64-16000064c731\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"27ce4ae8-3230-4d4d-8c53-d04fae435d99\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"0d3e9bc7-34f4-462c-9933-35cc7ca1930d\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"42f3bb22-3d79-49b8-bc87-6f9970bdb76a\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"86f20b59-387d-473e-aa23-359351c786b0\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"f3550572-dfed-44f1-aaf5-fe29a865fe3b\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"d7c2a4d1-c45b-4098-aca4-bf41c14b1d82\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"4bdfd14a-c798-446b-8c2d-969b1c27a1bd\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"d4317cdf-dc42-4765-93c1-8654b471bca0\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"68ef4f53-bb18-4ce5-9aa9-ec33a93f4ba5\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"92f1acc7-1248-4377-a2b9-8e3413f79f54\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"14bbce6a-2657-40fa-838e-659cab813b99\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"e0f60973-5a6f-481b-abdb-02598ba95ee8\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"a8472010-a383-40cf-ae92-e497cc82dae4\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"9b240e62-d7ef-4854-b31c-70f12cfa3278\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"a498ef03-a0a2-43f3-9328-b2afe4a41655\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10014\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"a9ae4a34-9deb-46ef-84fb-5ffaea6d42bb\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10015\n[11:02:26.761] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"872a0148-5179-452b-a59d-7f21b62390a6\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10015\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"be4a0a07-a868-4472-aa88-d5a5ea7bcd27\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"510d16fe-521e-41e2-9e6c-90d3dfccb336\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"3c1cdec3-080a-44a5-8fc3-2aa6368c81a0\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"a6bc73ed-3d55-4cf4-a29c-998168645eea\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"8cf06c1b-6717-4829-87f4-8c4c9481919a\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"ff0b74cb-656d-4499-a3e2-d7e9f05bb864\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"ae46cdb6-85d2-48ed-b7b5-9bc71542aa19\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"cb5b0548-d97c-4956-98f5-4c3637fe79e1\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"3adc7e5a-577e-4224-83e4-9356d9a48c61\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"734660da-49d4-4e1c-b8f7-111ea1dc2e1d\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"d9c68469-c28f-470f-bf2c-8ad95857ca22\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"97358904-972a-47a6-8ee9-7141b352d8d8\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"5bf9bddc-6e42-4968-9af4-3057da39bd43\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"66b1bd70-45fe-4011-9872-2374627734c8\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"0f37e724-b84a-4f78-bb4b-db03732f8971\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"d5f9d6b4-ee1f-4db1-80e3-58ba2a51541f\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"fe85968c-809b-4c46-8a73-41ecaa3f815c\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"63f6af4e-82f6-480f-a75d-b259585af136\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"c4b97284-7461-48b6-b953-193ea65d3607\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.762] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"99e80d29-63df-4f09-a879-ff55cdc1e2c1\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 10016\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"f8ff101c-3ada-4607-89e9-95cc1c43013d\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"df666c35-7a33-46b3-9a37-c13580edc048\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"21182bd6-dd51-48c6-8498-11775af1b72e\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"4e3ac55c-6de2-4b22-a296-cb790c1a4592\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"f3ce4f40-69f5-46de-bcef-1effd70b1b87\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"62b8e91a-b7b8-44f9-b497-b7de9d8e89ee\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"48bcc9c1-6914-4134-87e5-8ba71701e15b\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"4ac2eed7-18ab-4791-9e76-4271939b4cc0\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9996\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"33bd0586-6202-48f8-9c89-d37b2584c7f6\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9997\n[11:02:26.764] \u001b[32mINFO\u001b[39m (17360): \u001b[36mrequest aborted\u001b[39m\n    \u001b[35mreq\u001b[39m: {\n      \"id\": \"7524739f-08ec-41df-8a9c-9d253ec93255\",\n      \"method\": \"GET\",\n      \"url\": \"/api/v1/tenders/search\"\n    }\n    \u001b[35mres\u001b[39m: {\n      \"statusCode\": null\n    }\n    \u001b[35mresponseTime\u001b[39m: 9997\n"
+  },
+  "metrics": {
+    "rssPeakBytes": 419135488,
+    "eventLoopLagMeanMs": 20.995204660960393,
+    "eventLoopLagP95Ms": 22.298623,
+    "eventLoopLagMaxMs": 28.884991
+  },
+  "results": [
+    {
+      "scenario": "busca-comum",
+      "concurrency": 10,
+      "rps": 26.6,
+      "p50Ms": 348,
+      "p95Ms": 513.931166,
+      "p99Ms": 552,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 266,
+      "statusCodeStats": {
+        "200": {
+          "count": 266
+        }
+      }
+    },
+    {
+      "scenario": "busca-comum",
+      "concurrency": 50,
+      "rps": 24.7,
+      "p50Ms": 1756,
+      "p95Ms": 2232.729125,
+      "p99Ms": 2361,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 247,
+      "statusCodeStats": {
+        "200": {
+          "count": 247
+        }
+      }
+    },
+    {
+      "scenario": "busca-comum",
+      "concurrency": 100,
+      "rps": 20,
+      "p50Ms": 3697,
+      "p95Ms": 4123.284042,
+      "p99Ms": 4636,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 200,
+      "statusCodeStats": {
+        "200": {
+          "count": 200
+        }
+      }
+    },
+    {
+      "scenario": "busca-media",
+      "concurrency": 10,
+      "rps": 24.9,
+      "p50Ms": 389,
+      "p95Ms": 449.895417,
+      "p99Ms": 524,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 249,
+      "statusCodeStats": {
+        "200": {
+          "count": 249
+        }
+      }
+    },
+    {
+      "scenario": "busca-media",
+      "concurrency": 50,
+      "rps": 21.9,
+      "p50Ms": 1910,
+      "p95Ms": 2602.197208,
+      "p99Ms": 2689,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 219,
+      "statusCodeStats": {
+        "200": {
+          "count": 219
+        }
+      }
+    },
+    {
+      "scenario": "busca-media",
+      "concurrency": 100,
+      "rps": 20,
+      "p50Ms": 3841,
+      "p95Ms": 4525.955292,
+      "p99Ms": 5403,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 200,
+      "statusCodeStats": {
+        "200": {
+          "count": 200
+        }
+      }
+    },
+    {
+      "scenario": "busca-rara",
+      "concurrency": 10,
+      "rps": 28.1,
+      "p50Ms": 344,
+      "p95Ms": 395.067,
+      "p99Ms": 474,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 281,
+      "statusCodeStats": {
+        "200": {
+          "count": 281
+        }
+      }
+    },
+    {
+      "scenario": "busca-rara",
+      "concurrency": 50,
+      "rps": 25.9,
+      "p50Ms": 1686,
+      "p95Ms": 2188.022834,
+      "p99Ms": 2431,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 259,
+      "statusCodeStats": {
+        "200": {
+          "count": 259
+        }
+      }
+    },
+    {
+      "scenario": "busca-rara",
+      "concurrency": 100,
+      "rps": 20,
+      "p50Ms": 3453,
+      "p95Ms": 4400.629083,
+      "p99Ms": 4839,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 200,
+      "statusCodeStats": {
+        "200": {
+          "count": 200
+        }
+      }
+    },
+    {
+      "scenario": "busca-multitermo",
+      "concurrency": 10,
+      "rps": 21.7,
+      "p50Ms": 438,
+      "p95Ms": 581.659834,
+      "p99Ms": 660,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 217,
+      "statusCodeStats": {
+        "200": {
+          "count": 217
+        }
+      }
+    },
+    {
+      "scenario": "busca-multitermo",
+      "concurrency": 50,
+      "rps": 19.61,
+      "p50Ms": 2156,
+      "p95Ms": 2687.086459,
+      "p99Ms": 3039,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 196,
+      "statusCodeStats": {
+        "200": {
+          "count": 196
+        }
+      }
+    },
+    {
+      "scenario": "busca-multitermo",
+      "concurrency": 100,
+      "rps": 19.3,
+      "p50Ms": 4113,
+      "p95Ms": 5155.591709,
+      "p99Ms": 5861,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 193,
+      "statusCodeStats": {
+        "200": {
+          "count": 193
+        }
+      }
+    },
+    {
+      "scenario": "filtros",
+      "concurrency": 10,
+      "rps": 330.7,
+      "p50Ms": 28,
+      "p95Ms": 46.65025,
+      "p99Ms": 66,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 3307,
+      "statusCodeStats": {
+        "200": {
+          "count": 3307
+        }
+      }
+    },
+    {
+      "scenario": "filtros",
+      "concurrency": 50,
+      "rps": 312.2,
+      "p50Ms": 148,
+      "p95Ms": 232.504917,
+      "p99Ms": 350,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 3122,
+      "statusCodeStats": {
+        "200": {
+          "count": 3122
+        }
+      }
+    },
+    {
+      "scenario": "filtros",
+      "concurrency": 100,
+      "rps": 331.5,
+      "p50Ms": 293,
+      "p95Ms": 339.859208,
+      "p99Ms": 358,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 3315,
+      "statusCodeStats": {
+        "200": {
+          "count": 3315
+        }
+      }
+    },
+    {
+      "scenario": "pagina-profunda",
+      "concurrency": 10,
+      "rps": 14.3,
+      "p50Ms": 596,
+      "p95Ms": 1067.384333,
+      "p99Ms": 1137,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 143,
+      "statusCodeStats": {
+        "200": {
+          "count": 143
+        }
+      }
+    },
+    {
+      "scenario": "pagina-profunda",
+      "concurrency": 50,
+      "rps": 13,
+      "p50Ms": 3250,
+      "p95Ms": 4107.440292,
+      "p99Ms": 4549,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 130,
+      "statusCodeStats": {
+        "200": {
+          "count": 130
+        }
+      }
+    },
+    {
+      "scenario": "pagina-profunda",
+      "concurrency": 100,
+      "rps": 10,
+      "p50Ms": 6869,
+      "p95Ms": 8232.908209,
+      "p99Ms": 8319,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 100,
+      "statusCodeStats": {
+        "200": {
+          "count": 100
+        }
+      }
+    },
+    {
+      "scenario": "sugestoes",
+      "concurrency": 10,
+      "rps": 22.8,
+      "p50Ms": 428,
+      "p95Ms": 510.503166,
+      "p99Ms": 546,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 228,
+      "statusCodeStats": {
+        "200": {
+          "count": 228
+        }
+      }
+    },
+    {
+      "scenario": "sugestoes",
+      "concurrency": 50,
+      "rps": 23.2,
+      "p50Ms": 2123,
+      "p95Ms": 2207.594958,
+      "p99Ms": 2220,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 232,
+      "statusCodeStats": {
+        "200": {
+          "count": 232
+        }
+      }
+    },
+    {
+      "scenario": "sugestoes",
+      "concurrency": 100,
+      "rps": 22.9,
+      "p50Ms": 4200,
+      "p95Ms": 4464.621625,
+      "p99Ms": 4504,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 229,
+      "statusCodeStats": {
+        "200": {
+          "count": 229
+        }
+      }
+    },
+    {
+      "scenario": "detalhe",
+      "concurrency": 10,
+      "rps": 5282,
+      "p50Ms": 1,
+      "p95Ms": 2.961833,
+      "p99Ms": 3,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 52812,
+      "statusCodeStats": {
+        "200": {
+          "count": 52812
+        }
+      }
+    },
+    {
+      "scenario": "detalhe",
+      "concurrency": 50,
+      "rps": 4639.2,
+      "p50Ms": 10,
+      "p95Ms": 13.329083,
+      "p99Ms": 17,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 46383,
+      "statusCodeStats": {
+        "200": {
+          "count": 46383
+        }
+      }
+    },
+    {
+      "scenario": "detalhe",
+      "concurrency": 100,
+      "rps": 4033.7,
+      "p50Ms": 23,
+      "p95Ms": 35.585666,
+      "p99Ms": 46,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 40332,
+      "statusCodeStats": {
+        "200": {
+          "count": 40332
+        }
+      }
+    },
+    {
+      "scenario": "rajada-cliente-a",
+      "concurrency": 500,
+      "rps": 0,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "p99Ms": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 0,
+      "statusCodeStats": {}
+    },
+    {
+      "scenario": "cliente-b-durante-rajada",
+      "concurrency": 10,
+      "rps": 0,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "p99Ms": 0,
+      "errors": 0,
+      "timeouts": 0,
+      "non2xx": 0,
+      "requests": 0,
+      "statusCodeStats": {}
+    }
+  ],
+  "explains": {
+    "busca-comum": "Limit  (cost=25662.94..25665.27 rows=20 width=26) (actual time=54.375..55.972 rows=20 loops=1)\n  Buffers: shared hit=11755 read=11683\n  ->  Gather Merge  (cost=25662.94..30484.41 rows=41324 width=26) (actual time=54.374..55.969 rows=20 loops=1)\n        Workers Planned: 2\n        Workers Launched: 2\n        Buffers: shared hit=11755 read=11683\n        ->  Sort  (cost=24662.92..24714.57 rows=20662 width=26) (actual time=52.559..52.560 rows=16 loops=3)\n              Sort Key: (CASE WHEN (title_norm ~~ '%contratacao%'::text) THEN 5 WHEN (object_norm ~~ '%contratacao%'::text) THEN 4 WHEN (items_norm ~~ '%contratacao%'::text) THEN 3 WHEN (organization_norm ~~ '%contratacao%'::text) THEN 2 WHEN (other_norm ~~ '%contratacao%'::text) THEN 1 ELSE 0 END) DESC, published_at DESC NULLS LAST, id\n              Sort Method: top-N heapsort  Memory: 27kB\n              Buffers: shared hit=11755 read=11683\n              Worker 0:  Sort Method: top-N heapsort  Memory: 27kB\n              Worker 1:  Sort Method: top-N heapsort  Memory: 27kB\n              ->  Parallel Seq Scan on tenders  (cost=0.00..24113.11 rows=20662 width=26) (actual time=0.023..49.824 rows=16667 loops=3)\n                    Filter: (search_text ~~ '%contratacao%'::text)\n                    Rows Removed by Filter: 16667\n                    Buffers: shared hit=11651 read=11683\nPlanning:\n  Buffers: shared hit=77\nPlanning Time: 0.249 ms\nExecution Time: 55.993 ms\nAggregate  (cost=24707.97..24707.98 rows=1 width=8) (actual time=71.861..71.862 rows=1 loops=1)\n  Buffers: shared hit=11747 read=11587\n  ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=49590 width=0) (actual time=0.026..70.480 rows=50000 loops=1)\n        Filter: (search_text ~~ '%contratacao%'::text)\n        Rows Removed by Filter: 50000\n        Buffers: shared hit=11747 read=11587\nPlanning Time: 0.136 ms\nExecution Time: 71.891 ms",
+    "busca-media": "Limit  (cost=24717.31..24717.36 rows=20 width=22) (actual time=97.276..97.278 rows=20 loops=1)\n  Buffers: shared hit=16269 read=7065\n  ->  Sort  (cost=24717.31..24729.84 rows=5010 width=22) (actual time=97.275..97.276 rows=20 loops=1)\n        Sort Key: published_at DESC NULLS LAST, id\n        Sort Method: top-N heapsort  Memory: 26kB\n        Buffers: shared hit=16269 read=7065\n        ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=5010 width=22) (actual time=0.095..96.883 rows=5000 loops=1)\n              Filter: (search_text ~~ '%tecnologia%'::text)\n              Rows Removed by Filter: 95000\n              Buffers: shared hit=16269 read=7065\nPlanning Time: 0.088 ms\nExecution Time: 97.287 ms\nAggregate  (cost=24596.53..24596.53 rows=1 width=8) (actual time=95.837..95.838 rows=1 loops=1)\n  Buffers: shared hit=16269 read=7065\n  ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=5010 width=0) (actual time=0.089..95.624 rows=5000 loops=1)\n        Filter: (search_text ~~ '%tecnologia%'::text)\n        Rows Removed by Filter: 95000\n        Buffers: shared hit=16269 read=7065\nPlanning Time: 0.088 ms\nExecution Time: 95.850 ms",
+    "busca-rara": "Limit  (cost=24586.58..24586.63 rows=20 width=22) (actual time=91.531..91.534 rows=20 loops=1)\n  Buffers: shared hit=16316 read=7018\n  ->  Sort  (cost=24586.58..24586.82 rows=97 width=22) (actual time=91.531..91.532 rows=20 loops=1)\n        Sort Key: published_at DESC NULLS LAST, id\n        Sort Method: top-N heapsort  Memory: 27kB\n        Buffers: shared hit=16316 read=7018\n        ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=97 width=22) (actual time=0.227..91.458 rows=100 loops=1)\n              Filter: (search_text ~~ '%ultrassom%'::text)\n              Rows Removed by Filter: 99900\n              Buffers: shared hit=16316 read=7018\nPlanning Time: 0.075 ms\nExecution Time: 91.543 ms\nAggregate  (cost=24584.24..24584.25 rows=1 width=8) (actual time=89.962..89.963 rows=1 loops=1)\n  Buffers: shared hit=16316 read=7018\n  ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=97 width=0) (actual time=0.218..89.937 rows=100 loops=1)\n        Filter: (search_text ~~ '%ultrassom%'::text)\n        Rows Removed by Filter: 99900\n        Buffers: shared hit=16316 read=7018\nPlanning Time: 0.080 ms\nExecution Time: 89.978 ms",
+    "busca-multitermo": "Limit  (cost=25063.25..25064.42 rows=10 width=22) (actual time=39.278..41.227 rows=20 loops=1)\n  Buffers: shared hit=16286 read=7138\n  ->  Gather Merge  (cost=25063.25..25064.42 rows=10 width=22) (actual time=39.278..41.225 rows=20 loops=1)\n        Workers Planned: 2\n        Workers Launched: 2\n        Buffers: shared hit=16286 read=7138\n        ->  Sort  (cost=24063.22..24063.24 rows=5 width=22) (actual time=37.750..37.751 rows=16 loops=3)\n              Sort Key: published_at DESC NULLS LAST, id\n              Sort Method: top-N heapsort  Memory: 27kB\n              Buffers: shared hit=16286 read=7138\n              Worker 0:  Sort Method: top-N heapsort  Memory: 27kB\n              Worker 1:  Sort Method: top-N heapsort  Memory: 27kB\n              ->  Parallel Seq Scan on tenders  (cost=0.00..24063.17 rows=5 width=22) (actual time=0.034..37.516 rows=1667 loops=3)\n                    Filter: ((search_text ~~ '%tecnologia%'::text) AND (search_text ~~ '%integracao%'::text) AND (search_text ~~ '%especializada%'::text))\n                    Rows Removed by Filter: 31667\n                    Buffers: shared hit=16205 read=7129\nPlanning Time: 0.166 ms\nExecution Time: 41.239 ms\nAggregate  (cost=25084.03..25084.04 rows=1 width=8) (actual time=98.550..98.551 rows=1 loops=1)\n  Buffers: shared hit=16269 read=7065\n  ->  Seq Scan on tenders  (cost=0.00..25084.00 rows=13 width=0) (actual time=0.029..98.333 rows=5000 loops=1)\n        Filter: ((search_text ~~ '%tecnologia%'::text) AND (search_text ~~ '%integracao%'::text) AND (search_text ~~ '%especializada%'::text))\n        Rows Removed by Filter: 95000\n        Buffers: shared hit=16269 read=7065\nPlanning Time: 0.203 ms\nExecution Time: 98.566 ms",
+    "filtros": "Limit  (cost=1385.54..1385.57 rows=11 width=22) (actual time=3.561..3.562 rows=0 loops=1)\n  Buffers: shared hit=174 read=104\n  ->  Sort  (cost=1385.54..1385.57 rows=11 width=22) (actual time=3.560..3.561 rows=0 loops=1)\n        Sort Key: published_at DESC NULLS LAST, id\n        Sort Method: quicksort  Memory: 25kB\n        Buffers: shared hit=174 read=104\n        ->  Bitmap Heap Scan on tenders  (cost=478.69..1385.35 rows=11 width=22) (actual time=3.557..3.558 rows=0 loops=1)\n              Recheck Cond: ((state = 'SP'::text) AND (modality = 'pregao_eletronico'::text) AND (status = 'open'::text))\n              Filter: ((search_text ~~ '%tecnologia%'::text) AND (published_at >= '2025-01-01 03:00:00+00'::timestamp with time zone))\n              Rows Removed by Filter: 241\n              Heap Blocks: exact=241\n              Buffers: shared hit=174 read=104\n              ->  BitmapAnd  (cost=478.69..478.69 rows=245 width=0) (actual time=3.018..3.019 rows=0 loops=1)\n                    Buffers: shared read=37\n                    ->  Bitmap Index Scan on tenders_state_idx  (cost=0.00..114.07 rows=9837 width=0) (actual time=0.508..0.508 rows=9678 loops=1)\n                          Index Cond: (state = 'SP'::text)\n                          Buffers: shared read=9\n                    ->  Bitmap Index Scan on tenders_modality_idx  (cost=0.00..141.52 rows=12430 width=0) (actual time=0.830..0.830 rows=12500 loops=1)\n                          Index Cond: (modality = 'pregao_eletronico'::text)\n                          Buffers: shared read=11\n                    ->  Bitmap Index Scan on tenders_status_idx  (cost=0.00..222.59 rows=20040 width=0) (actual time=1.398..1.398 rows=20000 loops=1)\n                          Index Cond: (status = 'open'::text)\n                          Buffers: shared read=17\nPlanning:\n  Buffers: shared hit=8\nPlanning Time: 0.121 ms\nExecution Time: 3.603 ms\nAggregate  (cost=1385.37..1385.38 rows=1 width=8) (actual time=2.751..2.753 rows=1 loops=1)\n  Buffers: shared hit=278\n  ->  Bitmap Heap Scan on tenders  (cost=478.69..1385.35 rows=11 width=0) (actual time=2.749..2.750 rows=0 loops=1)\n        Recheck Cond: ((state = 'SP'::text) AND (modality = 'pregao_eletronico'::text) AND (status = 'open'::text))\n        Filter: ((search_text ~~ '%tecnologia%'::text) AND (published_at >= '2025-01-01 03:00:00+00'::timestamp with time zone))\n        Rows Removed by Filter: 241\n        Heap Blocks: exact=241\n        Buffers: shared hit=278\n        ->  BitmapAnd  (cost=478.69..478.69 rows=245 width=0) (actual time=2.293..2.294 rows=0 loops=1)\n              Buffers: shared hit=37\n              ->  Bitmap Index Scan on tenders_state_idx  (cost=0.00..114.07 rows=9837 width=0) (actual time=0.264..0.264 rows=9678 loops=1)\n                    Index Cond: (state = 'SP'::text)\n                    Buffers: shared hit=9\n              ->  Bitmap Index Scan on tenders_modality_idx  (cost=0.00..141.52 rows=12430 width=0) (actual time=0.576..0.576 rows=12500 loops=1)\n                    Index Cond: (modality = 'pregao_eletronico'::text)\n                    Buffers: shared hit=11\n              ->  Bitmap Index Scan on tenders_status_idx  (cost=0.00..222.59 rows=20040 width=0) (actual time=1.264..1.264 rows=20000 loops=1)\n                    Index Cond: (status = 'open'::text)\n                    Buffers: shared hit=17\nPlanning Time: 0.086 ms\nExecution Time: 2.912 ms",
+    "pagina-profunda": "Limit  (cost=26808.65..26810.98 rows=20 width=22) (actual time=48.210..49.976 rows=20 loops=1)\n  Buffers: shared hit=16152 read=7272\n  ->  Gather Merge  (cost=26227.61..31049.08 rows=41324 width=22) (actual time=46.827..49.878 rows=5000 loops=1)\n        Workers Planned: 2\n        Workers Launched: 2\n        Buffers: shared hit=16152 read=7272\n        ->  Sort  (cost=25227.59..25279.24 rows=20662 width=22) (actual time=45.247..45.320 rows=2450 loops=3)\n              Sort Key: published_at DESC NULLS LAST, id\n              Sort Method: top-N heapsort  Memory: 981kB\n              Buffers: shared hit=16152 read=7272\n              Worker 0:  Sort Method: top-N heapsort  Memory: 984kB\n              Worker 1:  Sort Method: top-N heapsort  Memory: 965kB\n              ->  Parallel Seq Scan on tenders  (cost=0.00..23854.83 rows=20662 width=22) (actual time=0.027..36.954 rows=16667 loops=3)\n                    Filter: (search_text ~~ '%contratacao%'::text)\n                    Rows Removed by Filter: 16667\n                    Buffers: shared hit=16062 read=7272\nPlanning Time: 0.085 ms\nExecution Time: 49.987 ms\nAggregate  (cost=24707.97..24707.98 rows=1 width=8) (actual time=72.199..72.199 rows=1 loops=1)\n  Buffers: shared hit=16126 read=7208\n  ->  Seq Scan on tenders  (cost=0.00..24584.00 rows=49590 width=0) (actual time=0.008..70.870 rows=50000 loops=1)\n        Filter: (search_text ~~ '%contratacao%'::text)\n        Rows Removed by Filter: 50000\n        Buffers: shared hit=16126 read=7208\nPlanning Time: 0.067 ms\nExecution Time: 72.211 ms"
+  }
+}
