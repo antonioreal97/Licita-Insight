@@ -24,7 +24,7 @@ export class ApiError extends Error {
 
   /** Errors worth retrying automatically (transient on the server or network). */
   get isTransient() {
-    return this.code === 'NETWORK_ERROR' || this.code === 'SEARCH_UNAVAILABLE' || this.code === 'RATE_LIMITED' || this.status >= 500;
+    return this.code === 'NETWORK_ERROR' || this.code === 'SEARCH_UNAVAILABLE' || this.code === 'RATE_LIMITED' || this.code === 'SERVICE_OVERLOADED' || this.status >= 500;
   }
 
   static fromBody(body: ApiErrorBody, status: number, retryAfter?: string | null) {
