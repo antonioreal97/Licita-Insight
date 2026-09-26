@@ -30,6 +30,7 @@ import {
   scoreCompanyFit,
   scoreSizeRestriction,
 } from "./jev-client";
+import { fitLexicalGateMode } from "./fit-lexical-gate";
 
 export { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 export type { CompanyProfileInput, CompanySize } from "./company-fit-policy";
@@ -175,6 +176,26 @@ async function lexicalMatches(
     limit 20
   `);
   return result.rows.map(({ term }) => term);
+}
+
+export async function lexicalGatePasses(
+  tenderId: string,
+  offerings: string[],
+): Promise<boolean> {
+  if (offerings.length === 0) return false;
+  const result = await db.execute<{ passed: boolean }>(sql`
+    select exists (
+      select 1
+      from tenders t,
+        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term),
+        regexp_split_to_table(terms.term, '[^[:alnum:]]+') words(word)
+      where t.id = ${tenderId}
+        and length(words.word) >= 2
+        and to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.items::text))
+          @@ plainto_tsquery('portuguese', words.word)
+    ) as passed
+  `);
+  return result.rows[0]?.passed === true;
 }
 
 function explicitFilter(
@@ -420,6 +441,7 @@ async function ensureFit(
   const fingerprint = companyFitTenderFingerprint(tender);
   const key = `${userId}:${profile.version}:${tender.id}:${config.model}:${COMPANY_FIT_PROMPT_VERSION}`;
   const filters = explicitFilter(profile, tender);
+  const gateMode = fitLexicalGateMode();
   const [existing] = await db
     .select()
     .from(companyTenderFitsTable)
@@ -489,12 +511,61 @@ async function ensureFit(
           score: "0",
           reasons: filters,
           responseModel: null,
+          lexicalGatePass: null,
           checkedAt: new Date(),
           updatedAt: new Date(),
         },
       })
       .returning();
     return publicFit(row!);
+  }
+  const lexicalGatePass = gateMode === "off"
+    ? null
+    : await lexicalGatePasses(tender.id, profile.offerings);
+  if (gateMode === "on" && !lexicalGatePass) {
+    const checkedAt = new Date();
+    const [gated] = await db
+      .insert(companyTenderFitsTable)
+      .values({
+        id,
+        userId,
+        tenderId: tender.id,
+        profileVersion: profile.version,
+        tenderFingerprint: fingerprint,
+        requestedModel: config.model,
+        promptVersion: COMPANY_FIT_PROMPT_VERSION,
+        status: "ready",
+        level: "low",
+        score: "0",
+        reasons: [{ kind: "no_offering_term" }],
+        lexicalGatePass: false,
+        checkedAt,
+        updatedAt: checkedAt,
+      })
+      .onConflictDoUpdate({
+        target: [
+          companyTenderFitsTable.userId,
+          companyTenderFitsTable.profileVersion,
+          companyTenderFitsTable.tenderId,
+          companyTenderFitsTable.requestedModel,
+          companyTenderFitsTable.promptVersion,
+        ],
+        set: {
+          tenderFingerprint: fingerprint,
+          status: "ready",
+          level: "low",
+          score: "0",
+          reasons: [{ kind: "no_offering_term" }],
+          responseModel: null,
+          inputTokens: 0,
+          estimatedCostUsd: "0",
+          lexicalGatePass: false,
+          checkedAt,
+          updatedAt: checkedAt,
+        },
+      })
+      .returning();
+    return publicFit(gated!);
   }
   const [row] = await db
     .insert(companyTenderFitsTable)
@@ -507,6 +578,7 @@ async function ensureFit(
       requestedModel: config.model,
       promptVersion: COMPANY_FIT_PROMPT_VERSION,
       status: "processing",
+      lexicalGatePass,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -524,6 +596,7 @@ async function ensureFit(
         score: null,
         reasons: [],
         responseModel: null,
+        lexicalGatePass,
         checkedAt: null,
         updatedAt: new Date(),
       },

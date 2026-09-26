@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -27,6 +28,7 @@ export type FitEvidenceRecord = {
 
 export type FitReasonRecord =
   | { kind: "offering_match"; terms: string[] }
+  | { kind: "no_offering_term" }
   | { kind: "exclusion"; terms: string[] }
   | { kind: "out_of_coverage"; state: string | null }
   | { kind: "out_of_value_range"; estimatedValue: number }
@@ -112,6 +114,7 @@ export const companyTenderFitsTable = pgTable(
     estimatedCostUsd: numeric("estimated_cost_usd", { precision: 14, scale: 8 })
       .notNull()
       .default("0"),
+    lexicalGatePass: boolean("lexical_gate_pass"),
     checkedAt: timestamp("checked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

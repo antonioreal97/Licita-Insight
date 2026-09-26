@@ -56,6 +56,10 @@ Nível alto é `>= 0.75`, médio é `>= 0.55`; abaixo disso é baixo (limiares a
 
 Para empresa de porte `other`, participação exclusiva de ME/EPP força nível baixo. Cota reservada para ME/EPP é apenas informativa, pois a cota principal permanece aberta a outros portes; benefícios como preferência pós-lances, empate ficto e regularidade fiscal tardia não geram motivo de restrição. No máximo quatro razões verificáveis são retornadas. A verificação de porte só consulta um índice documental já pronto e nunca inicia indexação.
 
+O filtro lexical por palavra usa radicais do dicionário `portuguese` sobre título, objeto e itens: qualquer palavra de qualquer termo de `offerings` é suficiente (por exemplo, “obra” no edital passa para a oferta “obra civil”). `AI_FIT_LEXICAL_GATE=off|shadow|on` tem padrão `shadow`: nesse modo a decisão é gravada em `lexical_gate_pass`, mas o Jev continua sendo chamado. Em `off`, a coluna fica nula. Em `on`, uma reprovação evita a chamada, conclui o fit como `ready/low` com score zero e grava internamente o motivo aditivo `{kind:"no_offering_term"}`; clientes v1 ignoram motivos desconhecidos.
+
+O modo `on` nunca é ativado automaticamente. A decisão é do owner e exige pelo menos 500 avaliações medidas e recall de no mínimo 97% sobre resultados `high` + `medium`, conforme `report:fit-gate`. O padrão continua `shadow` porque a calibração inicial perdeu 3 de 19 resultados alta/média.
+
 O cache inclui usuário, versão do perfil, edital, fingerprint do conteúdo do edital, modelo e versão do prompt. O fingerprint considera título, objeto, descrição, itens, órgão, valor e UF; atualizações operacionais como `updatedAt` não invalidam o resultado. A cota de aderência é independente da cota de perguntas e usa `AI_DAILY_FIT_LIMIT` (padrão `1000`).
 
 ## Alertas

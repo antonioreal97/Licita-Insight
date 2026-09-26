@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { InvalidParameterError } from "../lib/api-error";
 import { companyFitTenderFingerprint, fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
+import { fitLexicalGateMode } from "./fit-lexical-gate";
 
 const valid = () => ({
   description:
@@ -97,4 +98,11 @@ test("fingerprint ignora updatedAt operacional e muda com o conteúdo", () => {
   const tenderTouched = { ...tender, updatedAt: new Date("2026-09-25T00:00:00Z") };
   assert.equal(companyFitTenderFingerprint(tender), companyFitTenderFingerprint(tenderTouched));
   assert.notEqual(companyFitTenderFingerprint(tender), companyFitTenderFingerprint({ ...tender, title: "Aquisição de notebooks" }));
+});
+
+test("filtro lexical nasce em shadow e valida os modos explícitos", () => {
+  assert.equal(fitLexicalGateMode(undefined), "shadow");
+  assert.equal(fitLexicalGateMode("off"), "off");
+  assert.equal(fitLexicalGateMode("on"), "on");
+  assert.throws(() => fitLexicalGateMode("enabled"), /off, shadow or on/);
 });
