@@ -12,6 +12,7 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 - `AI_MAX_DOCUMENT_BYTES`: limite por download, padrão `26214400`.
 - `AI_MAX_PDF_PAGES`: limite por PDF, padrão `300`.
 - `AI_DOCUMENT_TIMEOUT_MS`: timeout do download de cada documento, padrão `30000`.
+- `AI_DOCUMENT_RETRY_MAX_ATTEMPTS`: teto de tentativas por documento, padrão `6`.
 - `AI_DOCUMENT_HOSTS`: allowlist de hosts HTTPS separados por vírgula, padrão `pncp.gov.br`.
 - `AI_DAILY_SHEET_LIMIT`: teto global de fichas novas por dia, padrão `500`.
 - `AI_SHEET_EVIDENCE_THRESHOLD`: limiar Noul para considerar um trecho encontrado, padrão `0.5`.
@@ -22,7 +23,9 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 
 ### `GET /api/v1/tenders/:id/ask-status`
 
-Exige sessão. Usuários com acesso vigente iniciam a indexação assíncrona ao consultar a rota.
+Exige sessão. Usuários com acesso vigente iniciam somente a primeira indexação ou uma nova versão quando a lista de documentos muda. Retentativas de documentos falhos são feitas por job próprio: o GET nunca baixa novamente antes de `nextRetryAt`.
+
+A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsupported`. O índice fica `ready` assim que há pelo menos um documento legível e nenhum documento em processamento; se nenhum documento puder ser lido, fica `failed` (ou `unsupported` quando todos os resultados são desse tipo).
 
 ### `POST /api/v1/tenders/:id/ask`
 
@@ -36,7 +39,7 @@ Erros específicos: `402 SUBSCRIPTION_REQUIRED`, `429 AI_QUOTA_EXCEEDED` e `503 
 
 ### `GET /api/v1/tenders/:id/sheet`
 
-Exige sessão e acesso vigente (`402 SUBSCRIPTION_REQUIRED` sem acesso; `404 NOT_FOUND` para edital inexistente). A consulta usa o mesmo gatilho de indexação de `ask-status`; não cria um índice exclusivo para a ficha. Enquanto o índice ou a ficha estiver em cálculo, retorna `processing` e a UI pode repetir a consulta com backoff.
+Exige sessão e acesso vigente (`402 SUBSCRIPTION_REQUIRED` sem acesso; `404 NOT_FOUND` para edital inexistente). A consulta usa o mesmo índice de `ask-status`; não cria um índice exclusivo para a ficha nem executa retentativas de download. Enquanto a primeira indexação ou a ficha estiver em cálculo, retorna `processing` e a UI pode repetir a consulta com backoff.
 
 Resposta:
 
@@ -86,9 +89,11 @@ type SheetField = {
 
 Fora de `ready`, `fields` é vazio. Em `ready`, há sempre os 13 ids na ordem acima. `unreadDocuments` conta documentos `failed` ou `unsupported` do índice.
 
-Categorias válidas em `answer`: `consortium` (`allowed | forbidden`), `subcontracting` (`allowed | limited | forbidden`), `me_epp` (`exclusive | quota | benefits_only`), `site_visit` (`mandatory | optional | waived`) e `samples` (`required | not_required`). Os demais campos têm `answer: null` e mostram somente o trecho.
+Categorias válidas em `answer`: `consortium` (`allowed | forbidden`), `subcontracting` (`allowed | limited | forbidden`), `me_epp` (`exclusive | quota | benefits_only`), `site_visit` (`mandatory | optional | waived`), `samples` (`required | not_required`), `bid_guarantee` (`required | not_required`) e `contract_guarantee` (`required | not_required`). Os demais campos têm `answer: null` e mostram somente o trecho.
 
-Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_found`, com `answer`, `confidence` e `evidence` nulos. Choice `not_defined` ou confiança abaixo de `AI_SHEET_ANSWER_THRESHOLD` mantém `status: found` e o trecho oficial, mas retorna `answer: null`.
+Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_found`, com `answer`, `confidence` e `evidence` nulos. Em especial, garantias só recebem `not_required` quando o trecho diz explicitamente que não serão exigidas. Choice `not_defined` ou confiança abaixo de `AI_SHEET_ANSWER_THRESHOLD` mantém `status: found` e o trecho oficial, mas retorna `answer: null`.
+
+Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas após 5 minutos, 30 minutos, 2 horas e, daí em diante, uma vez por dia, até o teto configurado. HTTP 404, URL/arquivo inválido e limites de tamanho são definitivos. Uma recuperação incrementa `indexVersion`, invalida perguntas e fichas em cache e preserva os trechos dos demais documentos. Se a reextração falhar, uma extração anterior que ainda seja legível não é removida.
 
 A ficha é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
 

@@ -83,9 +83,17 @@ export const tenderAiDocumentsTable = pgTable(
     pages: integer("pages"),
     status: text("status").notNull(),
     error: text("error"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    retryable: boolean("retryable").notNull().default(false),
+    nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
     extractedAt: timestamp("extracted_at", { withTimezone: true }),
   },
-  (table) => [index("tender_ai_documents_tender_idx").on(table.tenderId)],
+  (table) => [
+    index("tender_ai_documents_tender_idx").on(table.tenderId),
+    index("tender_ai_documents_retry_idx").on(table.nextRetryAt).where(sql`${table.retryable} = true`),
+    check("tender_ai_documents_attempt_count_check", sql`${table.attemptCount} >= 0`),
+  ],
 );
 
 export const tenderAiPassagesTable = pgTable(

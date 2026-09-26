@@ -604,13 +604,13 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     );
     assert.equal(limited.status, 429);
     assert.equal(((await limited.json()) as { error: { code: string } }).error.code, "AI_QUOTA_EXCEEDED");
-    const { SHEET_FIELDS } = await import("../ai/tender-sheet-policy");
+    const { SHEET_FIELDS, SHEET_PROMPT_VERSION } = await import("../ai/tender-sheet-policy");
     await db.insert(tenderAiSheetsTable).values({
       id: "global-sheet-cache",
       tenderId,
       indexVersion: 1,
       requestedModel: "jev-1.13.0",
-      promptVersion: 1,
+      promptVersion: SHEET_PROMPT_VERSION,
       status: "ready",
       fields: SHEET_FIELDS.map(({ id }) => ({
         id,

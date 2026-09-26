@@ -18,7 +18,7 @@ type FieldSpec = {
   choices?: Readonly<Record<string, string>>;
 };
 
-export const SHEET_PROMPT_VERSION = 1;
+export const SHEET_PROMPT_VERSION = 2;
 
 export const SHEET_FIELDS: readonly FieldSpec[] = [
   {
@@ -115,7 +115,14 @@ export const SHEET_FIELDS: readonly FieldSpec[] = [
       "seguro garantia proposta",
     ],
     question:
-      "O trecho contém a regra ou o valor da garantia de proposta/participação?",
+      "O trecho contém regra explícita sobre exigir ou não garantia de proposta/participação?",
+    choices: {
+      required: "O trecho exige garantia de proposta ou participação.",
+      not_required:
+        "O trecho diz expressamente que garantia de proposta ou participação não será exigida.",
+      not_defined:
+        "O trecho não define com clareza se a garantia de proposta ou participação é exigida.",
+    },
   },
   {
     id: "contract_guarantee",
@@ -128,7 +135,14 @@ export const SHEET_FIELDS: readonly FieldSpec[] = [
       "caução",
     ],
     question:
-      "O trecho contém a regra ou o valor da garantia contratual/de execução?",
+      "O trecho contém regra explícita sobre exigir ou não garantia contratual/de execução?",
+    choices: {
+      required: "O trecho exige garantia contratual ou de execução.",
+      not_required:
+        "O trecho diz expressamente que garantia contratual ou de execução não será exigida.",
+      not_defined:
+        "O trecho não define com clareza se a garantia contratual ou de execução é exigida.",
+    },
   },
   {
     id: "penalties",

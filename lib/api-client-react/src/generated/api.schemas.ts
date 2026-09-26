@@ -445,6 +445,8 @@ export interface AiQuota {
 export interface TenderAskStatus {
   index: TenderAskIndexStatus;
   documents: TenderAskDocument[];
+  /** @minimum 0 */
+  unreadDocuments: number;
   quota: AiQuota;
 }
 

@@ -309,6 +309,8 @@ export const GetTenderAskStatusParams = zod.object({
 })
 
 
+export const getTenderAskStatusResponseUnreadDocumentsMin = 0;
+
 export const getTenderAskStatusResponseQuotaUsedMin = 0;
 
 
@@ -322,6 +324,7 @@ export const GetTenderAskStatusResponse = zod.object({
   "pages": zod.number().int().min(1).nullable(),
   "status": zod.enum(['processing', 'ready', 'failed', 'unsupported'])
 })),
+  "unreadDocuments": zod.number().int().min(getTenderAskStatusResponseUnreadDocumentsMin),
   "quota": zod.object({
   "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin),
   "limit": zod.number().int().min(1),

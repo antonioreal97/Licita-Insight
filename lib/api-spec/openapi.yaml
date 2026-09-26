@@ -1600,9 +1600,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TenderAskDocument"
+        unreadDocuments: { type: integer, minimum: 0 }
         quota:
           $ref: "#/components/schemas/AiQuota"
-      required: [index, documents, quota]
+      required: [index, documents, unreadDocuments, quota]
     AskTenderRequest:
       type: object
       additionalProperties: false

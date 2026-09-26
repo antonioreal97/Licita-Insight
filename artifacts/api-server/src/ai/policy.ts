@@ -27,8 +27,8 @@ export const completedIndexStatus = (
   unsupportedDocuments: number,
   failedDocuments: number,
 ): "ready" | "unsupported" | "failed" => {
-  if (failedDocuments > 0) return "failed";
   if (readyDocuments > 0) return "ready";
+  if (failedDocuments > 0) return "failed";
   if (unsupportedDocuments > 0) return "unsupported";
   return "failed";
 };

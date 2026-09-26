@@ -6,6 +6,7 @@ import { classifySheetField, scoreSheetPassage } from "./jev-client";
 import {
   buildSheetFields,
   SHEET_FIELDS,
+  SHEET_PROMPT_VERSION,
   sheetCacheKey,
 } from "./tender-sheet-policy";
 
@@ -121,6 +122,22 @@ test("cache key is global across users and invalidates on index, model, or promp
   assert.notEqual(first, sheetCacheKey("tender-1", 1, "jev-1.13.0", 2));
 });
 
+test("guarantees use explicit required/not_required/not_defined choices in prompt version 2", () => {
+  assert.equal(SHEET_PROMPT_VERSION, 2);
+  for (const id of [
+    "bid_guarantee",
+    "contract_guarantee",
+  ] satisfies TenderSheetFieldId[]) {
+    const spec = SHEET_FIELDS.find((field) => field.id === id);
+    assert.deepEqual(Object.keys(spec?.choices ?? {}), [
+      "required",
+      "not_required",
+      "not_defined",
+    ]);
+    assert.match(spec?.choices?.not_required ?? "", /expressamente/);
+  }
+});
+
 test("sheet daily limit is configurable and defaults to 500", () => {
   delete process.env.AI_DAILY_SHEET_LIMIT;
   assert.equal(aiConfig().sheetDailyLimit, 500);
@@ -205,4 +222,59 @@ test("Jev Choice uses the exact enum only after a best categorical passage exist
       inputTokens: 40,
     },
   );
+});
+
+test("Jev Choice classifies both guarantees without inferring not_required from absence", async () => {
+  process.env.JEV_API_KEY = "test-key";
+  for (const [id, passage, answer] of [
+    [
+      "bid_guarantee",
+      "23.1. Não será exigida garantia da proposta.",
+      "not_required",
+    ],
+    [
+      "contract_guarantee",
+      "A contratada prestará garantia de execução de 5%.",
+      "required",
+    ],
+  ] as const) {
+    const mockedFetch: typeof fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        state: Record<string, string>;
+        questions: {
+          answer: { type: string; criteria: Record<string, string> };
+        };
+      };
+      assert.deepEqual(Object.keys(body.state), ["trecho_do_edital"]);
+      assert.equal(body.state.trecho_do_edital, passage);
+      assert.deepEqual(Object.keys(body.questions.answer.criteria), [
+        "required",
+        "not_required",
+        "not_defined",
+      ]);
+      assert.match(
+        body.questions.answer.criteria.not_required ?? "",
+        /expressamente/,
+      );
+      return new Response(
+        JSON.stringify({
+          model: "jev-1.13.0",
+          answers: {
+            answer: {
+              type: "choice",
+              choice: answer,
+              confidence: 0.99,
+              probabilities: {},
+            },
+          },
+          usage: { input_tokens: 42, output_tokens: 0 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+    assert.equal(
+      (await classifySheetField(id, passage, mockedFetch)).answer,
+      answer,
+    );
+  }
 });
