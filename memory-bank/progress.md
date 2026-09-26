@@ -49,7 +49,7 @@
 ## O que falta
 
 - Credenciais Asaas no ambiente e restart da API do Compose para as rotas de billing entrarem no processo em execução.
-- Deploy online (fora do ciclo do paywall).
+- Deploy online no Fly.io `gru` (decidido em 26 set 2026; ainda não feito). `BILLING_MONTHLY_BRL=49.90` no `.env` de produção.
 - Carga nacional dos últimos 30 dias do PNCP.
 - Outras fontes além do Mapas Culturais.
 - Chave Resend + domínio (click/open tracking desligados) e CODEX_HANDOFF-010.
