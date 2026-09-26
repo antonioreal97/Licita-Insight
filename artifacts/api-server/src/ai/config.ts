@@ -17,9 +17,18 @@ export const aiConfig = () => ({
   trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 5),
   paidDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_PAID", 30),
   fitDailyLimit: positiveInteger("AI_DAILY_FIT_LIMIT", 1_000),
+  sheetDailyLimit: positiveInteger("AI_DAILY_SHEET_LIMIT", 500),
+  sheetEvidenceThreshold: probability("AI_SHEET_EVIDENCE_THRESHOLD", 0.5),
+  sheetAnswerThreshold: probability("AI_SHEET_ANSWER_THRESHOLD", 0.6),
+  sheetCandidateLimit: positiveInteger("AI_SHEET_CANDIDATE_LIMIT", 6),
   fitExcludedThreshold: probability("AI_FIT_EXCLUDED_THRESHOLD", 0.65),
   maxDocumentBytes: positiveInteger("AI_MAX_DOCUMENT_BYTES", 25 * 1024 * 1024),
   maxPdfPages: positiveInteger("AI_MAX_PDF_PAGES", 300),
+  documentTimeoutMs: positiveInteger("AI_DOCUMENT_TIMEOUT_MS", 30_000),
+  documentRetryMaxAttempts: positiveInteger(
+    "AI_DOCUMENT_RETRY_MAX_ATTEMPTS",
+    6,
+  ),
   shortlistSize: positiveInteger("AI_SHORTLIST_SIZE", 10),
   documentHosts: (process.env.AI_DOCUMENT_HOSTS ?? "pncp.gov.br")
     .split(",")

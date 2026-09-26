@@ -445,6 +445,8 @@ export interface AiQuota {
 export interface TenderAskStatus {
   index: TenderAskIndexStatus;
   documents: TenderAskDocument[];
+  /** @minimum 0 */
+  unreadDocuments: number;
   quota: AiQuota;
 }
 
@@ -485,6 +487,87 @@ export interface AskTenderResult {
   passages: AskTenderPassage[];
   model: string;
   quota: AiQuota;
+}
+
+export type SheetFieldId = typeof SheetFieldId[keyof typeof SheetFieldId];
+
+
+export const SheetFieldId = {
+  consortium: 'consortium',
+  subcontracting: 'subcontracting',
+  me_epp: 'me_epp',
+  site_visit: 'site_visit',
+  samples: 'samples',
+  bid_guarantee: 'bid_guarantee',
+  contract_guarantee: 'contract_guarantee',
+  penalties: 'penalties',
+  technical_qualification: 'technical_qualification',
+  financial_qualification: 'financial_qualification',
+  contract_term: 'contract_term',
+  delivery_term: 'delivery_term',
+  price_adjustment: 'price_adjustment',
+} as const;
+
+export interface SheetEvidence {
+  documentTitle: string;
+  documentUrl: string;
+  /** @minimum 1 */
+  page: number;
+  text: string;
+}
+
+export type SheetFieldStatus = typeof SheetFieldStatus[keyof typeof SheetFieldStatus];
+
+
+export const SheetFieldStatus = {
+  found: 'found',
+  not_found: 'not_found',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SheetFieldAnswer = typeof SheetFieldAnswer[keyof typeof SheetFieldAnswer] | null;
+
+
+export const SheetFieldAnswer = {
+  allowed: 'allowed',
+  forbidden: 'forbidden',
+  limited: 'limited',
+  exclusive: 'exclusive',
+  quota: 'quota',
+  benefits_only: 'benefits_only',
+  mandatory: 'mandatory',
+  optional: 'optional',
+  waived: 'waived',
+  required: 'required',
+  not_required: 'not_required',
+} as const;
+
+export interface SheetField {
+  id: SheetFieldId;
+  status: SheetFieldStatus;
+  /** @nullable */
+  answer: SheetFieldAnswer;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  confidence: number | null;
+  evidence: SheetEvidence | null;
+}
+
+export interface TenderSheet {
+  status: TenderAskIndexStatus;
+  /** @maxItems 13 */
+  fields: SheetField[];
+  /** @minimum 0 */
+  unreadDocuments: number;
+  /** @nullable */
+  model: string | null;
+  /** @nullable */
+  generatedAt: string | null;
 }
 
 export interface CompanyProfileResponse {

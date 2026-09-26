@@ -1,5 +1,6 @@
 import app from "./app";
 import { startAiRetentionScheduler } from "./ai/ask-tender-service";
+import { startDocumentRetryJob } from "./ai/document-retry-job";
 import { startTrialNotificationScheduler } from "./account/trial-notification-scheduler";
 import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
@@ -47,6 +48,7 @@ const start = async (): Promise<void> => {
     startTrialNotificationScheduler();
     startEmailNotificationJobs();
     startAiRetentionScheduler();
+    startDocumentRetryJob();
     startDailyPncpCollect();
     startDailyCultureCollect();
   });

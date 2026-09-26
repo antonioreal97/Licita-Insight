@@ -72,6 +72,7 @@ import type {
   TenderAskStatus,
   TenderDetail,
   TenderFitsResponse,
+  TenderSheet,
   UnauthenticatedResponse,
   UnreadNotificationCount,
   UpdateNotificationPreferencesRequest,
@@ -516,6 +517,83 @@ export const useAskTender = <TError = ErrorType<InvalidParameterResponse | Unaut
       > => {
       return useMutation(getAskTenderMutationOptions(options));
     }
+
+export const getGetTenderSheetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/sheet`
+}
+
+/**
+ * @summary Get or start the evidence-backed key-field sheet for a tender
+ */
+export const getTenderSheet = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TenderSheet> => {
+
+  return customFetch<TenderSheet>(getGetTenderSheetUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderSheetQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/sheet`
+    ] as const;
+    }
+
+
+export const getGetTenderSheetQueryOptions = <TData = Awaited<ReturnType<typeof getTenderSheet>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderSheet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderSheetQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderSheet>>> = ({ signal }) => getTenderSheet(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderSheet>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderSheetQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderSheet>>>
+export type GetTenderSheetQueryError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>
+
+
+/**
+ * @summary Get or start the evidence-backed key-field sheet for a tender
+ */
+
+export function useGetTenderSheet<TData = Awaited<ReturnType<typeof getTenderSheet>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | AiQuotaExceededResponse | AiUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderSheet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderSheetQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetCompanyProfileUrl = () => {
 

@@ -33,9 +33,11 @@ test("uses separate trial and paid limits", () => {
   assert.equal(aiDailyLimit("dev"), 40);
 });
 
-test("keeps an index retryable when any document extraction fails", () => {
-  assert.equal(completedIndexStatus(1, 1, 1), "failed");
+test("publishes a partial index when at least one document is readable", () => {
+  assert.equal(completedIndexStatus(1, 1, 1), "ready");
   assert.equal(completedIndexStatus(1, 1, 0), "ready");
+  assert.equal(completedIndexStatus(0, 0, 1), "failed");
+  assert.equal(completedIndexStatus(0, 2, 1), "failed");
   assert.equal(completedIndexStatus(0, 2, 0), "unsupported");
   assert.equal(completedIndexStatus(0, 0, 0), "failed");
 });

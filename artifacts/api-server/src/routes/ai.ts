@@ -15,6 +15,7 @@ import {
   parseCompanyProfileInput,
   putCompanyProfile,
 } from "../ai/company-fit-service";
+import { getTenderSheet } from "../ai/tender-sheet-service";
 
 const router: IRouter = Router();
 
@@ -81,6 +82,15 @@ router.get(
     const userId = authContext(res).user.id;
     const trigger = await hasAiAccess(userId);
     res.json(await getAskStatus(userId, String(req.params.id), trigger));
+  }),
+);
+
+router.get(
+  "/v1/tenders/:id/sheet",
+  requireAuth,
+  requireSubscription,
+  asyncHandler(async (req, res) => {
+    res.json(await getTenderSheet(String(req.params.id)));
   }),
 );
 
