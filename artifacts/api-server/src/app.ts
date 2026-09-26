@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
 import { requestContext } from "./middlewares/request-context";
 import { createRequestProtection } from "./middlewares/request-protection";
+import { httpMetricsMiddleware } from "./metrics";
 
 const app: Express = express();
 
@@ -17,6 +18,7 @@ if (trustProxy && trustProxy !== "false") {
 }
 
 app.use(requestContext);
+app.use(httpMetricsMiddleware);
 app.use(
   pinoHttp({
     logger,

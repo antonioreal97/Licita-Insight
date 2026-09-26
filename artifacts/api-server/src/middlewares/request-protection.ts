@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { createHash } from "node:crypto";
 import type { AuthContext } from "../auth/session-service";
 import { ApiError } from "../lib/api-error";
+import { incrementMetric } from "../metrics";
 
 const SESSION_COOKIE = "licita_session";
 
@@ -107,6 +108,7 @@ export const createRequestProtection = (
     if (!auth(res) && !isExempt(req.path) && (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE]) {
       const lookup = store.consume(`preauth:ip:${req.ip}`, config.preAuthPerMinute, 60_000, now());
       if (!lookup.allowed) {
+        incrementMetric("licitai_http_rate_limited_total", { type: "preauthentication" });
         res.setHeader("Retry-After", String(Math.max(1, Math.ceil((lookup.resetAt - now()) / 1000))));
         next(new ApiError(429, "RATE_LIMITED", "Request rate limit exceeded"));
         return;
@@ -131,6 +133,7 @@ export const createRequestProtection = (
         res.setHeader("RateLimit-Remaining", String(result.remaining));
         res.setHeader("RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
         if (!result.allowed) {
+          incrementMetric("licitai_http_rate_limited_total", { type: "window" });
           res.setHeader("Retry-After", String(Math.max(1, Math.ceil((result.resetAt - now()) / 1000))));
           next(new ApiError(429, "RATE_LIMITED", "Request rate limit exceeded"));
           return;
@@ -139,11 +142,13 @@ export const createRequestProtection = (
 
       const perClientLimit = authenticated ? config.maxInflightAuthenticated : config.maxInflightAnonymous;
       if ((inflightByClient.get(key) ?? 0) >= perClientLimit) {
+        incrementMetric("licitai_http_rate_limited_total", { type: "concurrency" });
         res.setHeader("Retry-After", "1");
         next(new ApiError(429, "RATE_LIMITED", "Too many requests in progress"));
         return;
       }
       if (inflightGlobal >= config.maxInflightGlobal) {
+        incrementMetric("licitai_http_global_shed_total");
         res.setHeader("Retry-After", "1");
         next(new ApiError(503, "SERVICE_OVERLOADED", "Service is temporarily overloaded"));
         return;

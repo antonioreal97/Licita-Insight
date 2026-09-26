@@ -49,6 +49,7 @@ services:
       PUBLIC_APP_ORIGIN: http://localhost:24252
       PNCP_DAILY_COLLECT: "false"
       NODE_ENV: development
+      METRICS_PORT: ${API_METRICS_PORT:-}
     ports:
       - "3001:3001"
     command: pnpm --filter @workspace/api-server run dev
@@ -77,6 +78,7 @@ services:
       WORKER_HEALTH_PORT: "3002"
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
       NODE_ENV: development
+      METRICS_PORT: ${WORKER_METRICS_PORT:-}
     command: pnpm --filter @workspace/api-server run dev:worker
     depends_on:
       db-setup:

@@ -1,6 +1,7 @@
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
+import { incrementMetric } from "../metrics";
 
 export type RetentionResult = {
   tenders: number;
@@ -69,6 +70,8 @@ export async function purgeExpiredAiDocuments(
       total.tenders += ids.length;
       total.passages += passages.rowCount ?? 0;
       total.documents += documents.rowCount ?? 0;
+      incrementMetric("licitai_ai_retention_deleted_total", { object: "passage" }, passages.rowCount ?? 0);
+      incrementMetric("licitai_ai_retention_deleted_total", { object: "document" }, documents.rowCount ?? 0);
       if (ids.length < batchSize) break;
     } catch (error) {
       await client.query("rollback").catch(() => undefined);

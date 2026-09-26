@@ -20,8 +20,9 @@ import { createWorkerHealthApp } from "./worker-health";
 import { tryRunSingletonJob } from "./jobs/job-lock";
 import { startAiJobWorker } from "./ai/ai-job-queue";
 import { startAiDocumentRetentionScheduler } from "./ai/ai-document-retention";
+import { startMetricsServer } from "./metrics";
 
-const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT", required: boolean): number | undefined => {
+const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT", required: boolean): number | undefined => {
   const raw = process.env[name]?.trim();
   if (!raw) {
     if (required) throw new Error(`${name} environment variable is required but was not provided.`);
@@ -65,6 +66,7 @@ const start = async (): Promise<void> => {
   const workerHealthPort = role === "worker"
     ? parsePort("WORKER_HEALTH_PORT", false)
     : undefined;
+  const metricsPort = parsePort("METRICS_PORT", false);
 
   if (devEntitlementEnabled()) {
     logger.warn(
@@ -89,15 +91,19 @@ const start = async (): Promise<void> => {
     : workerHealthPort
       ? startHttpServer(workerHealthPort, true)
       : undefined;
+  const metricsServer = metricsPort ? startMetricsServer(metricsPort) : undefined;
   const stops = runsJobs ? startSchedulers() : [];
   const config = httpServerConfig();
   installGracefulShutdown({
     server,
-    stopSchedulers: () => stops.forEach((stop) => stop()),
+    stopSchedulers: () => {
+      stops.forEach((stop) => stop());
+      metricsServer?.close();
+    },
     closePool: () => pool.end(),
     timeoutMs: config.shutdownTimeoutMs,
   });
-  logger.info({ role, apiPort, workerHealthPort, schedulers: runsJobs }, "Application role started");
+  logger.info({ role, apiPort, workerHealthPort, metricsPort, schedulers: runsJobs }, "Application role started");
 };
 
 void start().catch((error) => {

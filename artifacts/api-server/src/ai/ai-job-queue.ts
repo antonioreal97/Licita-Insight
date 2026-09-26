@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { incrementMetric, observeMetric } from "../metrics";
 
 export type AiJobKind = "index" | "fit" | "sheet";
 export type AiJobLane = "interactive" | "batch";
@@ -123,6 +124,7 @@ export async function enqueueAiJob(input: EnqueueAiJobInput): Promise<EnqueueAiJ
       );
       if (Number(recent.rows[0]?.count ?? 0) >= config.indexPerUserPerHour) {
         await client.query("commit");
+        incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "user_rate_limited" });
         return { enqueued: false, reason: "user_rate_limited", jobId: null };
       }
     }
@@ -132,6 +134,7 @@ export async function enqueueAiJob(input: EnqueueAiJobInput): Promise<EnqueueAiJ
     );
     if (Number(depth.rows[0]?.count ?? 0) >= config.maxDepth[input.kind]) {
       await client.query("commit");
+      incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "queue_full" });
       return { enqueued: false, reason: "queue_full", jobId: null };
     }
     const id = randomUUID();
@@ -267,6 +270,9 @@ export function startAiJobWorker(options: {
   const activeByKind: Record<AiJobKind, number> = { index: 0, fit: 0, sheet: 0 };
 
   const handle = (job: AiJob): void => {
+    observeMetric("licitai_ai_job_queue_wait_seconds", Math.max(0, (Date.now() - job.createdAt.getTime()) / 1_000), {
+      kind: job.kind, lane: job.lane,
+    });
     activeByKind[job.kind] += 1;
     const heartbeat = setInterval(() => {
       void pool.query(
