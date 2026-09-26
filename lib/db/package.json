@@ -5,13 +5,16 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./pool-config": "./src/pool-config.ts"
   },
   "scripts": {
     "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "verify:ai-push": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-push.ts"
+    "prepare-extensions": "node --env-file-if-exists=../../.env --import tsx scripts/prepare-extensions.ts",
+    "verify:ai-push": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-push.ts",
+    "verify:search-index": "node --env-file-if-exists=../../.env --import tsx scripts/verify-search-index.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

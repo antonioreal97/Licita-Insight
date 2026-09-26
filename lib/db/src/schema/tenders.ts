@@ -107,6 +107,10 @@ export const tendersTable = pgTable(
     index("tenders_source_id_idx").on(table.sourceId),
     index("tenders_city_ibge_idx").on(table.cityIbgeCode),
     index("tenders_fetched_at_idx").on(table.fetchedAt),
+    index("tenders_search_text_trgm_idx").using(
+      "gin",
+      table.searchText.asc().op("gin_trgm_ops"),
+    ),
   ],
 );
 
