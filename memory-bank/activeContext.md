@@ -2,20 +2,11 @@
 
 ## Foco agora
 
-Ciclo 6 (branch `antonioreal97/cycle6`, sobre o merge do PR #7): ficha do edital (3.5). Backend em CODEX_HANDOFF-015; frontend pronto contra a proposta (`features/tenders/components/tender-sheet-panel.tsx`), QA em `docs/reviews/onda3-sheet-frontend.md`. Regra: ausência de trecho é "não encontrado", nunca um "não".
+Ondas 0 a 3 entregues no `main` (PR #8 do ciclo 6, `524f083`): cobrança, teste de 7 dias, e-mail (Resend), Perguntar ao edital, aderência ao perfil, ficha do edital com leitura parcial e retentativa, landing nova. Próxima: Onda 4 (funil/CRM) ou preparar o lançamento; decisão do owner pendente.
 
-Ambiente em 25 set 2026 (noite): o Compose ativo voltou a ser o `licita-insight` (checkout CODE/MY, `main` atualizado); o `main` deste worktree está parado. Banco de teste com os 8.431 editais: `licita_cycle4` no Postgres do `licita-insight`; o `licita_cycle5` ficou no volume `main_licita_pg`. Este worktree agora tem `.env` (gitignored) com `BILLING_DEV_ENTITLED`.
+Pendências conhecidas: login Google no Docker não testado; nomes de arquivo em ZIP com caracteres trocados (CP437/CP850); PDF escaneado e planilhas sem leitura (OCR fora do escopo); visão em tabela da busca sem selo de aderência; calibração da ficha com só 3 editais (limiares 0,5/0,6 a rever).
 
-Ciclo 5 (branch `antonioreal97/cycle5`, sobre o merge do PR #6): aderência edital × perfil da empresa (roadmap 3.6). Decisões do owner de 25 set 2026 no roadmap. Backend em CODEX_HANDOFF-013 (perfil, `GET /me/fit`, calibração, depois alerta diário). Frontend já feito contra a proposta (`features/company-profile/`), verificado com rotas simuladas: `docs/reviews/onda3-fit-frontend.md`.
-Backend `5fcc392` + correções `d18f840` (HANDOFF-014): exclusão por termo e só do objeto principal, cota ME/EPP informativa, cache sem `updatedAt`, rubrica concreta. Retestado com Jev real; calibração 15/15 "Alta" corretos. Limiares aprovados em 25 set 2026: alta ≥ 0,75, média ≥ 0,55 (nível em cache derivado da nota). PR #7 aberto (cycle5 → main).
-
-Ambiente em 25 set 2026: o Compose ativo é o projeto `main` (este worktree, volume `main_licita_pg`, banco `licita` vazio). O stack antigo `licita-insight` (volume com 8.431 editais) está parado. Para QA, os editais foram copiados para o banco `licita_cycle5` no Postgres do `main` (autorizado pelo owner, leitura temporária do volume antigo).
-
-Onda 3, fatia 1 ("Perguntar ao edital" com o Jev) pronta: backend `fb9310a` + `7ce9ef4` (HANDOFF-012) e painel no detalhe (`features/tenders/components/ask-tender-panel.tsx`). Retestada pelo caminho do Docker (`dist/`) em 25 set 2026; QA em `docs/reviews/onda3-ask-qa.md`. `JEV_API_KEY` está no `.env` do checkout `CODE/MY/LicitAI/Licita-Insight`. Próximo na Onda 3: fatia 2 (ficha estruturada 3.5 e aderência 3.6).
-
-Onda 2 (e-mail) completa, incluindo o HANDOFF-010. Falta `RESEND_API_KEY`/`MAIL_FROM` no `.env`.
-
-O stack Docker em execução no checkout `main` é do cycle3: depois do merge, `docker compose up --build`.
+Ambiente: o Docker precisa de `JEV_API_KEY`, `RESEND_API_KEY`/`MAIL_FROM` e `BILLING_MONTHLY_BRL` no `.env` para o produto completo. Bancos de teste `licita_cycle4` (stack `licita-insight`) e `licita_cycle5` (volume `main_licita_pg`) podem ser apagados.
 
 ## O que está na mesa
 

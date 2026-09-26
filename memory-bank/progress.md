@@ -41,6 +41,11 @@
 - UI: painel no detalhe com estados de acesso/índice/cota, melhor trecho com termos destacados, link para o documento oficial e página, aviso fixo.
 - CODEX_HANDOFF-012 concluído: `pdfjs` resolvido no bundle, `search_vector` gerado pelo `push-force`, índices com falha retentáveis, ligaduras corrigidas e corte relativo de 0,25. Stack Docker e PDF real de 29 páginas validados.
 
+## O que já funciona — ficha do edital (Onda 3, item 3.5)
+
+- 13 campos com trecho oficial e página; ausência = "Não encontrado", nunca "não exige"; categorias por Choice (consórcio, subcontratação, ME/EPP, visita, amostra, garantias). Cache global por (edital, versão do índice, modelo, prompt); teto `AI_DAILY_SHEET_LIMIT`.
+- Índice parcial: publica o que foi lido, `unreadDocuments`, retentativa em job (5 min, 30 min, 2 h, 1×/dia).
+
 ## O que falta
 
 - Credenciais Asaas no ambiente e restart da API do Compose para as rotas de billing entrarem no processo em execução.
