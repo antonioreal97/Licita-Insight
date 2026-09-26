@@ -87,8 +87,10 @@ Gatilhos são métricas, não datas: p95 de busca, profundidade da fila, tokens/
 
 ## 8. Plano de execução
 
-| Handoff | Escopo | Depende de |
+| Handoff | Escopo | Estado |
 |---|---|---|
-| **CODEX_HANDOFF-017** (Fase 1a: proteger e medir) | harness de carga com 1 milhão de editais sintéticos; índice trigrama na busca; pool, timeouts e desligamento limpo; limite de taxa e cache HTTP nas rotas públicas | nada |
-| **CODEX_HANDOFF-018** (Fase 1b: custo e isolamento) | papéis `api`/`worker`; `ai_usage_ledger` + relatório de custo por usuário; semáforo com faixas no cliente Jev; filtro lexical no fit | 017 |
-| CODEX_HANDOFF-019 (Fase 2) | fila durável no Postgres, disjuntor de orçamento, métricas e alertas | decisões 1, 2 e 4 |
+| **CODEX_HANDOFF-017** (Fase 1a: proteger e medir) | harness de carga; índice trigrama na busca; pool, timeouts e desligamento limpo; `/readyz`; limite de taxa e de concorrência; cache HTTP público | entregue (PR #9) |
+| **CODEX_HANDOFF-018** (Fase 1b: custo e isolamento) | papéis `APP_ROLE=all|api|worker`; jobs seguros com várias réplicas (`pg_try_advisory_lock`); view `ai_usage_ledger` + `report:ai-cost`; faixas interativo/lote no cliente Jev (concorrência, taxa e pausa em 429); filtro lexical do fit em modo sombra + `report:fit-gate` | em execução |
+| CODEX_HANDOFF-019 (Fase 2) | fila durável no Postgres para extração de documentos, fit e ficha (tira esse trabalho do processo da API e o move para o worker); disjuntor de orçamento; métricas e alertas | depende das decisões 1, 2 e 4 |
+
+**Fronteira do 018:** os papéis separam apenas os agendadores. O trabalho disparado por uma requisição (download e extração de PDF, fila do fit, geração da ficha) continua no processo da API até o 019. Filtro lexical do fit: um filtro rígido cortaria 61% das chamadas de nível baixo, mas perderia 3 de 19 editais alta/média (recall 84%) na calibração do ciclo 5; por isso ele nasce em modo sombra e só liga com recall medido (≥ 97% em ≥ 500 avaliações).
