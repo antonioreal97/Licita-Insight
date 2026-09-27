@@ -20,6 +20,38 @@ export const QUALIFICATION_SEARCH_TERMS = [
   "garantia de participação",
 ] as const;
 
+export const QUALIFICATION_TYPES = [
+  "ato_societario",
+  "regularidade_fiscal",
+  "regularidade_trabalhista",
+  "qualificacao_tecnica",
+  "qualificacao_economica",
+] as const;
+
+export type QualificationType = (typeof QUALIFICATION_TYPES)[number];
+export type QualificationClassification =
+  | QualificationType
+  | "nao_e_requisito";
+
+export const QUALIFICATION_TYPE_CRITERIA: Readonly<
+  Record<QualificationClassification, string>
+> = {
+  ato_societario:
+    "Exige ato constitutivo, estatuto, contrato social, registro empresarial ou documento societário equivalente.",
+  regularidade_fiscal:
+    "Exige prova de regularidade fiscal, tributária, previdenciária ou perante o FGTS.",
+  regularidade_trabalhista:
+    "Exige prova de regularidade trabalhista, inclusive CNDT.",
+  qualificacao_tecnica:
+    "Exige atestado, registro em conselho, licença ou outro documento de qualificação técnica.",
+  qualificacao_economica:
+    "Exige balanço, índice, patrimônio, capital, certidão de falência ou outro documento econômico-financeiro.",
+  nao_e_requisito:
+    "Não exige documento de habilitação; é item do objeto, cláusula geral, título, remissão ou menção fora de contexto.",
+};
+
+export const QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD = 0.7;
+
 export const qualificationSearchQuery = (): string =>
   QUALIFICATION_SEARCH_TERMS.map((term) =>
     term.includes(" ") ? `"${term}"` : term,

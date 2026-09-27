@@ -3,6 +3,11 @@ import { aiConfig } from "./config";
 import { sheetFieldSpec } from "./tender-sheet-policy";
 import type { TenderSheetFieldId } from "@workspace/db";
 import { jevScheduler, retryAfterMs, type JevLane } from "./jev-scheduler";
+import {
+  QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD,
+  QUALIFICATION_TYPE_CRITERIA,
+  type QualificationClassification,
+} from "./qualification-checklist-policy";
 
 export class JevUnavailableError extends Error {
   constructor(
@@ -43,6 +48,15 @@ export type JevSheetScores = {
 export type JevSheetChoice = {
   answer: string;
   confidence: number;
+  model: string;
+  inputTokens: number;
+};
+
+export type JevQualificationClassification = {
+  isRequirement: number;
+  type: QualificationClassification;
+  typeConfidence: number;
+  mentionsLaborInAdditionToFiscal: number | null;
   model: string;
   inputTokens: number;
 };
@@ -272,6 +286,79 @@ export async function classifySheetField(
   } catch (error) {
     throw new JevUnavailableError(
       "Jev tender-sheet choice request failed",
+      error,
+    );
+  }
+}
+
+export async function classifyQualificationCandidate(
+  passage: string,
+  requestFetch?: typeof fetch,
+): Promise<JevQualificationClassification> {
+  const config = aiConfig();
+  try {
+    const initial = await jevScheduler.schedule("interactive", () =>
+      clientFor("interactive", requestFetch).systemOne({
+        model: config.model,
+        state: { trecho_do_edital: passage },
+        questions: {
+          is_req: noul(
+            "Isso exige um documento específico de habilitação, não é item do objeto nem cláusula geral?",
+            {
+              true:
+                "O trecho exige que a licitante apresente um documento ou comprovação específica para sua habilitação.",
+              false:
+                "O trecho é item do objeto, cláusula geral, título, remissão ou não exige documento de habilitação.",
+            },
+          ),
+          tipo: choice(
+            "Classifique o tipo da exigência explícita no trecho.",
+            QUALIFICATION_TYPE_CRITERIA,
+          ),
+        },
+      }),
+    );
+    const type = initial.answers.tipo.choice as QualificationClassification;
+    const typeConfidence = initial.answers.tipo.confidence;
+    let mentionsLaborInAdditionToFiscal: number | null = null;
+    let inputTokens = initial.usage.input_tokens;
+    let model = initial.model;
+
+    if (typeConfidence < QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD) {
+      const combination = await jevScheduler.schedule("interactive", () =>
+        clientFor("interactive", requestFetch).systemOne({
+          model: config.model,
+          state: { trecho_do_edital: passage },
+          questions: {
+            trabalhista_alem_fiscal: noul(
+              "O trecho cita regularidade trabalhista (CNDT) além da fiscal?",
+              {
+                true:
+                  "O mesmo trecho exige CNDT ou regularidade trabalhista e também uma comprovação fiscal, previdenciária ou de FGTS.",
+                false:
+                  "O trecho não combina regularidade trabalhista com regularidade fiscal, previdenciária ou de FGTS.",
+              },
+            ),
+          },
+        }),
+      );
+      mentionsLaborInAdditionToFiscal =
+        combination.answers.trabalhista_alem_fiscal.noul;
+      inputTokens += combination.usage.input_tokens;
+      model = combination.model;
+    }
+
+    return {
+      isRequirement: initial.answers.is_req.noul,
+      type,
+      typeConfidence,
+      mentionsLaborInAdditionToFiscal,
+      model,
+      inputTokens,
+    };
+  } catch (error) {
+    throw new JevUnavailableError(
+      "Jev qualification-checklist request failed",
       error,
     );
   }
