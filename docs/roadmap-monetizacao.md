@@ -183,7 +183,11 @@ Onda 5                        ████████  mercado + multi-CNPJ
 
 A Onda 3 depende só da Onda 1 (cota é atributo de plano), não da Onda 2: com a equipe atual (Codex no backend, Claude/Gemini no frontend) as Ondas 2 e 3 podem rodar em paralelo.
 
-Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justifica com alerta por e-mail e monitoramento de retificação, exatamente como conclui o documento de origem. A Onda 3 é o que tira o LicitAI da comparação por preço.
+Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justifica com alerta por e-mail e monitoramento de retificação, exatamente como conclui o documento de origem. A Onda 3 diferencia dentro da categoria "IA com fonte", não é mais exclusividade nossa: pesquisa de
+27 set 2026 (`docs/reviews/competitive-analysis-2026-09-27.md`) achou pelo menos dois concorrentes
+(Acumi, Licitei) já entregando chat citado por página e ficha campo a campo. Nosso diferencial de preço
+(R$ 49,90 sem limite mensal de análises) e as chamadas de fomento cultural continuam sem equivalente
+encontrado no mercado.
 
 ---
 
