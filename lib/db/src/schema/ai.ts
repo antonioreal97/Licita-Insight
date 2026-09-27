@@ -40,6 +40,19 @@ export type TenderSheetEvidence = {
   text: string;
 };
 
+export type QualificationItemType =
+  | "ato_societario"
+  | "regularidade_fiscal"
+  | "regularidade_trabalhista"
+  | "qualificacao_tecnica"
+  | "qualificacao_economica";
+
+export type QualificationItem = {
+  type: QualificationItemType;
+  evidence: TenderSheetEvidence;
+  confidence: number;
+};
+
 export type TenderSheetField = {
   id: TenderSheetFieldId;
   status: "found" | "not_found";
@@ -49,7 +62,7 @@ export type TenderSheetField = {
 };
 
 export type TenderSheetDiagnostic = {
-  id: TenderSheetFieldId;
+  id: TenderSheetFieldId | QualificationItemType;
   bestNoul: number | null;
   secondNoul: number | null;
   bestEvidence: TenderSheetEvidence | null;

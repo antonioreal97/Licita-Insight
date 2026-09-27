@@ -559,10 +559,32 @@ export interface SheetField {
   evidence: SheetEvidence | null;
 }
 
+export type QualificationType = typeof QualificationType[keyof typeof QualificationType];
+
+
+export const QualificationType = {
+  ato_societario: 'ato_societario',
+  regularidade_fiscal: 'regularidade_fiscal',
+  regularidade_trabalhista: 'regularidade_trabalhista',
+  qualificacao_tecnica: 'qualificacao_tecnica',
+  qualificacao_economica: 'qualificacao_economica',
+} as const;
+
+export interface QualificationItem {
+  type: QualificationType;
+  evidence: SheetEvidence;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  confidence: number;
+}
+
 export interface TenderSheet {
   status: TenderAskIndexStatus;
   /** @maxItems 13 */
   fields: SheetField[];
+  qualificationChecklist: QualificationItem[];
   /** @minimum 0 */
   unreadDocuments: number;
   /** @nullable */

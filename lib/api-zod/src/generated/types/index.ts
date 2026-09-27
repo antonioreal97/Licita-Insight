@@ -111,6 +111,8 @@ export * from './profileMatchNotificationLevel';
 export * from './publishedFromParameter';
 export * from './publishedToParameter';
 export * from './putSavedTenderRequest';
+export * from './qualificationItem';
+export * from './qualificationType';
 export * from './queryParameter';
 export * from './rateLimitedResponse';
 export * from './readinessCheck200';

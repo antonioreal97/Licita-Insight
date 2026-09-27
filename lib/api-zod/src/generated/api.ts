@@ -406,6 +406,10 @@ export const getTenderSheetResponseFieldsItemConfidenceMax = 1;
 
 export const getTenderSheetResponseFieldsMax = 13;
 
+
+export const getTenderSheetResponseQualificationChecklistItemConfidenceMin = 0;
+export const getTenderSheetResponseQualificationChecklistItemConfidenceMax = 1;
+
 export const getTenderSheetResponseUnreadDocumentsMin = 0;
 
 
@@ -424,6 +428,16 @@ export const GetTenderSheetResponse = zod.object({
   "text": zod.string()
 }),zod.null()])
 })).max(getTenderSheetResponseFieldsMax),
+  "qualificationChecklist": zod.array(zod.object({
+  "type": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica']),
+  "evidence": zod.object({
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string()
+}),
+  "confidence": zod.number().min(getTenderSheetResponseQualificationChecklistItemConfidenceMin).max(getTenderSheetResponseQualificationChecklistItemConfidenceMax)
+})),
   "unreadDocuments": zod.number().int().min(getTenderSheetResponseUnreadDocumentsMin),
   "model": zod.string().nullable(),
   "generatedAt": zod.coerce.date().nullable()

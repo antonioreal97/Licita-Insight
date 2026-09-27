@@ -54,9 +54,26 @@ type TenderSheet = {
     | "unsupported"
     | "expired";
   fields: SheetField[];
+  qualificationChecklist: QualificationItem[];
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
+};
+
+type QualificationItem = {
+  type:
+    | "ato_societario"
+    | "regularidade_fiscal"
+    | "regularidade_trabalhista"
+    | "qualificacao_tecnica"
+    | "qualificacao_economica";
+  evidence: {
+    documentTitle: string;
+    documentUrl: string;
+    page: number;
+    text: string;
+  };
+  confidence: number;
 };
 
 type SheetFieldId =
@@ -89,6 +106,8 @@ type SheetField = {
 ```
 
 Fora de `ready`, `fields` é vazio. Em `ready`, há sempre os 13 ids na ordem acima. `unreadDocuments` conta documentos `failed` ou `unsupported` do índice.
+
+`qualificationChecklist` é aditivo e fica vazio fora de `ready` ou quando nenhum requisito documental foi encontrado. Cada item reproduz um trecho oficial e sua página; o serviço não gera, completa nem infere requisitos ausentes. Um tipo ausente significa somente “não encontrado”, nunca “não exige”. A ordem é `ato_societario`, `regularidade_fiscal`, `regularidade_trabalhista`, `qualificacao_tecnica` e `qualificacao_economica`; um tipo pode aparecer mais de uma vez quando o edital exige documentos distintos.
 
 Categorias válidas em `answer`: `consortium` (`allowed | forbidden`), `subcontracting` (`allowed | limited | forbidden`), `me_epp` (`exclusive | quota | benefits_only`), `site_visit` (`mandatory | optional | waived`), `samples` (`required | not_required`), `bid_guarantee` (`required | not_required`) e `contract_guarantee` (`required | not_required`). Os demais campos têm `answer: null` e mostram somente o trecho.
 

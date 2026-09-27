@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD,
+  buildQualificationChecklist,
   qualificationSearchQuery,
   segmentQualificationPage,
   stitchIndexedPage,
@@ -53,6 +54,105 @@ test("uses the fixed Portuguese qualification vocabulary for the tsvector shortl
   assert.match(query, /"regularidade trabalhista"/);
   assert.match(query, /"ato constitutivo"/);
   assert.match(query, /CREA/);
+});
+
+const qualificationEvidence = (page: number, text: string) => ({
+  documentTitle: "Edital.pdf",
+  documentUrl: "https://pncp.gov.br/edital.pdf",
+  page,
+  text,
+});
+
+test("FGTS plus CNDT emits fiscal and trabalhista without generating evidence", () => {
+  const evidence = qualificationEvidence(
+    12,
+    "7.3 Prova de regularidade perante o FGTS e CNDT.",
+  );
+  const { items } = buildQualificationChecklist([
+    {
+      evidence,
+      isRequirement: 0.89,
+      type: "regularidade_fiscal",
+      typeConfidence: 0.61,
+      mentionsLaborInAdditionToFiscal: 0.96,
+    },
+  ]);
+  assert.deepEqual(items, [
+    { type: "regularidade_fiscal", evidence, confidence: 0.89 },
+    { type: "regularidade_trabalhista", evidence, confidence: 0.89 },
+  ]);
+});
+
+test("deduplicates by type and page, retaining the strongest official passage", () => {
+  const weaker = qualificationEvidence(
+    9,
+    "Atestado de capacidade técnica resumido.",
+  );
+  const stronger = qualificationEvidence(
+    9,
+    "7.4 A licitante apresentará atestado de capacidade técnica.",
+  );
+  const otherRequirement = qualificationEvidence(
+    10,
+    "7.4.2 A licitante apresentará registro vigente no CREA.",
+  );
+  const { items, diagnostics } = buildQualificationChecklist([
+    {
+      evidence: weaker,
+      isRequirement: 0.72,
+      type: "qualificacao_tecnica",
+      typeConfidence: 1,
+      mentionsLaborInAdditionToFiscal: null,
+    },
+    {
+      evidence: stronger,
+      isRequirement: 0.94,
+      type: "qualificacao_tecnica",
+      typeConfidence: 1,
+      mentionsLaborInAdditionToFiscal: null,
+    },
+    {
+      evidence: otherRequirement,
+      isRequirement: 0.91,
+      type: "qualificacao_tecnica",
+      typeConfidence: 1,
+      mentionsLaborInAdditionToFiscal: null,
+    },
+  ]);
+  assert.deepEqual(
+    items.map(({ evidence }) => evidence),
+    [stronger, otherRequirement],
+  );
+  assert.equal(
+    diagnostics.find(({ id }) => id === "qualificacao_tecnica")?.secondNoul,
+    0.91,
+  );
+});
+
+test("low requirement confidence and non-requirement classifications emit nothing", () => {
+  const { items } = buildQualificationChecklist([
+    {
+      evidence: qualificationEvidence(
+        1,
+        "Aquisição e habilitação de dispositivo eletrônico.",
+      ),
+      isRequirement: 0.49,
+      type: "qualificacao_tecnica",
+      typeConfidence: 0.55,
+      mentionsLaborInAdditionToFiscal: 0.2,
+    },
+    {
+      evidence: qualificationEvidence(
+        2,
+        "A participação implica a aceitação das condições.",
+      ),
+      isRequirement: 0.9,
+      type: "nao_e_requisito",
+      typeConfidence: 0.99,
+      mentionsLaborInAdditionToFiscal: null,
+    },
+  ]);
+  assert.deepEqual(items, []);
 });
 
 test("Jev rejects habilitação outside document-requirement context in the real response shape", async () => {

@@ -1714,6 +1714,26 @@ components:
             - $ref: "#/components/schemas/SheetEvidence"
             - type: "null"
       required: [id, status, answer, confidence, evidence]
+    QualificationType:
+      type: string
+      enum:
+        [
+          ato_societario,
+          regularidade_fiscal,
+          regularidade_trabalhista,
+          qualificacao_tecnica,
+          qualificacao_economica,
+        ]
+    QualificationItem:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          $ref: "#/components/schemas/QualificationType"
+        evidence:
+          $ref: "#/components/schemas/SheetEvidence"
+        confidence: { type: number, minimum: 0, maximum: 1 }
+      required: [type, evidence, confidence]
     TenderSheet:
       type: object
       additionalProperties: false
@@ -1725,10 +1745,15 @@ components:
           maxItems: 13
           items:
             $ref: "#/components/schemas/SheetField"
+        qualificationChecklist:
+          type: array
+          items:
+            $ref: "#/components/schemas/QualificationItem"
         unreadDocuments: { type: integer, minimum: 0 }
         model: { type: [string, "null"] }
         generatedAt: { type: [string, "null"], format: date-time }
-      required: [status, fields, unreadDocuments, model, generatedAt]
+      required:
+        [status, fields, qualificationChecklist, unreadDocuments, model, generatedAt]
     CompanySize:
       type: string
       enum: [me_epp, cooperative, other]
