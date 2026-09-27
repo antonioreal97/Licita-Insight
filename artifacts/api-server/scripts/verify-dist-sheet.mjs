@@ -3,6 +3,7 @@ import {
   buildSheetFields,
   SHEET_FIELDS,
 } from "../dist/tender-sheet-policy.mjs";
+import { buildQualificationChecklist } from "../dist/qualification-checklist-policy.mjs";
 
 const empty = buildSheetFields({}, {}, 0.5, 0.6);
 assert.equal(empty.fields.length, 13);
@@ -36,4 +37,22 @@ assert.deepEqual(unclear.fields[0], {
   confidence: 0.59,
   evidence,
 });
+const checklistEvidence = {
+  documentTitle: "Edital.pdf",
+  documentUrl: "https://pncp.gov.br/edital.pdf",
+  page: 7,
+  text: "7.3 Prova de regularidade perante o FGTS e CNDT.",
+};
+assert.deepEqual(
+  buildQualificationChecklist([
+    {
+      evidence: checklistEvidence,
+      isRequirement: 0.89,
+      type: "regularidade_fiscal",
+      typeConfidence: 0.61,
+      mentionsLaborInAdditionToFiscal: 0.96,
+    },
+  ]).items.map(({ type }) => type),
+  ["regularidade_fiscal", "regularidade_trabalhista"],
+);
 process.stdout.write("dist tender sheet policy: PASS\n");

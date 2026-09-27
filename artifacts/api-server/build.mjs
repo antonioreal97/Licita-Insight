@@ -25,6 +25,10 @@ async function buildAll() {
         artifactDir,
         "src/ai/tender-sheet-policy.ts",
       ),
+      "qualification-checklist-policy": path.resolve(
+        artifactDir,
+        "src/ai/qualification-checklist-policy.ts",
+      ),
     },
     platform: "node",
     bundle: true,

@@ -115,7 +115,7 @@ Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_fo
 
 Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas após 5 minutos, 30 minutos, 2 horas e, daí em diante, uma vez por dia, até o teto configurado. HTTP 404, URL/arquivo inválido e limites de tamanho são definitivos. Uma recuperação incrementa `indexVersion`, invalida perguntas e fichas em cache e preserva os trechos dos demais documentos. Se a reextração falhar, uma extração anterior que ainda seja legível não é removida.
 
-A ficha é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
+A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt atual é `3`. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
 
 ## Privacidade e retenção
 

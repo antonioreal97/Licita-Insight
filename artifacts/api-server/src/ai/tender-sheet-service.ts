@@ -345,6 +345,7 @@ async function processSheet(
       .set({
         status: "ready",
         fields: calculated.fields,
+        qualificationChecklist: calculated.qualificationChecklist,
         diagnostics: calculated.diagnostics,
         unreadDocuments,
         responseModel: calculated.model,
@@ -400,7 +401,7 @@ export async function getTenderSheet(
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
       .limit(1);
     if (cachedSheet) return {
-      status: "ready", fields: cachedSheet.fields, qualificationChecklist: [], unreadDocuments: cachedSheet.unreadDocuments,
+      status: "ready", fields: cachedSheet.fields, qualificationChecklist: cachedSheet.qualificationChecklist, unreadDocuments: cachedSheet.unreadDocuments,
       model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
       generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
     };
@@ -431,7 +432,7 @@ export async function getTenderSheet(
     return {
       status: "ready",
       fields: cached.fields,
-      qualificationChecklist: [],
+      qualificationChecklist: cached.qualificationChecklist,
       unreadDocuments: cached.unreadDocuments,
       model: cached.responseModel ?? cached.requestedModel,
       generatedAt: cached.generatedAt?.toISOString() ?? null,
@@ -487,6 +488,7 @@ export async function getTenderSheet(
       .set({
         status: "processing",
         fields: [],
+        qualificationChecklist: [],
         diagnostics: [],
         unreadDocuments,
         responseModel: null,

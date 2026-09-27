@@ -208,6 +208,10 @@ export const tenderAiSheetsTable = pgTable(
       .$type<TenderSheetField[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    qualificationChecklist: jsonb("qualification_checklist")
+      .$type<QualificationItem[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     diagnostics: jsonb("diagnostics")
       .$type<TenderSheetDiagnostic[]>()
       .notNull()
