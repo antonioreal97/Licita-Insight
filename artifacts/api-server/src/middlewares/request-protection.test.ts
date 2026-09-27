@@ -69,6 +69,36 @@ const protectedApp = (config: Partial<ProtectionConfig> = {}) => {
   return app;
 };
 
+test("one trusted Fly proxy hop ignores a forged X-Forwarded-For prefix", async () => {
+  const app = express();
+  app.set("trust proxy", 1);
+  app.use(requestContext, cookieParser());
+  app.use(
+    createRequestProtection(
+      { ...defaults, anonymousPerMinute: 2 },
+      new MemoryRateLimitStore(),
+    ),
+  );
+  app.get("/api/v1/tenders/search", (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const requestFromFlyClient = (forgedPrefix: string) =>
+      fetch(`${baseUrl}/api/v1/tenders/search`, {
+        // fly-proxy appends the actual client address on the right. Only that
+        // nearest forwarded hop is trusted; client-supplied prefixes are not.
+        headers: {
+          "x-forwarded-for": `${forgedPrefix}, 198.51.100.25`,
+        },
+      });
+    assert.equal((await requestFromFlyClient("203.0.113.1")).status, 200);
+    assert.equal((await requestFromFlyClient("203.0.113.2")).status, 200);
+    assert.equal((await requestFromFlyClient("203.0.113.3")).status, 429);
+  } finally {
+    server.close();
+  }
+});
+
 test("fixed window uses IP for anonymous clients and user id for authenticated clients", async () => {
   const app = protectedApp({
     anonymousPerMinute: 2,
