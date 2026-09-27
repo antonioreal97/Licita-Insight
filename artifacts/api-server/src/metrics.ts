@@ -1,9 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { RequestHandler } from "express";
-import { pool } from "@workspace/db";
-import { aiBudgetGuard } from "./ai/ai-budget";
-import { jevScheduler } from "./ai/jev-scheduler";
 import { logger } from "./lib/logger";
 
 const counters = new Map<string, number>();
@@ -50,6 +47,14 @@ export const httpMetricsMiddleware: RequestHandler = (req, res, next) => {
 };
 
 const dynamicMetrics = async (): Promise<void> => {
+  // Keep the counter-only API safe for infrastructure middleware to import before
+  // DATABASE_URL exists. Database and AI runtime dependencies are needed only when
+  // the private metrics endpoint is actually scraped.
+  const [{ pool }, { aiBudgetGuard }, { jevScheduler }] = await Promise.all([
+    import("@workspace/db"),
+    import("./ai/ai-budget"),
+    import("./ai/jev-scheduler"),
+  ]);
   setMetric("licitai_postgres_pool_connections", pool.totalCount, { state: "total" });
   setMetric("licitai_postgres_pool_connections", pool.idleCount, { state: "idle" });
   setMetric("licitai_postgres_pool_connections", pool.waitingCount, { state: "waiting" });
