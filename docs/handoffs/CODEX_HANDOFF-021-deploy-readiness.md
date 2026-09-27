@@ -105,6 +105,27 @@ Sondagem do orquestrador (27 set 2026, dois bancos vazios temporários, já apag
    - Atualize `.env.example` só com variáveis novas/faltantes (NODE_ENV, CULTURE_DAILY_COLLECT,
      STATIC_DIR, …), sem valores reais.
 
+ADENDO (27 set 2026, decisão do owner, substitui o Managed Postgres nos itens 4 e 5):
+  Começar enxuto até ~20 assinantes; o Managed Postgres (US$ 72/mês) só entra no gatilho.
+  Preços conferidos em docs.fly.io/about/pricing: shared CPU US$ 0,00000075/s, RAM extra
+  US$ 0,00000193/GB·s, gru = 1,615× a base, volume US$ 0,15/GB·mês, snapshot US$ 0,08/GB·mês com os
+  primeiros 10 GB grátis. Topologia inicial (~US$ 20/mês):
+  - App `licitai`: UM processo `app` com APP_ROLE=all (API + agendadores + fila) numa shared-cpu-1x de
+    1 GB, STATIC_DIR ligado, `min_machines_running = 1`, sem auto-stop (os agendadores precisam rodar).
+    Mantenha no fly.toml, comentado ou documentado, como separar em `api` + `worker` depois.
+  - App separado de banco (ex. `licitai-db`): `postgres:16` oficial numa shared-cpu-1x de 1 GB com
+    volume de 10 GB, só na rede privada do Fly (`.flycast`/`.internal`, nunca IP público), com
+    `pg_trgm` criado. Entregue a config (fly.toml próprio em `deploy/fly-db/` ou equivalente) e o passo a
+    passo no runbook.
+  - Backup: snapshots diários do volume (confirme na doc do Fly a retenção padrão e como aumentar) MAIS um
+    `pg_dump` noturno para fora da máquina do banco. Proponha o destino mais barato e simples (ex. Tigris
+    no próprio Fly) e implemente como job agendado ou máquina agendada; o restore precisa estar descrito e
+    testado localmente a partir de um dump real do banco temporário.
+  - Gatilho documentado para migrar ao Managed Postgres (~20 assinantes ou quedas do banco custando
+    clientes) com o procedimento pg_dump/restore e a janela de manutenção esperada.
+  - A conta de custo no runbook e no CLAUDE_HANDOFF é a desta topologia, com a do Managed Postgres ao lado
+    para comparação.
+
 Validação local obrigatória (sem Fly):
   - `docker build -f Dockerfile.prod` (amd64) e `docker run` da imagem contra um banco TEMPORÁRIO no
     Postgres local (crie e apague você mesmo; nome distinto de licita/licita_cycle4), rodando primeiro o
