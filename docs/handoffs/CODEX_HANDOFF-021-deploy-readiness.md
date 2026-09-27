@@ -126,6 +126,44 @@ ADENDO (27 set 2026, decisão do owner, substitui o Managed Postgres nos itens 4
   - A conta de custo no runbook e no CLAUDE_HANDOFF é a desta topologia, com a do Managed Postgres ao lado
     para comparação.
 
+ADENDO 2 (27 set 2026, decisão do owner — muda o LANÇAMENTO; o Fly enxuto vira o passo seguinte):
+  O lançamento é um beta fechado, SEM cobrança, rodando no Mac do owner (Apple Silicon, Docker Desktop,
+  imagem linux/amd64 sob emulação como o dev já roda) exposto por Cloudflare Tunnel com domínio próprio.
+  3–5 convidados; o Fly enxuto sobe quando houver ~3 usuários ativos. Prioridade agora: itens 1, 2, 3 e
+  este item 6. Itens 4 e 5 (Fly) continuam, sem polimento extra.
+
+6. Beta local atrás do Cloudflare Tunnel
+   - Novo `deploy/beta-local/` (compose próprio, nome de projeto próprio, ex. `licitai-beta`): Postgres 16
+     com volume PRÓPRIO (dados de clientes nunca no banco de dev `licita` nem nos de teste), a imagem do
+     Dockerfile.prod com APP_ROLE=all + STATIC_DIR, release (migrate) antes do app, e o container oficial
+     `cloudflare/cloudflared` rodando um túnel nomeado por token (o token é segredo do owner, vem de um
+     arquivo env local nunca versionado; não crie túnel, não chame a Cloudflare). `restart:
+     unless-stopped` em tudo. NENHUMA porta publicada no host que colida com o stack de dev (5432, 3001,
+     24252); de preferência nenhuma, ou só em 127.0.0.1 para administração. Os dois stacks precisam rodar
+     ao mesmo tempo sem se tocar.
+   - TRUST_PROXY correto para Cloudflare → cloudflared → app, com o mesmo teste de XFF forjado do item 4
+     (o cliente não pode escolher a chave do limite de taxa). PUBLIC_APP_ORIGIN = https://<domínio do owner>.
+   - Acesso do beta sem cobrança: o teste grátis é fixo em 7 dias (`TRIAL_DAYS`). Crie um comando de
+     operador (ex. `pnpm --filter @workspace/api-server run grant:beta-access -- --email <e> --until
+     <data>`) que libera as funções pagas até a data, distinguível de uma assinatura Asaas (o webhook e o
+     cancelamento do Asaas não podem apagar nem estender isso por engano), com revogação e listagem.
+     Testes: acesso liberado até a data, 402 depois, não interfere num usuário com assinatura Asaas.
+   - Backup: `pg_dump` noturno do banco do beta para uma pasta do Mac configurável (o owner aponta para
+     uma pasta sincronizada fora da máquina), com retenção, e restore descrito e testado localmente.
+   - Carga inicial: o banco do beta nasce vazio. Documente o que a coleta faz na primeira subida (quantos
+     dias, UFs, tempo e espaço medidos localmente num banco temporário), e como fazer uma carga inicial
+     menor se a nacional for pesada demais para o Mac.
+   - Runbook: a PRIMEIRA seção de docs/ops/deploy-fly.md (ou docs/ops/beta-local.md, apontado pelo
+     primeiro) é o beta: domínio na Cloudflare, criar o túnel nomeado no painel e pegar o token, redirect
+     URI do Google para https://<domínio>/api/v1/auth/google/callback (app do Google em modo "Testing" com
+     os convidados como test users), Resend com o domínio verificado, manter o Mac acordado
+     (caffeinate/ajustes de energia; o Docker Desktop já reiniciou sozinho neste projeto — "start on
+     login" e `restart: unless-stopped`), como liberar acesso a um convidado, como fazer e restaurar
+     backup, e como migrar os dados do beta para o Fly depois (pg_dump/restore).
+   - Validação: suba o stack do beta com um banco temporário e SEM o cloudflared (ou com ele desligado,
+     já que não há token), prove que convive com o stack de dev rodando, smoke test igual ao do item 2
+     batendo no app pela rede do compose, backup + restore, e grant/revoke do acesso beta.
+
 Validação local obrigatória (sem Fly):
   - `docker build -f Dockerfile.prod` (amd64) e `docker run` da imagem contra um banco TEMPORÁRIO no
     Postgres local (crie e apague você mesmo; nome distinto de licita/licita_cycle4), rodando primeiro o
