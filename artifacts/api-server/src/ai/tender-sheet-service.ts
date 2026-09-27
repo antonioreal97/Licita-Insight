@@ -6,6 +6,7 @@ import {
   tenderAiDocumentsTable,
   tenderAiIndexesTable,
   tenderAiSheetsTable,
+  type QualificationItem,
   type TenderSheetDiagnostic,
   type TenderSheetField,
   type TenderSheetFieldId,
@@ -15,7 +16,11 @@ import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { ensureTenderIndex } from "./ask-tender-service";
 import { aiConfig } from "./config";
-import { classifySheetField, scoreSheetPassage } from "./jev-client";
+import {
+  classifyQualificationCandidate,
+  classifySheetField,
+  scoreSheetPassage,
+} from "./jev-client";
 import {
   buildSheetFields,
   SHEET_FIELDS,
@@ -27,6 +32,14 @@ import {
 } from "./tender-sheet-policy";
 import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
+import {
+  buildQualificationChecklist,
+  isQualificationCandidateText,
+  qualificationSearchQuery,
+  segmentQualificationPage,
+  stitchIndexedPage,
+  type QualificationScoredCandidate,
+} from "./qualification-checklist-policy";
 
 type SheetStatus =
   | "not_started"
@@ -40,6 +53,7 @@ type SheetStatus =
 export type TenderSheetResponse = {
   status: SheetStatus;
   fields: TenderSheetField[];
+  qualificationChecklist: QualificationItem[];
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
@@ -48,6 +62,15 @@ export type TenderSheetResponse = {
 export type TenderSheetCalculation = {
   fields: TenderSheetField[];
   diagnostics: TenderSheetDiagnostic[];
+  qualificationChecklist: QualificationItem[];
+  model: string;
+  inputTokens: number;
+};
+
+export type TenderQualificationCalculation = {
+  qualificationChecklist: QualificationItem[];
+  diagnostics: TenderSheetDiagnostic[];
+  candidates: QualificationScoredCandidate[];
   model: string;
   inputTokens: number;
 };
@@ -58,6 +81,16 @@ type Candidate = {
   documentUrl: string;
   page: number;
   text: string;
+  context?: string;
+};
+
+type QualificationPageRow = {
+  documentId: string;
+  documentTitle: string;
+  documentUrl: string;
+  page: number;
+  passageOrder: number;
+  text: string;
 };
 
 const EMPTY_RESPONSE = (
@@ -66,6 +99,7 @@ const EMPTY_RESPONSE = (
 ): TenderSheetResponse => ({
   status,
   fields: [],
+  qualificationChecklist: [],
   unreadDocuments,
   model: null,
   generatedAt: null,
@@ -128,17 +162,140 @@ async function shortlistField(
   return result.rows;
 }
 
+async function shortlistQualificationCandidates(
+  tenderId: string,
+  indexVersion: number,
+): Promise<Candidate[]> {
+  const limit = aiConfig().qualificationCandidateLimit;
+  const queryText = qualificationSearchQuery();
+  const result = await db.execute<QualificationPageRow>(sql`
+    with matching_pages as (
+      select p.document_id, p.page,
+             max(ts_rank_cd(p.search_vector, query)) as rank
+      from tender_ai_passages p,
+           websearch_to_tsquery('portuguese', ${queryText}) query
+      where p.tender_id = ${tenderId}
+        and p.index_version = ${indexVersion}
+        and p.search_vector @@ query
+      group by p.document_id, p.page
+      order by rank desc, p.page asc
+      limit ${limit}
+    )
+    select p.document_id as "documentId", d.title as "documentTitle",
+           d.source_url as "documentUrl", p.page,
+           p.passage_order as "passageOrder", p.text
+    from matching_pages m
+    join tender_ai_passages p
+      on p.document_id = m.document_id and p.page = m.page
+    join tender_ai_documents d on d.id = p.document_id
+    where p.tender_id = ${tenderId}
+      and p.index_version = ${indexVersion}
+    order by m.rank desc, p.document_id, p.page, p.passage_order
+  `);
+  const pages = new Map<
+    string,
+    { metadata: QualificationPageRow; passages: QualificationPageRow[] }
+  >();
+  for (const row of result.rows) {
+    const key = `${row.documentId}:${row.page}`;
+    const page = pages.get(key) ?? { metadata: row, passages: [] };
+    page.passages.push(row);
+    pages.set(key, page);
+  }
+  const candidates: Candidate[] = [];
+  for (const [pageKey, page] of pages) {
+    const pageText = stitchIndexedPage(
+      page.passages.map(({ passageOrder: order, text }) => ({ order, text })),
+    );
+    let numberedContext: string | undefined;
+    for (const [segmentIndex, text] of segmentQualificationPage(pageText).entries()) {
+      const numbered = /^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s/u.test(text);
+      const lettered = /^[a-z]\)\s/iu.test(text);
+      const context = numberedContext;
+      if (numbered) numberedContext = text;
+      if (
+        !isQualificationCandidateText(text) &&
+        !(lettered && numberedContext && isQualificationCandidateText(numberedContext))
+      ) {
+        continue;
+      }
+      candidates.push({
+        id: `${pageKey}:${segmentIndex}`,
+        documentTitle: page.metadata.documentTitle,
+        documentUrl: page.metadata.documentUrl,
+        page: page.metadata.page,
+        text,
+        context: lettered ? numberedContext : numbered ? context : undefined,
+      });
+      if (candidates.length >= limit) return candidates;
+    }
+  }
+  return candidates;
+}
+
+export async function calculateQualificationChecklist(
+  tenderId: string,
+  indexVersion: number,
+): Promise<TenderQualificationCalculation> {
+  const config = aiConfig();
+  const candidates = await shortlistQualificationCandidates(
+    tenderId,
+    indexVersion,
+  );
+  const scored: QualificationScoredCandidate[] = [];
+  let inputTokens = 0;
+  let model = config.model;
+  const results = await Promise.all(
+    candidates.map(async (candidate) => ({
+      candidate,
+      result: await classifyQualificationCandidate(
+        candidate.text,
+        undefined,
+        candidate.context,
+      ),
+    })),
+  );
+  for (const { candidate, result } of results) {
+    inputTokens += result.inputTokens;
+    model = result.model;
+    scored.push({
+      evidence: {
+        documentTitle: candidate.documentTitle,
+        documentUrl: candidate.documentUrl,
+        page: candidate.page,
+        text: candidate.text,
+      },
+      isRequirement: result.isRequirement,
+      type: result.type,
+      typeConfidence: result.typeConfidence,
+      mentionsLaborInAdditionToFiscal:
+        result.mentionsLaborInAdditionToFiscal,
+    });
+  }
+  const built = buildQualificationChecklist(scored);
+  return {
+    qualificationChecklist: built.items,
+    diagnostics: built.diagnostics,
+    candidates: scored,
+    model,
+    inputTokens,
+  };
+}
+
 export async function calculateTenderSheet(
   tenderId: string,
   indexVersion: number,
 ): Promise<TenderSheetCalculation> {
   const config = aiConfig();
-  const shortlists = await Promise.all(
-    SHEET_FIELDS.map(async ({ id }) => ({
-      id,
-      candidates: await shortlistField(tenderId, indexVersion, id),
-    })),
-  );
+  const [shortlists, qualification] = await Promise.all([
+    Promise.all(
+      SHEET_FIELDS.map(async ({ id }) => ({
+        id,
+        candidates: await shortlistField(tenderId, indexVersion, id),
+      })),
+    ),
+    calculateQualificationChecklist(tenderId, indexVersion),
+  ]);
   const grouped = new Map<
     string,
     { candidate: Candidate; fieldIds: TenderSheetFieldId[] }
@@ -199,13 +356,18 @@ export async function calculateTenderSheet(
     inputTokens += result.inputTokens;
     responseModel = result.model;
   }
+  inputTokens += qualification.inputTokens;
+  responseModel = qualification.model;
+  const sheet = buildSheetFields(
+    candidates,
+    choices,
+    config.sheetEvidenceThreshold,
+    config.sheetAnswerThreshold,
+  );
   return {
-    ...buildSheetFields(
-      candidates,
-      choices,
-      config.sheetEvidenceThreshold,
-      config.sheetAnswerThreshold,
-    ),
+    fields: sheet.fields,
+    diagnostics: [...sheet.diagnostics, ...qualification.diagnostics],
+    qualificationChecklist: qualification.qualificationChecklist,
     model: responseModel,
     inputTokens,
   };
@@ -227,6 +389,7 @@ async function processSheet(
       .set({
         status: "ready",
         fields: calculated.fields,
+        qualificationChecklist: calculated.qualificationChecklist,
         diagnostics: calculated.diagnostics,
         unreadDocuments,
         responseModel: calculated.model,
@@ -282,7 +445,7 @@ export async function getTenderSheet(
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
       .limit(1);
     if (cachedSheet) return {
-      status: "ready", fields: cachedSheet.fields, unreadDocuments: cachedSheet.unreadDocuments,
+      status: "ready", fields: cachedSheet.fields, qualificationChecklist: cachedSheet.qualificationChecklist, unreadDocuments: cachedSheet.unreadDocuments,
       model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
       generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
     };
@@ -313,6 +476,7 @@ export async function getTenderSheet(
     return {
       status: "ready",
       fields: cached.fields,
+      qualificationChecklist: cached.qualificationChecklist,
       unreadDocuments: cached.unreadDocuments,
       model: cached.responseModel ?? cached.requestedModel,
       generatedAt: cached.generatedAt?.toISOString() ?? null,
@@ -368,6 +532,7 @@ export async function getTenderSheet(
       .set({
         status: "processing",
         fields: [],
+        qualificationChecklist: [],
         diagnostics: [],
         unreadDocuments,
         responseModel: null,

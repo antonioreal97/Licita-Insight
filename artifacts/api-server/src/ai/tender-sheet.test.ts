@@ -122,8 +122,8 @@ test("cache key is global across users and invalidates on index, model, or promp
   assert.notEqual(first, sheetCacheKey("tender-1", 1, "jev-1.13.0", 2));
 });
 
-test("guarantees use explicit required/not_required/not_defined choices in prompt version 2", () => {
-  assert.equal(SHEET_PROMPT_VERSION, 2);
+test("qualification checklist invalidates the sheet cache with prompt version 3", () => {
+  assert.equal(SHEET_PROMPT_VERSION, 3);
   for (const id of [
     "bid_guarantee",
     "contract_guarantee",

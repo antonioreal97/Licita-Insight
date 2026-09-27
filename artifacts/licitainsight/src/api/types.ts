@@ -346,9 +346,16 @@ export type SheetEvidence = { documentTitle: string; documentUrl: string; page: 
 export type SheetField = { id: SheetFieldId; status: 'found' | 'not_found'; answer: string | null; confidence: number | null; evidence: SheetEvidence | null };
 
 /** `GET /api/v1/tenders/:id/sheet` (session + access). `status` mirrors the document index. */
+export type QualificationType = 'ato_societario' | 'regularidade_fiscal' | 'regularidade_trabalhista' | 'qualificacao_tecnica' | 'qualificacao_economica';
+
+/** One requirement the edital's documents state explicitly, with its own passage. Absent types are not "not required" — only "not found". */
+export type QualificationItem = { type: QualificationType; evidence: SheetEvidence; confidence: number };
+
 export type TenderSheet = {
   status: 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
   fields: SheetField[];
+  /** Not exhaustive: dedup keeps the strongest passage per (type, page), so a sibling requirement sharing a page can be left out. */
+  qualificationChecklist: QualificationItem[];
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;

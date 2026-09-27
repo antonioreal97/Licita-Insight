@@ -18,6 +18,7 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 - `AI_SHEET_EVIDENCE_THRESHOLD`: limiar Noul para considerar um trecho encontrado, padrão `0.5`.
 - `AI_SHEET_ANSWER_THRESHOLD`: confiança mínima da Choice para expor a categoria, padrão `0.6`.
 - `AI_SHEET_CANDIDATE_LIMIT`: máximo de candidatos lexicais por campo, padrão `6`.
+- `AI_QUALIFICATION_CANDIDATE_LIMIT`: máximo de segmentos candidatos ao checklist por edital, padrão `40`.
 
 ## Rotas
 
@@ -54,9 +55,26 @@ type TenderSheet = {
     | "unsupported"
     | "expired";
   fields: SheetField[];
+  qualificationChecklist: QualificationItem[];
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
+};
+
+type QualificationItem = {
+  type:
+    | "ato_societario"
+    | "regularidade_fiscal"
+    | "regularidade_trabalhista"
+    | "qualificacao_tecnica"
+    | "qualificacao_economica";
+  evidence: {
+    documentTitle: string;
+    documentUrl: string;
+    page: number;
+    text: string;
+  };
+  confidence: number;
 };
 
 type SheetFieldId =
@@ -90,13 +108,15 @@ type SheetField = {
 
 Fora de `ready`, `fields` é vazio. Em `ready`, há sempre os 13 ids na ordem acima. `unreadDocuments` conta documentos `failed` ou `unsupported` do índice.
 
+`qualificationChecklist` é aditivo e fica vazio fora de `ready` ou quando nenhum requisito documental foi encontrado. Cada item reproduz um trecho oficial e sua página; o serviço não gera, completa nem infere requisitos ausentes. Um tipo ausente significa somente “não encontrado”, nunca “não exige”. A ordem é `ato_societario`, `regularidade_fiscal`, `regularidade_trabalhista`, `qualificacao_tecnica` e `qualificacao_economica`; um tipo pode aparecer mais de uma vez quando o edital exige documentos distintos.
+
 Categorias válidas em `answer`: `consortium` (`allowed | forbidden`), `subcontracting` (`allowed | limited | forbidden`), `me_epp` (`exclusive | quota | benefits_only`), `site_visit` (`mandatory | optional | waived`), `samples` (`required | not_required`), `bid_guarantee` (`required | not_required`) e `contract_guarantee` (`required | not_required`). Os demais campos têm `answer: null` e mostram somente o trecho.
 
 Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_found`, com `answer`, `confidence` e `evidence` nulos. Em especial, garantias só recebem `not_required` quando o trecho diz explicitamente que não serão exigidas. Choice `not_defined` ou confiança abaixo de `AI_SHEET_ANSWER_THRESHOLD` mantém `status: found` e o trecho oficial, mas retorna `answer: null`.
 
 Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas após 5 minutos, 30 minutos, 2 horas e, daí em diante, uma vez por dia, até o teto configurado. HTTP 404, URL/arquivo inválido e limites de tamanho são definitivos. Uma recuperação incrementa `indexVersion`, invalida perguntas e fichas em cache e preserva os trechos dos demais documentos. Se a reextração falhar, uma extração anterior que ainda seja legível não é removida.
 
-A ficha é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
+A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt atual é `3`. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
 
 ## Privacidade e retenção
 

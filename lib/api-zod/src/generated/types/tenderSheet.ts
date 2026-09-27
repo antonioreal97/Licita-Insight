@@ -5,6 +5,7 @@
  * Public Licita Insight API
  * OpenAPI spec version: 1.3.0
  */
+import type { QualificationItem } from './qualificationItem';
 import type { SheetField } from './sheetField';
 import type { TenderAskIndexStatus } from './tenderAskIndexStatus';
 
@@ -12,6 +13,7 @@ export interface TenderSheet {
   status: TenderAskIndexStatus;
   /** @maxItems 13 */
   fields: SheetField[];
+  qualificationChecklist: QualificationItem[];
   /** @minimum 0 */
   unreadDocuments: number;
   /** @nullable */

@@ -536,6 +536,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.deepEqual(await sheet.json(), {
       status: "no_documents",
       fields: [],
+      qualificationChecklist: [],
       unreadDocuments: 0,
       model: null,
       generatedAt: null,

@@ -21,6 +21,10 @@ export const aiConfig = () => ({
   sheetEvidenceThreshold: probability("AI_SHEET_EVIDENCE_THRESHOLD", 0.5),
   sheetAnswerThreshold: probability("AI_SHEET_ANSWER_THRESHOLD", 0.6),
   sheetCandidateLimit: positiveInteger("AI_SHEET_CANDIDATE_LIMIT", 6),
+  qualificationCandidateLimit: positiveInteger(
+    "AI_QUALIFICATION_CANDIDATE_LIMIT",
+    40,
+  ),
   fitExcludedThreshold: probability("AI_FIT_EXCLUDED_THRESHOLD", 0.65),
   maxDocumentBytes: positiveInteger("AI_MAX_DOCUMENT_BYTES", 25 * 1024 * 1024),
   maxPdfPages: positiveInteger("AI_MAX_PDF_PAGES", 300),
