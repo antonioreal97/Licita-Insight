@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import type { RequestHandler } from "express";
 
-const IMMUTABLE_ASSET = /(?:^|[-._])[A-Za-z0-9_-]{8,}\.[A-Za-z0-9]+$/;
-
 const isInside = (root: string, candidate: string): boolean =>
   candidate === root || candidate.startsWith(`${root}${path.sep}`);
 
 export const createStaticApp = (staticDir: string): RequestHandler => {
   const root = fs.realpathSync(path.resolve(staticDir));
   const indexPath = fs.realpathSync(path.join(root, "index.html"));
+  // Vite writes every content-hashed file to assets/; public/ files (logo, favicon) keep their names.
+  const hashedAssetsDir = path.join(root, "assets");
   if (!isInside(root, indexPath)) {
     throw new Error("STATIC_DIR index.html must stay inside STATIC_DIR");
   }
@@ -52,14 +52,11 @@ export const createStaticApp = (staticDir: string): RequestHandler => {
       }
     }
 
-    const isIndex = filePath === indexPath;
     res.setHeader(
       "Cache-Control",
-      isIndex
-        ? "no-cache"
-        : IMMUTABLE_ASSET.test(path.basename(filePath))
-          ? "public, max-age=31536000, immutable"
-          : "no-cache",
+      filePath !== indexPath && isInside(hashedAssetsDir, filePath)
+        ? "public, max-age=31536000, immutable"
+        : "no-cache",
     );
     res.sendFile(filePath, (error) => {
       if (error) next(error);

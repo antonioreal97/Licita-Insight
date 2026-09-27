@@ -48,13 +48,13 @@ Gere usuário e senha exclusivos. Grave `POSTGRES_USER`, `POSTGRES_PASSWORD` e
 argumento que fique no histórico:
 
 ```sh
-fly secrets import --app licitai-db < .secrets.postgres.env
+fly secrets import --app licitai-db < ~/.licitai-secrets/postgres.env
 fly deploy --app licitai-db --config deploy/fly-db/fly.toml --ha=false
 fly status --app licitai-db
 fly checks list --app licitai-db
 ```
 
-O arquivo local deve ter modo `0600`, não usar `export` e nunca ser versionado. O
+O arquivo local (`~/.licitai-secrets/postgres.env`, fora do repositório) deve ter modo `0600`, não usar `export` e nunca ser versionado. O
 TOML não declara `services.ports`, portanto não há listener público; o app LicitAI
 conecta diretamente a `licitai-db.internal:5432` pela rede 6PN. Não crie IPv4/IPv6
 público para o banco.
@@ -73,12 +73,13 @@ URL-encoded e host `licitai-db.internal`, importe-a como segredo **somente** nos
 
 ## 3. Configuração e segredos da aplicação
 
-Crie `.secrets.production.env` fora do repositório, modo `0600`, uma linha por
+Crie `~/.licitai-secrets/production.env` (fora do repositório, para nunca entrar num commit), modo `0600`, uma linha por
 segredo, sem `export`. Importe por stdin:
 
 ```sh
-chmod 600 .secrets.production.env
-fly secrets import --app licitai < .secrets.production.env
+mkdir -p ~/.licitai-secrets && chmod 700 ~/.licitai-secrets
+chmod 600 ~/.licitai-secrets/production.env
+fly secrets import --app licitai < ~/.licitai-secrets/production.env
 ```
 
 Um valor do Asaas que começa com `$` entra literalmente nesse arquivo: o

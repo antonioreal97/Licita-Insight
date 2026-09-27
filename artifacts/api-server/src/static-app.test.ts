@@ -41,6 +41,8 @@ test("serves the SPA without intercepting API, methods or path traversal", async
   await mkdir(path.join(staticDir, "assets"), { recursive: true });
   await writeFile(path.join(staticDir, "index.html"), "<html>LICITAI SPA</html>");
   await writeFile(path.join(staticDir, "assets/index-AbCdEf12.js"), "ASSET");
+  // Copied from public/ as-is, no content hash: a new logo must reach returning visitors.
+  await writeFile(path.join(staticDir, "LicitAI_logo.png"), "LOGO");
   await writeFile(path.join(parent, "secret.txt"), "MUST NOT LEAK");
 
   const app = express();
@@ -69,6 +71,11 @@ test("serves the SPA without intercepting API, methods or path traversal", async
     assert.equal(asset.status, 200);
     assert.equal(asset.body, "ASSET");
     assert.equal(asset.cacheControl, "public, max-age=31536000, immutable");
+
+    const logo = await rawRequest(address.port, "/LicitAI_logo.png");
+    assert.equal(logo.status, 200);
+    assert.equal(logo.body, "LOGO");
+    assert.equal(logo.cacheControl, "no-cache");
 
     const api = await rawRequest(address.port, "/api/x");
     assert.equal(api.status, 404);
