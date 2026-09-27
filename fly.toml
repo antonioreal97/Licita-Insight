@@ -14,16 +14,15 @@ primary_region = "gru"
   TRUST_PROXY = "1"
 
 [processes]
-  api = "env APP_ROLE=api STATIC_DIR=/app/artifacts/licitainsight/dist/public node --enable-source-maps /app/artifacts/api-server/dist/index.mjs"
-  worker = "env APP_ROLE=worker WORKER_HEALTH_PORT=3002 node --enable-source-maps /app/artifacts/api-server/dist/index.mjs"
+  app = "env APP_ROLE=all STATIC_DIR=/app/artifacts/licitainsight/dist/public node --enable-source-maps /app/artifacts/api-server/dist/index.mjs"
 
 [http_service]
   internal_port = 3001
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["api"]
+  processes = ["app"]
 
   [[http_service.checks]]
     grace_period = "30s"
@@ -32,26 +31,11 @@ primary_region = "gru"
     path = "/api/readyz"
     timeout = "5s"
 
-[[services]]
-  internal_port = 3002
-  protocol = "tcp"
-  processes = ["worker"]
-
-  [[services.http_checks]]
-    grace_period = "30s"
-    interval = "15s"
-    method = "GET"
-    path = "/api/healthz"
-    timeout = "5s"
-
 [[vm]]
-  processes = ["api"]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 512
-
-[[vm]]
-  processes = ["worker"]
+  processes = ["app"]
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 1024
+
+# Gatilho de escala (~20 assinantes): troque `app` pelos processos `api` e
+# `worker` documentados em docs/ops/deploy-fly.md. Nunca exponha METRICS_PORT.
