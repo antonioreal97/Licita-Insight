@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
 import { chunkPages, extractDocuments } from "../dist/document-extractor.mjs";
 
-const fixturePdf = (text) => {
-  const escaped = text.replace(/([\\()])/g, "\\$1");
-  const stream = `BT /F1 12 Tf 72 720 Td (${escaped}) Tj ET`;
-  const objects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>", `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`];
+const fixturePdf = (text, pageCount) => {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  const kids = [];
+  for (let page = 1; page <= pageCount; page += 1) {
+    const pageObject = objects.length + 1;
+    const contentObject = pageObject + 1;
+    kids.push(`${pageObject} 0 R`);
+    const escaped = `${text} Pagina ${page}.`.replace(/([\\()])/g, "\\$1");
+    const stream = `BT /F1 12 Tf 72 720 Td (${escaped}) Tj ET`;
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObject} 0 R >>`,
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    );
+  }
+  objects[1] = `<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pageCount} >>`;
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
   objects.forEach((object, index) => {
@@ -21,8 +36,19 @@ const fixturePdf = (text) => {
   return new TextEncoder().encode(pdf);
 };
 
-const documents = await extractDocuments(fixturePdf("Participacao em consorcio permitida."), "TEST DATA edital.pdf", 10);
+const documents = await extractDocuments(
+  fixturePdf("Participacao em consorcio permitida.", 29),
+  "TEST DATA edital.pdf",
+  40,
+);
 assert.equal(documents.length, 1);
+assert.equal(documents[0].pages.length, 29);
 assert.match(documents[0].pages[0], /Participacao em consorcio/);
-assert.equal(chunkPages(documents[0].pages).length, 1);
-process.stdout.write("dist PDF extraction: PASS\n");
+assert.match(documents[0].pages[28], /Pagina 29/);
+assert.equal(chunkPages(documents[0].pages).length, 29);
+process.stdout.write("dist PDF extraction (29 pages): PASS\n");
+
+const holdMs = Number(process.env.HOLD_AFTER_VERIFY_MS ?? 0);
+if (Number.isFinite(holdMs) && holdMs > 0) {
+  await new Promise((resolve) => setTimeout(resolve, holdMs));
+}
