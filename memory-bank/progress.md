@@ -34,6 +34,7 @@
 
 - Preferências (`digest` diário 07:00 BRT, `immediateCritical`) fora do gate, descadastro público em um clique (RFC 8058), entregas idempotentes com retry, buscas salvas em job próprio (15 min).
 - UI: switches em `/settings#notificacoes` (otimista, rollback), `/descadastro` com confirmação explícita. QA headless desktop/mobile em 24 set 2026.
+- `RESEND_API_KEY`/`MAIL_FROM` no `.env` real desde 27 set 2026 (auditoria de promessas). Envio de teste real ainda não disparado — precisa de aprovação explícita do owner por ser ação com efeito externo.
 
 ## O que já funciona — Perguntar ao edital (Onda 3, fatia 1)
 
@@ -46,13 +47,34 @@
 - 13 campos com trecho oficial e página; ausência = "Não encontrado", nunca "não exige"; categorias por Choice (consórcio, subcontratação, ME/EPP, visita, amostra, garantias). Cache global por (edital, versão do índice, modelo, prompt); teto `AI_DAILY_SHEET_LIMIT`.
 - Índice parcial: publica o que foi lido, `unreadDocuments`, retentativa em job (5 min, 30 min, 2 h, 1×/dia).
 
+## O que já funciona — checklist automático de habilitação (Onda 3, item 3.5b)
+
+- Motivado pela análise competitiva de 27 set 2026 (`docs/reviews/competitive-analysis-2026-09-27.md`):
+  Acumi e Licitei já entregam checklist de habilitação; decisão do owner foi fazer.
+- `GET /tenders/:id/sheet` ganhou o campo aditivo `qualificationChecklist: QualificationItem[]`
+  (`{ type, evidence, confidence }`, 5 tipos: ato_societario, regularidade_fiscal, regularidade_trabalhista,
+  qualificacao_tecnica, qualificacao_economica). Sem inferência: tipo ausente = "não encontrado", nunca
+  "não exige". Segmentação própria por item numerado/lettered sobre o texto já extraído (não reindexa);
+  Jev com Noul `is_req` + Choice `tipo` por candidato; 2ª Noul quando o mesmo trecho cobre fiscal+trabalhista
+  (ex. FGTS+CNDT), publicando os dois itens; dedup por `(tipo, página)` mantendo o de maior `is_req`.
+  Cache global junto com o resto da ficha (`SHEET_PROMPT_VERSION` 2→3).
+- Calibração real nos 3 editais do `licita_cycle4` (Codex + reteste meu independente com o Jev real):
+  4, 8–9 e 8 itens finais; falso positivo lexical do "TAG" (dispositivo de pedágio) corretamente rejeitado
+  nos 3; nenhum falso positivo encontrado na leitura humana; falsos negativos documentais esperados e
+  documentados (regra de manter só um candidato por tipo/página). Custo: ~US$0,0015/edital, global.
+- Frontend (minha integração, fora do ownership do Codex): seção "Requisitos de habilitação encontrados"
+  na Ficha do Edital, ordem fixa por tipo, toggle "Ver trecho" por item, aviso de que não é lista exaustiva.
+  QA visual headless (desktop 1440×900 + mobile 390×844) nos 3 editais de calibração: seção renderiza,
+  ordem correta, toggle funciona, sem erros de console atribuíveis à feature.
+  Detalhes: `docs/reviews/qualification-checklist-2026-09-27.md`.
+
 ## O que falta
 
-- Credenciais Asaas no ambiente e restart da API do Compose para as rotas de billing entrarem no processo em execução.
-- Deploy online no Fly.io `gru` (decidido em 26 set 2026; ainda não feito). `BILLING_MONTHLY_BRL=49.90` no `.env` de produção.
+- Deploy online no Fly.io `gru` (decidido em 26 set 2026; ainda não feito). Pausado a pedido do owner até
+  concluir a verificação competitiva/promessas (27 set 2026) — concluída; deploy segue sem nova autorização.
 - Carga nacional dos últimos 30 dias do PNCP.
 - Outras fontes além do Mapas Culturais.
-- Chave Resend + domínio (click/open tracking desligados) e CODEX_HANDOFF-010.
+- Alerta por WhatsApp e histórico de preços (achados como gap competitivo em 27 set 2026, não iniciados).
 
 ## Problemas conhecidos
 

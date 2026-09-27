@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { Link } from 'wouter';
 import { ChevronDown, CircleAlert, ClipboardList, ExternalLink, Info, Loader2, RefreshCw } from 'lucide-react';
-import { isApiError, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
+import { isApiError, type QualificationItem, type QualificationType, type SheetEvidence, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
@@ -29,6 +29,59 @@ const FIELDS: Record<SheetFieldId, FieldCopy> = {
   price_adjustment: { label: 'Reajuste' },
 };
 
+/** Fixed display order; absent types just don't render (never "não exige" by omission). */
+const QUALIFICATION_LABELS: Record<QualificationType, string> = {
+  ato_societario: 'Documento societário',
+  regularidade_fiscal: 'Regularidade fiscal',
+  regularidade_trabalhista: 'Regularidade trabalhista',
+  qualificacao_tecnica: 'Qualificação técnica',
+  qualificacao_economica: 'Qualificação econômico-financeira',
+};
+const QUALIFICATION_ORDER: QualificationType[] = ['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica'];
+
+function QualificationRow({ item }: { item: QualificationItem }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="py-3 first:pt-0 last:pb-0" data-testid="qualification-item" data-type={item.type}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[item.type]}</span>
+        <div className="flex items-center gap-3">
+          <SourceLink evidence={item.evidence} />
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+            data-testid="button-qualification-toggle"
+          >
+            {open ? 'Ocultar trecho' : 'Ver trecho'}
+            <ChevronDown size={13} aria-hidden="true" className={cn('transition-transform duration-fast ease-standard', open && 'rotate-180')} />
+          </button>
+        </div>
+      </div>
+      {open && <blockquote className="mt-2 border-l-2 border-primary/50 pl-3 type-meta break-words text-foreground/90">{item.evidence.text}</blockquote>}
+    </div>
+  );
+}
+
+function QualificationChecklist({ items }: { items: QualificationItem[] }) {
+  if (items.length === 0) return null;
+  const ordered = QUALIFICATION_ORDER.flatMap((type) => items.filter((item) => item.type === type));
+  return (
+    <section aria-label="Requisitos de habilitação encontrados">
+      <h3 className="mb-2 type-eyebrow text-muted-foreground">Requisitos de habilitação encontrados</h3>
+      <p className="mb-2 type-meta text-muted-foreground">
+        Não é uma lista completa: pode haver mais de uma exigência do mesmo tipo na mesma página, e só uma aparece aqui. Confira sempre o edital.
+      </p>
+      <dl className="divide-y divide-border-subtle">
+        {ordered.map((item, index) => (
+          <QualificationRow key={`${item.type}-${item.evidence.page}-${index}`} item={item} />
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 const GROUPS: { title: string; ids: SheetFieldId[] }[] = [
   { title: 'Participação', ids: ['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples'] },
   { title: 'Garantias e penalidades', ids: ['bid_guarantee', 'contract_guarantee', 'penalties'] },
@@ -40,21 +93,21 @@ const noteBox = 'flex gap-2.5 rounded-lg border border-border bg-muted px-4 py-3
 const errorBox = 'flex gap-2.5 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-4 py-3 type-meta text-destructive-subtle-foreground';
 const linkClass = 'font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring';
 
-function SourceLink({ field }: { field: SheetField }) {
-  if (!field.evidence) return null;
+function SourceLink({ evidence }: { evidence: SheetEvidence | null }) {
+  if (!evidence) return null;
   return (
     <a
-      href={field.evidence.documentUrl}
+      href={evidence.documentUrl}
       target="_blank"
       rel="noopener noreferrer"
-      title={field.evidence.documentTitle}
+      title={evidence.documentTitle}
       data-testid="link-sheet-source"
       className={cn('inline-flex shrink-0 items-center gap-1 type-meta', linkClass)}
     >
-      p. {field.evidence.page}
+      p. {evidence.page}
       <ExternalLink size={11} aria-hidden="true" />
       <span className="sr-only">
-        ({field.evidence.documentTitle}, documento oficial, abre em nova aba)
+        ({evidence.documentTitle}, documento oficial, abre em nova aba)
       </span>
     </a>
   );
@@ -95,7 +148,7 @@ function FieldRow({ field }: { field: SheetField }) {
                 // Found a passage but the category was unclear: show the text, do not guess.
                 <span className="type-meta text-muted-foreground">Sem resposta clara; veja o trecho.</span>
               )}
-              <SourceLink field={field} />
+              <SourceLink evidence={field.evidence} />
               <button
                 type="button"
                 aria-expanded={open}
@@ -133,6 +186,7 @@ function SheetBody({ sheet }: { sheet: TenderSheet }) {
           ` ${sheet.unreadDocuments === 1 ? '1 documento não pôde ser lido' : `${sheet.unreadDocuments} documentos não puderam ser lidos`}; a ficha pode estar incompleta.`}
       </p>
       <div className="space-y-6">
+        <QualificationChecklist items={sheet.qualificationChecklist} />
         {GROUPS.map((group) => {
           const fields = group.ids.map((id) => byId.get(id)).filter((field): field is SheetField => Boolean(field));
           if (fields.length === 0) return null;
