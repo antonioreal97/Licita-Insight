@@ -49,6 +49,25 @@ Não houve erro, timeout nem resposta não-2xx em nenhuma célula dessa compara�
 
 A meta indicativa do handoff foi atingida na escala segura executada: p95 raro com 50 conexões = **89,6 ms** (<250 ms). A redução é de 98,9% contra o baseline de 8.349 ms.
 
+## 1,5 M
+
+O `scale:seed` foi executado com a nova escala padrão: 1.500.000 editais determinísticos (seed 42), em banco descartável `licita_scale` de 3.648.805.911 bytes. A tentativa HTTP começou pelo pior caso, `busca-comum`, com 10 conexões e uma amostra de 10 s. Durante a amostra o VM do PostgreSQL chegou a 826% de CPU e havia 18 execuções ativas; a rodada foi interrompida imediatamente, antes de produzir uma célula válida. Por segurança da máquina não foram executados HTTP com 50 conexões nem os demais cenários. Portanto a meta informativa de p95 < 300 ms **não foi verificada por HTTP em 1,5 M**.
+
+Os planos abaixo foram medidos depois, sequencialmente, uma consulta por vez. A coluna `resultado` inclui seleção/ordenação/paginação; `count(*)` é a contagem exata que o contrato atual continua fazendo.
+
+| Cenário | Forma principal | resultado | `count(*)` | buffers do resultado |
+|---|---|---:|---:|---:|
+| termo comum (`contratacao`, 50%) | `Parallel Seq Scan` + top-N | 731,4 ms | 378,1 ms | 350.106 |
+| termo médio (`tecnologia`, 5%) | `Parallel Bitmap Heap Scan` GIN | 179,6 ms | 124,5 ms | 76.973 |
+| termo raro (`ultrassom`, 0,1%) | `Bitmap Heap Scan` GIN | 18,6 ms | 4,4 ms | 2.875 |
+| três termos (5%) | `Bitmap Heap Scan` GIN, recheck lossy | 293,4 ms | 257,2 ms | 82.244 |
+| filtros combinados | `BitmapAnd` | 65,8 ms | 51,7 ms | 7.810 |
+| página 250, termo comum | `Parallel Seq Scan` + top-N 5.000 | 413,1 ms | 372,7 ms | 350.092 |
+
+O termo comum e a página profunda continuam lineares, e a contagem exata representa parte material da latência. Como mitigação sem mudar o envelope público, foi avaliado: escolher os 5.000 casamentos mais recentes pelo índice de `published_at` e só então aplicar o ranking atual. Em 50 consultas comuns determinísticas, a sobreposição do top-20 foi 100% (mínimo 100%, acima do limiar de 90%). Mesmo assim a alternativa não foi implementada: em execução serial, para limitar a pressão da medição, o ranking exato teve p50/p95 de 567,6/2.358,8 ms e os candidatos tiveram 584,0/1.816,8 ms; o p50 piorou 2,9% e `contratacao` piorou de 1.724,9 para 2.441,5 ms. A forma candidata precisa de outra estratégia de acesso ou de um limiar de seletividade antes de ser segura como otimização.
+
+O banco `licita_scale` foi apagado ao final desta rodada e a ausência foi conferida em `pg_database`.
+
 ## Planos `EXPLAIN (ANALYZE, BUFFERS)`
 
 ### Raro, 100 mil — antes
@@ -147,8 +166,8 @@ O RSS maior depois é o custo de aceitar 500 sockets e responder 155 mil descart
 ## Reprodução
 
 ```sh
-pnpm --filter @workspace/api-server run scale:seed -- --rows 100000 --seed 42
-pnpm --filter @workspace/api-server run scale:load -- --label exemplo --duration 10 --concurrency 10,50,100
+pnpm --filter @workspace/api-server run scale:seed -- --rows 1500000 --seed 42
+pnpm --filter @workspace/api-server run scale:load -- --label exemplo --duration 10 --concurrency 10,50
 pnpm --filter @workspace/api-server run scale:drop
 ```
 

@@ -22,9 +22,9 @@ const label =
 if (!/^[a-zA-Z0-9_-]+$/.test(label))
   throw new Error("--label contains unsupported characters");
 const duration = Number(
-  arg("--duration") ?? process.env.SCALE_DURATION_SECONDS ?? "5",
+  arg("--duration") ?? process.env.SCALE_DURATION_SECONDS ?? "10",
 );
-const concurrencies = (arg("--concurrency") ?? "10,50,100")
+const concurrencies = (arg("--concurrency") ?? "10,50")
   .split(",")
   .map(Number);
 const selectedScenarios = new Set(
