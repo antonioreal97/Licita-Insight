@@ -8,6 +8,7 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
   const url = new URL(process.env.PNCP_TEST_DATABASE_URL!);
   url.searchParams.set("options", `-c search_path=${schema}`);
   process.env.DATABASE_URL = url.toString();
+  process.env.APP_ROLE = "all";
   process.env.JEV_API_KEY = "test-key";
   process.env.LOG_LEVEL = "silent";
   const {
@@ -17,7 +18,7 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
   await pool.query(`create schema "${schema}"`);
   for (const table of [
     "users", "subscriptions", "tenders", "company_profiles",
-    "company_tender_fits", "ai_fit_daily_usage",
+    "company_tender_fits", "ai_fit_daily_usage", "ai_jobs",
   ]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
@@ -69,6 +70,11 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
     assert.equal(shadowStored?.status, "ready");
     assert.equal(jevCalls, 1);
     assert.ok(shadowRow);
+    const shadowJob = await pool.query<{ status: string }>(
+      "select status from ai_jobs where tender_id = $1",
+      [shadow.tenderId],
+    );
+    assert.deepEqual(shadowJob.rows.map(({ status }) => status), ["succeeded"]);
 
     const on = await addCase("on", "medicamentos");
     process.env.AI_FIT_LEXICAL_GATE = "on";
@@ -85,6 +91,11 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
     assert.equal(jevCalls, 2);
     const offStored = await db.query.companyTenderFitsTable.findFirst({ where: (fits, { eq }) => eq(fits.userId, off.userId) });
     assert.equal(offStored?.lexicalGatePass, null);
+    const offJob = await pool.query<{ status: string }>(
+      "select status from ai_jobs where tender_id = $1",
+      [off.tenderId],
+    );
+    assert.deepEqual(offJob.rows.map(({ status }) => status), ["succeeded"]);
   } finally {
     globalThis.fetch = originalFetch;
     await pool.query(`drop schema "${schema}" cascade`);
