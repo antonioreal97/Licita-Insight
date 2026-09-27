@@ -2,17 +2,14 @@
 
 ## Foco agora
 
-Ciclo 8 (branch `antonioreal97/cycle8`, commits locais, sem push nem PR): Fase 1b de escala, custo e isolamento (HANDOFF-018), entregue e validada. Ciclo 7 (Fase 1a, PR #9) está no `main`. Plano completo em `docs/architecture-scale.md`.
+Ciclo 8 (branch `antonioreal97/cycle8`, commits locais, sem push nem PR): Fases 1b e 2 de escala e custo por usuário (HANDOFFs 018 e 019), entregues e validadas ao vivo com o Jev real. Ciclo 7 (Fase 1a, PR #9) e as decisões do owner de 26 set 2026 (`docs/architecture-scale.md`, seção 7) estão no `main`.
 
-Entregue no 018: `APP_ROLE=all|api|worker` (worker com porta de saúde opcional; o serviço `worker` do Compose só sobe com `--profile scale`); ciclos dos jobs protegidos por `pg_try_advisory_lock` + auditoria em `job_run_audit`; view `ai_usage_ledger` e `report:ai-cost` (bate com as tabelas de origem); faixas interativo/lote no cliente Jev (`jev-scheduler.ts`); filtro lexical do fit em modo sombra (`AI_FIT_LEXICAL_GATE=shadow`, `report:fit-gate`). Validado ao vivo com o Jev real: pergunta e fit passam pelo scheduler, espera p95 do interativo 0 ms e do lote 640 ms, desligamento em < 1 s sem travas presas.
+018: `APP_ROLE=all|api|worker`, jobs com `pg_try_advisory_lock` + `job_run_audit`, view `ai_usage_ledger` + `report:ai-cost`, faixas interativo/lote no Jev, filtro lexical do fit em modo `shadow`.
+019: fila durável `ai_jobs` (a API só enfileira; o worker extrai PDF, calcula fit e ficha; SKIP LOCKED, visibilidade, retentativa), disjuntor `AI_DAILY_BUDGET_USD=10` que pausa só o lote, RPM do Jev por papel, retenção de 90 dias após o prazo (exceto editais salvos; tombstone; valor `expired`), métricas Prometheus em `METRICS_PORT` (não públicas) e `docs/ops/alerts.md`. Relatório com a validação independente em `docs/reviews/queue-budget-metrics.md`.
 
-Decisões de escala tomadas em 26 set 2026 (`docs/architecture-scale.md`, seção 7): Fly.io `gru` com Managed Postgres Starter, teto de infra US$ 150/mês (Fase 1) e US$ 400/mês (Fase 2); metas de 100 pagantes em 6 meses e 500 em 12; plano a R$ 49,90/mês para ficar bem abaixo da concorrência (margem 59% no pior caso, antes de imposto; reajuste se o custo por assinante passar de R$ 25); no limite de IA pausa só o lote (fit e alerta de perfil), disjuntor de US$ 10/dia no Jev; retenção de trechos/documentos 90 dias após `proposal_deadline`, exceto editais salvos, e `tenders` não expira.
+Pendente/limites: carga HTTP em 1,5 M de linhas não medida (só EXPLAIN; VM do Postgres a 826% de CPU); termo comum na busca sem mitigação; edital sem `proposal_deadline` nunca expira; filtro lexical só liga com ≥ 500 medições e recall ≥ 97% (decisão do owner). Próximo: HANDOFF-020 (deploy no Fly.io `gru`: api + worker, Managed Postgres, `pg_trgm`, `TRUST_PROXY`, `BILLING_MONTHLY_BRL=49.90`). Segurança: rotas de ingestão sem autenticação (só limite de 3/min) e relatório do Hermes em `docs/reviews/security-audit-2026-09-26.md` (não commitado); o owner respondeu "ainda não" ao handoff P0.
 
-Filtro lexical: fica em `shadow`. Na calibração antiga um filtro rígido perdia 3 de 19 alta/média; na amostra nova de 24 editais sem relação cortaria 67% das chamadas com recall 100% (só 3 altos). Ligar (`on`) exige ≥ 500 medições e recall ≥ 97%: decisão do owner.
-
-Fronteira: o trabalho disparado por request (download e extração de PDF, fila do fit, geração da ficha) ainda roda no processo da API; a fila durável que o move para o worker é o HANDOFF-019, agora desbloqueado pelas decisões de 26 set 2026 acima (o harness de carga precisa subir para 1,5 milhão de editais). Segurança: rotas de ingestão ainda sem autenticação (só limite de 3/min) e sem teto global de indexação; o owner respondeu "ainda não" ao handoff de segurança P0; relatório do agente Hermes em `docs/reviews/security-audit-2026-09-26.md` (não commitado).
-
-Ambiente: Docker Desktop reinicia sozinho e derruba o stack `licita-insight`; só o container do Postgres é religado à mão. `licita_cycle4` está com o esquema atual (migrations até 0012) e dados de teste do usuário qa-018.
+Ambiente: o Docker Desktop reinicia sozinho e derruba o stack `licita-insight`; só o container do Postgres é religado à mão. `licita_cycle4` está no esquema atual (migrations até 0015). A conta Codex do owner bateu o limite de uso uma vez e foi trocada; um dispatch antigo do Orca ficou como `release_unknown` (o processo já saiu).
 
 ## O que está na mesa
 

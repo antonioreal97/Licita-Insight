@@ -176,6 +176,13 @@ function SheetState({ sheet, onRetry, retrying }: { sheet: TenderSheet; onRetry:
           Ainda não conseguimos ler o texto dos documentos deste edital (imagens digitalizadas ou formato que não lemos).
         </p>
       );
+    case 'expired':
+      return (
+        <p className={noteBox} data-testid="text-sheet-expired">
+          <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
+          Os documentos deste edital saíram do índice 90 dias depois do prazo da proposta. Salve o edital para gerar a ficha de novo.
+        </p>
+      );
     case 'failed':
       return (
         <div role="alert" className={cn(errorBox, 'flex-wrap items-center justify-between')} data-testid="text-sheet-failed">

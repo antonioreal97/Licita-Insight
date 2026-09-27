@@ -305,7 +305,8 @@ export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPrefere
 
 // AI v1 ("Perguntar ao edital") — source of truth: docs/contracts/ai-v1.md. Jev selects official passages; nothing is generated.
 
-export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported';
+/** `expired`: the documents were dropped from the index 90 days after the proposal deadline (unless a user saved the tender). Saving reopens it. */
+export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
 
 export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ready' | 'failed' | 'unsupported' };
 
@@ -346,7 +347,7 @@ export type SheetField = { id: SheetFieldId; status: 'found' | 'not_found'; answ
 
 /** `GET /api/v1/tenders/:id/sheet` (session + access). `status` mirrors the document index. */
 export type TenderSheet = {
-  status: 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported';
+  status: 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
   fields: SheetField[];
   unreadDocuments: number;
   model: string | null;

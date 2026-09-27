@@ -70,3 +70,20 @@ Os `EXPLAIN (ANALYZE, BUFFERS)` sequenciais foram concluídos: termo comum 731,4
 - `verify:ai-jobs` e `verify:ai-purged-at`: banco vazio, dado existente e segundo `push-force`: passaram;
 - dois `push-force` consecutivos no banco existente `licita_cycle4`: passaram;
 - Jev real não foi chamado; todos os resultados Jev do smoke foram simulados.
+
+## Validação independente do orquestrador (26 set 2026, Jev real, licita_cycle4)
+
+- Suíte com o comando real, **sem `DATABASE_URL` exportada**: 160/160; typecheck e build; os cinco `verify:*` de paridade passam. (Duas regressões achadas na revisão de 5 dos 6 itens, corrigidas em `d3a6d68` e `261cd42`: o módulo de métricas puxava o pool do banco para dentro do middleware, e o fixture do gate lexical não tinha `ai_jobs`.)
+- **Fila com processos separados** (API `APP_ROLE=api` + worker `APP_ROLE=worker`): `GET ask-status` num edital sem índice responde `processing` em 0,03 s, enfileira (`index | interactive | queued`) e a API não baixa nada; ao ligar o worker o índice fica pronto em 2,1 s (166 trechos, 5 documentos).
+- **Jev real pela fila:** ficha em 4,2 s (8/13 campos, consórcio vedado p. 5, visita dispensada p. 8, igual ao resultado anterior); 8 aderências em 2,1 s na faixa `batch`; pergunta ao edital interativa em ~1 s.
+- **`kill -9` no meio do job** (estado `running` confirmado no instante do kill, 0 trechos gravados): a API seguiu `processing`; sem worker, ninguém retomou; um segundo worker assumiu (`attempts = 2`), concluiu em 5,2 s e gravou exatamente 166 trechos, sem duplicar.
+- **Disjuntor:** com `AI_DAILY_BUDGET_USD=0.0001` os 6 fits ficaram `queued` (o worker registrou a transição) e a pergunta interativa respondeu em 1,1 s; ao subir o teto a fila drenou (14 fits concluídos).
+- **Métricas:** API e worker em porta interna; `/metrics` na porta pública responde 404; rotas como padrão (`/api/v1/tenders/:id/ask-status`, `unmatched` para 404); zero id de edital/e-mail em rótulo.
+- **Retenção** (3 editais: A vencido e não salvo, B vencido e salvo, C com prazo futuro): dry-run 1 edital/225 trechos/4 documentos/361.116 bytes sem efeito; purga real igual ao dry-run; A ficou com 0 trechos/0 documentos e tombstone, ficha em cache e linha de `tenders` preservadas; B e C intactos. API: A → `index: "expired"`, nenhum job novo (sem reindexar fantasma), ficha `ready` do cache, `POST ask` → `409 CONFLICT` com `index_expired`. Salvar A reabriu a indexação: `ready` em 6,2 s com 225 trechos e `purged_at` limpo.
+- **Frontend:** `expired` tratado no painel de perguntas, na ficha e no erro `409 index_expired`.
+
+## Pontos de atenção
+
+- Edital com `proposal_deadline` nulo nunca expira (conservador; acumula).
+- Carga HTTP em 1,5 M de linhas não foi medida (VM do Postgres a 826% de CPU); só há `EXPLAIN`. Termo comum segue sem mitigação.
+- `report-ai-cost`: rótulo "0/2 user-days" confuso (números corretos).
