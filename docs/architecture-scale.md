@@ -99,8 +99,12 @@ Tomadas por delegação do owner. Preços de terceiros conferidos nas páginas p
 
 ## 8. Plano de execução
 
-| Handoff | Escopo | Depende de |
+| Handoff | Escopo | Estado |
 |---|---|---|
-| **CODEX_HANDOFF-017** (Fase 1a: proteger e medir) | harness de carga com 1 milhão de editais sintéticos; índice trigrama na busca; pool, timeouts e desligamento limpo; limite de taxa e cache HTTP nas rotas públicas | nada |
-| **CODEX_HANDOFF-018** (Fase 1b: custo e isolamento) | papéis `api`/`worker`; `ai_usage_ledger` + relatório de custo por usuário; semáforo com faixas no cliente Jev; filtro lexical no fit | 017 |
-| CODEX_HANDOFF-019 (Fase 2) | fila durável no Postgres, disjuntor de orçamento, métricas e alertas | 018 (o ledger calibra o teto do disjuntor) |
+| **CODEX_HANDOFF-017** (Fase 1a: proteger e medir) | harness de carga; índice trigrama na busca; pool, timeouts e desligamento limpo; `/readyz`; limite de taxa e de concorrência; cache HTTP público | entregue (PR #9) |
+| **CODEX_HANDOFF-018** (Fase 1b: custo e isolamento) | papéis `APP_ROLE=all|api|worker`; jobs seguros com várias réplicas (`pg_try_advisory_lock`); view `ai_usage_ledger` + `report:ai-cost`; faixas interativo/lote no cliente Jev (concorrência, taxa e pausa em 429); filtro lexical do fit em modo sombra + `report:fit-gate` | entregue |
+| **CODEX_HANDOFF-019** (Fase 2) | fila durável no Postgres para índice, fit e ficha; disjuntor de orçamento; partição de RPM; retenção com tombstone; métricas/alertas; baseline de 1,5 M | entregue; HTTP de 1,5 M interrompido por proteção da máquina, planos registrados |
+
+**Fronteira após o 019:** a API só enfileira índice, fit e ficha em `ai_jobs`; o worker consome com visibilidade e retentativa. O disjuntor pausa somente fit/alertas de lote. O filtro lexical continua em modo sombra e só liga com recall medido (≥ 97% em ≥ 500 avaliações). Deploy Fly.io, balde de taxa compartilhado, cursor e busca dedicada continuam fora desta fase.
+
+`APP_ROLE=all` preserva o processo único de desenvolvimento; `api` serve somente HTTP e `worker` inicia somente os agendadores. O worker pode expor apenas `/api/healthz` e `/api/readyz` quando `WORKER_HEALTH_PORT` estiver definido. O profile `scale` do Compose adiciona o worker sem alterar a topologia padrão.

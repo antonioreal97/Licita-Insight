@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { promisify } from "node:util";
 import test from "node:test";
 import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
@@ -12,6 +14,19 @@ import {
   publicHttpCache,
   type ProtectionConfig,
 } from "./request-protection";
+
+const execFileAsync = promisify(execFile);
+
+test("request protection loads without DATABASE_URL", async () => {
+  const moduleUrl = new URL("./request-protection.ts", import.meta.url).href;
+  const env = { ...process.env };
+  delete env.DATABASE_URL;
+  await execFileAsync(
+    "pnpm",
+    ["exec", "tsx", "--eval", `import(${JSON.stringify(moduleUrl)}).then(() => {})`],
+    { env },
+  );
+});
 
 const defaults: ProtectionConfig = {
   anonymousPerMinute: 60,

@@ -25,6 +25,8 @@ import {
   type SheetChoice,
   type SheetScoredCandidate,
 } from "./tender-sheet-policy";
+import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
+import { appRoleFromEnv } from "../app-role";
 
 type SheetStatus =
   | "not_started"
@@ -32,7 +34,8 @@ type SheetStatus =
   | "ready"
   | "failed"
   | "no_documents"
-  | "unsupported";
+  | "unsupported"
+  | "expired";
 
 export type TenderSheetResponse = {
   status: SheetStatus;
@@ -57,7 +60,6 @@ type Candidate = {
   text: string;
 };
 
-const runningSheets = new Map<string, Promise<void>>();
 const EMPTY_RESPONSE = (
   status: SheetStatus,
   unreadDocuments: number,
@@ -251,15 +253,40 @@ async function processSheet(
       { err: error, tenderId, indexVersion },
       "Tender sheet generation failed",
     );
+    throw error;
   }
+}
+
+export async function executeTenderSheetJob(sheetId: string, tenderId: string): Promise<void> {
+  const [sheet] = await db.select().from(tenderAiSheetsTable)
+    .where(and(eq(tenderAiSheetsTable.id, sheetId), eq(tenderAiSheetsTable.tenderId, tenderId))).limit(1);
+  if (!sheet || sheet.status === "ready") return;
+  await processSheet(
+    sheet.id,
+    tenderId,
+    sheet.indexVersion,
+    sheet.unreadDocuments,
+    dateInSaoPaulo(sheet.createdAt),
+  );
 }
 
 export async function getTenderSheet(
   tenderId: string,
+  userId?: string,
   now = new Date(),
 ): Promise<TenderSheetResponse> {
-  const indexStatus = await ensureTenderIndex(tenderId, true);
+  const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   const unreadDocuments = await unreadDocumentCount(tenderId);
+  if (indexStatus === "expired") {
+    const [cachedSheet] = await db.select().from(tenderAiSheetsTable)
+      .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
+      .limit(1);
+    if (cachedSheet) return {
+      status: "ready", fields: cachedSheet.fields, unreadDocuments: cachedSheet.unreadDocuments,
+      model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
+      generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
+    };
+  }
   if (indexStatus !== "ready")
     return EMPTY_RESPONSE(indexStatus, unreadDocuments);
 
@@ -295,8 +322,7 @@ export async function getTenderSheet(
     cached?.status === "processing" &&
     cached.updatedAt.getTime() < now.getTime() - 15 * 60_000;
   if (
-    (cached?.status === "processing" && !staleProcessing) ||
-    runningSheets.has(cacheKey)
+    cached?.status === "processing" && !staleProcessing
   ) {
     return EMPTY_RESPONSE("processing", unreadDocuments);
   }
@@ -353,13 +379,15 @@ export async function getTenderSheet(
       .where(eq(tenderAiSheetsTable.id, sheetId));
   }
   const quotaDay = dateInSaoPaulo(now);
-  const task = processSheet(
-    sheetId,
+  const dedupeKey = `sheet:${cacheKey}`;
+  await enqueueAiJob({
+    kind: "sheet",
+    dedupeKey,
     tenderId,
-    index.version,
-    unreadDocuments,
-    quotaDay,
-  ).finally(() => runningSheets.delete(cacheKey));
-  runningSheets.set(cacheKey, task);
+    userId: null,
+    payload: { sheetId },
+    lane: "interactive",
+  });
+  if (appRoleFromEnv() === "all") void runEnqueuedAiJobNow(dedupeKey);
   return EMPTY_RESPONSE("processing", unreadDocuments);
 }

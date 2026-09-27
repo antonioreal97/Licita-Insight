@@ -30,6 +30,11 @@ import {
   scoreCompanyFit,
   scoreSizeRestriction,
 } from "./jev-client";
+import { fitLexicalGateMode } from "./fit-lexical-gate";
+import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
+import { appRoleFromEnv } from "../app-role";
+import { isAiBatchBudgetPaused } from "./ai-budget";
+import { recordSkippedJobRun } from "../jobs/job-lock";
 
 export { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 export type { CompanyProfileInput, CompanySize } from "./company-fit-policy";
@@ -47,7 +52,6 @@ export type TenderFit = {
 };
 
 export const COMPANY_FIT_PROMPT_VERSION = 2;
-const runningFits = new Map<string, Promise<void>>();
 
 const toProfile = (
   row: typeof companyProfilesTable.$inferSelect,
@@ -175,6 +179,26 @@ async function lexicalMatches(
     limit 20
   `);
   return result.rows.map(({ term }) => term);
+}
+
+export async function lexicalGatePasses(
+  tenderId: string,
+  offerings: string[],
+): Promise<boolean> {
+  if (offerings.length === 0) return false;
+  const result = await db.execute<{ passed: boolean }>(sql`
+    select exists (
+      select 1
+      from tenders t,
+        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term),
+        regexp_split_to_table(terms.term, '[^[:alnum:]]+') words(word)
+      where t.id = ${tenderId}
+        and length(words.word) >= 2
+        and to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.items::text))
+          @@ plainto_tsquery('portuguese', words.word)
+    ) as passed
+  `);
+  return result.rows[0]?.passed === true;
 }
 
 function explicitFilter(
@@ -387,8 +411,29 @@ async function processFit(
       { err: error, userId, tenderId: tender.id },
       "Company fit evaluation failed",
     );
-    if (error instanceof JevUnavailableError) return;
+    throw error;
   }
+}
+
+export async function executeCompanyFitJob(fitId: string): Promise<void> {
+  const [fit] = await db.select().from(companyTenderFitsTable)
+    .where(eq(companyTenderFitsTable.id, fitId)).limit(1);
+  if (!fit || fit.status === "ready" || fit.status === "filtered") return;
+  const [profile, tender] = await Promise.all([
+    getCompanyProfile(fit.userId),
+    db.select({
+      id: tendersTable.id,
+      title: tendersTable.title,
+      objectSummary: tendersTable.objectSummary,
+      description: tendersTable.description,
+      organizationName: tendersTable.organizationName,
+      estimatedValue: tendersTable.estimatedValue,
+      state: tendersTable.state,
+      items: tendersTable.items,
+    }).from(tendersTable).where(eq(tendersTable.id, fit.tenderId)).limit(1),
+  ]);
+  if (!profile || !tender[0] || profile.version !== fit.profileVersion) return;
+  await processFit(fit.id, fit.userId, profile, tender[0]);
 }
 
 const publicFit = (
@@ -420,6 +465,7 @@ async function ensureFit(
   const fingerprint = companyFitTenderFingerprint(tender);
   const key = `${userId}:${profile.version}:${tender.id}:${config.model}:${COMPANY_FIT_PROMPT_VERSION}`;
   const filters = explicitFilter(profile, tender);
+  const gateMode = fitLexicalGateMode();
   const [existing] = await db
     .select()
     .from(companyTenderFitsTable)
@@ -442,17 +488,7 @@ async function ensureFit(
     existing?.tenderFingerprint === fingerprint &&
     (existing.status === "processing" || existing.status === "failed")
   ) {
-    const active = runningFits.get(key);
-    if (active && wait) {
-      await active;
-      const [completed] = await db
-        .select()
-        .from(companyTenderFitsTable)
-        .where(eq(companyTenderFitsTable.id, existing.id))
-        .limit(1);
-      return completed ? publicFit(completed) : publicFit(existing);
-    }
-    if (active || existing.updatedAt.getTime() > Date.now() - 5 * 60_000)
+    if (existing.updatedAt.getTime() > Date.now() - 5 * 60_000)
       return publicFit(existing);
   }
   const id = existing?.id ?? randomUUID();
@@ -489,12 +525,61 @@ async function ensureFit(
           score: "0",
           reasons: filters,
           responseModel: null,
+          lexicalGatePass: null,
           checkedAt: new Date(),
           updatedAt: new Date(),
         },
       })
       .returning();
     return publicFit(row!);
+  }
+  const lexicalGatePass = gateMode === "off"
+    ? null
+    : await lexicalGatePasses(tender.id, profile.offerings);
+  if (gateMode === "on" && !lexicalGatePass) {
+    const checkedAt = new Date();
+    const [gated] = await db
+      .insert(companyTenderFitsTable)
+      .values({
+        id,
+        userId,
+        tenderId: tender.id,
+        profileVersion: profile.version,
+        tenderFingerprint: fingerprint,
+        requestedModel: config.model,
+        promptVersion: COMPANY_FIT_PROMPT_VERSION,
+        status: "ready",
+        level: "low",
+        score: "0",
+        reasons: [{ kind: "no_offering_term" }],
+        lexicalGatePass: false,
+        checkedAt,
+        updatedAt: checkedAt,
+      })
+      .onConflictDoUpdate({
+        target: [
+          companyTenderFitsTable.userId,
+          companyTenderFitsTable.profileVersion,
+          companyTenderFitsTable.tenderId,
+          companyTenderFitsTable.requestedModel,
+          companyTenderFitsTable.promptVersion,
+        ],
+        set: {
+          tenderFingerprint: fingerprint,
+          status: "ready",
+          level: "low",
+          score: "0",
+          reasons: [{ kind: "no_offering_term" }],
+          responseModel: null,
+          inputTokens: 0,
+          estimatedCostUsd: "0",
+          lexicalGatePass: false,
+          checkedAt,
+          updatedAt: checkedAt,
+        },
+      })
+      .returning();
+    return publicFit(gated!);
   }
   const [row] = await db
     .insert(companyTenderFitsTable)
@@ -507,6 +592,7 @@ async function ensureFit(
       requestedModel: config.model,
       promptVersion: COMPANY_FIT_PROMPT_VERSION,
       status: "processing",
+      lexicalGatePass,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -524,20 +610,35 @@ async function ensureFit(
         score: null,
         reasons: [],
         responseModel: null,
+        lexicalGatePass,
         checkedAt: null,
         updatedAt: new Date(),
       },
     })
     .returning();
-  let task = runningFits.get(key);
-  if (!task) {
-    task = processFit(row!.id, userId, profile, tender).finally(() =>
-      runningFits.delete(key),
-    );
-    runningFits.set(key, task);
+  const queued = await enqueueAiJob({
+    kind: "fit",
+    dedupeKey: `fit:${key}`,
+    tenderId: tender.id,
+    userId,
+    payload: { fitId: row!.id },
+    lane: "batch",
+  });
+  if (queued.reason === "queue_full") {
+    await db.update(companyTenderFitsTable).set({ status: "failed", updatedAt: new Date() })
+      .where(eq(companyTenderFitsTable.id, row!.id));
   }
   if (wait) {
-    await task;
+    if (appRoleFromEnv() === "all") {
+      await runEnqueuedAiJobNow(`fit:${key}`);
+    } else {
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        const [current] = await db.select({ status: companyTenderFitsTable.status })
+          .from(companyTenderFitsTable).where(eq(companyTenderFitsTable.id, row!.id)).limit(1);
+        if (current?.status === "ready" || current?.status === "filtered" || current?.status === "failed") break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     const [completed] = await db
       .select()
       .from(companyTenderFitsTable)
@@ -590,6 +691,10 @@ export async function getTenderFits(
 export async function evaluateProfileAlertNotifications(
   completedAt = new Date(),
 ): Promise<number> {
+  if (await isAiBatchBudgetPaused()) {
+    await recordSkippedJobRun("profile_alerts", "skipped_budget");
+    return 0;
+  }
   const profiles = await db
     .select({
       userId: companyProfilesTable.userId,

@@ -66,6 +66,7 @@ export const tenderAiIndexesTable = pgTable("tender_ai_indexes", {
   error: text("error"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  purgedAt: timestamp("purged_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -135,7 +136,11 @@ export const aiDailyUsageTable = pgTable(
       .default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.quotaDay] }), check("ai_daily_usage_used_check", sql`${table.used} >= 0`)],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.quotaDay] }),
+    index("ai_daily_usage_day_idx").on(table.quotaDay),
+    check("ai_daily_usage_used_check", sql`${table.used} >= 0`),
+  ],
 );
 
 export const aiAskRequestsTable = pgTable(

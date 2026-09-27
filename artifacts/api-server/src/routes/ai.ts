@@ -90,7 +90,7 @@ router.get(
   requireAuth,
   requireSubscription,
   asyncHandler(async (req, res) => {
-    res.json(await getTenderSheet(String(req.params.id)));
+    res.json(await getTenderSheet(String(req.params.id), authContext(res).user.id));
   }),
 );
 

@@ -12,8 +12,9 @@ import {
   type AiPassageRecord,
 } from "@workspace/db";
 import { entitlementSource, type EntitlementSource } from "../billing/billing-access";
-import { AiQuotaExceededError, AiUnavailableError } from "../lib/api-error";
+import { AiQuotaExceededError, AiUnavailableError, ConflictError } from "../lib/api-error";
 import { logger } from "../lib/logger";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { aiConfig } from "./config";
 import { JevUnavailableError, scoreTenderPassage } from "./jev-client";
@@ -98,7 +99,7 @@ async function reserveQuota(userId: string, now: Date): Promise<Quota> {
 }
 
 export async function getAskStatus(userId: string, tenderId: string, trigger: boolean, now = new Date()): Promise<AskStatus> {
-  const index = await ensureTenderIndex(tenderId, trigger);
+  const index = await ensureTenderIndex(tenderId, trigger, { userId, lane: "interactive" });
   const documents = await db
     .select({
       id: tenderAiDocumentsTable.id,
@@ -147,7 +148,12 @@ export async function askTender(
 }> {
   const config = aiConfig();
   if (!config.apiKey) throw new AiUnavailableError();
-  const indexStatus = await ensureTenderIndex(tenderId, true);
+  const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
+  if (indexStatus === "expired") {
+    throw new ConflictError("The tender document index has expired", [
+      { field: "index", issue: "index_expired" },
+    ]);
+  }
   if (indexStatus === "processing")
     return {
       status: "processing",
@@ -266,9 +272,11 @@ export async function purgeExpiredAiQuestions(now = new Date()): Promise<number>
 
 export function startAiRetentionScheduler(): () => void {
   const run = () => {
-    void purgeExpiredAiQuestions()
-      .then((deleted) => {
-        if (deleted > 0) logger.info({ deleted }, "Expired AI questions purged");
+    void tryRunSingletonJob("ai_question_retention", () => purgeExpiredAiQuestions())
+      .then((result) => {
+        if (result.acquired && result.value > 0) {
+          logger.info({ deleted: result.value }, "Expired AI questions purged");
+        }
       })
       .catch((error) => logger.error({ err: error }, "AI question retention cleanup failed"));
   };

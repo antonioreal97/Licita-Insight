@@ -49,6 +49,7 @@ services:
       PUBLIC_APP_ORIGIN: http://localhost:24252
       PNCP_DAILY_COLLECT: "false"
       NODE_ENV: development
+      METRICS_PORT: ${API_METRICS_PORT:-}
     ports:
       - "3001:3001"
     command: pnpm --filter @workspace/api-server run dev
@@ -62,6 +63,33 @@ services:
           "node",
           "-e",
           "fetch('http://127.0.0.1:3001/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  worker:
+    <<: *app
+    profiles: ["scale"]
+    env_file: .env
+    environment:
+      APP_ROLE: worker
+      WORKER_HEALTH_PORT: "3002"
+      DATABASE_URL: postgres://licita:licita@postgres:5432/licita
+      NODE_ENV: development
+      METRICS_PORT: ${WORKER_METRICS_PORT:-}
+    command: pnpm --filter @workspace/api-server run dev:worker
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3002/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 5s

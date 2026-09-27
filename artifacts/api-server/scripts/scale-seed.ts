@@ -12,7 +12,7 @@ const arg = (name: string): string | undefined => {
   return index >= 0 ? process.argv[index + 1] : undefined;
 };
 
-const rows = Number(arg("--rows") ?? "1000000");
+const rows = Number(arg("--rows") ?? "1500000");
 const seed = Number(arg("--seed") ?? "42");
 const skipSchema = process.argv.includes("--skip-schema");
 if (!Number.isSafeInteger(rows) || rows < 1 || rows > 2_000_000) {

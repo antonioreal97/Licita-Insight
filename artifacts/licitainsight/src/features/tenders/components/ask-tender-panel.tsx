@@ -25,6 +25,9 @@ const MAX_HISTORY = 5;
 
 type Entry = { id: number; question: string } & ({ state: 'pending' } | { state: 'done'; result: AskTenderResult } | { state: 'error'; error: unknown });
 
+/** Documents leave the index 90 days after the proposal deadline; saving the tender brings them back. */
+const EXPIRED_MESSAGE = 'Os documentos deste edital saíram do índice 90 dias depois do prazo da proposta. Salve o edital para consultá-los de novo.';
+
 const noteBox = 'flex gap-2.5 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground';
 const errorBox = 'flex gap-2.5 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-4 py-3 type-meta text-destructive-subtle-foreground';
 const linkClass = 'font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring';
@@ -47,6 +50,8 @@ function askErrorMessage(error: unknown, limit: number | undefined) {
       return 'Seu acesso terminou. Assine para continuar perguntando ao edital.';
     case 'INVALID_PARAMETER':
       return `Escreva a pergunta com ${ASK_MIN_LENGTH} a ${ASK_MAX_LENGTH} caracteres.`;
+    case 'CONFLICT':
+      return error.detail('index_expired') ? EXPIRED_MESSAGE : withRef('Não foi possível consultar o edital. Tente de novo.', error);
     case 'NETWORK_ERROR':
       return 'Sem conexão com o servidor. Tente de novo.';
     default:
@@ -300,6 +305,13 @@ function IndexState({ status, onRetry, retrying }: { status: TenderAskStatus; on
           <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
           Ainda não conseguimos ler o texto dos documentos deste edital: são imagens digitalizadas ou estão num formato que não lemos (como planilhas).
           Consulte os documentos na lista.
+        </p>
+      );
+    case 'expired':
+      return (
+        <p className={noteBox} data-testid="text-ask-expired">
+          <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
+          {EXPIRED_MESSAGE}
         </p>
       );
     case 'failed':

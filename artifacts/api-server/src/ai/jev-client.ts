@@ -2,6 +2,7 @@ import { TypeSafeClient, choice, noul, score } from "@typesafe-ai/sdk";
 import { aiConfig } from "./config";
 import { sheetFieldSpec } from "./tender-sheet-policy";
 import type { TenderSheetFieldId } from "@workspace/db";
+import { jevScheduler, retryAfterMs, type JevLane } from "./jev-scheduler";
 
 export class JevUnavailableError extends Error {
   constructor(
@@ -46,16 +47,24 @@ export type JevSheetChoice = {
   inputTokens: number;
 };
 
-const clientFor = (requestFetch?: typeof fetch) => {
+const clientFor = (lane: JevLane, requestFetch?: typeof fetch) => {
   const config = aiConfig();
   if (!config.apiKey)
     throw new JevUnavailableError("JEV_API_KEY is not configured");
+  const baseFetch = requestFetch ?? fetch;
+  const observedFetch: typeof fetch = async (input, init) => {
+    const response = await baseFetch(input, init);
+    if (response.status === 429 || response.status === 529) {
+      jevScheduler.recordRateLimit(lane, retryAfterMs(response));
+    }
+    return response;
+  };
   return new TypeSafeClient({
     apiKey: config.apiKey,
     defaultModel: config.model,
     timeout: config.timeoutMs,
     logLevel: "off",
-    ...(requestFetch ? { fetch: requestFetch } : {}),
+    fetch: observedFetch,
   });
 };
 
@@ -95,7 +104,7 @@ export async function scoreCompanyFit(
     ...exclusionQuestions,
   };
   try {
-    const result = await clientFor(requestFetch).systemOne({
+    const result = await jevScheduler.schedule("batch", () => clientFor("batch", requestFetch).systemOne({
       model: config.model,
       state: {
         perfil_da_empresa: {
@@ -106,7 +115,7 @@ export async function scoreCompanyFit(
         licitacao: input.tenderText,
       },
       questions,
-    });
+    }));
     const answers = result.answers as Record<
       string,
       { type: string; noul?: number }
@@ -131,7 +140,7 @@ export async function scoreSizeRestriction(
 ): Promise<JevSizeRestriction> {
   const config = aiConfig();
   try {
-    const result = await clientFor(requestFetch).systemOne({
+    const result = await jevScheduler.schedule("batch", () => clientFor("batch", requestFetch).systemOne({
       model: config.model,
       state: { trecho_do_edital: passage },
       questions: {
@@ -146,7 +155,7 @@ export async function scoreSizeRestriction(
           },
         ),
       },
-    });
+    }));
     return {
       restriction: result.answers.restricao.choice,
       confidence: result.answers.restricao.confidence,
@@ -164,9 +173,8 @@ export async function scoreTenderPassage(
   requestFetch?: typeof fetch,
 ): Promise<JevScore> {
   const config = aiConfig();
-  const client = clientFor(requestFetch);
   try {
-    const result = await client.systemOne({
+    const result = await jevScheduler.schedule("interactive", () => clientFor("interactive", requestFetch).systemOne({
       model: config.model,
       state: { pergunta_do_usuario: question, trecho_do_edital: passage },
       questions: {
@@ -179,7 +187,7 @@ export async function scoreTenderPassage(
           },
         ),
       },
-    });
+    }));
     return {
       relevance: result.answers.responde.noul,
       model: result.model,
@@ -210,11 +218,11 @@ export async function scoreSheetPassage(
     }),
   );
   try {
-    const result = await clientFor(requestFetch).systemOne({
+    const result = await jevScheduler.schedule("interactive", () => clientFor("interactive", requestFetch).systemOne({
       model: config.model,
       state: { trecho_do_edital: passage },
       questions,
-    });
+    }));
     const answers = result.answers as Record<
       string,
       { type: string; noul?: number }
@@ -243,17 +251,18 @@ export async function classifySheetField(
   const spec = sheetFieldSpec(fieldId);
   if (!spec.choices)
     throw new Error(`Sheet field ${fieldId} is not categorical`);
+  const choices = spec.choices;
   try {
-    const result = await clientFor(requestFetch).systemOne({
+    const result = await jevScheduler.schedule("interactive", () => clientFor("interactive", requestFetch).systemOne({
       model: config.model,
       state: { trecho_do_edital: passage },
       questions: {
         answer: choice(
           `Classifique somente a regra explícita deste trecho para o campo ${fieldId}.`,
-          spec.choices,
+          choices,
         ),
       },
-    });
+    }));
     return {
       answer: result.answers.answer.choice,
       confidence: result.answers.answer.confidence,

@@ -4,6 +4,7 @@ import {
   IngestInProgressError,
   startPncpIngest,
 } from "./collect-pncp";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 
 const TZ = "America/Sao_Paulo";
 
@@ -59,8 +60,13 @@ export function startDailyPncpCollect(): () => void {
 
   const run = async (reason: string) => {
     try {
-      const options = collectOptionsFromEnv();
-      const started = await startPncpIngest(options);
+      const locked = await tryRunSingletonJob("pncp_collect", async () => {
+        const options = collectOptionsFromEnv();
+        const started = await startPncpIngest(options);
+        return { options, started };
+      });
+      if (!locked.acquired) return;
+      const { options, started } = locked.value;
       logger.info(
         { reason, runId: started.runId, from: options.from, to: options.to },
         "Daily PNCP collect started",
@@ -111,8 +117,12 @@ export function startDailyCultureCollect(): () => void {
 
   const run = async (reason: string) => {
     try {
-      const { startCultureIngest } = await import("./collect-opportunities");
-      const started = await startCultureIngest();
+      const locked = await tryRunSingletonJob("culture_collect", async () => {
+        const { startCultureIngest } = await import("./collect-opportunities");
+        return await startCultureIngest();
+      });
+      if (!locked.acquired) return;
+      const started = locked.value;
       logger.info(
         { reason, runId: started.runId },
         "Daily cultural opportunities collect started",
