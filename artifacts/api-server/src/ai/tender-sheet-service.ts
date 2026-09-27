@@ -67,12 +67,21 @@ export type TenderSheetCalculation = {
   inputTokens: number;
 };
 
+export type TenderQualificationCalculation = {
+  qualificationChecklist: QualificationItem[];
+  diagnostics: TenderSheetDiagnostic[];
+  candidates: QualificationScoredCandidate[];
+  model: string;
+  inputTokens: number;
+};
+
 type Candidate = {
   id: string;
   documentTitle: string;
   documentUrl: string;
   page: number;
   text: string;
+  context?: string;
 };
 
 type QualificationPageRow = {
@@ -198,16 +207,25 @@ async function shortlistQualificationCandidates(
     const pageText = stitchIndexedPage(
       page.passages.map(({ passageOrder: order, text }) => ({ order, text })),
     );
-    for (const [segmentIndex, text] of segmentQualificationPage(
-      pageText,
-    ).entries()) {
-      if (!isQualificationCandidateText(text)) continue;
+    let numberedContext: string | undefined;
+    for (const [segmentIndex, text] of segmentQualificationPage(pageText).entries()) {
+      const numbered = /^\d{1,2}(?:\.\d{1,2}){0,3}\.?\s/u.test(text);
+      const lettered = /^[a-z]\)\s/iu.test(text);
+      const context = numberedContext;
+      if (numbered) numberedContext = text;
+      if (
+        !isQualificationCandidateText(text) &&
+        !(lettered && numberedContext && isQualificationCandidateText(numberedContext))
+      ) {
+        continue;
+      }
       candidates.push({
         id: `${pageKey}:${segmentIndex}`,
         documentTitle: page.metadata.documentTitle,
         documentUrl: page.metadata.documentUrl,
         page: page.metadata.page,
         text,
+        context: lettered ? numberedContext : numbered ? context : undefined,
       });
       if (candidates.length >= limit) return candidates;
     }
@@ -215,19 +233,68 @@ async function shortlistQualificationCandidates(
   return candidates;
 }
 
+export async function calculateQualificationChecklist(
+  tenderId: string,
+  indexVersion: number,
+): Promise<TenderQualificationCalculation> {
+  const config = aiConfig();
+  const candidates = await shortlistQualificationCandidates(
+    tenderId,
+    indexVersion,
+  );
+  const scored: QualificationScoredCandidate[] = [];
+  let inputTokens = 0;
+  let model = config.model;
+  const results = await Promise.all(
+    candidates.map(async (candidate) => ({
+      candidate,
+      result: await classifyQualificationCandidate(
+        candidate.text,
+        undefined,
+        candidate.context,
+      ),
+    })),
+  );
+  for (const { candidate, result } of results) {
+    inputTokens += result.inputTokens;
+    model = result.model;
+    scored.push({
+      evidence: {
+        documentTitle: candidate.documentTitle,
+        documentUrl: candidate.documentUrl,
+        page: candidate.page,
+        text: candidate.text,
+      },
+      isRequirement: result.isRequirement,
+      type: result.type,
+      typeConfidence: result.typeConfidence,
+      mentionsLaborInAdditionToFiscal:
+        result.mentionsLaborInAdditionToFiscal,
+    });
+  }
+  const built = buildQualificationChecklist(scored);
+  return {
+    qualificationChecklist: built.items,
+    diagnostics: built.diagnostics,
+    candidates: scored,
+    model,
+    inputTokens,
+  };
+}
+
 export async function calculateTenderSheet(
   tenderId: string,
   indexVersion: number,
 ): Promise<TenderSheetCalculation> {
   const config = aiConfig();
-  const [shortlists, qualificationCandidates] = await Promise.all([
+  const [shortlists, qualification] = await Promise.all([
     Promise.all(
       SHEET_FIELDS.map(async ({ id }) => ({
         id,
         candidates: await shortlistField(tenderId, indexVersion, id),
       })),
     ),
-    shortlistQualificationCandidates(tenderId, indexVersion),
+    calculateQualificationChecklist(tenderId, indexVersion),
   ]);
   const grouped = new Map<
     string,
@@ -289,31 +356,8 @@ export async function calculateTenderSheet(
     inputTokens += result.inputTokens;
     responseModel = result.model;
   }
-  const qualificationScored: QualificationScoredCandidate[] = [];
-  const qualificationResults = await Promise.all(
-    qualificationCandidates.map(async (candidate) => ({
-      candidate,
-      result: await classifyQualificationCandidate(candidate.text),
-    })),
-  );
-  for (const { candidate, result } of qualificationResults) {
-    inputTokens += result.inputTokens;
-    responseModel = result.model;
-    qualificationScored.push({
-      evidence: {
-        documentTitle: candidate.documentTitle,
-        documentUrl: candidate.documentUrl,
-        page: candidate.page,
-        text: candidate.text,
-      },
-      isRequirement: result.isRequirement,
-      type: result.type,
-      typeConfidence: result.typeConfidence,
-      mentionsLaborInAdditionToFiscal:
-        result.mentionsLaborInAdditionToFiscal,
-    });
-  }
-  const qualification = buildQualificationChecklist(qualificationScored);
+  inputTokens += qualification.inputTokens;
+  responseModel = qualification.model;
   const sheet = buildSheetFields(
     candidates,
     choices,
@@ -323,7 +367,7 @@ export async function calculateTenderSheet(
   return {
     fields: sheet.fields,
     diagnostics: [...sheet.diagnostics, ...qualification.diagnostics],
-    qualificationChecklist: qualification.items,
+    qualificationChecklist: qualification.qualificationChecklist,
     model: responseModel,
     inputTokens,
   };

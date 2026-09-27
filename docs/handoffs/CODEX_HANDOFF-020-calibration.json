@@ -1,0 +1,1804 @@
+{
+  "model": "jev-1.13.0",
+  "promptVersion": 3,
+  "requirementThreshold": 0.5,
+  "typeCombinationThreshold": 0.7,
+  "laborCombinationThreshold": 0.5,
+  "candidateLimit": 40,
+  "generatedAt": "2026-09-27T20:39:58.933Z",
+  "database": "licita_cycle4",
+  "indexedTenderCount": 3,
+  "skipped": [],
+  "tenders": [
+    {
+      "tenderId": "03288908000483-1-000042-2026",
+      "title": "REGISTRO DE PREÇOS PARA AQUISIÇÃO DE PASTILHAS DETERGENTES DESTINADAS À HIGIENIZAÇÃO DE EQUIPAMENTOS DE COZINHA DOS RESTAURANTES DO SESC DF.",
+      "indexVersion": 3,
+      "indexStatus": "ready",
+      "passageCount": 225,
+      "candidateCount": 40,
+      "passedThresholdCount": 12,
+      "combinationQuestionCount": 9,
+      "inputTokens": 34926,
+      "estimatedCostUsd": 0.00146689,
+      "items": [
+        {
+          "type": "ato_societario",
+          "evidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "c) ato constitutivo, estatuto ou Contrato social em vigor, compatível com o objeto desta licitação, devidamente registrado no órgão competente; e"
+          },
+          "confidence": 0.96
+        },
+        {
+          "type": "regularidade_fiscal",
+          "evidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "b) Prova de inscrição no Cadastro de Contribuintes Estadual ou Municipal, se houver, relativo ao domicílio ou sede da licitante, pertinente ao seu ramo de atividade e compatível com o objeto desta licitação;"
+          },
+          "confidence": 0.94
+        },
+        {
+          "type": "qualificacao_tecnica",
+          "evidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "a) atestado(s) de capacidade técnica, emitido(s) por entidade(s) pública(s) ou privada(s), compatível(is) com o objeto desta licitação, que comprove o fornecimento de, no mínimo, 10% (dez por cento) da quantidade estimada do grupo licitado. Os atestados deverão conter as seguintes informações: a.1) nome ou razão social, CNPJ e endereço completo do emitente; a.2) data da emissão do atestado; a.3) assinatura e identificação do signatário (exemplos: nome, telefone, cargo e função que exerce junto à empresa emitente); a.4) descrição do objeto fornecido, compatível com o objeto desta licitação;"
+          },
+          "confidence": 0.94
+        },
+        {
+          "type": "qualificacao_economica",
+          "evidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 12,
+            "text": "a) Certidão negativa de falência, concordata ou execução patrimonial, expedida pelo distribuidor da sede da licitante."
+          },
+          "confidence": 0.96
+        }
+      ],
+      "diagnostics": [
+        {
+          "id": "ato_societario",
+          "bestNoul": 0.96,
+          "secondNoul": 0.94,
+          "bestEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "c) ato constitutivo, estatuto ou Contrato social em vigor, compatível com o objeto desta licitação, devidamente registrado no órgão competente; e"
+          },
+          "secondEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "b) prova de registro no órgão competente, no caso de empresário individual;"
+          }
+        },
+        {
+          "id": "regularidade_fiscal",
+          "bestNoul": 0.94,
+          "secondNoul": 0.93,
+          "bestEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "b) Prova de inscrição no Cadastro de Contribuintes Estadual ou Municipal, se houver, relativo ao domicílio ou sede da licitante, pertinente ao seu ramo de atividade e compatível com o objeto desta licitação;"
+          },
+          "secondEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "c) Prova de regularidade para com a Fazenda Federal, Estadual e a Municipal do domicílio ou da sede da licitante;"
+          }
+        },
+        {
+          "id": "regularidade_trabalhista",
+          "bestNoul": null,
+          "secondNoul": null,
+          "bestEvidence": null,
+          "secondEvidence": null
+        },
+        {
+          "id": "qualificacao_tecnica",
+          "bestNoul": 0.94,
+          "secondNoul": 0.91,
+          "bestEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 11,
+            "text": "a) atestado(s) de capacidade técnica, emitido(s) por entidade(s) pública(s) ou privada(s), compatível(is) com o objeto desta licitação, que comprove o fornecimento de, no mínimo, 10% (dez por cento) da quantidade estimada do grupo licitado. Os atestados deverão conter as seguintes informações: a.1) nome ou razão social, CNPJ e endereço completo do emitente; a.2) data da emissão do atestado; a.3) assinatura e identificação do signatário (exemplos: nome, telefone, cargo e função que exerce junto à empresa emitente); a.4) descrição do objeto fornecido, compatível com o objeto desta licitação;"
+          },
+          "secondEvidence": {
+            "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 3,
+            "text": "4.1. Será exigida a comprovação de aptidão para o fornecimento de bens compatíveis em características, quantidades e prazos com o objeto desta licitação, por meio da apresentação de atestado(s) de capacidade técnica fornecido(s) por pessoa(s) jurídica(s) de direito público ou privado."
+          }
+        },
+        {
+          "id": "qualificacao_economica",
+          "bestNoul": 0.96,
+          "secondNoul": 0.91,
+          "bestEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 12,
+            "text": "a) Certidão negativa de falência, concordata ou execução patrimonial, expedida pelo distribuidor da sede da licitante."
+          },
+          "secondEvidence": {
+            "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/03288908000483/compras/2026/42/arquivos/1",
+            "page": 12,
+            "text": "b) Balanço patrimonial, demonstração de resultado de exercício e demais demonstrações contábeis do último exercício social, já exigíveis e apresentados na forma da lei, comprovando, índices de Liquidez Geral (LG), Liquidez Corrente (LC), e Solvência Geral (SG) superiores ou iguais a 1 (um), obtidos por meio da aplicação das seguintes fórmulas: I.Liquidez Geral (LG) = Ativo Circulante + Realizável a Longo Prazo ≥ 1 Passivo Circulante + Passivo não Circulante II.Solvência Geral (SG) = Ativo Total ≥ 1 Passivo Circulante + Passivo não Circulante III.Liquidez Corrente (LC) = Ativo Circulante ≥ 1 Passivo Circulante b.1) Caso a empresa interessada apresente resultado inferior a 1 (um) em qualquer dos índices de Liquidez Geral (LG), Solvência Geral (SG) e Liquidez Corrente (LC), será exigido para fins de habilitação capital mínimo OU patrimônio líquido mínimo de 10 % do valor total estimado da contratação. b.2) As empresas criadas no exercício financeiro da licitação deverão atender a todas as exigências da habilitação e poderão substituir os demonstrativos contábeis pelo balanço de abertura. b.3) O atendimento dos índices econômicos previstos neste item deverá ser atestado mediante declaração assinada por profissional habilitado da área contábil, apresentada pelo fornecedor."
+          }
+        }
+      ],
+      "candidates": [
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14. DA DOCUMENTAÇÃO DE HABILITAÇÃO",
+          "isRequirement": 0.12,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.1. Para habilitar-se à presente licitação, a interessada deverá apresentar a seguinte documentação:",
+          "isRequirement": 0.28,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.1.1. Habilitação Jurídica:",
+          "isRequirement": 0.45,
+          "type": "ato_societario",
+          "typeConfidence": 0.53,
+          "mentionsLaborInAdditionToFiscal": 0.07,
+          "passed": false
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "a) cédula de identidade do representante legal da empresa ou de seu procurador, quando este for o signatário da proposta;",
+          "isRequirement": 0.94,
+          "type": "ato_societario",
+          "typeConfidence": 0.65,
+          "mentionsLaborInAdditionToFiscal": 0.02,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "b) prova de registro no órgão competente, no caso de empresário individual;",
+          "isRequirement": 0.94,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "c) ato constitutivo, estatuto ou Contrato social em vigor, compatível com o objeto desta licitação, devidamente registrado no órgão competente; e",
+          "isRequirement": 0.96,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "d) ato de nomeação ou de eleição dos administradores, devidamente registrado no órgão competente, na hipótese de terem sido nomeados ou eleitos em separado.",
+          "isRequirement": 0.91,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.1.2. Qualificação Técnica:",
+          "isRequirement": 0.23,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.9,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "a) atestado(s) de capacidade técnica, emitido(s) por entidade(s) pública(s) ou privada(s), compatível(is) com o objeto desta licitação, que comprove o fornecimento de, no mínimo, 10% (dez por cento) da quantidade estimada do grupo licitado. Os atestados deverão conter as seguintes informações: a.1) nome ou razão social, CNPJ e endereço completo do emitente; a.2) data da emissão do atestado; a.3) assinatura e identificação do signatário (exemplos: nome, telefone, cargo e função que exerce junto à empresa emitente); a.4) descrição do objeto fornecido, compatível com o objeto desta licitação;",
+          "isRequirement": 0.94,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.1.3. Regularidade Fiscal:",
+          "isRequirement": 0.41,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.95,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "a) Prova de inscrição no Cadastro Nacional de Pessoas Jurídicas (CNPJ);",
+          "isRequirement": 0.93,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.51,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "b) Prova de inscrição no Cadastro de Contribuintes Estadual ou Municipal, se houver, relativo ao domicílio ou sede da licitante, pertinente ao seu ramo de atividade e compatível com o objeto desta licitação;",
+          "isRequirement": 0.94,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 11,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "c) Prova de regularidade para com a Fazenda Federal, Estadual e a Municipal do domicílio ou da sede da licitante;",
+          "isRequirement": 0.93,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 1,
+          "documentTitle": "1.1. Quadro Resumo da Licitação.pdf",
+          "text": "RESUMO DA CONTRATAÇÃO Este quadro tem por finalidade oferecer informações resumidas sobre o certame, contudo não exime o licitante de conhecer plenamente o instrumento convocatório e seus anexos. UASG 926637 SERVIÇO SOCIAL DO COMÉRCIO – SESC (AR/DF) Pregão Eletrônico n° 43/2026 Abertura às 10h00 em 02/10/2026 (www.gov.br/compras) Apesar das disposições constantes no sistema do Compras.gov, a presente licitação será regida pelo Regulamento de Licitações e Contratos do Sesc, aprovado pela Resolução Sesc no. 1.593/2024, de forma que o supracitado sistema será utilizado apenas para operacionalizar a execução do certame até o fim da fase recursal (se houver). OBJETO REGISTRO DE PREÇOS PARA AQUISIÇÃO DE PASTILHAS DETERGENTES DESTINADAS À HIGIENIZAÇÃO DE EQUIPAMENTOS DE COZINHA DOS RESTAURANTES DO SESC-DF. VALOR TOTAL ESTIMADO R$ 64.610,10 (sessenta e quatro mil, seiscentos e dez reais e dez centavos). CRITÉRIO DE JULGAMENTO Menor preço por grupo REGISTRO DE PREÇOS SIM VISTORIA NÃO CONTRATO NÃO AMOSTRA NÃO GARANTIA DE EXECUÇÃO NÃO GARANTIA DE PROPOSTA NÃO QUALIFICAÇÃO TÉCNICA",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 1,
+          "documentTitle": "1.1. Quadro Resumo da Licitação.pdf",
+          "text": "a) atestado(s) de capacidade técnica, emitido(s) por entidade(s) pública(s) ou privada(s), compatível(is) com o objeto desta licitação. Para fins de aceitação será exigida a comprovação da execução de 10% da quantidade estimada da presente licitação. Os atestados deverão conter as seguintes informações: a.1) nome ou razão social, CNPJ e endereço completo do emitente; a.2) data da emissão do atestado; a.3) assinatura e identificação do signatário (exemplos: nome, telefone, cargo e função que exerce junto à empresa emitente); a.4) em caso de atestados contendo assinatura manual, deverão ser apresentadas juntamente as respectivas notas fiscais, ou contratos; a.5) descrição do objeto fornecido, compatível com o objeto desta licitação; QUALIFICAÇÃO ECONÔMICA-FINANCEIRA Certidão negativa de falência, expedida pelo distribuidor da sede da licitante; Balanço patrimonial, demonstração de resultado de exercício e demais demonstrações contábeis do último exercício social, já exigíveis e apresentados na forma da lei, comprovando, índices de Liquidez Geral (LG), Liquidez Corrente (LC), e Solvência Geral (SG) superiores ou iguais a 1 (um); Caso a empresa interessada apresente resultado inferior a 1 (um) em qualquer dos índices de Liquidez Geral (LG), Solvência Geral (SG) e Liquidez Corrente (LC), será exigido para fins de habilitação capital mínimo OU patrimônio líquido mínimo de 10 % do valor total estimado da contratação. As empresas criadas no exercício financeiro da licitação deverão atender a todas as exigências da habilitação e poderão substituir os demonstrativos contábeis pelo balanço de abertura. O atendimento dos índices econômicos previstos neste item deverá ser atestado mediante declaração assinada por profissional habilitado da área contábil, apresentada pelo fornecedor. DA EXECUÇÃO Os produtos deverão ser novos, originais, de primeiro uso, não recondicionados, entregues em suas embalagens originais, lacradas e sem qualquer sinal de violação ou avaria. Os produtos deverão possuir prazo de validade remanescente de, no mínimo, 75% (setenta e cinco por cento) do prazo total de validade informado pelo fabricante, contado da data da entrega. Considerando a necessidade de compatibilidade técnica com os fornos combinados da marca Rational instalados nas Unidades de Alimentação e Nutrição do Sesc-AR/DF, somente serão aceitos os produtos da marca Rational, nos modelos especificados neste Termo de Referência. Não serão aceitos produtos similares, equivalentes ou de outras marcas, ainda que apresentem características ou especificações técnicas semelhantes, tendo em vista a necessidade de assegurar a compatibilidade com os programas automáticos de limpeza e conservação dos equipamentos, bem como a adequada higienização, conservação e segurança operacional dos fornos CONTATO licitacao@sescdf.com.br",
+          "isRequirement": 0.89,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.74,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "20.6. Para fins de atesto e posterior pagamento, a CONTRATADA deverá apresentar a nota fiscal acompanhada dos seguintes documentos de regularidade fiscal:",
+          "isRequirement": 0.09,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "a) Certificado de Regularidade do FGTS – CRF;",
+          "isRequirement": 0.14,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "b) Certidão Conjunta Negativa de Débitos relativos aos Tributos Federais e à Dívida Ativa da União;",
+          "isRequirement": 0.15,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "c) Certidão Negativa de Débitos Tributários Estadual;",
+          "isRequirement": 0.13,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "d) Certidão Negativa de Débitos Tributários Municipal.",
+          "isRequirement": 0.14,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "20.7. A documentação prevista no item anterior poderá ser substituída por Certidão emitida pelo Sistema de Cadastramento Unificado de Fornecedores – SICAF, quando aplicável.",
+          "isRequirement": 0.14,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.9,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "20.8. A CONTRATADA deverá manter, durante toda a execução da contratação, as condições de habilitação exigidas na licitação, observando-se que:",
+          "isRequirement": 0.17,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "a) constatada irregularidade fiscal, o CONTRATANTE notificará a CONTRATADA para que regularize sua situação ou apresente defesa, no prazo de 5 (cinco) dias úteis;",
+          "isRequirement": 0.07,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.95,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "b) o prazo previsto na alínea anterior poderá ser prorrogado uma única vez, por igual período, a critério do CONTRATANTE.",
+          "isRequirement": 0.06,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "3.1. Para habilitar-se à presente licitação, a interessada deverá apresentar a seguinte documentação:",
+          "isRequirement": 0.39,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "3.1.1. As exigências de habilitação jurídica e de regularidade fiscal e trabalhista são as usuais para a generalidade dos objetos, conforme a ser disciplinado no edital.",
+          "isRequirement": 0.09,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.54,
+          "mentionsLaborInAdditionToFiscal": 0.9,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "3.1.2. Os critérios de qualificação econômico-financeira a serem atendidos pelo fornecedor estarão previstos no edital.",
+          "isRequirement": 0.08,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.68,
+          "mentionsLaborInAdditionToFiscal": 0.28,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "4. DA QUALIFICAÇÃO TÉCNICA",
+          "isRequirement": 0.11,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.68,
+          "mentionsLaborInAdditionToFiscal": 0.11,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "2. Termo de Referencia - PG 43-2026.pdf",
+          "text": "4.1. Será exigida a comprovação de aptidão para o fornecimento de bens compatíveis em características, quantidades e prazos com o objeto desta licitação, por meio da apresentação de atestado(s) de capacidade técnica fornecido(s) por pessoa(s) jurídica(s) de direito público ou privado.",
+          "isRequirement": 0.91,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 12,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.1.4. Qualificação Econômico-Financeira:",
+          "isRequirement": 0.29,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.56,
+          "mentionsLaborInAdditionToFiscal": 0.08,
+          "passed": false
+        },
+        {
+          "page": 12,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "a) Certidão negativa de falência, concordata ou execução patrimonial, expedida pelo distribuidor da sede da licitante.",
+          "isRequirement": 0.96,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 12,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "b) Balanço patrimonial, demonstração de resultado de exercício e demais demonstrações contábeis do último exercício social, já exigíveis e apresentados na forma da lei, comprovando, índices de Liquidez Geral (LG), Liquidez Corrente (LC), e Solvência Geral (SG) superiores ou iguais a 1 (um), obtidos por meio da aplicação das seguintes fórmulas: I.Liquidez Geral (LG) = Ativo Circulante + Realizável a Longo Prazo ≥ 1 Passivo Circulante + Passivo não Circulante II.Solvência Geral (SG) = Ativo Total ≥ 1 Passivo Circulante + Passivo não Circulante III.Liquidez Corrente (LC) = Ativo Circulante ≥ 1 Passivo Circulante b.1) Caso a empresa interessada apresente resultado inferior a 1 (um) em qualquer dos índices de Liquidez Geral (LG), Solvência Geral (SG) e Liquidez Corrente (LC), será exigido para fins de habilitação capital mínimo OU patrimônio líquido mínimo de 10 % do valor total estimado da contratação. b.2) As empresas criadas no exercício financeiro da licitação deverão atender a todas as exigências da habilitação e poderão substituir os demonstrativos contábeis pelo balanço de abertura. b.3) O atendimento dos índices econômicos previstos neste item deverá ser atestado mediante declaração assinada por profissional habilitado da área contábil, apresentada pelo fornecedor.",
+          "isRequirement": 0.91,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 12,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.2. A documentação exigida para fins de habilitação jurídica, técnica, fiscal e econômico- financeira poderá ser substituída pelo registro cadastral no Sistema de Cadastro de Fornecedor – SICAF.",
+          "isRequirement": 0.24,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.64,
+          "mentionsLaborInAdditionToFiscal": 0.04,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "17.9. O Sesc AR/DF poderá, até a assinatura da Ata, desclassificar a licitante vencedora, por despacho fundamentado, sem direito à indenização ou ressarcimento e sem prejuízo de outras sanções cabíveis, se tiver informação fundada de qualquer fato ou circunstância, anterior ou posterior ao julgamento da licitação, que desabone sua qualificação técnica, habilitação jurídica, qualificação econômico-financeira ou regularidade fiscal.",
+          "isRequirement": 0.09,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.8,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "3. Minuta da Ata - PG 43-2026.pdf",
+          "text": "posterior ao julgamento da licitação, que desabone sua qualificação técnica, habilitação jurídica, qualificação econômico-financeira ou regularidade fiscal.",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.53,
+          "mentionsLaborInAdditionToFiscal": 0.05,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "3. Minuta da Ata - PG 43-2026.pdf",
+          "text": "4.3. Respeitada a ordem de classificação registrada em Ata, será verificada a manutenção das condições de habilitação dos licitantes integrantes do cadastro de reserva quando houver necessidade de contratação, nas seguintes hipóteses:",
+          "isRequirement": 0.09,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.98,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "3. Minuta da Ata - PG 43-2026.pdf",
+          "text": "a) quando o licitante vencedor não assinar a ata de registro de preços no prazo e nas",
+          "isRequirement": 0.13,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 9,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "13.4. Em se tratando de filial, os documentos de habilitação jurídica e regularidade fiscal deverão estar em nome da filial, exceto aqueles que, pela própria natureza, são emitidos somente em nome da matriz.",
+          "isRequirement": 0.18,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.8,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 13,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.4. Documentos ou certidões que não contenham prazo de validade terão eficácia de 90 (noventa) dias, a partir da data de sua emissão.",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.98,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 13,
+          "documentTitle": "1. Minuta de Edital - PG 43-2026.pdf",
+          "text": "14.6. O Sesc AR/DF reserva o direito de promover diligências com vistas a esclarecer ou a complementar a instrução do processo, nos termos da lei, diligenciando contratos, editais, termos de referência, declarações, certidões, notas fiscais, dentre outros. No caso de documentos extraídos da internet, será facultado ao Pregoeiro realizar pesquisa para efeito de confirmação da veracidade ou validade desses.",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        }
+      ],
+      "humanReview": {
+        "reviewed": true,
+        "falsePositives": [],
+        "falseNegatives": [
+          {
+            "type": "ato_societario",
+            "pages": [11],
+            "requirements": [
+              "cédula de identidade do representante ou procurador",
+              "prova de registro do empresário individual",
+              "ato de nomeação ou eleição dos administradores"
+            ],
+            "reason": "A deduplicação obrigatória por (tipo, página) manteve apenas o contrato/ato constitutivo da página 11."
+          },
+          {
+            "type": "regularidade_fiscal",
+            "pages": [11, 12],
+            "requirements": [
+              "inscrição no CNPJ",
+              "regularidade com as Fazendas Federal, Estadual e Municipal",
+              "regularidade perante o FGTS"
+            ],
+            "reason": "O item publicado representa a categoria com a inscrição estadual/municipal, mas outros documentos reais ficaram fora."
+          },
+          {
+            "type": "qualificacao_economica",
+            "pages": [12],
+            "requirements": [
+              "balanço patrimonial e demonstrações contábeis",
+              "declaração dos índices assinada por profissional contábil"
+            ],
+            "reason": "Na mesma página da certidão de falência, a deduplicação reteve somente a certidão."
+          }
+        ],
+        "notes": "Leitura humana do edital (páginas 11–13), do Termo de Referência (páginas 3–4) e da seção de pagamento (página 20). Os quatro itens publicados são exigências reais de habilitação e não houve falso positivo; documentos cobrados apenas após a contratação/pagamento foram corretamente rejeitados. Não há exigência explícita de CNDT neste edital, portanto a ausência de regularidade trabalhista está correta."
+      }
+    },
+    {
+      "tenderId": "34028316000103-1-000086-2026",
+      "title": "PREGÃO CORREIOS Nº 26000413/2026- SE/SPI - Prestação de serviços de passagem automática por pedágio através de dispositivos eletrônicos de identificação (TAG) para utilização pelos veículos operacionais e administrativos dos Correios - Superintendência Estadual/São Paulo Interior -SE-SPI conforme condições previstas no Edital e em seus Apêndices e Anexos. IMPORTANTE: Ao registrar as propostas, atentar para o item 6.9 e seus subitens.A Licitação será realizada pela CPL/MG. O valor estimado da contratação é sigiloso e será divulgado após o encerramento da fase de lances. (REGISTRAR VALOR TOTAL DO LOTE - SUGERIMOS MINUCIOSA LEITURA DO EDITAL E SEUS ANEXOS).",
+      "indexVersion": 1,
+      "indexStatus": "ready",
+      "passageCount": 166,
+      "candidateCount": 40,
+      "passedThresholdCount": 20,
+      "combinationQuestionCount": 6,
+      "inputTokens": 36241,
+      "estimatedCostUsd": 0.00152212,
+      "items": [
+        {
+          "type": "ato_societario",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "b) ato constitutivo, estatuto ou contrato social em vigor, devidamente registrado, em se tratando de sociedades comerciais e, no caso de sociedades por ações, acompanhado de documentos de eleição de seus Administradores;"
+          },
+          "confidence": 0.92
+        },
+        {
+          "type": "ato_societario",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 22,
+            "text": "a) Cópia autenticada dos estatutos sociais e suas alterações posteriores, devidamente registradas na Organização das Cooperativas Brasileiras ou em entidade estadual (se houver); a.1) Para efeito de habilitação jurídica as Cooperativas deverão observar o disposto na Lei 5.764/1971;"
+          },
+          "confidence": 0.93
+        },
+        {
+          "type": "regularidade_fiscal",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;"
+          },
+          "confidence": 0.95
+        },
+        {
+          "type": "regularidade_trabalhista",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT."
+          },
+          "confidence": 0.93
+        },
+        {
+          "type": "regularidade_trabalhista",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 20,
+            "text": "a) Declaração conforme modelo III do apêndice 1 deste Edital, que atende os seguintes pontos: a.1) não emprega menor de dezoito anos em trabalho noturno, perigoso ou insalubre e não emprega menor de dezesseis anos, salvo menor, a partir de quatorze anos, na condição de aprendiz; a.2) que não utiliza, nem utilizará, direta ou indiretamente, em qualquer etapa de sua cadeia produtiva, mão de obra em condições análogas às de escravo, trabalho forçado ou degradante, conforme definido na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes neste Edital; a.5) ter recebido todos os documentos e informações, conhecer e acatar as condições para o cumprimento das obrigações objeto desta licitação; a.6) não está incurso em nenhuma das vedações previstas no art."
+          },
+          "confidence": 0.84
+        },
+        {
+          "type": "qualificacao_tecnica",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "7.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compatível, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital, conforme modelo constante no modelo do Edital."
+          },
+          "confidence": 0.89
+        },
+        {
+          "type": "qualificacao_economica",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 18,
+            "text": "7.5 A capacidade econômica e financeira será comprovada mediante apresentação de Balanço Patrimonial e da Demonstração do Resultado do Exercício, exigidos na forma da lei, para comprovar:"
+          },
+          "confidence": 0.88
+        },
+        {
+          "type": "qualificacao_economica",
+          "evidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 19,
+            "text": "7.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoa física;"
+          },
+          "confidence": 0.93
+        }
+      ],
+      "diagnostics": [
+        {
+          "id": "ato_societario",
+          "bestNoul": 0.93,
+          "secondNoul": 0.92,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 22,
+            "text": "a) Cópia autenticada dos estatutos sociais e suas alterações posteriores, devidamente registradas na Organização das Cooperativas Brasileiras ou em entidade estadual (se houver); a.1) Para efeito de habilitação jurídica as Cooperativas deverão observar o disposto na Lei 5.764/1971;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "b) ato constitutivo, estatuto ou contrato social em vigor, devidamente registrado, em se tratando de sociedades comerciais e, no caso de sociedades por ações, acompanhado de documentos de eleição de seus Administradores;"
+          }
+        },
+        {
+          "id": "regularidade_fiscal",
+          "bestNoul": 0.95,
+          "secondNoul": 0.94,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "a) Certidão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições Federais e Dívida Ativa da União da Fazenda Federal) e Contribuições Sociais e às de Terceiros (INSS);"
+          }
+        },
+        {
+          "id": "regularidade_trabalhista",
+          "bestNoul": 0.93,
+          "secondNoul": 0.84,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT."
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 20,
+            "text": "a) Declaração conforme modelo III do apêndice 1 deste Edital, que atende os seguintes pontos: a.1) não emprega menor de dezoito anos em trabalho noturno, perigoso ou insalubre e não emprega menor de dezesseis anos, salvo menor, a partir de quatorze anos, na condição de aprendiz; a.2) que não utiliza, nem utilizará, direta ou indiretamente, em qualquer etapa de sua cadeia produtiva, mão de obra em condições análogas às de escravo, trabalho forçado ou degradante, conforme definido na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes neste Edital; a.5) ter recebido todos os documentos e informações, conhecer e acatar as condições para o cumprimento das obrigações objeto desta licitação; a.6) não está incurso em nenhuma das vedações previstas no art."
+          }
+        },
+        {
+          "id": "qualificacao_tecnica",
+          "bestNoul": 0.89,
+          "secondNoul": 0.5,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 17,
+            "text": "7.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compatível, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital, conforme modelo constante no modelo do Edital."
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 34,
+            "text": "b) a omissão de qualquer item acima previsto será analisada pelo Pregoeiro, que decidirá pela validação ou não do Atestado de Capacidade Técnica, desde que não comprometa a análise da qualificação técnica e o atestado se encontre pertinente e compatível em características e prazos com o objeto da licitação."
+          }
+        },
+        {
+          "id": "qualificacao_economica",
+          "bestNoul": 0.93,
+          "secondNoul": 0.89,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 19,
+            "text": "7.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoa física;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_26000413-SPI.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/86/arquivos/2",
+            "page": 19,
+            "text": "7.5.3.4. Por força do disposto no art. 4o da Lei 5.764/1971, as Cooperativas estão desobrigadas de apresentar a Certidão Negativa de Falência e Recuperação Judicial/Extrajudicial, entretanto, deverão apresentar declaração própria de não haver contra si qualquer processo de liquidação judicial ou extrajudicial; https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=10000010... 19/35"
+          }
+        }
+      ],
+      "candidates": [
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "b) ato constitutivo, estatuto ou contrato social em vigor, devidamente registrado, em se tratando de sociedades comerciais e, no caso de sociedades por ações, acompanhado de documentos de eleição de seus Administradores;",
+          "isRequirement": 0.92,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "c) inscrição do ato constitutivo, no caso de sociedades civis, acompanhada de prova de diretoria em exercício;",
+          "isRequirement": 0.9,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.3 A prova de regularidade fiscal e trabalhista será realizada mediante a apresentação dos seguintes documentos:",
+          "isRequirement": 0.81,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.84,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) Certidão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições Federais e Dívida Ativa da União da Fazenda Federal) e Contribuições Sociais e às de Terceiros (INSS);",
+          "isRequirement": 0.94,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;",
+          "isRequirement": 0.95,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.93,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT.",
+          "isRequirement": 0.93,
+          "type": "regularidade_trabalhista",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compatível, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital, conforme modelo constante no modelo do Edital.",
+          "isRequirement": 0.89,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5 A capacidade econômica e financeira será comprovada mediante apresentação de Balanço Patrimonial e da Demonstração do Resultado do Exercício, exigidos na forma da lei, para comprovar:",
+          "isRequirement": 0.88,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.1.1. A LICITANTE que apresentar pelo menos um dos índices indicados acima, igual ou inferior a 1 (um), deverá comprovar que possui patrimônio líquido de no mínimo 10% (dez por cento) do preço negociado do lote.",
+          "isRequirement": 0.54,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.2. O Balanço Patrimonial e a Demonstração do Resultado do Exercício, exigíveis nos termos dos subitens",
+          "isRequirement": 0.72,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) Resultados das contas do Ativo, do Passivo e do Patrimônio Líquido;",
+          "isRequirement": 0.47,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.2.1. Deverá ser apresentado o Balanço Patrimonial e a Demonstração do Resultado do Exercício do último exercício social, caso a sessão publica ocorra a partir do primeiro dia útil do mês de julho do ano seguinte ao ano-Calendário a que se refere a escrituração.",
+          "isRequirement": 0.74,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.2.2. Poderá ser apresentado o Balanço Patrimonial e a Demonstração do Resultado do Exercício do penúltimo exercício social, caso a sessão publica ocorra até o último dia útil do mês de junho do ano seguinte ao ano-calendário a que se refere a escrituração.",
+          "isRequirement": 0.69,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.2.3 É vedada a substituição do Balanço Patrimonial por balancetes ou balanços provisórios.",
+          "isRequirement": 0.4,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.2.5 As sociedades constituídas com mais de 1 (um) ano de exercício poderão apresentar o balanço intermediário, desde que haja comprovação de que o estatuto ou contrato social autoriza a sua emissão, ou em decorrência de lei.",
+          "isRequirement": 0.44,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.93,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoa física;",
+          "isRequirement": 0.93,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.3.1 Se a certidão apresentada contiver a observação de que o seu conteúdo declaratório (nada consta) não abrange eventuais processos que tramitam eletronicamente, deverá ser apresentada a Certidão negativa de falência e recuperação judicial e extrajudicial emitida pelo Sistema de Processo Judicial Eletrônico – PJE ou outro sistema eletrônico próprio do Tribunal da região da sede da pessoa jurídica;",
+          "isRequirement": 0.62,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.3.2 Quando o prazo de validade não estiver expresso na Certidão, deverá ser considerado válido para os efeitos deste Edital, desde que expedida em 180 (cento e oitenta) dias, a contar da data da emissão do documento;",
+          "isRequirement": 0.56,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.7,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.3.3 Caso a certidão apresentada seja positiva, a licitante deverá comprovar o acolhimento ou a homologação de seu plano de recuperação judicial ou extrajudicial, respectivamente, pelo juízo competente;",
+          "isRequirement": 0.81,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.98,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.5.3.4. Por força do disposto no art. 4o da Lei 5.764/1971, as Cooperativas estão desobrigadas de apresentar a Certidão Negativa de Falência e Recuperação Judicial/Extrajudicial, entretanto, deverão apresentar declaração própria de não haver contra si qualquer processo de liquidação judicial ou extrajudicial; https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=10000010... 19/35",
+          "isRequirement": 0.89,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 20,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) Declaração conforme modelo III do apêndice 1 deste Edital, que atende os seguintes pontos: a.1) não emprega menor de dezoito anos em trabalho noturno, perigoso ou insalubre e não emprega menor de dezesseis anos, salvo menor, a partir de quatorze anos, na condição de aprendiz; a.2) que não utiliza, nem utilizará, direta ou indiretamente, em qualquer etapa de sua cadeia produtiva, mão de obra em condições análogas às de escravo, trabalho forçado ou degradante, conforme definido na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes neste Edital; a.5) ter recebido todos os documentos e informações, conhecer e acatar as condições para o cumprimento das obrigações objeto desta licitação; a.6) não está incurso em nenhuma das vedações previstas no art.",
+          "isRequirement": 0.84,
+          "type": "regularidade_trabalhista",
+          "typeConfidence": 0.87,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 20,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.7 Os documentos de habilitação previstos no presente Edital serão verificados, preferencialmente, por meio do Sistema de Cadastramento Unificado de Fornecedores - SICAF, sendo que as informações para cadastramento no SICAF estão disponíveis no site SICAF - Sistema de Cadastramento Unificado de Fornecedores.",
+          "isRequirement": 0.11,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 20,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.9 Poderão ser consultados os sítios oficiais emissores de certidões, especialmente quando o interessado esteja com alguma documentação vencida junto ao SICAF, sendo os resultados da consulta considerados como meio de prova. https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=10000010... 20/35",
+          "isRequirement": 0.2,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.73,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "6.21. A LICITANTE classificada em primeiro lugar deverá apresentar a proposta econômica escrita com os valores unitários dos itens e total do(s) lote(s), conforme modelos disponíveis neste Edital, nos prazos e formas previstas na cláusula de habilitação.",
+          "isRequirement": 0.5,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.96,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7. HABILITAÇÃO",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.1 A habilitação dos interessados será verificada em consonância com o Art.",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "58 da Lei n° 13.303/2016, para comprovação da possibilidade da aquisição de direitos e da contração de obrigações por parte do interessado, de sua qualificação técnica e capacidade econômica e financeira.",
+          "isRequirement": 0.34,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.3,
+          "mentionsLaborInAdditionToFiscal": 0.05,
+          "passed": false
+        },
+        {
+          "page": 21,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.11. Na forma da Lei Complementar 123/06, no caso de Microempresa - ME / Empresa de Pequeno Porte – EPP / Cooperativa - COOP, havendo alguma restrição na regularidade fiscal e trabalhista, será assegurado prazo de 05 (cinco) dias úteis, prorrogáveis por igual período, a critério dos CORREIOS, para a regularização da documentação, cujo termo inicial corresponderá ao momento da convocação do licitante pelo Pregoeiro, após concluída a análise dos documentos de habilitação, sendo que, após esse prazo, será inabilitada do certame.",
+          "isRequirement": 0.16,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.47,
+          "mentionsLaborInAdditionToFiscal": 0.82,
+          "passed": false
+        },
+        {
+          "page": 21,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.11.2. A licitante ME/EPP/COOP, beneficiada pelo regime diferenciado e favorecido da Lei Complementar no 123/2006, deverá apresentar toda a documentação exigida para habilitação, mesmo havendo alguma restrição na regularidade fiscal e trabalhista.",
+          "isRequirement": 0.26,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.64,
+          "mentionsLaborInAdditionToFiscal": 0.9,
+          "passed": false
+        },
+        {
+          "page": 34,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "b) a omissão de qualquer item acima previsto será analisada pelo Pregoeiro, que decidirá pela validação ou não do Atestado de Capacidade Técnica, desde que não comprometa a análise da qualificação técnica e o atestado se encontre pertinente e compatível em características e prazos com o objeto da licitação.",
+          "isRequirement": 0.5,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.96,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 34,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "34. * ( ) que não possui contratos celebrados com a Administração Pública, no ano calendário de realização do Pregão Eletrônico no XXX/20XX, cujos valores somados extrapolem a receita bruta máxima admitida para fins de enquadramento como empresa de pequeno porte, o que a qualifica como apta a usufruir do tratamento favorecido estabelecido nos artigos 42 a 49 da Lei Complementar 123 de 14 de dezembro de 2006. que não emprega menor de dezoito anos em trabalho noturno, perigoso ou insalubre e não emprega menor de dezesseis anos, salvo na condição de aprendiz, a partir de quatorze anos; que não utiliza, nem utilizará, direta ou indiretamente, em qualquer etapa de sua cadeia produtiva, mão de obra em condições análogas às de escravo, trabalho forçado ou degradante, conforme definido na legislação vigente. que até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; que atende plenamente os requisitos de habilitação constantes do Edital; https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=10000010... 34/35",
+          "isRequirement": 0.33,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.63,
+          "mentionsLaborInAdditionToFiscal": 0.15,
+          "passed": false
+        },
+        {
+          "page": 33,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "5. A licitante deverá indicar na planilha se é optante do SIMPLES NACIONAL, qual o regime de tributação (lucro real ou lucro presumido), além de indicar o código FPAS. APÊNDICE 1 (Modelo II) ATESTADO DE CAPACIDADE TÉCNICA (Este modelo é um exemplo de como será avaliada a qualificação técnica da licitante) Atestamos para os devidos fins que a empresa (nome e CNPJ da empresa prestadora de serviços) estabelecida à (endereço completo), na categoria de prestadora de serviços de ...................... (indicar o objeto da contratação), objeto desta licitação, prestou serviços para esta empresa (nome e CNPJ da empresa emitente), na condição de cliente usuária dos serviços especificados abaixo, no período de __/__/__ a __/__/__: SERVIÇOS:................................ N.o CONTRATO:................................... DE ...../...../....... VALOR PARCIAL/GLOBAL (R$):.................................. (se possível). Atestamos ainda, que tais serviços foram executados de acordo com os parâmetros técnicos de qualidade exigidos e no prazo pactuado, não existindo, em nossos registros, até a presente data, fatos que desabonem sua conduta e responsabilidade com as obrigações assumidas. ............................, .......de ....................de 20.... IDENTIFICAÇÃO (nome, cargo/função) E ASSINATURA DA DECLARANTE CONDIÇÃO DE ACEITABILIDADE:",
+          "isRequirement": 0.48,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 33,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) os atestados podem ser emitidos pela mesma pessoa jurídica, contudo deverão reportar-se a relações contratuais distintas, caso a licitante deseje apresentar mais de um atestado; https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=10000010... 33/35",
+          "isRequirement": 0.48,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 3,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "Item Descrição do Serviço UM * Qtde Estimada Valor Total Máximo Aceito para o Item ** 1 Aquisição/habilitação do dispositivo eletrônico (TAG) - Veículos Operacionais UN 355 ** 2 Aquisição/habilitação do dispositivo eletrônico (TAG) - Veículos Administrativos UN 30 ** 3 Mensalidade Veículo - Operacional pesado (Qtde veículos x 30 meses) UN 900 ** 4 Mensalidade Veículo - Operacional leve (Qtde veículos x 30 meses) UN 9.750 ** 5 Mensalidade Veículo - Administrativo leve (Qtde veículos x 30 meses) UN 900 ** 6 Substituição do dispositivo (troca de veículo) - Veículo Operacional UN 355 ** 7 Substituição do dispositivo (troca de veículo) - Veículo Administrativo UN 30 ** SUBTOTAL 1 ** Item Descrição UM * Qtde DESPESA ESTIMADA - MENSAL (R$) DESPESA ESTIMADA - TOTAL (R$) 8 Pedágio Operacional Mês 30 R$ 216.062,34 R$ 6.481.870,20 9 Pedágio Administrativo Mês 30 R$ 17.468,35 R$ 524.050,50 SUBTOTAL 2 R$ 7.005.920,70 VALOR TOTAL DO LOTE (SUBTOTAL 1 + SUBTOTAL 2) ** ** * UM (Unidade de Medida) = UN e Mês - unidade ** O valor estimado da contratação é sigiloso e será divulgado após a etapa de lances. Para os itens 1, 2, 6 e 7, deverá ser apresentado valor unitário para habilitação do serviço (fornecimento do dispositivo) e a sua eventual substituição, respectivamente. Para os itens 3, 4 e 5 deverá ser apresentado valor unitário da mensalidade por dispositivo eletrônico, sendo a quantidade total igual a quantidade de veículos x 30 (trinta) meses de vigência contratual. Os itens 8 e 9 tratam-se de campos meramente informativos com a previsão de despesas com as tarifas de pedágio. **O valor estimado da contratação é sigiloso e será divulgado após encerramento da etapa de lances. https://sei.correios.com.br/sei/controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&acao_retorno=procedimento_controlar&id_procedimento=72563370&infra_sistema=100000100... 3/35",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 5,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "4.2. Poderão participar deste Pregão os interessados que não incorrerem nas hipóteses de impedimento previstas neste edital, que comprovarem o atendimento aos requisitos de habilitação exigidos e cujo objeto social seja compatível com o objeto licitado.",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.71,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 6,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "c) pessoa jurídica cujo administrador ou sócio detentor de mais de 5% (cinco por cento) do capital social seja diretor ou empregado dos Correios;",
+          "isRequirement": 0.19,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.54,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": false
+        },
+        {
+          "page": 10,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "6.9.4. O registro da proposta pressupõe o pleno conhecimento e aceitação das regras e das condições gerais da contratação, constantes do Edital. A LICITANTE declarará no sistema, antes de registrar sua proposta, que cumpre plenamente os requisitos de habilitação e que sua proposta está em conformidade com as exigências deste Edital, sujeitando-se às sanções legais na hipótese de declaração falsa.",
+          "isRequirement": 0.07,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 22,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) Cópia autenticada dos estatutos sociais e suas alterações posteriores, devidamente registradas na Organização das Cooperativas Brasileiras ou em entidade estadual (se houver); a.1) Para efeito de habilitação jurídica as Cooperativas deverão observar o disposto na Lei 5.764/1971;",
+          "isRequirement": 0.93,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 22,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "7.15 O CNPJ do interessado utilizado nesta licitação deverá ser o mesmo compreendido no SICAF e em todos os documentos de habilitação. Se o interessado for a matriz, todos os documentos deverão estar em nome da matriz, e se o interessado for a filial, todos os documentos deverão estar em nome da filial, exceto aqueles documentos que, pela própria natureza, comprovadamente, forem emitidos somente em nome da matriz.",
+          "isRequirement": 0.11,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.62,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": false
+        },
+        {
+          "page": 23,
+          "documentTitle": "EDITAL_26000413-SPI.pdf",
+          "text": "a) não mantiver os preços ou as condições de habilitação;",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        }
+      ],
+      "humanReview": {
+        "reviewed": true,
+        "falsePositives": [],
+        "falseNegatives": [
+          {
+            "type": "ato_societario",
+            "pages": [17, 22],
+            "requirements": [
+              "registro comercial do empresário individual",
+              "inscrição de sociedade civil e prova da diretoria",
+              "autorização de sociedade estrangeira",
+              "certificado e relação nominal exigidos das cooperativas"
+            ],
+            "reason": "Há vários documentos societários na mesma página; o checklist reteve um representante por (tipo, página)."
+          },
+          {
+            "type": "regularidade_fiscal",
+            "pages": [17],
+            "requirements": [
+              "Certidão Conjunta de Regularidade com a Fazenda Federal e INSS"
+            ],
+            "reason": "A página também exige FGTS; por deduplicação do tipo/página, somente o FGTS permaneceu."
+          }
+        ],
+        "notes": "Leitura humana integral da seção 7 (páginas 16–22) e conferência dos modelos nas páginas 33–34. Todos os oito itens publicados correspondem a documentos reais de habilitação; o modelo e suas instruções não foram publicados como requisitos adicionais. A declaração do modelo III é uma exigência real e foi classificada pelo conteúdo trabalhista."
+      }
+    },
+    {
+      "tenderId": "34028316000103-1-000087-2026",
+      "title": "PREGÃO CORREIOS Nº 26000415/2016 - SE/AM - Prestação de serviço de Transporte Multimodal de Cargas Regional dos Correios SE/AM pelos modais rodoviário e hidroviário. IMPORTANTE: ao registrar as propostas, atentar para o item 5.9 e seus subitens, sob pena de desclassificação. A Licitação será realizada pela CPL/MG. O valor estimado da contratação é sigiloso e será divulgado após o encerramento da fase de lances. (ATENÇÃO: REGISTRAR VALOR TOTAL DO LOTE - SUGERIMOS MINUCIOSA LEITURA DO EDITAL E SEUS ANEXOS).",
+      "indexVersion": 4,
+      "indexStatus": "ready",
+      "passageCount": 127,
+      "candidateCount": 40,
+      "passedThresholdCount": 23,
+      "combinationQuestionCount": 7,
+      "inputTokens": 36141,
+      "estimatedCostUsd": 0.00151792,
+      "items": [
+        {
+          "type": "ato_societario",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "c) inscrição do ato constitutivo, no caso de sociedades civis, acompanhada de prova de diretoria em exercício;"
+          },
+          "confidence": 0.86
+        },
+        {
+          "type": "ato_societario",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 18,
+            "text": "b) Estatutos sociais e suas alterações posteriores; b.1) Para efeito de habilitação jurídica as Cooperativas deverão observar o disposto na Lei 5.764/1971;"
+          },
+          "confidence": 0.78
+        },
+        {
+          "type": "regularidade_fiscal",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;"
+          },
+          "confidence": 0.95
+        },
+        {
+          "type": "regularidade_trabalhista",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT;"
+          },
+          "confidence": 0.94
+        },
+        {
+          "type": "qualificacao_tecnica",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "6.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compativel, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital."
+          },
+          "confidence": 0.9
+        },
+        {
+          "type": "qualificacao_tecnica",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 17,
+            "text": "b) Habilitação prévia e registro para Operador de Transporte Multimodal, junto a Agência Nacional de Transportes Terrestres - ANTT, conforme Decreto no 3.411/2000."
+          },
+          "confidence": 0.91
+        },
+        {
+          "type": "qualificacao_economica",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 15,
+            "text": "6.5 A capacidade econômica e financeira será comprovada mediante apresentação de Balanço Patrimonial e da Demonstração do Resultado do Exercício, exigidos na forma da lei, para comprovar:"
+          },
+          "confidence": 0.89
+        },
+        {
+          "type": "qualificacao_economica",
+          "evidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 16,
+            "text": "6.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoatisica;"
+          },
+          "confidence": 0.93
+        }
+      ],
+      "diagnostics": [
+        {
+          "id": "ato_societario",
+          "bestNoul": 0.86,
+          "secondNoul": 0.82,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "c) inscrição do ato constitutivo, no caso de sociedades civis, acompanhada de prova de diretoria em exercício;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "b) ato constitutivo, estatuto ou contrato social em vigor, devidamente registrado, em se tratando de sociedades comerciais e, no caso de sociedades por ações, acompanhado de documentos de eleição de seus Administradores;"
+          }
+        },
+        {
+          "id": "regularidade_fiscal",
+          "bestNoul": 0.95,
+          "secondNoul": 0.94,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "a) Certidão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições Federais e Dívida Ava da União da Fazenda Federal) e Contribuições Sociais e às de Terceiros (INSS);"
+          }
+        },
+        {
+          "id": "regularidade_trabalhista",
+          "bestNoul": 0.94,
+          "secondNoul": null,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT;"
+          },
+          "secondEvidence": null
+        },
+        {
+          "id": "qualificacao_tecnica",
+          "bestNoul": 0.91,
+          "secondNoul": 0.9,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 17,
+            "text": "b) Habilitação prévia e registro para Operador de Transporte Multimodal, junto a Agência Nacional de Transportes Terrestres - ANTT, conforme Decreto no 3.411/2000."
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 14,
+            "text": "6.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compativel, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital."
+          }
+        },
+        {
+          "id": "qualificacao_economica",
+          "bestNoul": 0.93,
+          "secondNoul": 0.9,
+          "bestEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 16,
+            "text": "6.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoatisica;"
+          },
+          "secondEvidence": {
+            "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+            "documentUrl": "https://pncp.gov.br/pncp-api/v1/orgaos/34028316000103/compras/2026/87/arquivos/4",
+            "page": 16,
+            "text": "6.5.3.4. Por força do disposto no art. 4o da Lei 5.764/1971, as Cooperativas estão desobrigadas de apresentar a Certidão Negativa de Falência e Recuperação Judicial/Extrajudicial, entretanto, deverão apresentar declaração própria de não haver contra si qualquer processo de liquidação judicial ou extrajudicial;"
+          }
+        }
+      ],
+      "candidates": [
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6. HABILITAÇÃO",
+          "isRequirement": 0.13,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.1 A habilitação dos interessados será verificada em consonância com o Art.",
+          "isRequirement": 0.08,
+          "type": "nao_e_requisito",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "58 da Lei n° 13.303/2016, para comprovação da possibilidade da aquisição de direitos e da contração de obrigações por parte do interessado, de sua qualificação técnica e capacidade econômica e financeira.",
+          "isRequirement": 0.35,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.35,
+          "mentionsLaborInAdditionToFiscal": 0.05,
+          "passed": false
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "b) ato constitutivo, estatuto ou contrato social em vigor, devidamente registrado, em se tratando de sociedades comerciais e, no caso de sociedades por ações, acompanhado de documentos de eleição de seus Administradores;",
+          "isRequirement": 0.82,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "c) inscrição do ato constitutivo, no caso de sociedades civis, acompanhada de prova de diretoria em exercício;",
+          "isRequirement": 0.86,
+          "type": "ato_societario",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.3 A prova de regularidade fiscal e trabalhista será realizada mediante a apresentação dos seguintes documentos:",
+          "isRequirement": 0.78,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.83,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "a) Certidão Conjunta de Regularidade com a Fazenda Federal (Quitação de Tributos e Contribuições Federais e Dívida Ava da União da Fazenda Federal) e Contribuições Sociais e às de Terceiros (INSS);",
+          "isRequirement": 0.94,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "b) Certificado de Regularidade com o Fundo de Garantia por Tempo de Serviço - FGTS;",
+          "isRequirement": 0.95,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.95,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "c) Certidão Negativa de Débitos Trabalhistas - CNDT;",
+          "isRequirement": 0.94,
+          "type": "regularidade_trabalhista",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 14,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.4 A qualificação técnica será comprovada mediante apresentação de Atestado(s)de Capacidade Técnica, fornecido(s) por pessoa jurídica de direito público ou privado, que comprove(m) aptidão para o desempenho de atividade pertinente e compativel, em características, quantidades e prazos, com o ramo de atividade de acordo com o objeto deste Edital.",
+          "isRequirement": 0.9,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.2.3 É vedada a substituição do Balanço Patrimonial por balancetes ou balanços provisórios.",
+          "isRequirement": 0.29,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.94,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.2.5 As sociedades constituídas com mais de 1 (um) ano de exercício poderão apresentar o balanço intermediário, desde que haja comprovação de que o estatuto ou contrato social autoriza a sua emissão, ou em decorrência de lei.",
+          "isRequirement": 0.49,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.95,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.3 Também deverá ser apresentado Certidão negativa de falência e recuperação judicial e extrajudicial expedida pelo distribuidor da sede da pessoa jurídica, ou, quando for o caso, de execução patrimonial, expedida no domicílio da pessoatisica;",
+          "isRequirement": 0.93,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.3.1 Se a certidão apresentada contiver a observação de que o seu conteúdo declaratório (nada consta) não abrange eventuais processos que tramitam eletronicamente, deverá ser apresentada a Certidão negativa de falência e recuperação judicial e extrajudicial emitida pelo Sistema de Processo Judicial Eletrônico – PJE ou outro sistema eletrônico próprio do Tribunal da região da sede da pessoa jurídica;",
+          "isRequirement": 0.66,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.3.2 Quando o prazo de validade não estiver expresso na Certidão, deverá ser considerado válido para os efeitos deste Edital, desde que expedida em 180 (cento e oitenta) dias, a contar da data da emissão do documento;",
+          "isRequirement": 0.56,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.66,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": true
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.3.3 Caso a certidão apresentada seja positiva, a licitante deverá comprovar o acolhimento ou a homologação de seu plano de recuperação judicial ou extrajudicial, respectivamente, pelo juízo competente;",
+          "isRequirement": 0.8,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 16,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.3.4. Por força do disposto no art. 4o da Lei 5.764/1971, as Cooperativas estão desobrigadas de apresentar a Certidão Negativa de Falência e Recuperação Judicial/Extrajudicial, entretanto, deverão apresentar declaração própria de não haver contra si qualquer processo de liquidação judicial ou extrajudicial;",
+          "isRequirement": 0.9,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5 A capacidade econômica e financeira será comprovada mediante apresentação de Balanço Patrimonial e da Demonstração do Resultado do Exercício, exigidos na forma da lei, para comprovar:",
+          "isRequirement": 0.89,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.1.1. A LICITANTE que apresentar pelo menos um dos índices indicados acima, igual ou inferior a 1 (um), deverá comprovar que possui patrimônio líquido de no mínimo 10% (dez por cento) do preço negociado do lote.",
+          "isRequirement": 0.57,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.2. O Balanço Patrimonial e a Demonstração do Resultado do Exercício, exigíveis nos termos dos subitens",
+          "isRequirement": 0.73,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "a) Resultados das contas do Avo, do Passivo e do Patrimônio Líquido;",
+          "isRequirement": 0.5,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.2.1. Deverá ser apresentado o Balanço Patrimonial e a Demonstração do Resultado do Exercício do último exercício social, caso a sessão publica ocorra a partir do primeiro dia útil do mês de julho do ano seguinte ao ano-Calendário a que se refere a escrituração.",
+          "isRequirement": 0.75,
+          "type": "qualificacao_economica",
+          "typeConfidence": 1,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 15,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.5.2.2. Poderá ser apresentado o Balanço Patrimonial e a Demonstração do Resultado do Exercício do 15 of 29 21/09/2026, 08:34",
+          "isRequirement": 0.74,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "na legislação vigente. a.3) até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; a.4) atende plenamente os requisitos de habilitação constantes neste Edital; a.5) ter recebido todos os documentos e informações, conhecer e acatar as condições para o cumprimento das obrigações objeto desta licitação; a.6) não está incurso em nenhuma das vedações previstas no art.",
+          "isRequirement": 0.21,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.86,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "b) Habilitação prévia e registro para Operador de Transporte Multimodal, junto a Agência Nacional de Transportes Terrestres - ANTT, conforme Decreto no 3.411/2000.",
+          "isRequirement": 0.91,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.7 Os documentos de habilitação previstos no presente Edital serão verificados, preferencialmente, por meio do Sistema de Cadastramento Unificado de Fornecedores - SICAF, sendo que as informações para cadastramento no SICAF estão disponíveis no site SICAF - Sistema de Cadastramento Unificado de Fornecedores.",
+          "isRequirement": 0.17,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 17,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.9 Poderão ser consultados os sítios oficiais emissores de certidões, especialmente quando o interessado esteja com alguma documentação vencida junto ao SICAF, sendo os resultados da consulta considerados como meio de prova.",
+          "isRequirement": 0.22,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.72,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.11. Na forma da Lei Complementar 123/06, no caso de Microempresa - ME / Empresa de Pequeno Porte – EPP / Cooperativa - COOP, havendo alguma restrição na regularidade fiscal e trabalhista, será assegurado prazo de 05 (cinco) dias úteis, prorrogáveis por igual período, a critério dos CORREIOS, para a regularização da documentação, cujo termo inicial corresponderá ao momento da convocação do licitante pelo Pregoeiro, após concluída a análise dos documentos de habilitação, sendo que, após esse prazo, será inabilitada do certame.",
+          "isRequirement": 0.15,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.68,
+          "mentionsLaborInAdditionToFiscal": 0.87,
+          "passed": false
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.11.2. A licitante ME/EPP/COOP, beneficiada pelo regime diferenciado e favorecido da Lei Complementar no 123/2006, deverá apresentar toda a documentação exigida para habilitação, mesmo havendo alguma restrição na regularidade fiscal e trabalhista.",
+          "isRequirement": 0.24,
+          "type": "regularidade_fiscal",
+          "typeConfidence": 0.63,
+          "mentionsLaborInAdditionToFiscal": 0.9,
+          "passed": false
+        },
+        {
+          "page": 18,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "b) Estatutos sociais e suas alterações posteriores; b.1) Para efeito de habilitação jurídica as Cooperativas deverão observar o disposto na Lei 5.764/1971;",
+          "isRequirement": 0.78,
+          "type": "ato_societario",
+          "typeConfidence": 0.99,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 28,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "34. • * ( ) que não possui contratos celebrados com a Administração Pública, no ano calendário de realização do Pregão Eletrônico no 26000415/2026 - SE/AM, cujos valores somados extrapolem a receita bruta máxima admitida para fins de enquadramento como empresa de pequeno porte, o que a qualifica como apta a usufruir do tratamento favorecido estabelecido nos artigos 42 a 49 da Lei Complementar 123 de 14 de dezembro de 2006. • que não emprega menor de dezoito anos em trabalho noturno, perigoso ou insalubre e não emprega menor de dezesseis anos, salvo na condição de aprendiz, a partir de quatorze anos; • que não utiliza, nem utilizará, direta ou indiretamente, em qualquer etapa de sua cadeia produtiva, mão de obra em condições análogas às de escravo, trabalho forçado ou degradante, conforme definido na legislação vigente. • que até a presente data, inexiste(m) fato(s) impeditivo(s) para a sua habilitação, estando ciente da obrigatoriedade de declarar ocorrências posteriores; • que atende plenamente os requisitos de habilitação constantes do Edital; • ter recebido todos os documentos e informações, conhecer e acatar as condições para o cumprimento das obrigações objeto da Licitação; • que não está incursa em nenhuma das vedações previstas no art.",
+          "isRequirement": 0.26,
+          "type": "qualificacao_economica",
+          "typeConfidence": 0.59,
+          "mentionsLaborInAdditionToFiscal": 0.12,
+          "passed": false
+        },
+        {
+          "page": 27,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "5. A licitante deverá indicar na planilha se é optante do SIMPLES NACIONAL, qual o regime de tributação (lucro real ou lucro presumido), além de indicar o código FPAS. APÊNDICE 1 (Modelo II) ATESTADO DE CAPACIDADE TÉCNICA (Este modelo é um exemplo de como será avaliada a qualificação técnica da licitante) Atestamos para os devidos fins que a empresa (nome e CNPJ da empresa prestadora de serviços) estabelecida à (endereço completo), na categoria de prestadora de serviços de (indicar o objeto da contratação), objeto desta licitação, prestou serviços para esta empresa (nome e CNPJ da empresa emitente), na condição de cliente usuária dos serviços especificados abaixo, no período de __/__/__ a __/__/__: SERVIÇOS:................................ N.o CONTRATO:................................... DE ...../...../....... VALOR PARCIAL/GLOBAL (R$):.................................. (se possível). Atestamos ainda, que tais serviços foram executados de acordo com os parâmetros técnicos de qualidade exigidos e no prazo pactuado, não existindo, em nossos registros, até a presente data, fatos que desabonem sua conduta e responsabilidade com as obrigações assumidas. ............................, .......de ....................de 20.... IDENTIFICAÇÃO (nome, cargo/função) E ASSINATURA DA DECLARANTE CONDIÇÃO DE ACEITABILIDADE:",
+          "isRequirement": 0.73,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.76,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 27,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "a) os atestados podem ser emitidos pela mesma pessoa jurídica, contudo deverão reportar-se a relações contratuais distintas, caso a licitante deseje apresentar mais de um atestado;",
+          "isRequirement": 0.51,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.98,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 27,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "b) a omissão de qualquer item acima previsto será analisada pelo Pregoeiro, que decidirá pela validação ou não do Atestado de Capacidade Técnica, desde que não comprometa a análise da qualificação técnica 27 of 29 21/09/2026, 08:34",
+          "isRequirement": 0.63,
+          "type": "qualificacao_tecnica",
+          "typeConfidence": 0.92,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": true
+        },
+        {
+          "page": 4,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "4.2. Poderão participar deste Pregão os interessados que não incorrerem nas hipóteses de impedimento previstas neste edital, que comprovarem o atendimento aos requisitos de habilitação exigidos e cujo objeto social seja compativel com o objeto licitado.",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.74,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 5,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "c) pessoa jurídica cujo administrador ou sócio detentor de mais de 5% (cinco por cento) do capital social seja diretor ou empregado dos Correios;",
+          "isRequirement": 0.17,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.56,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": false
+        },
+        {
+          "page": 8,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "5.9.4. O registro da proposta pressupõe o pleno conhecimento e aceitação das regras e das condições gerais da contratação, constantes do Edital. A LICITANTE declarará no sistema, antes de registrar sua proposta, que cumpre plenamente os requisitos de habilitação e que sua proposta está em conformidade com as exigências deste Edital, sujeitando-se às sanções legais na hipótese de declaração falsa.",
+          "isRequirement": 0.07,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.98,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 13,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "5.21. A LICITANTE classificada em primeiro lugar deverá apresentar a proposta econômica escrita com os valores unitários dos itens e total do(s) lote(s), conforme modelos disponíveis neste Edital, nos prazos e formas previstas na cláusula de habilitação.",
+          "isRequirement": 0.46,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.95,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        },
+        {
+          "page": 19,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "6.15 O CNPJ do interessado utilizado nesta licitação deverá ser o mesmo compreendido no SICAF e em todos os documentos de habilitação. Se o interessado for a matriz, todos os documentos deverão estar em nome da matriz, e se o interessado for a filial, todos os documentos deverão estar em nome da filial, exceto aqueles documentos que, pela própria natureza, comprovadamente, forem emitidos somente em nome da matriz.",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.58,
+          "mentionsLaborInAdditionToFiscal": 0.03,
+          "passed": false
+        },
+        {
+          "page": 20,
+          "documentTitle": "EDITAL_PGE_26000415_AM.pdf",
+          "text": "a) não mantiver os preços ou as condições de habilitação;",
+          "isRequirement": 0.1,
+          "type": "nao_e_requisito",
+          "typeConfidence": 0.97,
+          "mentionsLaborInAdditionToFiscal": null,
+          "passed": false
+        }
+      ],
+      "humanReview": {
+        "reviewed": true,
+        "falsePositives": [],
+        "falseNegatives": [
+          {
+            "type": "ato_societario",
+            "pages": [14, 18],
+            "requirements": [
+              "registro comercial do empresário individual",
+              "contrato/estatuto social e eleição dos administradores",
+              "autorização de sociedade estrangeira",
+              "certificado e relação nominal exigidos das cooperativas"
+            ],
+            "reason": "A deduplicação por (tipo, página) reteve a inscrição da sociedade civil e os estatutos da cooperativa como representantes."
+          },
+          {
+            "type": "regularidade_fiscal",
+            "pages": [14],
+            "requirements": [
+              "Certidão Conjunta de Regularidade com a Fazenda Federal e INSS"
+            ],
+            "reason": "A mesma página exige FGTS; o checklist reteve apenas o candidato fiscal de maior is_req."
+          },
+          {
+            "type": "regularidade_trabalhista",
+            "pages": [16, 17],
+            "requirements": [
+              "declaração do modelo III sobre trabalho de menores, trabalho análogo ao escravo e fatos impeditivos"
+            ],
+            "reason": "A declaração é real, mas o candidato não permaneceu no checklist final."
+          }
+        ],
+        "notes": "Leitura humana integral da seção 6 (páginas 14–18) e conferência do modelo de atestado na página 27. Todos os oito itens publicados são requisitos reais; o modelo de atestado foi deduplicado contra a exigência principal. O registro prévio na ANTT é uma exigência técnica adicional real e foi preservado."
+      }
+    }
+  ]
+}

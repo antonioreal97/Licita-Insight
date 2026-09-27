@@ -294,21 +294,25 @@ export async function classifySheetField(
 export async function classifyQualificationCandidate(
   passage: string,
   requestFetch?: typeof fetch,
+  context?: string,
 ): Promise<JevQualificationClassification> {
   const config = aiConfig();
+  const state: Record<string, string> = context
+    ? { trecho_do_edital: passage, contexto_do_edital: context }
+    : { trecho_do_edital: passage };
   try {
     const initial = await jevScheduler.schedule("interactive", () =>
       clientFor("interactive", requestFetch).systemOne({
         model: config.model,
-        state: { trecho_do_edital: passage },
+        state,
         questions: {
           is_req: noul(
             "Isso exige um documento específico de habilitação, não é item do objeto nem cláusula geral?",
             {
               true:
-                "O trecho exige que a licitante apresente um documento ou comprovação específica para sua habilitação.",
+                "O trecho nomeia um documento ou comprovação específica que a licitante deve apresentar na fase de habilitação.",
               false:
-                "O trecho é item do objeto, cláusula geral, título, remissão ou não exige documento de habilitação.",
+                "O trecho é item do objeto, título, remissão, regra genérica, modelo/instrução para conferir documento já exigido ou exige documento da contratada depois da habilitação, por exemplo para pagamento.",
             },
           ),
           tipo: choice(
@@ -328,7 +332,7 @@ export async function classifyQualificationCandidate(
       const combination = await jevScheduler.schedule("interactive", () =>
         clientFor("interactive", requestFetch).systemOne({
           model: config.model,
-          state: { trecho_do_edital: passage },
+          state,
           questions: {
             trabalhista_alem_fiscal: noul(
               "O trecho cita regularidade trabalhista (CNDT) além da fiscal?",

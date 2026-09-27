@@ -95,7 +95,7 @@ export function stitchIndexedPage(passages: IndexedPagePassage[]): string {
 }
 
 const ITEM_MARKER =
-  /(?:^|\n|(?<=[.!?;:])\s+)(?=(?:\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+|[a-z]\)\s+))|\s+(?=\d{1,2}(?:\.\d{1,2}){1,3}\.?\s+)/gimu;
+  /(?:^|\n|(?<=[.!?;:])\s+)(?=(?:\d{1,2}(?:\.\d{1,2}){0,3}\.?\s+|[a-z]\)\s+))|\s+(?=(?:\d{1,2}(?:\.\d{1,2}){1,3}\.?|[a-z]\))\s+)/gimu;
 
 /**
  * Splits one extracted PDF page on numbered or lettered edital items. The
@@ -125,7 +125,7 @@ export function segmentQualificationPage(pageText: string): string[] {
 }
 
 const QUALIFICATION_TERM_PATTERN =
-  /habilit|qualificacao tecnic|qualificacao economic|regularidade fisca|regularidade trabalh|certid|atestado de capacidade|balanco patrimonial|patrimonio liquido|indice de liquidez|capital social|ato constitutivo|contrato social|registro no conselho|\bcrea\b|\bcra\b|\bcau\b|alvara|garantia de participacao/iu;
+  /habilit|qualificacao tecnic|qualificacao economic|regularidade fisca|regularidade trabalh|certid|atestado(?:\(s\))? de capacidade|balanco patrimonial|patrimonio liquido|indice de liquidez|capital social|ato constitutivo|contrato social|registro no conselho|\bcrea\b|\bcra\b|\bcau\b|alvara|garantia de participacao/iu;
 
 const searchableText = (value: string): string =>
   value
@@ -179,13 +179,17 @@ const emittedTypes = (
     return [];
   }
   if (
-    candidate.typeConfidence < QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD &&
-    candidate.mentionsLaborInAdditionToFiscal !== null &&
-    candidate.mentionsLaborInAdditionToFiscal >= 0.5 &&
-    (candidate.type === "regularidade_fiscal" ||
-      candidate.type === "regularidade_trabalhista")
+    candidate.typeConfidence < QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD
   ) {
-    return ["regularidade_fiscal", "regularidade_trabalhista"];
+    if (
+      candidate.mentionsLaborInAdditionToFiscal !== null &&
+      candidate.mentionsLaborInAdditionToFiscal >= 0.5 &&
+      (candidate.type === "regularidade_fiscal" ||
+        candidate.type === "regularidade_trabalhista")
+    ) {
+      return ["regularidade_fiscal", "regularidade_trabalhista"];
+    }
+    return [];
   }
   return [candidate.type];
 };
@@ -214,6 +218,31 @@ const relevantTokens = (value: string): Set<string> =>
   );
 
 const hasRelevantOverlap = (left: string, right: string): boolean => {
+  const anchorPatterns: ReadonlyArray<readonly [string, RegExp]> = [
+    ["atestado_capacidade", /atestado(?:\(s\))?\s*de capacidade/iu],
+    ["balanco", /balanco patrimonial/iu],
+    ["falencia", /certidao negativa de falencia/iu],
+    ["ato_societario", /ato constitutivo|contrato social/iu],
+    ["cndt", /\bcndt\b/iu],
+    ["fgts", /\bfgts\b/iu],
+    ["cnpj", /\bcnpj\b/iu],
+    ["crea", /\bcrea\b/iu],
+    ["cra", /\bcra\b/iu],
+    ["cau", /\bcau\b/iu],
+    ["antt", /\bantt\b/iu],
+    ["conselho", /registro no conselho/iu],
+  ];
+  const anchors = (value: string): Set<string> => {
+    const normalized = searchableText(value);
+    return new Set(
+      anchorPatterns
+        .filter(([, pattern]) => pattern.test(normalized))
+        .map(([id]) => id),
+    );
+  };
+  const leftAnchors = anchors(left);
+  const rightAnchors = anchors(right);
+  if ([...leftAnchors].some((anchor) => rightAnchors.has(anchor))) return true;
   const leftTokens = relevantTokens(left);
   const rightTokens = relevantTokens(right);
   if (leftTokens.size === 0 || rightTokens.size === 0) return false;

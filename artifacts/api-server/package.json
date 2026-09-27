@@ -14,6 +14,7 @@
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
     "calibrate:company-fit": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-company-fit.ts",
     "calibrate:tender-sheet": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-tender-sheet.ts",
+    "calibrate:qualification-checklist": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-qualification-checklist.ts",
     "scale:seed": "node --env-file-if-exists=../../.env --import tsx scripts/scale-seed.ts",
     "scale:load": "node --env-file-if-exists=../../.env --import tsx scripts/scale-load.ts",
     "scale:drop": "node --env-file-if-exists=../../.env --import tsx scripts/scale-drop.ts",

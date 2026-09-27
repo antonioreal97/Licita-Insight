@@ -18,6 +18,7 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 - `AI_SHEET_EVIDENCE_THRESHOLD`: limiar Noul para considerar um trecho encontrado, padrão `0.5`.
 - `AI_SHEET_ANSWER_THRESHOLD`: confiança mínima da Choice para expor a categoria, padrão `0.6`.
 - `AI_SHEET_CANDIDATE_LIMIT`: máximo de candidatos lexicais por campo, padrão `6`.
+- `AI_QUALIFICATION_CANDIDATE_LIMIT`: máximo de segmentos candidatos ao checklist por edital, padrão `40`.
 
 ## Rotas
 

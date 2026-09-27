@@ -96,6 +96,10 @@ test("deduplicates by type and page, retaining the strongest official passage", 
     10,
     "7.4.2 A licitante apresentará registro vigente no CREA.",
   );
+  const repeatedModel = qualificationEvidence(
+    20,
+    "MODELO DE ATESTADO DE CAPACIDADE TÉCNICA.",
+  );
   const { items, diagnostics } = buildQualificationChecklist([
     {
       evidence: weaker,
@@ -116,6 +120,13 @@ test("deduplicates by type and page, retaining the strongest official passage", 
       isRequirement: 0.91,
       type: "qualificacao_tecnica",
       typeConfidence: 1,
+      mentionsLaborInAdditionToFiscal: null,
+    },
+    {
+      evidence: repeatedModel,
+      isRequirement: 0.8,
+      type: "qualificacao_tecnica",
+      typeConfidence: 0.99,
       mentionsLaborInAdditionToFiscal: null,
     },
   ]);
@@ -150,6 +161,22 @@ test("low requirement confidence and non-requirement classifications emit nothin
       type: "nao_e_requisito",
       typeConfidence: 0.99,
       mentionsLaborInAdditionToFiscal: null,
+    },
+  ]);
+  assert.deepEqual(items, []);
+});
+
+test("low type confidence does not infer a checklist type without the mixed fiscal signal", () => {
+  const { items } = buildQualificationChecklist([
+    {
+      evidence: qualificationEvidence(
+        6,
+        "Habilitação: consulte os documentos aplicáveis.",
+      ),
+      isRequirement: 0.8,
+      type: "ato_societario",
+      typeConfidence: 0.69,
+      mentionsLaborInAdditionToFiscal: 0.1,
     },
   ]);
   assert.deepEqual(items, []);
@@ -253,4 +280,41 @@ test("low-confidence fiscal plus CNDT runs the second Noul with the real respons
   assert.equal(result.typeConfidence, 0.61);
   assert.equal(result.mentionsLaborInAdditionToFiscal, 0.96);
   assert.equal(result.inputTokens, 135);
+});
+
+test("Jev receives parent context as a separate official state value", async () => {
+  process.env.JEV_API_KEY = "test-key";
+  const mockedFetch: typeof fetch = async (_input, init) => {
+    const body = JSON.parse(String(init?.body)) as {
+      state: Record<string, string>;
+    };
+    assert.deepEqual(body.state, {
+      trecho_do_edital: "b) Certidão negativa federal.",
+      contexto_do_edital:
+        "20.6. Para posterior pagamento, a contratada apresentará documentos.",
+    });
+    return new Response(
+      JSON.stringify({
+        model: "jev-1.13.0",
+        answers: {
+          is_req: { type: "noul", noul: 0.08 },
+          tipo: {
+            type: "choice",
+            choice: "nao_e_requisito",
+            confidence: 0.99,
+            probabilities: {},
+          },
+        },
+        usage: { input_tokens: 75, output_tokens: 0 },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+  const result = await classifyQualificationCandidate(
+    "b) Certidão negativa federal.",
+    mockedFetch,
+    "20.6. Para posterior pagamento, a contratada apresentará documentos.",
+  );
+  assert.equal(result.isRequirement, 0.08);
+  assert.equal(result.type, "nao_e_requisito");
 });
