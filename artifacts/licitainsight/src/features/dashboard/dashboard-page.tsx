@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, Bell, RefreshCw, Search, Target } from 'lucide-react';
+import { ArrowRight, Bell, Search, Target } from 'lucide-react';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
@@ -14,8 +14,9 @@ import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tender
 import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-tenders-list';
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { ProfileInviteCard } from '@/features/company-profile/components/profile-invite-card';
-import { useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
+import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
 import { formatNumber } from '@/lib/format';
+import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 
 function saoPauloDate(offsetDays = 0): string {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -140,9 +141,41 @@ function OpportunitiesCard() {
   );
 }
 
+function PersonalDeadlines() {
+  const analyzing = useSavedTendersList({ page: 1, pageSize: 4, stage: 'analyzing', sort: 'deadline', upcoming: true });
+  const preparing = useSavedTendersList({ page: 1, pageSize: 4, stage: 'participating', sort: 'deadline', upcoming: true });
+  const { isSaved, toggle } = useSavedTenders();
+  const rows = nearestSavedDeadlines(analyzing.data?.data ?? [], preparing.data?.data ?? []);
+  const total = (analyzing.data?.pagination.total ?? 0) + (preparing.data?.pagination.total ?? 0);
+  const error = analyzing.error ?? preparing.error;
+  return (
+    <section data-testid="dashboard-personal-deadlines" aria-labelledby="personal-deadlines-title">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="personal-deadlines-title" className="type-section text-foreground">Seus próximos prazos</h2>
+          <p className="mt-1 type-meta text-muted-foreground">Editais que você marcou como Analisando ou Preparando documentos, com prazo futuro.</p>
+        </div>
+        <Link href="/saved-tenders" className="shrink-0 rounded-sm type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">Ver salvos</Link>
+      </div>
+      {error ? <ErrorState error={error} onRetry={() => { void analyzing.refetch(); void preparing.refetch(); }} />
+        : analyzing.isPending || preparing.isPending ? <RowsSkeleton rows={2} />
+        : rows.length === 0 ? <p className="rounded-xl border border-border bg-card p-5 type-ui text-muted-foreground">Nenhum prazo futuro nestas etapas. Salve um edital para acompanhar sua preparação aqui.</p>
+        : <>
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
+            {rows.map(({ tender }) => <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact />)}
+          </div>
+          {total > rows.length && <p className="mt-2 type-meta text-muted-foreground">Mostrando os {rows.length} prazos mais próximos entre {formatNumber(total)} editais nessas etapas.</p>}
+        </>}
+    </section>
+  );
+}
+
 export default function DashboardPage() {
   const { isSaved, toggle } = useSavedTenders();
   const { user } = useSession();
+  const billing = useBilling();
+  const profile = useCompanyProfile();
+  const personal = Boolean(user && billing.data?.entitled);
   const firstName = user?.name?.trim().split(/\s+/)[0];
   const today = useMemo(() => saoPauloDate(0), []);
   const weekAgo = useMemo(() => saoPauloDate(-6), []);
@@ -172,20 +205,24 @@ export default function DashboardPage() {
   // deadlineFrom=today keeps "open" tenders whose deadline already passed (status lags the source) out of the top.
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], deadlineFrom: today, facets: false });
   const fits = useTenderFits(priority.data?.data.map((tender) => tender.id) ?? []);
-  const refreshing = catalog.isFetching || recent.isFetching || soon.isFetching || priority.isFetching;
-  const refresh = () => {
-    void catalog.refetch();
-    void recent.refetch();
-    void soon.refetch();
-    void priority.refetch();
-  };
+  const candidates = priority.data?.data ?? [];
+  const matches = matchingCandidates(candidates, fits.data?.results ?? {});
+  const shown = personal && matches.length > 0 ? matches : candidates;
+  const fitsPending = fits.isPending || candidates.some(tender => !fits.data?.results[tender.id] || fits.data.results[tender.id].status === 'pending');
+  const metrics = (
+    <section aria-label="Métricas nacionais" data-testid="dashboard-national-metrics" className="grid grid-cols-3 gap-3 rounded-xl border border-border bg-card px-4 py-5 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
+      <MiniMetric label="Prazo nos próximos 7 dias" value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)} detail="editais em aberto" attention />
+      <MiniMetric label="Publicados na semana" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="nos últimos 7 dias" />
+      <MiniMetric label="Editais disponíveis" value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)} detail="de todo o Brasil" />
+    </section>
+  );
 
   return (
     <>
       <PageTitle
         eyebrow={eyebrow}
         title={firstName ? `${greeting()}, ${firstName}.` : `${greeting()}.`}
-        description="Uma leitura rápida das publicações do PNCP que estão no banco."
+        description="Os prazos que estão chegando e o que merece sua atenção hoje."
         action={
           <Link
             href="/search"
@@ -197,35 +234,30 @@ export default function DashboardPage() {
           </Link>
         }
       />
-      <div className="mb-8 grid grid-cols-3 gap-3 rounded-xl border border-border bg-card px-4 py-5 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
-        <MiniMetric
-          label="Editais no banco"
-          value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
-          detail="publicações coletadas"
-        />
-        <MiniMetric label="Últimos 7 dias" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="publicados até hoje" />
-        <MiniMetric
-          label="Prazos próximos"
-          value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)}
-          detail="em aberto, prazo de proposta em até 7 dias"
-          attention
-        />
-      </div>
+      {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-        <section className="min-w-0">
+        <div className="min-w-0 space-y-8">
+        {personal && <PersonalDeadlines />}
+        {personal && profile.isPending ? <RowsSkeleton rows={2} />
+          : personal && profile.isError ? <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
+          : personal && !profile.data?.profile ? <ProfileInviteCard />
+          : <section data-testid="dashboard-candidates">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="type-section text-foreground">Prazos mais próximos</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Editais em aberto com prazo de proposta a partir de hoje</p>
+              <h2 className="type-section text-foreground">{personal ? 'Para você' : 'Prazos mais próximos'}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">{personal ? 'Aderência entre os quatro editais com prazo mais próximo — não é uma busca de todo o catálogo pelo seu perfil.' : 'Editais em aberto com prazo de proposta a partir de hoje'}</p>
             </div>
             <Link
               href={`/search?status=open&sort=deadline_asc&deadlineFrom=${today}`}
               data-testid="link-dashboard-all"
               className="shrink-0 rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
             >
-              Ver todos <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
+              Ver todos com prazo <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
             </Link>
           </div>
+          {personal && candidates.length > 0 && (fits.isError
+            ? <ErrorState error={fits.error} onRetry={() => fits.refetch()} />
+            : <p className="mb-3 type-meta text-muted-foreground">{fitsPending ? 'A avaliação destes editais ainda está em andamento.' : matches.length > 0 ? `${matches.length} com aderência alta ou média nesta seleção. Compatibilidade não significa habilitação.` : 'Nenhum destes editais tem aderência alta ou média ao seu perfil. Veja os prazos abaixo ou explore outras oportunidades.'}</p>)}
           {priority.isPending ? (
             <RowsSkeleton rows={4} />
           ) : priority.isError ? (
@@ -236,33 +268,17 @@ export default function DashboardPage() {
             </p>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
-              {priority.data.data.map((tender) => (
+              {shown.map((tender) => (
                 <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact fit={fits.data?.results[tender.id]} />
               ))}
             </div>
           )}
-        </section>
+        </section>}
+        {personal && metrics}
+        </div>
         <aside className="space-y-6">
-          <ProfileInviteCard />
           <MonitoringCard />
           <OpportunitiesCard />
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="type-section text-foreground">Coleta</h2>
-              <button
-                data-testid="button-refresh-activity"
-                aria-label="Atualizar leitura"
-                aria-busy={refreshing || undefined}
-                onClick={refresh}
-                className="rounded-md p-1 text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
-              >
-                <RefreshCw size={14} strokeWidth={1.75} className={refreshing ? 'animate-spin' : undefined} />
-              </button>
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              A API atualiza as publicações novas todo dia e revisa os editais que ainda estão em aberto. O histórico que já entrou no banco permanece.
-            </p>
-          </div>
         </aside>
       </div>
     </>

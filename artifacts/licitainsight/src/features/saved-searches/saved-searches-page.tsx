@@ -98,7 +98,6 @@ export default function SavedSearchesPage() {
   return (
     <>
       <PageTitle
-        eyebrow="seus alertas"
         title="Buscas salvas"
         description="Consultas que você escolheu acompanhar. Com alertas ligados, avisamos aqui no app quando a coleta diária traz editais novos."
         action={

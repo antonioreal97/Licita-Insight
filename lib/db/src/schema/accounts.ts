@@ -111,6 +111,10 @@ export const sessionsTable = pgTable(
   ],
 );
 
+export type ParticipationStage = 'analyzing' | 'participating' | 'submitted' | 'awaiting_result' | 'completed' | 'dismissed';
+export type ParticipationChecklistItem = { key: string; state: 'have' | 'missing' | 'unknown'; note: string | null; updatedAt: string };
+export type ParticipationTransition = { from: ParticipationStage | null; to: ParticipationStage; at: string; source: 'user' };
+
 export const savedTendersTable = pgTable(
   "saved_tenders",
   {
@@ -125,9 +129,18 @@ export const savedTendersTable = pgTable(
       .defaultNow(),
     monitored: boolean("monitored").notNull().default(false),
     monitoredAt: timestamp("monitored_at", { withTimezone: true }),
+    stage: text("stage").$type<ParticipationStage>().notNull().default('analyzing'),
+    stageAt: timestamp("stage_at", { withTimezone: true }).notNull().defaultNow(),
+    protocol: text("protocol"),
+    nextAction: text("next_action"),
+    nextActionDeadline: timestamp("next_action_deadline", { withTimezone: true }),
+    checklist: jsonb("checklist").$type<ParticipationChecklistItem[]>().notNull().default([]),
+    history: jsonb("history").$type<ParticipationTransition[]>().notNull().default([]),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.tenderId] }),
+    check("saved_tenders_stage_check", sql`${table.stage} in ('analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed')`),
+    index("saved_tenders_user_stage_idx").on(table.userId, table.stage),
     index("saved_tenders_user_saved_at_idx").on(table.userId, table.savedAt),
     index("saved_tenders_monitored_tender_idx")
       .on(table.tenderId)

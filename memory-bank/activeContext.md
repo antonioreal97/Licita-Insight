@@ -4,6 +4,30 @@ Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.m
 
 ## Foco agora
 
+28 set 2026 — MVP de participação implementado e ativado na stack Docker local: migration 0019, etapas,
+checklist Tenho/Não tenho/Não sei, protocolo declarado, próxima ação/prazo e histórico. P0.6 e P1 conectados
+à API; testes de API (184), frontend (16), migrations, typechecks/build e navegador desktop/mobile passaram.
+Detalhes em `docs/reviews/participation-implementation-2026-09-28.md` e contrato `participation-v1.md`.
+Backend e revisão final pelo coordenador Codex; Cursor gravou a integração, mas parou por erro de conexão.
+Stack local agora aponta para este workspace em `http://localhost:24252`; API/web saudáveis, Postgres/volume
+preservados. Histórico reconciliado por paridade de schema até 0018; 0019 aplicada e integridade das 26 tabelas
+conferida antes/depois. Checksum histórico divergente da 0004 preservado/documentado, sem reescrever o registro.
+Backup: `.local/backups/0019-aTSS4o/before-0019.dump`. Reinício usa `.local/compose-activation-0019.yml` e o `.env`
+real de `/Users/antonio/CODE/MY/LicitAI/Licita-Insight`, **não** o `.env` de dev deste workspace.
+Usar `up -d --no-deps api web` com projeto `licita-insight` e os dois arquivos compose para não executar
+`db-setup`/`push-force`. Procedimento completo em `docs/reviews/participation-activation-2026-09-28.md`.
+Verificação anônima desktop/mobile passou; timeout externo no coletor Mapas Culturais CE permanece.
+Sem deploy Fly, cofre de documentos ou envio oficial.
+
+Ciclo 11 (branch `antonioreal97/cycle11`, sem deploy por decisão do owner): simplificação de UI/UX segundo os
+princípios de design da Apple — tipografia maior e sem monoespaçada/caixa-alta nos rótulos, menu e topo sem
+jargão, ficha do edital agrupada por pergunta e sem duplicatas, painel e landing enxutos. Relatório em
+`docs/reviews/ux-simplification-2026-09-28.md`. Backend reavaliado: as 9 correções de escala de
+`docs/architecture-scale.md` estão no código; TypeScript continua a escolha certa (gargalos são I/O de
+Postgres, PNCP e Jev, não CPU). Abertos: carga HTTP com 1,5 M de linhas nunca medida, termo comum na busca,
+limite de taxa em memória por processo (precisa ser compartilhado quando houver mais de uma réplica da API),
+rotas de ingestão sem autenticação.
+
 Ciclo 10 (branch `antonioreal97/cycle10`, commits locais, sem push nem PR): prontidão de deploy
 (HANDOFF-021). Decisões do owner em 27–28 set 2026: (1) custo fixo alto sem usuários → Fly enxuto (~US$ 20/mês:
 1 máquina `APP_ROLE=all` + Postgres próprio com volume; Managed Postgres só com ~20 assinantes; revisão na

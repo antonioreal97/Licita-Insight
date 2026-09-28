@@ -5,11 +5,14 @@ import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService, MAX_SAVED_TENDERS_PAGE_SIZE } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
-/** Server-paginated saved tenders (`savedAt desc`). `monitored: true` lists only monitored ones. Disabled while signed out. */
-export function useSavedTendersList({ page, pageSize, monitored }: SavedTendersParams) {
+/**
+ * Server-paginated saved tenders (`savedAt desc`, or nearest deadline with `sort: 'deadline'`). `monitored: true` / `stage`
+ * filter on the server. Disabled while signed out.
+ */
+export function useSavedTendersList({ page, pageSize, monitored, stage, sort, upcoming }: SavedTendersParams) {
   const { status } = useSession();
   const billing = useBilling();
-  const params: SavedTendersParams = { page, pageSize, monitored };
+  const params: SavedTendersParams = { page, pageSize, monitored, stage, sort, upcoming };
   return useQuery({
     queryKey: queryKeys.me.savedTenders.list(params),
     queryFn: ({ signal }) => accountService.listSavedTenders(params, signal),

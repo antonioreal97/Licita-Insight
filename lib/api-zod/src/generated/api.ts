@@ -27,6 +27,7 @@ export const ReadinessCheckResponse = zod.object({
 /**
  * @summary Search tenders
  */
+export const searchTendersQueryIncludeMonitoredDefault = false;
 export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
@@ -47,6 +48,7 @@ export const SearchTendersQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
   "mode": zod.enum(['keyword', 'semantic', 'hybrid']).optional(),
   "status": zod.array(zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled'])).optional(),
+  "includeMonitored": zod.coerce.boolean().default(searchTendersQueryIncludeMonitoredDefault).describe('With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).'),
   "modality": zod.array(zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other'])).optional(),
   "state": zod.array(zod.coerce.string().regex(searchTendersQueryStateItemRegExp)).optional(),
   "city": zod.array(zod.coerce.string().min(1)).optional(),
@@ -740,6 +742,12 @@ export const DeleteAccountResponse = zod.void()
 /**
  * @summary Export the authenticated user's retained personal data
  */
+export const exportAccountDataResponseSavedTendersItemOneProtocolMax = 200;
+
+export const exportAccountDataResponseSavedTendersItemOneNextActionMax = 500;
+
+export const exportAccountDataResponseSavedTendersItemOneChecklistItemNoteMax = 1000;
+
 export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
 
 export const exportAccountDataResponseEmailDeliveriesItemAttemptsMin = 0;
@@ -792,11 +800,30 @@ export const ExportAccountDataResponse = zod.object({
   "expiresAt": zod.coerce.date()
 })),
   "savedTenders": zod.array(zod.object({
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "stageAt": zod.coerce.date(),
+  "participationSource": zod.enum(['user']),
+  "protocol": zod.string().max(exportAccountDataResponseSavedTendersItemOneProtocolMax).nullable(),
+  "nextAction": zod.string().max(exportAccountDataResponseSavedTendersItemOneNextActionMax).nullable(),
+  "nextActionDeadline": zod.coerce.date().nullable(),
+  "checklist": zod.array(zod.object({
+  "key": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica', 'site_visit', 'samples', 'bid_guarantee']),
+  "state": zod.enum(['have', 'missing', 'unknown']),
+  "note": zod.string().max(exportAccountDataResponseSavedTendersItemOneChecklistItemNoteMax).nullable(),
+  "updatedAt": zod.coerce.date()
+})),
+  "history": zod.array(zod.object({
+  "from": zod.union([zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),zod.null()]),
+  "to": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "at": zod.coerce.date(),
+  "source": zod.enum(['user'])
+}))
+}).and(zod.object({
   "tenderId": zod.string(),
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
   "monitoredAt": zod.coerce.date().nullable()
-})),
+}))),
   "savedSearches": zod.array(zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -1079,16 +1106,44 @@ export const listSavedTendersQueryPageSizeMax = 100;
 export const ListSavedTendersQueryParams = zod.object({
   "page": zod.coerce.number().int().min(1).default(listSavedTendersQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(listSavedTendersQueryPageSizeMax).default(listSavedTendersQueryPageSizeDefault),
-  "monitored": zod.coerce.boolean().optional()
+  "monitored": zod.coerce.boolean().optional(),
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']).optional(),
+  "sort": zod.enum(['saved_at', 'deadline']).optional(),
+  "upcoming": zod.coerce.boolean().optional()
 })
 
-export const listSavedTendersResponseDataItemTenderRelevanceScoreMin = 0;
-export const listSavedTendersResponseDataItemTenderRelevanceScoreMax = 1;
+export const listSavedTendersResponseDataItemOneProtocolMax = 200;
+
+export const listSavedTendersResponseDataItemOneNextActionMax = 500;
+
+export const listSavedTendersResponseDataItemOneChecklistItemNoteMax = 1000;
+
+export const listSavedTendersResponseDataItemTwoTenderRelevanceScoreMin = 0;
+export const listSavedTendersResponseDataItemTwoTenderRelevanceScoreMax = 1;
 
 
 
 export const ListSavedTendersResponse = zod.object({
   "data": zod.array(zod.object({
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "stageAt": zod.coerce.date(),
+  "participationSource": zod.enum(['user']),
+  "protocol": zod.string().max(listSavedTendersResponseDataItemOneProtocolMax).nullable(),
+  "nextAction": zod.string().max(listSavedTendersResponseDataItemOneNextActionMax).nullable(),
+  "nextActionDeadline": zod.coerce.date().nullable(),
+  "checklist": zod.array(zod.object({
+  "key": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica', 'site_visit', 'samples', 'bid_guarantee']),
+  "state": zod.enum(['have', 'missing', 'unknown']),
+  "note": zod.string().max(listSavedTendersResponseDataItemOneChecklistItemNoteMax).nullable(),
+  "updatedAt": zod.coerce.date()
+})),
+  "history": zod.array(zod.object({
+  "from": zod.union([zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),zod.null()]),
+  "to": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "at": zod.coerce.date(),
+  "source": zod.enum(['user'])
+}))
+}).and(zod.object({
   "tender": zod.object({
   "id": zod.string(),
   "title": zod.string(),
@@ -1123,7 +1178,7 @@ export const ListSavedTendersResponse = zod.object({
   "label": zod.string()
 })),
   "relevance": zod.object({
-  "score": zod.number().min(listSavedTendersResponseDataItemTenderRelevanceScoreMin).max(listSavedTendersResponseDataItemTenderRelevanceScoreMax).nullable(),
+  "score": zod.number().min(listSavedTendersResponseDataItemTwoTenderRelevanceScoreMin).max(listSavedTendersResponseDataItemTwoTenderRelevanceScoreMax).nullable(),
   "highlights": zod.array(zod.object({
   "field": zod.enum(['title', 'objectSummary', 'items']),
   "fragments": zod.array(zod.string())
@@ -1134,7 +1189,7 @@ export const ListSavedTendersResponse = zod.object({
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
   "monitoredAt": zod.coerce.date().nullable()
-})),
+}))),
   "pagination": zod.object({
   "page": zod.number().int(),
   "pageSize": zod.number().int(),
@@ -1179,20 +1234,41 @@ export const ImportSavedTendersResponse = zod.object({
 
 
 
-export const PutSavedTenderParams = zod.object({
+export const GetSavedTenderParams = zod.object({
   "tenderId": zod.coerce.string().min(1)
 })
 
-export const PutSavedTenderBody = zod.object({
-  "monitored": zod.boolean().optional()
-})
+export const getSavedTenderResponseOneProtocolMax = 200;
 
-export const putSavedTenderResponseTenderRelevanceScoreMin = 0;
-export const putSavedTenderResponseTenderRelevanceScoreMax = 1;
+export const getSavedTenderResponseOneNextActionMax = 500;
+
+export const getSavedTenderResponseOneChecklistItemNoteMax = 1000;
+
+export const getSavedTenderResponseTwoTenderRelevanceScoreMin = 0;
+export const getSavedTenderResponseTwoTenderRelevanceScoreMax = 1;
 
 
 
-export const PutSavedTenderResponse = zod.object({
+export const GetSavedTenderResponse = zod.object({
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "stageAt": zod.coerce.date(),
+  "participationSource": zod.enum(['user']),
+  "protocol": zod.string().max(getSavedTenderResponseOneProtocolMax).nullable(),
+  "nextAction": zod.string().max(getSavedTenderResponseOneNextActionMax).nullable(),
+  "nextActionDeadline": zod.coerce.date().nullable(),
+  "checklist": zod.array(zod.object({
+  "key": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica', 'site_visit', 'samples', 'bid_guarantee']),
+  "state": zod.enum(['have', 'missing', 'unknown']),
+  "note": zod.string().max(getSavedTenderResponseOneChecklistItemNoteMax).nullable(),
+  "updatedAt": zod.coerce.date()
+})),
+  "history": zod.array(zod.object({
+  "from": zod.union([zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),zod.null()]),
+  "to": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "at": zod.coerce.date(),
+  "source": zod.enum(['user'])
+}))
+}).and(zod.object({
   "tender": zod.object({
   "id": zod.string(),
   "title": zod.string(),
@@ -1227,7 +1303,7 @@ export const PutSavedTenderResponse = zod.object({
   "label": zod.string()
 })),
   "relevance": zod.object({
-  "score": zod.number().min(putSavedTenderResponseTenderRelevanceScoreMin).max(putSavedTenderResponseTenderRelevanceScoreMax).nullable(),
+  "score": zod.number().min(getSavedTenderResponseTwoTenderRelevanceScoreMin).max(getSavedTenderResponseTwoTenderRelevanceScoreMax).nullable(),
   "highlights": zod.array(zod.object({
   "field": zod.enum(['title', 'objectSummary', 'items']),
   "fragments": zod.array(zod.string())
@@ -1238,7 +1314,116 @@ export const PutSavedTenderResponse = zod.object({
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
   "monitoredAt": zod.coerce.date().nullable()
+}))
+
+
+
+
+
+export const PutSavedTenderParams = zod.object({
+  "tenderId": zod.coerce.string().min(1)
 })
+
+export const putSavedTenderBodyProtocolMax = 200;
+
+export const putSavedTenderBodyNextActionMax = 500;
+
+export const putSavedTenderBodyChecklistItemNoteMax = 1000;
+
+export const putSavedTenderBodyChecklistMax = 8;
+
+
+
+export const PutSavedTenderBody = zod.object({
+  "monitored": zod.boolean().optional(),
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']).optional(),
+  "protocol": zod.string().max(putSavedTenderBodyProtocolMax).nullish(),
+  "nextAction": zod.string().max(putSavedTenderBodyNextActionMax).nullish(),
+  "nextActionDeadline": zod.coerce.date().nullish(),
+  "checklist": zod.array(zod.object({
+  "key": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica', 'site_visit', 'samples', 'bid_guarantee']),
+  "state": zod.enum(['have', 'missing', 'unknown']),
+  "note": zod.string().max(putSavedTenderBodyChecklistItemNoteMax).nullish()
+})).max(putSavedTenderBodyChecklistMax).optional().describe('Patch by key; omitted keys and notes are preserved.')
+})
+
+export const putSavedTenderResponseOneProtocolMax = 200;
+
+export const putSavedTenderResponseOneNextActionMax = 500;
+
+export const putSavedTenderResponseOneChecklistItemNoteMax = 1000;
+
+export const putSavedTenderResponseTwoTenderRelevanceScoreMin = 0;
+export const putSavedTenderResponseTwoTenderRelevanceScoreMax = 1;
+
+
+
+export const PutSavedTenderResponse = zod.object({
+  "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "stageAt": zod.coerce.date(),
+  "participationSource": zod.enum(['user']),
+  "protocol": zod.string().max(putSavedTenderResponseOneProtocolMax).nullable(),
+  "nextAction": zod.string().max(putSavedTenderResponseOneNextActionMax).nullable(),
+  "nextActionDeadline": zod.coerce.date().nullable(),
+  "checklist": zod.array(zod.object({
+  "key": zod.enum(['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica', 'site_visit', 'samples', 'bid_guarantee']),
+  "state": zod.enum(['have', 'missing', 'unknown']),
+  "note": zod.string().max(putSavedTenderResponseOneChecklistItemNoteMax).nullable(),
+  "updatedAt": zod.coerce.date()
+})),
+  "history": zod.array(zod.object({
+  "from": zod.union([zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),zod.null()]),
+  "to": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
+  "at": zod.coerce.date(),
+  "source": zod.enum(['user'])
+}))
+}).and(zod.object({
+  "tender": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "objectSummary": zod.string().nullable(),
+  "organization": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}),
+  "purchasingUnit": zod.string().nullable(),
+  "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
+  "modalityLabel": zod.string(),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
+  "estimatedValue": zod.number().nullable(),
+  "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "openingAt": zod.coerce.date().nullable(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "cityIbgeCode": zod.string().nullable()
+}),
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().url().nullable()
+}),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "relevance": zod.object({
+  "score": zod.number().min(putSavedTenderResponseTwoTenderRelevanceScoreMin).max(putSavedTenderResponseTwoTenderRelevanceScoreMax).nullable(),
+  "highlights": zod.array(zod.object({
+  "field": zod.enum(['title', 'objectSummary', 'items']),
+  "fragments": zod.array(zod.string())
+}))
+}),
+  "updatedAt": zod.coerce.date()
+}),
+  "savedAt": zod.coerce.date(),
+  "monitored": zod.boolean(),
+  "monitoredAt": zod.coerce.date().nullable()
+}))
 
 
 

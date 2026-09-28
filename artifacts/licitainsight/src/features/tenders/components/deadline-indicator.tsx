@@ -93,6 +93,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
   return (
     <span data-urgency={info.urgency} className={cn('inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5', className)}>
       <span
+        title={deadline && info.urgency !== 'unknown' ? formatDateTime(deadline) : undefined}
         className={cn(
           'inline-flex items-center gap-1 whitespace-nowrap rounded-md text-xs font-semibold',
           tone,
@@ -103,7 +104,8 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         {info.label}
       </span>
       {deadline && info.urgency !== 'unknown' && (
-        <time dateTime={deadline} title={formatDateTime(deadline)} className="whitespace-nowrap type-meta tabular-nums text-muted-foreground">
+        // Phones keep the countdown on the value's line; the exact date is one tap away on the detail page.
+        <time dateTime={deadline} title={formatDateTime(deadline)} className="hidden whitespace-nowrap type-meta tabular-nums text-muted-foreground sm:inline">
           {formatDate(deadline)}
         </time>
       )}

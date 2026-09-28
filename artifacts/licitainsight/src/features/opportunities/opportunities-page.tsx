@@ -79,7 +79,6 @@ export default function OpportunitiesPage() {
   return (
     <>
       <PageTitle
-        eyebrow="audiovisual"
         title="Chamadas culturais"
         description="Fomento do Mapa da Cultura e das secretarias que publicam no Mapas Culturais. Licitações do PNCP continuam em Explorar editais."
       />

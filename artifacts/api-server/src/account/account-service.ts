@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
   and,
+  asc,
   count,
   desc,
   eq,
+  gt,
   inArray,
   isNull,
   ne,
@@ -32,6 +34,7 @@ import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
 import { toSummary } from "../services/search-service";
 import type { SearchCriteria } from "../domain/search";
 import { canonicalSearchQuery } from "./saved-search-query";
+import { participationUpdate, type ParticipationPatch } from './participation';
 
 const MAX_SAVED_TENDERS = 500;
 const MAX_SAVED_SEARCHES = 50;
@@ -71,6 +74,14 @@ const toSavedTender = (
   savedAt: saved.savedAt,
   monitored: saved.monitored,
   monitoredAt: saved.monitoredAt,
+  stage: saved.stage,
+  stageAt: saved.stageAt,
+  participationSource: 'user',
+  protocol: saved.protocol,
+  nextAction: saved.nextAction,
+  nextActionDeadline: saved.nextActionDeadline,
+  checklist: saved.checklist.map(item => ({ ...item, key: item.key as SavedTender['checklist'][number]['key'], updatedAt: new Date(item.updatedAt) })),
+  history: saved.history.map(item => ({ ...item, at: new Date(item.at) })),
 });
 
 const toSavedSearch = (
@@ -95,21 +106,26 @@ export const listSavedTenders = async (input: {
   page: number;
   pageSize: number;
   monitored?: boolean;
+  stage?: ParticipationPatch['stage'];
+  sort?: 'saved_at' | 'deadline';
+  upcoming?: boolean;
 }): Promise<SavedTenderPage> => {
   const filter = and(
     eq(savedTendersTable.userId, input.userId),
     input.monitored === undefined
       ? undefined
       : eq(savedTendersTable.monitored, input.monitored),
+    input.stage === undefined ? undefined : eq(savedTendersTable.stage, input.stage),
+    input.upcoming ? gt(tendersTable.proposalDeadline, new Date()) : undefined,
   );
   const [[totalRow], rows] = await Promise.all([
-    db.select({ value: count() }).from(savedTendersTable).where(filter),
+    db.select({ value: count() }).from(savedTendersTable).innerJoin(tendersTable, eq(savedTendersTable.tenderId, tendersTable.id)).where(filter),
     db
       .select({ saved: savedTendersTable, tender: tendersTable })
       .from(savedTendersTable)
       .innerJoin(tendersTable, eq(savedTendersTable.tenderId, tendersTable.id))
       .where(filter)
-      .orderBy(desc(savedTendersTable.savedAt))
+      .orderBy(...(input.sort === 'deadline' ? [sql`${tendersTable.proposalDeadline} asc nulls last`, asc(savedTendersTable.tenderId)] : [desc(savedTendersTable.savedAt), asc(savedTendersTable.tenderId)]))
       .limit(input.pageSize)
       .offset((input.page - 1) * input.pageSize),
   ]);
@@ -131,11 +147,19 @@ export const savedTenderIds = async (userId: string) => {
   };
 };
 
+export const getSavedTender = async (userId: string, tenderId: string): Promise<SavedTender> => {
+  const [row] = await db.select({ saved: savedTendersTable, tender: tendersTable })
+    .from(savedTendersTable).innerJoin(tendersTable, eq(savedTendersTable.tenderId, tendersTable.id))
+    .where(and(eq(savedTendersTable.userId, userId), eq(savedTendersTable.tenderId, tenderId))).limit(1);
+  if (!row) throw new NotFoundError('Saved tender was not found');
+  return toSavedTender(row.saved, row.tender);
+};
+
 export const putSavedTender = async (input: {
   userId: string;
   tenderId: string;
   monitored?: boolean;
-}): Promise<SavedTender> =>
+} & ParticipationPatch): Promise<SavedTender> =>
   db.transaction(async (tx) => {
     await lockUser(tx, input.userId);
     const [tender] = await tx
@@ -155,14 +179,14 @@ export const putSavedTender = async (input: {
       )
       .limit(1);
     const now = new Date();
+    const participation = participationUpdate(existing, input, now);
     let saved = existing;
     if (existing) {
-      if (input.monitored !== undefined && input.monitored !== existing.monitored) {
         const [updated] = await tx
           .update(savedTendersTable)
           .set({
-            monitored: input.monitored,
-            monitoredAt: input.monitored ? now : null,
+            ...participation,
+            monitoredAt: participation.monitored ? (existing.monitoredAt ?? now) : null,
           })
           .where(
             and(
@@ -172,7 +196,6 @@ export const putSavedTender = async (input: {
           )
           .returning();
         saved = updated;
-      }
     } else {
       const [totalRow] = await tx
         .select({ value: count() })
@@ -183,14 +206,14 @@ export const putSavedTender = async (input: {
           { field: "limit", issue: "max_saved_tenders" },
         ]);
       }
-      const monitored = input.monitored ?? false;
+      const monitored = participation.monitored;
       [saved] = await tx
         .insert(savedTendersTable)
         .values({
           userId: input.userId,
           tenderId: input.tenderId,
           savedAt: now,
-          monitored,
+          ...participation,
           monitoredAt: monitored ? now : null,
         })
         .returning();

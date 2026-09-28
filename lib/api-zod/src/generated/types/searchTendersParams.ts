@@ -10,6 +10,7 @@ import type { CityFilterParameter } from './cityFilterParameter';
 import type { DeadlineFromParameter } from './deadlineFromParameter';
 import type { DeadlineToParameter } from './deadlineToParameter';
 import type { FacetsParameter } from './facetsParameter';
+import type { IncludeMonitoredParameter } from './includeMonitoredParameter';
 import type { ModalityFilterParameter } from './modalityFilterParameter';
 import type { OrganizationFilterParameter } from './organizationFilterParameter';
 import type { PageParameter } from './pageParameter';
@@ -31,6 +32,10 @@ export type SearchTendersParams = {
 q?: QueryParameter;
 mode?: SearchModeParameter;
 status?: StatusFilterParameter;
+/**
+ * With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).
+ */
+includeMonitored?: IncludeMonitoredParameter;
 modality?: ModalityFilterParameter;
 /**
  * @items.pattern ^[A-Za-z]{2}$

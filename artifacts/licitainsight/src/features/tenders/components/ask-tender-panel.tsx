@@ -3,9 +3,10 @@ import { Link } from 'wouter';
 import { CircleAlert, ExternalLink, FileSearch, Info, Loader2, MessageSquareQuote, RefreshCw, SearchX } from 'lucide-react';
 import { isApiError, type AskTenderPassage, type AskTenderResult, type TenderAskStatus } from '@/api';
 import { Button } from '@/components/common/action-button';
-import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
 import { ASK_MAX_LENGTH, ASK_MIN_LENGTH } from '@/services/ai-service';
 import { cn } from '@/lib/utils';
 import { useAskStatus, useAskTender } from '../hooks/use-ask-tender';
@@ -334,7 +335,7 @@ function IndexState({ status, onRetry, retrying }: { status: TenderAskStatus; on
 
 /**
  * "Perguntar ao edital" (ai-v1). Jev picks official passages; the panel never shows generated text.
- * Anonymous → sign in; no access → subscription; with access → index state, quota and the question form.
+ * Visitors and accounts without access see the title and one line ("Antes de decidir" explains the gate); with access → index state, quota and the question form.
  */
 export function AskTenderPanel({ tenderId }: { tenderId: string }) {
   const session = useSession();
@@ -342,20 +343,11 @@ export function AskTenderPanel({ tenderId }: { tenderId: string }) {
   const entitled = billing.data?.entitled === true;
   const status = useAskStatus(tenderId, entitled);
   const titleId = useId();
+  const gated = session.status === 'anonymous' || billing.data?.entitled === false;
 
   let body;
-  if (session.status === 'anonymous') {
-    body = (
-      <div className={noteBox}>
-        <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-        <span>
-          Pergunte, por exemplo, se o edital exige visita técnica, e veja o trecho oficial que responde, com a página.{' '}
-          <button type="button" onClick={() => signInWithGoogle()} className={linkClass} data-testid="button-ask-sign-in">
-            Entrar com Google
-          </button>
-        </span>
-      </div>
-    );
+  if (gated) {
+    body = null;
   } else if (session.status !== 'authenticated' || billing.isPending || (entitled && status.isPending)) {
     body = <div aria-busy="true" aria-label="Carregando" className="h-11 animate-pulse rounded-lg bg-muted" />;
   } else if (billing.isError || status.isError) {
@@ -369,18 +361,6 @@ export function AskTenderPanel({ tenderId }: { tenderId: string }) {
         </Button>
       </div>
     );
-  } else if (!entitled) {
-    body = (
-      <p className={noteBox} data-testid="text-ask-no-access">
-        <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-        <span>
-          Perguntar ao edital faz parte da assinatura.{' '}
-          <Link href={BILLING_HREF} className={linkClass}>
-            Ver assinatura
-          </Link>
-        </span>
-      </p>
-    );
   } else if (status.data) {
     body =
       status.data.index === 'ready' ? (
@@ -392,18 +372,19 @@ export function AskTenderPanel({ tenderId }: { tenderId: string }) {
 
   return (
     <section aria-labelledby={titleId} className="rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="panel-ask-tender">
-      <div className="mb-1 flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <FileSearch size={17} aria-hidden="true" className="text-primary" />
         <h2 id={titleId} className="type-section text-foreground">
           Perguntar ao edital
         </h2>
+        {gated && <IncludedInAccessHint className="ml-1" />}
       </div>
-      <p className="mb-4 type-meta text-muted-foreground">A resposta é sempre um trecho dos documentos oficiais, com a página, nunca um texto gerado.</p>
-      {body}
-      <p className="mt-5 flex gap-2 border-t border-border-subtle pt-4 type-meta text-muted-foreground" data-testid="text-ask-disclaimer">
-        <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Os trechos são escolhidos automaticamente e podem não ser os únicos relevantes. Confira o edital original antes de decidir.
-      </p>
+      {!gated && (
+        <>
+          <p className="mt-1 mb-4 type-meta text-muted-foreground">A resposta é sempre um trecho dos documentos oficiais, com a página, nunca um texto gerado.</p>
+          {body}
+        </>
+      )}
     </section>
   );
 }

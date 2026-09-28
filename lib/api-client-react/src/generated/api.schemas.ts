@@ -182,13 +182,100 @@ export interface AccountExportSession {
   expiresAt: string;
 }
 
-export interface AccountExportSavedTender {
+export type ParticipationStage = typeof ParticipationStage[keyof typeof ParticipationStage];
+
+
+export const ParticipationStage = {
+  analyzing: 'analyzing',
+  participating: 'participating',
+  submitted: 'submitted',
+  awaiting_result: 'awaiting_result',
+  completed: 'completed',
+  dismissed: 'dismissed',
+} as const;
+
+export type ParticipationDataParticipationSource = typeof ParticipationDataParticipationSource[keyof typeof ParticipationDataParticipationSource];
+
+
+export const ParticipationDataParticipationSource = {
+  user: 'user',
+} as const;
+
+export type ParticipationChecklistItemKey = typeof ParticipationChecklistItemKey[keyof typeof ParticipationChecklistItemKey];
+
+
+export const ParticipationChecklistItemKey = {
+  ato_societario: 'ato_societario',
+  regularidade_fiscal: 'regularidade_fiscal',
+  regularidade_trabalhista: 'regularidade_trabalhista',
+  qualificacao_tecnica: 'qualificacao_tecnica',
+  qualificacao_economica: 'qualificacao_economica',
+  site_visit: 'site_visit',
+  samples: 'samples',
+  bid_guarantee: 'bid_guarantee',
+} as const;
+
+export type ParticipationChecklistItemState = typeof ParticipationChecklistItemState[keyof typeof ParticipationChecklistItemState];
+
+
+export const ParticipationChecklistItemState = {
+  have: 'have',
+  missing: 'missing',
+  unknown: 'unknown',
+} as const;
+
+export interface ParticipationChecklistItem {
+  key: ParticipationChecklistItemKey;
+  state: ParticipationChecklistItemState;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  note: string | null;
+  updatedAt: string;
+}
+
+export type ParticipationTransitionSource = typeof ParticipationTransitionSource[keyof typeof ParticipationTransitionSource];
+
+
+export const ParticipationTransitionSource = {
+  user: 'user',
+} as const;
+
+export interface ParticipationTransition {
+  from: ParticipationStage | null;
+  to: ParticipationStage;
+  at: string;
+  source: ParticipationTransitionSource;
+}
+
+export interface ParticipationData {
+  stage: ParticipationStage;
+  stageAt: string;
+  participationSource: ParticipationDataParticipationSource;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  protocol: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  nextAction: string | null;
+  /** @nullable */
+  nextActionDeadline: string | null;
+  checklist: ParticipationChecklistItem[];
+  history: ParticipationTransition[];
+}
+
+export type AccountExportSavedTender = ParticipationData & ({
   tenderId: string;
   savedAt: string;
   monitored: boolean;
   /** @nullable */
   monitoredAt: string | null;
-}
+});
 
 export interface AccountExportSavedSearch {
   id: string;
@@ -877,13 +964,46 @@ export interface Pagination {
   totalIsEstimate: boolean;
 }
 
-export interface SavedTender {
+export type ParticipationChecklistPatchKey = typeof ParticipationChecklistPatchKey[keyof typeof ParticipationChecklistPatchKey];
+
+
+export const ParticipationChecklistPatchKey = {
+  ato_societario: 'ato_societario',
+  regularidade_fiscal: 'regularidade_fiscal',
+  regularidade_trabalhista: 'regularidade_trabalhista',
+  qualificacao_tecnica: 'qualificacao_tecnica',
+  qualificacao_economica: 'qualificacao_economica',
+  site_visit: 'site_visit',
+  samples: 'samples',
+  bid_guarantee: 'bid_guarantee',
+} as const;
+
+export type ParticipationChecklistPatchState = typeof ParticipationChecklistPatchState[keyof typeof ParticipationChecklistPatchState];
+
+
+export const ParticipationChecklistPatchState = {
+  have: 'have',
+  missing: 'missing',
+  unknown: 'unknown',
+} as const;
+
+export interface ParticipationChecklistPatch {
+  key: ParticipationChecklistPatchKey;
+  state: ParticipationChecklistPatchState;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  note?: string | null;
+}
+
+export type SavedTender = ParticipationData & ({
   tender: TenderSummary;
   savedAt: string;
   monitored: boolean;
   /** @nullable */
   monitoredAt: string | null;
-}
+});
 
 export interface SavedTenderPage {
   data: SavedTender[];
@@ -897,6 +1017,24 @@ export interface SavedTenderIds {
 
 export interface PutSavedTenderRequest {
   monitored?: boolean;
+  stage?: ParticipationStage;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  protocol?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  nextAction?: string | null;
+  /** @nullable */
+  nextActionDeadline?: string | null;
+  /**
+     * Patch by key; omitted keys and notes are preserved.
+     * @maxItems 8
+     */
+  checklist?: ParticipationChecklistPatch[];
 }
 
 export interface ImportSavedTendersRequest {
@@ -1371,6 +1509,11 @@ export type PageSizeParameter = number;
 
 export type FacetsParameter = boolean;
 
+/**
+ * With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).
+ */
+export type IncludeMonitoredParameter = boolean;
+
 export type ReadinessCheck200 = {
   status: 'ok';
 };
@@ -1383,6 +1526,10 @@ export type SearchTendersParams = {
 q?: QueryParameter;
 mode?: SearchModeParameter;
 status?: StatusFilterParameter;
+/**
+ * With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).
+ */
+includeMonitored?: IncludeMonitoredParameter;
 modality?: ModalityFilterParameter;
 /**
  * @items.pattern ^[A-Za-z]{2}$
@@ -1511,7 +1658,18 @@ page?: PageParameter;
  */
 pageSize?: PageSizeParameter;
 monitored?: boolean;
+stage?: ParticipationStage;
+sort?: ListSavedTendersSort;
+upcoming?: boolean;
 };
+
+export type ListSavedTendersSort = typeof ListSavedTendersSort[keyof typeof ListSavedTendersSort];
+
+
+export const ListSavedTendersSort = {
+  saved_at: 'saved_at',
+  deadline: 'deadline',
+} as const;
 
 export type ListNotificationsParams = {
 unreadOnly?: boolean;

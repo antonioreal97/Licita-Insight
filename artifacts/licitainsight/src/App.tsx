@@ -168,13 +168,15 @@ function Router() {
             </AppShell>
           )}
         </Route>
-        <Route path="/design-system">
-          {() => (
-            <AppShell>
-              <DesignSystemPage />
-            </AppShell>
-          )}
-        </Route>
+        {import.meta.env.DEV && (
+          <Route path="/design-system">
+            {() => (
+              <AppShell>
+                <DesignSystemPage />
+              </AppShell>
+            )}
+          </Route>
+        )}
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>

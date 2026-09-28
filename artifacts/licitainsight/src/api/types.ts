@@ -212,9 +212,62 @@ export type BillingCheckoutResponse = { url: string };
 /** A downloaded attachment (e.g. `GET /me/export`). `filename` comes from `Content-Disposition`, `null` when absent. */
 export type DownloadedFile = { blob: Blob; filename: string | null };
 
-export type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
+// Participation — source of truth: docs/contracts/participation-v1.md. Everything here is the user's own declaration.
+export type ParticipationStage = 'analyzing' | 'participating' | 'submitted' | 'awaiting_result' | 'completed' | 'dismissed';
 
-export type SavedTendersParams = { page?: number; pageSize?: number; monitored?: boolean };
+export type ChecklistKey =
+  | QualificationType
+  | 'site_visit'
+  | 'samples'
+  | 'bid_guarantee';
+
+/** No entry for a key means `unknown`, never a validated document. */
+export type ChecklistState = 'have' | 'missing' | 'unknown';
+
+export type ParticipationChecklistItem = { key: ChecklistKey; state: ChecklistState; note: string | null; updatedAt: string };
+
+export type ParticipationTransition = { from: ParticipationStage | null; to: ParticipationStage; at: string; source: 'user' };
+
+export type SavedTender = {
+  tender: TenderSummary;
+  savedAt: string;
+  monitored: boolean;
+  monitoredAt: string | null;
+  stage: ParticipationStage;
+  stageAt: string;
+  participationSource: 'user';
+  /** ≤ 200 chars. */
+  protocol: string | null;
+  /** ≤ 500 chars. */
+  nextAction: string | null;
+  nextActionDeadline: string | null;
+  checklist: ParticipationChecklistItem[];
+  history: ParticipationTransition[];
+};
+
+/**
+ * Body of `PUT /me/saved-tenders/{id}`: omitted fields are preserved, `null` clears. The checklist is a patch by key
+ * (omitted keys and notes are kept). The server owns `history`, `stageAt`, `participationSource` and the monitoring side effects.
+ */
+export type SaveTenderBody = {
+  monitored?: boolean;
+  stage?: ParticipationStage;
+  protocol?: string | null;
+  nextAction?: string | null;
+  nextActionDeadline?: string | null;
+  checklist?: { key: ChecklistKey; state: ChecklistState; note?: string | null }[];
+};
+
+export type SavedTendersParams = {
+  page?: number;
+  pageSize?: number;
+  monitored?: boolean;
+  stage?: ParticipationStage;
+  /** `deadline`: nearest proposal deadline first, nulls last. Default `saved_at` (newest first). */
+  sort?: 'saved_at' | 'deadline';
+  /** Only future proposal deadlines. */
+  upcoming?: boolean;
+};
 
 export type SavedTendersResponse = { data: SavedTender[]; pagination: Pagination };
 

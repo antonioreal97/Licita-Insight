@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Building2, CalendarDays, Globe, MapPin } from 'lucide-react';
+import { Building2, CalendarDays, MapPin } from 'lucide-react';
 import type { TenderFit, TenderSummary } from '@/api';
 import { FitBadge } from '@/features/company-profile/components/fit-badge';
 import { formatDate } from '@/lib/format';
@@ -27,7 +27,8 @@ type Props = {
 };
 
 /**
- * Primary result unit. Reading order: status/modality/number → objeto → órgão · local · publicado · fonte → facts → categorias.
+ * Primary result unit. Reading order: status/modality/number → objeto → órgão · local · publicado → facts → categorias.
+ * The source is not repeated per row (every result shows it on the detail page).
  * Layout (grid): mobile stacks facts under the text; ≥sm moves value/deadline/relevance to a right-aligned column
  * so values line up vertically across rows for fast scanning. The whole row opens the detail (title link overlay).
  */
@@ -44,7 +45,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
       aria-labelledby={titleId}
       data-testid={`row-tender-${tender.id}`}
       className={cn(
-        'group relative grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-border px-4 transition-colors duration-fast ease-standard last:border-0 hover:bg-surface-sunken sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:gap-x-5 sm:px-5',
+        'group relative grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-border px-4 transition-colors duration-fast ease-standard last:border-0 hover:bg-surface-sunken active:bg-surface-sunken sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:gap-x-5 sm:px-5',
         'has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-ring',
         compact ? 'py-3.5' : 'py-4',
       )}
@@ -65,7 +66,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
 
       {/* Title, org line, snippet, categories */}
       <div className="col-span-2 row-start-2 mt-1.5 min-w-0 sm:col-span-1 sm:col-start-1">
-        <h3 id={titleId} className="text-sm font-semibold leading-5 text-foreground">
+        <h3 id={titleId} className="type-body font-semibold text-foreground">
           <Link
             href={`/tenders/${tender.id}`}
             data-testid={`link-tender-${tender.id}`}
@@ -84,20 +85,15 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
             {place ?? 'Local não informado'}
           </MetaItem>
           {!compact && (
-            <>
-              <MetaItem icon={CalendarDays} label="Publicado em" className="shrink-0">
-                {tender.publishedAt ? (
-                  <>
-                    publicado <time dateTime={tender.publishedAt}>{formatDate(tender.publishedAt)}</time>
-                  </>
-                ) : (
-                  'publicação não informada'
-                )}
-              </MetaItem>
-              <MetaItem icon={Globe} label="Fonte" title={tender.source.name} className="max-w-[14rem]">
-                {tender.source.name}
-              </MetaItem>
-            </>
+            <MetaItem icon={CalendarDays} label="Publicado em" className="shrink-0">
+              {tender.publishedAt ? (
+                <>
+                  publicado <time dateTime={tender.publishedAt}>{formatDate(tender.publishedAt)}</time>
+                </>
+              ) : (
+                'publicação não informada'
+              )}
+            </MetaItem>
           )}
         </div>
 

@@ -5,6 +5,11 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { EmailMessage } from "../email/resend-client";
+import type { SavedTender as SavedTenderModel, SavedTenderPage as SavedTenderPageModel, AccountExport as AccountExportModel } from '@workspace/api-zod';
+type JsonValue<T> = T extends Date ? string : T extends Array<infer U> ? JsonValue<U>[] : T extends object ? { [K in keyof T]: JsonValue<T[K]> } : T;
+type SavedTender = JsonValue<SavedTenderModel>;
+type SavedTenderPage = JsonValue<SavedTenderPageModel>;
+type AccountExport = JsonValue<AccountExportModel>;
 
 // Opt-in: uses real Postgres in an isolated schema. The public schema must have
 // the application migrations applied before PNCP_TEST_DATABASE_URL is set.
@@ -91,6 +96,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   // Newer than the shared test database's public schema: create it from its migration, in this schema.
   await pool.query(
     readFileSync(new URL("../../../../lib/db/migrations/0018_beta_access.sql", import.meta.url), "utf8"),
+  );
+  const participationColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'saved_tenders' and column_name = 'stage'", [schema]);
+  if (participationColumn.rowCount === 0) await pool.query(
+    readFileSync(new URL('../../../../lib/db/migrations/0019_participation.sql', import.meta.url), 'utf8'),
   );
 
   const server: Server = app.listen(0, "127.0.0.1");
@@ -430,6 +439,11 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const denied = await request("/v1/me/saved-tenders/ids", {}, cookie);
     assert.equal(denied.status, 402);
     assert.equal(((await denied.json()) as { error: { code: string } }).error.code, "SUBSCRIPTION_REQUIRED");
+    const participationPath = '/v1/me/saved-tenders/00394460000141-1-000123-2026';
+    assert.equal((await request(participationPath, {}, cookie)).status, 402);
+    assert.equal((await request(participationPath, {
+      method: 'PUT', headers: csrf, body: JSON.stringify({ stage: 'participating' }),
+    }, cookie)).status, 402);
 
     const billing = await request("/v1/me/billing", {}, cookie);
     assert.equal(billing.status, 200);
@@ -480,6 +494,59 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   const first = publication(123);
   await upsertPublications([first], new Date("2026-09-23T13:00:00Z"));
   const tenderId = "00394460000141-1-000123-2026";
+
+  await t.test('persists declared participation, isolates users, merges concurrent checklist patches and exports history', async () => {
+    const cookie = await login('participation@example.test');
+    const path = `/v1/me/saved-tenders/${tenderId}`;
+    const put = (body: unknown) => request(path, { method: 'PUT', headers: csrf, body: JSON.stringify(body) }, cookie);
+    assert.equal((await request(path)).status, 401);
+    assert.equal((await request(path, {}, cookie)).status, 404);
+    assert.equal((await request(path, { method: 'PUT', body: '{}' }, cookie)).status, 403);
+    const initialResponse = await put({});
+    assert.equal(initialResponse.status, 200);
+    const initial = await initialResponse.json() as SavedTender;
+    assert.equal(initial.stage, 'analyzing');
+    assert.equal(initial.participationSource, 'user');
+    assert.equal(initial.history.length, 1);
+    assert.equal((await request(path, {}, userBCookie)).status, 404);
+    const preparing = await (await put({ stage: 'participating', protocol: 'ABC-123', nextAction: 'Separar documentos', nextActionDeadline: '2026-10-02T15:00:00Z' })).json() as SavedTender;
+    assert.equal(preparing.monitored, true);
+    assert.equal(preparing.history[1].from, 'analyzing');
+    assert.equal(preparing.history[1].source, 'user');
+    await Promise.all([
+      put({ checklist: [{ key: 'site_visit', state: 'missing', note: 'Agendar visita' }] }),
+      put({ checklist: [{ key: 'qualificacao_tecnica', state: 'have' }] }),
+    ]);
+    const persisted = await (await request(path, {}, cookie)).json() as SavedTender;
+    assert.equal(persisted.checklist.length, 2);
+    assert.equal(persisted.protocol, 'ABC-123');
+    assert.equal(persisted.nextAction, 'Separar documentos');
+    const repeated = await (await put({ stage: 'participating' })).json() as SavedTender;
+    assert.equal(repeated.history.length, 2);
+    assert.equal(repeated.stageAt, preparing.stageAt);
+    const submitted = await (await put({ stage: 'submitted', checklist: [{ key: 'site_visit', state: 'have' }] })).json() as SavedTender;
+    assert.equal(submitted.checklist.find((item) => item.key === 'site_visit')?.note, 'Agendar visita');
+    assert.equal(submitted.history.length, 3);
+    const filtered = await (await request('/v1/me/saved-tenders?stage=submitted&sort=deadline&upcoming=true', {}, cookie)).json() as SavedTenderPage;
+    assert.equal(filtered.pagination.total, 1);
+    const empty = await (await request('/v1/me/saved-tenders?stage=dismissed', {}, cookie)).json() as SavedTenderPage;
+    assert.equal(empty.pagination.total, 0);
+    assert.equal((await put({ history: [], participationSource: 'official' })).status, 400);
+    assert.equal((await put({ checklist: [{ key: 'fake', state: 'have' }] })).status, 400);
+    assert.equal((await request('/v1/me/saved-tenders?stage=fake', {}, cookie)).status, 400);
+    const exported = await (await request('/v1/me/export', {}, cookie)).json() as AccountExport;
+    assert.equal(exported.savedTenders[0].protocol, 'ABC-123');
+    assert.equal(exported.savedTenders[0].history.length, 3);
+    assert.equal(exported.savedTenders[0].participationSource, 'user');
+    await put({ stage: 'awaiting_result' });
+    await put({ stage: 'completed' });
+    const dismissed = await (await put({ stage: 'dismissed', protocol: null, nextAction: null, nextActionDeadline: null })).json() as SavedTender;
+    assert.equal(dismissed.monitored, false);
+    assert.equal(dismissed.protocol, null);
+    assert.equal(dismissed.history.length, 6);
+    assert.equal((await request(path, { method: 'DELETE', headers: csrf }, cookie)).status, 204);
+    assert.equal((await request(path, {}, cookie)).status, 404);
+  });
 
   await t.test("enforces ask-tender authentication, entitlement, validation, and availability", async () => {
     assert.equal((await request(`/v1/tenders/${tenderId}/ask-status`)).status, 401);

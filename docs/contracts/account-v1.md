@@ -72,6 +72,11 @@ rota não é registrada (404). Serve para QA/testes automatizados sem conta Goog
 
 Monitorar implica salvar: `monitored` é um atributo do edital salvo.
 
+Extensão implementada em setembro de 2026: [participação por usuário e edital](participation-v1.md).
+Ela acrescenta etapas, checklist triestado, protocolo, próxima ação, histórico e filtros à lista,
+além do GET individual. Os campos também fazem parte da exportação pessoal. As formas mínimas
+abaixo continuam aceitas; consulte a extensão para o contrato completo.
+
 ```ts
 type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
 ```

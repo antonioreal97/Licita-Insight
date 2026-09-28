@@ -35,6 +35,7 @@ export const httpAccountAdapter: AccountAdapter = {
 
   listSavedTenders: (params, signal) => getJson<SavedTendersResponse>('/v1/me/saved-tenders', params, signal),
   getSavedTenderIds: (signal) => getJson<SavedTenderIdsResponse>('/v1/me/saved-tenders/ids', {}, signal),
+  getSavedTender: (tenderId, signal) => getJson<SavedTender>(`/v1/me/saved-tenders/${enc(tenderId)}`, {}, signal),
   saveTender: (tenderId, body) => sendJson<SavedTender>('PUT', `/v1/me/saved-tenders/${enc(tenderId)}`, body),
   removeSavedTender: (tenderId) => sendJson<void>('DELETE', `/v1/me/saved-tenders/${enc(tenderId)}`),
   importSavedTenders: (ids) => sendJson<ImportSavedTendersResponse>('POST', '/v1/me/saved-tenders/import', { ids }),

@@ -64,6 +64,7 @@ paths:
         - $ref: "#/components/parameters/Query"
         - $ref: "#/components/parameters/SearchMode"
         - $ref: "#/components/parameters/StatusFilter"
+        - $ref: "#/components/parameters/IncludeMonitored"
         - $ref: "#/components/parameters/ModalityFilter"
         - $ref: "#/components/parameters/StateFilter"
         - $ref: "#/components/parameters/CityFilter"
@@ -619,6 +620,19 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: stage
+          in: query
+          schema:
+            $ref: "#/components/schemas/ParticipationStage"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [saved_at, deadline]
+        - name: upcoming
+          in: query
+          schema:
+            type: boolean
       responses:
         "200":
           description: Saved tender page
@@ -674,6 +688,23 @@ paths:
         schema:
           type: string
           minLength: 1
+    get:
+      operationId: getSavedTender
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Saved tender with user-declared participation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedTender"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+        "404":
+          $ref: "#/components/responses/NotFound"
     put:
       operationId: putSavedTender
       tags: [account]
@@ -1126,6 +1157,16 @@ components:
       schema:
         type: boolean
         default: true
+    IncludeMonitored:
+      name: includeMonitored
+      in: query
+      description: >-
+        With a status filter and a signed-in user, also returns the tenders that user monitors,
+        whatever their status (e.g. an open-only search still lists a monitored tender that closed).
+        Ignored without a session. Such responses are private (never publicly cached).
+      schema:
+        type: boolean
+        default: false
   responses:
     InvalidParameter:
       description: Invalid request parameter
@@ -1399,6 +1440,8 @@ components:
       required: [createdAt, lastSeenAt, expiresAt]
     AccountExportSavedTender:
       type: object
+      allOf:
+        - $ref: "#/components/schemas/ParticipationData"
       properties:
         tenderId: { type: string }
         savedAt: { type: string, format: date-time }
@@ -2141,8 +2184,68 @@ components:
         totalIsEstimate:
           type: boolean
       required: [page, pageSize, total, totalPages, totalIsEstimate]
+    ParticipationStage:
+      type: string
+      enum: [analyzing, participating, submitted, awaiting_result, completed, dismissed]
+    ParticipationChecklistPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          enum: [ato_societario, regularidade_fiscal, regularidade_trabalhista, qualificacao_tecnica, qualificacao_economica, site_visit, samples, bid_guarantee]
+        state:
+          type: string
+          enum: [have, missing, unknown]
+        note: { type: [string, "null"], maxLength: 1000 }
+      required: [key, state]
+    ParticipationChecklistItem:
+      type: object
+      properties:
+        key:
+          type: string
+          enum: [ato_societario, regularidade_fiscal, regularidade_trabalhista, qualificacao_tecnica, qualificacao_economica, site_visit, samples, bid_guarantee]
+        state:
+          type: string
+          enum: [have, missing, unknown]
+        note: { type: [string, "null"], maxLength: 1000 }
+        updatedAt: { type: string, format: date-time }
+      required: [key, state, note, updatedAt]
+    ParticipationTransition:
+      type: object
+      properties:
+        from:
+          anyOf:
+            - $ref: "#/components/schemas/ParticipationStage"
+            - type: "null"
+        to:
+          $ref: "#/components/schemas/ParticipationStage"
+        at: { type: string, format: date-time }
+        source: { type: string, enum: [user] }
+      required: [from, to, at, source]
+    ParticipationData:
+      type: object
+      properties:
+        stage:
+          $ref: "#/components/schemas/ParticipationStage"
+        stageAt: { type: string, format: date-time }
+        participationSource: { type: string, enum: [user] }
+        protocol: { type: [string, "null"], maxLength: 200 }
+        nextAction: { type: [string, "null"], maxLength: 500 }
+        nextActionDeadline: { type: [string, "null"], format: date-time }
+        checklist:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParticipationChecklistItem"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParticipationTransition"
+      required: [stage, stageAt, participationSource, protocol, nextAction, nextActionDeadline, checklist, history]
     SavedTender:
       type: object
+      allOf:
+        - $ref: "#/components/schemas/ParticipationData"
       properties:
         tender:
           $ref: "#/components/schemas/TenderSummary"
@@ -2181,6 +2284,17 @@ components:
       properties:
         monitored:
           type: boolean
+        stage:
+          $ref: "#/components/schemas/ParticipationStage"
+        protocol: { type: [string, "null"], maxLength: 200 }
+        nextAction: { type: [string, "null"], maxLength: 500 }
+        nextActionDeadline: { type: [string, "null"], format: date-time }
+        checklist:
+          type: array
+          maxItems: 8
+          description: Patch by key; omitted keys and notes are preserved.
+          items:
+            $ref: "#/components/schemas/ParticipationChecklistPatch"
     ImportSavedTendersRequest:
       type: object
       additionalProperties: false

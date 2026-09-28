@@ -5,11 +5,12 @@
  * Public Licita Insight API
  * OpenAPI spec version: 1.3.0
  */
+import type { ParticipationData } from './participationData';
 
-export interface AccountExportSavedTender {
+export type AccountExportSavedTender = ParticipationData & ({
   tenderId: string;
   savedAt: Date;
   monitored: boolean;
   /** @nullable */
   monitoredAt: Date | null;
-}
+});

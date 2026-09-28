@@ -34,6 +34,7 @@ export const queryKeys = {
       all: ['me', 'saved-tenders'] as const,
       ids: ['me', 'saved-tenders', 'ids'] as const,
       list: (params: SavedTendersParams) => ['me', 'saved-tenders', 'list', params] as const,
+      detail: (tenderId: string) => ['me', 'saved-tenders', 'detail', tenderId] as const,
     },
     savedSearches: ['me', 'saved-searches'] as const,
     notifications: {

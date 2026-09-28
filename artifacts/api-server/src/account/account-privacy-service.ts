@@ -62,6 +62,13 @@ export async function exportAccountData(userId: string, now = new Date()) {
           savedAt: savedTendersTable.savedAt,
           monitored: savedTendersTable.monitored,
           monitoredAt: savedTendersTable.monitoredAt,
+          stage: savedTendersTable.stage,
+          stageAt: savedTendersTable.stageAt,
+          protocol: savedTendersTable.protocol,
+          nextAction: savedTendersTable.nextAction,
+          nextActionDeadline: savedTendersTable.nextActionDeadline,
+          checklist: savedTendersTable.checklist,
+          history: savedTendersTable.history,
         })
         .from(savedTendersTable)
         .where(eq(savedTendersTable.userId, userId)),
@@ -159,7 +166,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
     exportedAt: now,
     user,
     sessions,
-    savedTenders,
+    savedTenders: savedTenders.map(saved => ({ ...saved, participationSource: 'user' as const })),
     savedSearches,
     notifications,
     emailDeliveries,

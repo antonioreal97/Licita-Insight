@@ -1,117 +1,83 @@
-import { useId, useState } from 'react';
-import { Link } from 'wouter';
-import { ChevronDown, CircleAlert, ClipboardList, ExternalLink, Info, Loader2, RefreshCw } from 'lucide-react';
-import { isApiError, type QualificationItem, type QualificationType, type SheetEvidence, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
+import { useId, useState, type ReactNode } from 'react';
+import { ChevronDown, CircleAlert, ClipboardList, Info, Loader2, RefreshCw } from 'lucide-react';
+import { isApiError, type ChecklistKey, type QualificationItem, type QualificationType, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
 import { Button } from '@/components/common/action-button';
-import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
+import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
-import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
+import { ChecklistControl, ChecklistSummary } from '@/features/participation/components/prep-checklist';
+import { ProvenanceLabel } from '@/features/participation/components/provenance-label';
 import { cn } from '@/lib/utils';
 import { useTenderSheet } from '../hooks/use-tender-sheet';
 import { sheetExcerpt } from '../lib/sheet-excerpt';
+import { FIELDS, QUALIFICATION_LABELS, QUALIFICATION_ORDER } from '../lib/sheet-labels';
+import { SourceLink } from './source-link';
 
-type FieldCopy = { label: string; answers?: Record<string, string> };
-
-/** Labels live here; the API sends stable ids and answer keys (CODEX_HANDOFF-015). */
-const FIELDS: Record<SheetFieldId, FieldCopy> = {
-  consortium: { label: 'Consórcio', answers: { allowed: 'Permitido', forbidden: 'Vedado' } },
-  subcontracting: { label: 'Subcontratação', answers: { allowed: 'Permitida', limited: 'Permitida com limites', forbidden: 'Vedada' } },
-  me_epp: { label: 'ME/EPP', answers: { exclusive: 'Exclusivo para ME/EPP', quota: 'Cota reservada para ME/EPP', benefits_only: 'Só os benefícios da LC 123' } },
-  site_visit: { label: 'Visita técnica', answers: { mandatory: 'Obrigatória', optional: 'Facultativa', waived: 'Dispensada' } },
-  samples: { label: 'Amostra ou prova de conceito', answers: { required: 'Exige', not_required: 'Não exige' } },
-  bid_guarantee: { label: 'Garantia de proposta', answers: { required: 'Exige', not_required: 'Não exige' } },
-  contract_guarantee: { label: 'Garantia contratual', answers: { required: 'Exige', not_required: 'Não exige' } },
-  penalties: { label: 'Multas' },
-  technical_qualification: { label: 'Qualificação técnica' },
-  financial_qualification: { label: 'Qualificação econômico-financeira' },
-  contract_term: { label: 'Vigência do contrato' },
-  delivery_term: { label: 'Prazo de entrega ou execução' },
-  price_adjustment: { label: 'Reajuste' },
-};
-
-/** Fixed display order; absent types just don't render (never "não exige" by omission). */
-const QUALIFICATION_LABELS: Record<QualificationType, string> = {
-  ato_societario: 'Documento societário',
-  regularidade_fiscal: 'Regularidade fiscal',
-  regularidade_trabalhista: 'Regularidade trabalhista',
-  qualificacao_tecnica: 'Qualificação técnica',
-  qualificacao_economica: 'Qualificação econômico-financeira',
-};
-const QUALIFICATION_ORDER: QualificationType[] = ['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica'];
-
-function QualificationRow({ item }: { item: QualificationItem }) {
+/** One row per requirement type; each official passage keeps its own page link. `prep`: the user's mark, in "O que preparar". */
+function QualificationRow({ type, items, prep }: { type: QualificationType; items: QualificationItem[]; prep?: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const passagesId = useId();
+  const single = items.length === 1;
   return (
-    <div className="py-3 first:pt-0 last:pb-0" data-testid="qualification-item" data-type={item.type}>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[item.type]}</span>
-        <div className="flex items-center gap-3">
-          <SourceLink evidence={item.evidence} />
+    <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4" data-testid="qualification-item" data-type={type}>
+      <dt className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[type]}</dt>
+      <dd className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="type-meta text-muted-foreground">{single ? 'Exigido' : `Exigido em ${items.length} trechos`}</span>
+          {items.map((item) => (
+            <SourceLink key={`${item.evidence.documentUrl}-${item.evidence.page}`} evidence={item.evidence} />
+          ))}
           <button
             type="button"
             aria-expanded={open}
+            aria-controls={passagesId}
             onClick={() => setOpen((value) => !value)}
             className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
             data-testid="button-qualification-toggle"
           >
-            {open ? 'Ocultar trecho' : 'Ver trecho'}
+            {open ? 'Ocultar' : single ? 'Ver trecho' : 'Ver trechos'}
             <ChevronDown size={13} aria-hidden="true" className={cn('transition-transform duration-fast ease-standard', open && 'rotate-180')} />
           </button>
         </div>
-      </div>
-      {open && <blockquote className="mt-2 border-l-2 border-primary/50 pl-3 type-meta break-words text-foreground/90">{item.evidence.text}</blockquote>}
+        {open && (
+          <div id={passagesId} className="mt-2 space-y-2">
+            {items.map((item) => (
+              <blockquote key={`${item.evidence.documentUrl}-${item.evidence.page}`} className="border-l-2 border-primary/50 pl-3 type-meta break-words text-foreground/90">
+                {!single && <span className="mr-1.5 font-semibold text-muted-foreground">p. {item.evidence.page}</span>}
+                {item.evidence.text}
+              </blockquote>
+            ))}
+          </div>
+        )}
+        {prep}
+      </dd>
     </div>
   );
 }
 
-function QualificationChecklist({ items }: { items: QualificationItem[] }) {
-  if (items.length === 0) return null;
-  const ordered = QUALIFICATION_ORDER.flatMap((type) => items.filter((item) => item.type === type));
-  return (
-    <section aria-label="Requisitos de habilitação encontrados">
-      <h3 className="mb-2 type-eyebrow text-muted-foreground">Requisitos de habilitação encontrados</h3>
-      <p className="mb-2 type-meta text-muted-foreground">
-        Não é uma lista completa: pode haver mais de uma exigência do mesmo tipo na mesma página, e só uma aparece aqui. Confira sempre o edital.
-      </p>
-      <dl className="divide-y divide-border-subtle">
-        {ordered.map((item, index) => (
-          <QualificationRow key={`${item.type}-${item.evidence.page}-${index}`} item={item} />
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-const GROUPS: { title: string; ids: SheetFieldId[] }[] = [
-  { title: 'Participação', ids: ['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples'] },
-  { title: 'Garantias e penalidades', ids: ['bid_guarantee', 'contract_guarantee', 'penalties'] },
-  { title: 'Habilitação', ids: ['technical_qualification', 'financial_qualification'] },
-  { title: 'Execução', ids: ['contract_term', 'delivery_term', 'price_adjustment'] },
+/** Groups, in the order a bidder asks: can I take part, what must I prepare, what is at stake, how it runs. */
+const GROUPS: { title: string; ids: SheetFieldId[]; prepare?: boolean }[] = [
+  { title: 'Quem pode participar', ids: ['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples'] },
+  { title: 'O que preparar', ids: ['technical_qualification', 'financial_qualification', 'site_visit', 'samples', 'bid_guarantee'], prepare: true },
+  { title: 'Garantias e multas', ids: ['bid_guarantee', 'contract_guarantee', 'penalties'] },
+  { title: 'Execução do contrato', ids: ['contract_term', 'delivery_term', 'price_adjustment'] },
 ];
+
+/** Only a found passage with this exact answer moves the field into "O que preparar"; anything else stays in its own group. */
+const PREPARE_WHEN: Partial<Record<SheetFieldId, string>> = { site_visit: 'mandatory', samples: 'required', bid_guarantee: 'required' };
+const toPrepare = (field: SheetField) => field.status === 'found' && Boolean(field.evidence) && PREPARE_WHEN[field.id] === field.answer;
+
+/** A checklist item of these types already cites the passage; the single fixed field would repeat it. */
+const COVERED_BY_CHECKLIST: Partial<Record<SheetFieldId, QualificationType>> = {
+  technical_qualification: 'qualificacao_tecnica',
+  financial_qualification: 'qualificacao_economica',
+};
+
+/** Key the user's mark is stored under (participation-v1) for each field that can appear in "O que preparar". */
+const PREP_KEY: Partial<Record<SheetFieldId, ChecklistKey>> = { ...COVERED_BY_CHECKLIST, site_visit: 'site_visit', samples: 'samples', bid_guarantee: 'bid_guarantee' };
 
 const noteBox = 'flex gap-2.5 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground';
 const errorBox = 'flex gap-2.5 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-4 py-3 type-meta text-destructive-subtle-foreground';
-const linkClass = 'font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring';
-
-function SourceLink({ evidence }: { evidence: SheetEvidence | null }) {
-  if (!evidence) return null;
-  return (
-    <a
-      href={evidence.documentUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={evidence.documentTitle}
-      data-testid="link-sheet-source"
-      className={cn('inline-flex shrink-0 items-center gap-1 type-meta', linkClass)}
-    >
-      p. {evidence.page}
-      <ExternalLink size={11} aria-hidden="true" />
-      <span className="sr-only">
-        ({evidence.documentTitle}, documento oficial, abre em nova aba)
-      </span>
-    </a>
-  );
-}
 
 /** Collapsed preview: from the sentence about this field, with an ellipsis when the start was skipped. Expanding shows it all. */
 function PreviewText({ field }: { field: SheetField }) {
@@ -119,7 +85,7 @@ function PreviewText({ field }: { field: SheetField }) {
   return <>{excerpt.trimmed ? `…${excerpt.text}` : excerpt.text}</>;
 }
 
-function FieldRow({ field }: { field: SheetField }) {
+function FieldRow({ field, prep }: { field: SheetField; prep?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const passageId = useId();
   const copy = FIELDS[field.id];
@@ -166,6 +132,7 @@ function FieldRow({ field }: { field: SheetField }) {
                 {field.evidence.text}
               </blockquote>
             )}
+            {prep}
           </>
         )}
       </dd>
@@ -173,9 +140,66 @@ function FieldRow({ field }: { field: SheetField }) {
   );
 }
 
-function SheetBody({ sheet }: { sheet: TenderSheet }) {
+function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }) {
   const byId = new Map(sheet.fields.map((field) => [field.id, field]));
   const found = sheet.fields.filter((field) => field.status === 'found').length;
+  const checklist = new Map<QualificationType, QualificationItem[]>();
+  for (const item of sheet.qualificationChecklist) checklist.set(item.type, [...(checklist.get(item.type) ?? []), item]);
+  const covered = (id: SheetFieldId) => {
+    const type = COVERED_BY_CHECKLIST[id];
+    return type !== undefined && checklist.has(type);
+  };
+  // Absence is not an answer: the fields the documents never mention are named together at the end, as "não encontrados".
+  const missing: SheetField[] = [];
+
+  const sections = GROUPS.map((group) => {
+    const fields = group.ids
+      .filter((id) => !covered(id))
+      .map((id) => byId.get(id))
+      .filter((field): field is SheetField => Boolean(field))
+      // A mandatory site visit, required sample or required bid guarantee is listed only in "O que preparar"; any other answer stays in its own group.
+      .filter((field) => (group.prepare ? PREPARE_WHEN[field.id] === undefined || toPrepare(field) : !toPrepare(field)));
+    const shown = fields.filter((field) => field.status !== 'not_found' && field.evidence);
+    missing.push(...fields.filter((field) => !shown.includes(field)));
+    const qualification = group.prepare ? QUALIFICATION_ORDER.filter((type) => checklist.has(type)) : [];
+    const empty = shown.length === 0 && qualification.length === 0;
+    if (empty && !group.prepare) return null;
+    // Only requirements found in the current ficha can be marked; a mark never creates a requirement.
+    const prepKeys: ChecklistKey[] = group.prepare ? [...qualification, ...shown.map((field) => PREP_KEY[field.id]!)] : [];
+    return (
+      <section key={group.title} aria-label={group.title} data-testid={group.prepare ? 'sheet-group-prepare' : undefined}>
+        <h3 className="mb-2 type-eyebrow text-muted-foreground">{group.title}</h3>
+        {empty ? (
+          <p className="type-meta text-muted-foreground" data-testid="text-prepare-empty">
+            Nenhuma exigência de documento foi encontrada nos documentos lidos. Confira o edital.
+          </p>
+        ) : (
+          <>
+            {group.prepare && <ChecklistSummary tenderId={tenderId} keys={prepKeys} />}
+            <dl className="divide-y divide-border-subtle">
+              {qualification.map((type) => (
+                <QualificationRow
+                  key={type}
+                  type={type}
+                  items={checklist.get(type)!}
+                  prep={<ChecklistControl tenderId={tenderId} itemKey={type} label={QUALIFICATION_LABELS[type]} />}
+                />
+              ))}
+              {shown.map((field) => (
+                <FieldRow
+                  key={field.id}
+                  field={field}
+                  prep={group.prepare ? <ChecklistControl tenderId={tenderId} itemKey={PREP_KEY[field.id]!} label={FIELDS[field.id].label} /> : undefined}
+                />
+              ))}
+            </dl>
+          </>
+        )}
+        {group.prepare && !empty && <p className="mt-2 type-meta text-muted-foreground">Pode haver outras exigências. Confira sempre o edital.</p>}
+      </section>
+    );
+  });
+
   return (
     <>
       <p className="mb-4 type-meta text-muted-foreground" data-testid="text-sheet-summary">
@@ -186,27 +210,19 @@ function SheetBody({ sheet }: { sheet: TenderSheet }) {
           ` ${sheet.unreadDocuments === 1 ? '1 documento não pôde ser lido' : `${sheet.unreadDocuments} documentos não puderam ser lidos`}; a ficha pode estar incompleta.`}
       </p>
       <div className="space-y-6">
-        <QualificationChecklist items={sheet.qualificationChecklist} />
-        {GROUPS.map((group) => {
-          const fields = group.ids.map((id) => byId.get(id)).filter((field): field is SheetField => Boolean(field));
-          if (fields.length === 0) return null;
-          return (
-            <section key={group.title} aria-label={group.title}>
-              <h3 className="mb-2 type-eyebrow text-muted-foreground">{group.title}</h3>
-              <dl className="divide-y divide-border-subtle">
-                {fields.map((field) => (
-                  <FieldRow key={field.id} field={field} />
-                ))}
-              </dl>
-            </section>
-          );
-        })}
+        {sections}
+        {missing.length > 0 && (
+          <p className="type-meta text-muted-foreground" data-testid="text-sheet-missing">
+            <span className="font-semibold text-foreground/80">Não encontrados nos documentos:</span>{' '}
+            {missing.map((field) => FIELDS[field.id].label).join(', ')}.
+          </p>
+        )}
       </div>
     </>
   );
 }
 
-function SheetState({ sheet, onRetry, retrying }: { sheet: TenderSheet; onRetry: () => void; retrying: boolean }) {
+function SheetState({ sheet, tenderId, onRetry, retrying }: { sheet: TenderSheet; tenderId: string; onRetry: () => void; retrying: boolean }) {
   switch (sheet.status) {
     case 'not_started':
     case 'processing':
@@ -251,31 +267,25 @@ function SheetState({ sheet, onRetry, retrying }: { sheet: TenderSheet; onRetry:
         </div>
       );
     default:
-      return <SheetBody sheet={sheet} />;
+      return <SheetBody sheet={sheet} tenderId={tenderId} />;
   }
 }
 
-/** "Ficha do edital" (3.5): key rules with the official passage and page; missing fields say so. */
+/**
+ * "Ficha do edital" (3.5): key rules with the official passage and page; missing fields say so.
+ * Visitors and accounts without access see the title and one line: "Antes de decidir" explains the gate once.
+ */
 export function TenderSheetPanel({ tenderId }: { tenderId: string }) {
   const session = useSession();
   const billing = useBilling();
   const entitled = billing.data?.entitled === true;
   const sheet = useTenderSheet(tenderId, entitled);
   const titleId = useId();
+  const gated = session.status === 'anonymous' || billing.data?.entitled === false;
 
   let body;
-  if (session.status === 'anonymous') {
-    body = (
-      <p className={noteBox}>
-        <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-        <span>
-          Consórcio, garantia, visita técnica, habilitação e prazos, cada um com o trecho e a página do edital.{' '}
-          <button type="button" onClick={() => signInWithGoogle()} className={linkClass} data-testid="button-sheet-sign-in">
-            Entrar com Google
-          </button>
-        </span>
-      </p>
-    );
+  if (gated) {
+    body = null;
   } else if (session.status !== 'authenticated' || billing.isPending || (entitled && sheet.isPending)) {
     body = <div aria-busy="true" aria-label="Carregando" className="h-24 animate-pulse rounded-lg bg-muted" />;
   } else if (billing.isError || sheet.isError) {
@@ -289,36 +299,27 @@ export function TenderSheetPanel({ tenderId }: { tenderId: string }) {
         </Button>
       </div>
     );
-  } else if (!entitled) {
-    body = (
-      <p className={noteBox} data-testid="text-sheet-no-access">
-        <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-        <span>
-          A ficha do edital faz parte da assinatura.{' '}
-          <Link href={BILLING_HREF} className={linkClass}>
-            Ver assinatura
-          </Link>
-        </span>
-      </p>
-    );
   } else if (sheet.data) {
-    body = <SheetState sheet={sheet.data} onRetry={() => sheet.refetch()} retrying={sheet.isFetching} />;
+    body = <SheetState sheet={sheet.data} tenderId={tenderId} onRetry={() => sheet.refetch()} retrying={sheet.isFetching} />;
   }
 
   return (
-    <section aria-labelledby={titleId} className="rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="panel-tender-sheet">
-      <div className="mb-1 flex items-center gap-2">
+    <section id="ficha" aria-labelledby={titleId} className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="panel-tender-sheet">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <ClipboardList size={17} aria-hidden="true" className="text-primary" />
         <h2 id={titleId} className="type-section text-foreground">
           Ficha do edital
         </h2>
+        {gated && <IncludedInAccessHint className="ml-1" />}
       </div>
-      <p className="mb-4 type-meta text-muted-foreground">Cada campo mostra o trecho oficial e a página. Campo sem trecho fica como não encontrado.</p>
-      {body}
-      <p className="mt-5 flex gap-2 border-t border-border-subtle pt-4 type-meta text-muted-foreground" data-testid="text-sheet-disclaimer">
-        <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Os trechos são escolhidos automaticamente e podem não ser os únicos relevantes. Confira o edital original antes de decidir.
-      </p>
+      {!gated && (
+        <>
+          <ProvenanceLabel kind="found" className="mt-1 mb-4 flex">
+            Encontrado no edital. Cada campo mostra o trecho oficial e a página; campo sem trecho fica como não encontrado.
+          </ProvenanceLabel>
+          {body}
+        </>
+      )}
     </section>
   );
 }
