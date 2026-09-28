@@ -68,11 +68,20 @@
   ordem correta, toggle funciona, sem erros de console atribuíveis à feature.
   Detalhes: `docs/reviews/qualification-checklist-2026-09-27.md`.
 
+## O que já funciona — prontidão de deploy (HANDOFF-021, ciclo 10)
+
+- Migrations versionadas `0000`–`0018` como único caminho de schema em produção (`release_command`), com
+  `verify:migrations` (migrate == push num banco vazio; idempotente; testado com mutação).
+- `Dockerfile.prod` (147 MiB, amd64, sem `tsx`), frontend servido pela API com `STATIC_DIR` (mesma origem;
+  só `assets/` com cache imutável), `fly.toml` enxuto + `deploy/fly-db/` (Postgres próprio + dump para Tigris).
+- Beta fechado no Mac: `deploy/beta-local/` + `docs/ops/beta-local.md`; convites em `beta_access_grants`
+  respeitados pelo gate 402, por `/me/billing` (`source: beta`) e pelos e-mails; runner na imagem.
+- Carga do PNCP medida: 1 dia útil nacional ≈ 5,3 mil editais, ~11 min, +28 MB.
+
 ## O que falta
 
-- Deploy online no Fly.io `gru` (decidido em 26 set 2026; ainda não feito). Pausado a pedido do owner até
-  concluir a verificação competitiva/promessas (27 set 2026) — concluída; deploy segue sem nova autorização.
-- Carga nacional dos últimos 30 dias do PNCP.
+- Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).
+- Deploy no Fly.io `gru` enxuto: quando o beta tiver ~3 usuários ativos (decisão do owner, 28 set 2026).
 - Outras fontes além do Mapas Culturais.
 - Alerta por WhatsApp e histórico de preços (achados como gap competitivo em 27 set 2026, não iniciados).
 

@@ -1250,7 +1250,7 @@ components:
       enum: [none, pending, active, past_due, canceled]
     BillingEntitlementSource:
       type: [string, "null"]
-      enum: [subscription, trial, dev, null]
+      enum: [subscription, trial, beta, dev, null]
     BillingResponse:
       type: object
       properties:

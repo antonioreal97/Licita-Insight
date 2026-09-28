@@ -21,6 +21,7 @@ import {
 } from "@workspace/db";
 import { publicAppOrigin } from "../auth/config";
 import { isEntitled } from "../billing/billing-access";
+import { activeBetaGrantEmails } from "../billing/beta-grants";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { logger } from "../lib/logger";
 import { createUnsubscribeToken } from "./unsubscribe-token";
@@ -91,8 +92,14 @@ const notificationSelection = {
   currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
 };
 
-const hasEmailAccess = (candidate: Candidate, now: Date): boolean =>
+/** `betaEmails` comes lowercased from activeBetaGrantEmails, loaded once per job run. */
+export const hasEmailAccess = (
+  candidate: Pick<Candidate, "type" | "email" | "subscriptionStatus" | "currentPeriodEnd" | "trialEndsAt">,
+  now: Date,
+  betaEmails: ReadonlySet<string>,
+): boolean =>
   candidate.type === "trial_ending" ||
+  betaEmails.has(candidate.email.toLowerCase()) ||
   isEntitled(
     {
       status: candidate.subscriptionStatus,
@@ -137,7 +144,8 @@ const digestCandidates = async (now: Date): Promise<Candidate[]> => {
     )
     .orderBy(asc(notificationsTable.createdAt))
     .limit(5_000);
-  return rows.filter((row) => hasEmailAccess(row, now));
+  const betaEmails = await activeBetaGrantEmails(now);
+  return rows.filter((row) => hasEmailAccess(row, now, betaEmails));
 };
 
 const immediateCandidates = async (
@@ -189,7 +197,8 @@ const immediateCandidates = async (
     )
     .orderBy(asc(notificationsTable.createdAt))
     .limit(5_000);
-  return rows.filter((row) => hasEmailAccess(row, now));
+  const betaEmails = await activeBetaGrantEmails(now);
+  return rows.filter((row) => hasEmailAccess(row, now, betaEmails));
 };
 
 const digestKey = (userId: string, now: Date): string =>

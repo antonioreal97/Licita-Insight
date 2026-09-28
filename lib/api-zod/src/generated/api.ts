@@ -890,7 +890,7 @@ export const ExportAccountDataResponse = zod.object({
 export const GetBillingResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
@@ -922,7 +922,7 @@ export const StartBillingCheckoutResponse = zod.object({
 export const CancelBillingSubscriptionResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
@@ -1532,3 +1532,5 @@ export const markNotificationsReadResponseUnreadCountMin = 0;
 export const MarkNotificationsReadResponse = zod.object({
   "unreadCount": zod.number().int().min(markNotificationsReadResponseUnreadCountMin)
 })
+
+

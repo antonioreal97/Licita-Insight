@@ -226,14 +226,15 @@ Um plano mensal. O valor vem de `BILLING_MONTHLY_BRL` (não fica no código). Se
 e o restante do app segue no ar.
 
 Acesso (`entitled`) quando há assinatura elegível (`active`, ou `canceled` com período pago ainda
-vigente), teste vigente ou bypass de desenvolvimento. A prioridade pública da origem é
-`subscription > trial > dev`. Sem linha na tabela `subscriptions` = `status: none`.
+vigente), teste vigente, acesso beta por convite ou bypass de desenvolvimento. A prioridade pública
+da origem é `subscription > trial > dev > beta` (em produção `dev` nunca aparece). Sem linha na tabela
+`subscriptions` = `status: none`.
 
 ```ts
 type BillingResponse = {
   status: 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
   entitled: boolean;
-  source: 'subscription' | 'trial' | 'dev' | null;
+  source: 'subscription' | 'trial' | 'beta' | 'dev' | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   canCancel: boolean;
@@ -245,6 +246,13 @@ O teste dura 7 dias desde a criação do usuário. A migration `0003_trial_acces
 sua execução aos usuários preexistentes. Um tombstone fora de `users` preserva somente HMAC-SHA256
 do Google `sub` (com `SESSION_SECRET`) e o fim original do teste. Excluir e recriar a conta preserva
 apenas os dias restantes, sem reiniciar o período; e-mail e nome nunca entram no tombstone.
+
+Beta fechado (`source: 'beta'`): liberação dada pelo owner, fora do Asaas, na tabela
+`beta_access_grants` (e-mail, `access_until`, `revoked_at`), gerida pelo runner
+`lib/db/scripts/beta-access.mjs` (grant/revoke/list; exige `DATABASE_URL` explícito). Vale enquanto
+não revogada e antes de `access_until`, com e-mail comparado sem diferenciar maiúsculas. É respeitada
+pelo gate `402`, por `GET /me/billing` e pela elegibilidade de e-mail; webhook e cancelamento do Asaas
+não leem nem alteram essa tabela.
 
 Em desenvolvimento, `BILLING_DEV_ENTITLED=true` libera o gate para qualquer usuário autenticado
 somente quando `NODE_ENV !== 'production'`. `source: 'dev'` só aparece quando não há assinatura nem

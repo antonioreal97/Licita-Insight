@@ -4,6 +4,7 @@ import { db, subscriptionsTable, usersTable } from "@workspace/db";
 import { authContext } from "../auth/http";
 import { SubscriptionRequiredError } from "../lib/api-error";
 import { isEntitled } from "./billing-access";
+import { userHasBetaGrant } from "./beta-grants";
 
 export const requireSubscription: RequestHandler = async (_req, res, next) => {
   try {
@@ -25,7 +26,10 @@ export const requireSubscription: RequestHandler = async (_req, res, next) => {
       )
       .where(eq(usersTable.id, userId))
       .limit(1);
-    if (!isEntitled(row ?? null, new Date())) throw new SubscriptionRequiredError();
+    const now = new Date();
+    if (!isEntitled(row ?? null, now) && !(await userHasBetaGrant(userId, now))) {
+      throw new SubscriptionRequiredError();
+    }
     next();
   } catch (error) {
     next(error);

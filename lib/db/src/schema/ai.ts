@@ -69,19 +69,28 @@ export type TenderSheetDiagnostic = {
   secondEvidence: TenderSheetEvidence | null;
 };
 
-export const tenderAiIndexesTable = pgTable("tender_ai_indexes", {
-  tenderId: text("tender_id")
-    .primaryKey()
-    .references(() => tendersTable.id, { onDelete: "cascade" }),
-  version: integer("version").notNull().default(1),
-  sourceFingerprint: text("source_fingerprint").notNull(),
-  status: text("status").notNull(),
-  error: text("error"),
-  startedAt: timestamp("started_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  purgedAt: timestamp("purged_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const tenderAiIndexesTable = pgTable(
+  "tender_ai_indexes",
+  {
+    tenderId: text("tender_id")
+      .primaryKey()
+      .references(() => tendersTable.id, { onDelete: "cascade" }),
+    version: integer("version").notNull().default(1),
+    sourceFingerprint: text("source_fingerprint").notNull(),
+    status: text("status").notNull(),
+    error: text("error"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    purgedAt: timestamp("purged_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "tender_ai_indexes_status_check",
+      sql`${table.status} in ('processing', 'ready', 'failed', 'no_documents', 'unsupported')`,
+    ),
+  ],
+);
 
 export const tenderAiDocumentsTable = pgTable(
   "tender_ai_documents",
@@ -107,6 +116,10 @@ export const tenderAiDocumentsTable = pgTable(
     index("tender_ai_documents_tender_idx").on(table.tenderId),
     index("tender_ai_documents_retry_idx").on(table.nextRetryAt).where(sql`${table.retryable} = true`),
     check("tender_ai_documents_attempt_count_check", sql`${table.attemptCount} >= 0`),
+    check(
+      "tender_ai_documents_status_check",
+      sql`${table.status} in ('processing', 'ready', 'failed', 'unsupported')`,
+    ),
   ],
 );
 
@@ -129,6 +142,7 @@ export const tenderAiPassagesTable = pgTable(
   (table) => [
     uniqueIndex("tender_ai_passages_position_uidx").on(table.documentId, table.indexVersion, table.page, table.passageOrder),
     index("tender_ai_passages_tender_idx").on(table.tenderId, table.indexVersion),
+    index("tender_ai_passages_search_idx").using("gin", table.searchVector),
   ],
 );
 
@@ -190,6 +204,10 @@ export const aiAskRequestsTable = pgTable(
   (table) => [
     uniqueIndex("ai_ask_requests_cache_uidx").on(table.userId, table.tenderId, table.normalizedQuestion, table.indexVersion, table.requestedModel),
     index("ai_ask_requests_user_created_idx").on(table.userId, table.createdAt),
+    check(
+      "ai_ask_requests_status_check",
+      sql`${table.status} in ('processing', 'answered', 'not_found', 'failed')`,
+    ),
   ],
 );
 
@@ -232,6 +250,14 @@ export const tenderAiSheetsTable = pgTable(
   (table) => [
     uniqueIndex("tender_ai_sheets_cache_uidx").on(table.tenderId, table.indexVersion, table.requestedModel, table.promptVersion),
     index("tender_ai_sheets_tender_idx").on(table.tenderId, table.updatedAt),
+    check(
+      "tender_ai_sheets_status_check",
+      sql`${table.status} in ('processing', 'ready', 'failed')`,
+    ),
+    check(
+      "tender_ai_sheets_unread_documents_check",
+      sql`${table.unreadDocuments} >= 0`,
+    ),
   ],
 );
 

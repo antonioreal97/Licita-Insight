@@ -64,3 +64,48 @@ Do `ai_usage_ledger` acumulado nesta sessão (54 chamadas reais ao Jev, `licita_
 | Ficha (custo da plataforma, não do usuário) | 23.796 | US$ 0,001 | 500/dia → **US$ 15/mês no total**, para todos os usuários |
 
 Os números medidos confirmam a estimativa dada ao owner; a de "Perguntar ao edital" fica ainda mais barata do que o previsto.
+
+## Adendo — nomes parecidos com "LicitAI" e preço do Licitei (27 set 2026, noite)
+
+Motivo: busca de marca do owner apontou vários "LicitaAI" no mesmo segmento. Conferido nos sites (ou em busca,
+quando o site só carrega por JavaScript):
+
+| Produto | Vende para | Preço público | Observação |
+|---|---|---|---|
+| LICITAI (`licitai.lovable.app`) | empresas licitantes | R$ 199 / 399 / 899 por mês (10 / 50 / ilimitadas licitações) | 14 dias grátis; diz ter "500+ empresas", mas roda num subdomínio do Lovable com logos de exemplo — tratar como não verificado |
+| LicitaIA (`licitaia.app`, Clareou Soluções Digitais) | empresas licitantes | R$ 297/mês (1 usuário); R$ 2.970/ano; Multi+ R$ 579/mês (2 usuários) | gera propostas e documentos, planilha de custos, pesquisa de preços, alertas e radar por WhatsApp, kanban, raio-X de concorrentes |
+| Portal Licita.ia (`portallicitaia.com.br`) | empresas licitantes | não publicado (teste grátis) | análise de edital, histórico de pagamento do órgão, preços, concorrentes |
+| **Licitei** (`licitei.com.br/planos`) | empresas licitantes | **Busca R$ 101/mês (R$ 1.031/ano ≈ R$ 86/mês); Premium R$ 393/mês; Multiempresas 3 R$ 1.179/mês** | 7 dias grátis. Busca já inclui consulta ao edital com IA, gestão de documentos de habilitação, alertas diários e gerador de declarações/propostas. Premium: robô de lances, monitoramento de chat, concorrentes. (Na análise da manhã o preço não estava publicado.) |
+| Licita IA (`licitaia.com.br`, Y2TI) | **órgãos públicos** | não publicado | "não atendemos fornecedores privados licitantes" — não é concorrente direto |
+| LICITA.AI (`licitaaidigital.com.br`) | **órgãos públicos** | não publicado (sob solicitação) | cotação de preços/CATMAT para setores de compras |
+| LiciteAI (`liciteai.com.br`) | órgãos **e** fornecedores | não publicado | portal de licitação (publicação, sessão, recursos) com IA; outro modelo de negócio |
+| LicitAI (`licitai.org`) | — | — | DNS não resolve em 27 set 2026 |
+
+Além desses, a busca mostrou `licitaia.pro`, `licitai.mbest.site` e um "LicitAI – Busca Inteligente de
+Licitações" (`licitaieditais.com.br`, DNS não resolve). Domínios `licitai.com.br` e `licitaia.com.br`
+pertencem a terceiros; `licitai.com` existe desde 2024. Conclusão para a marca: o espaço "Licita + IA" está
+saturado; trocar o nome antes do beta.
+
+**Posição de preço de quem vende para empresas licitantes:** Acumi R$ 49 (1 análise/mês) · **LicitAI R$ 49,90
+sem teto de análises** · ContrataX R$ 59–149 · Licitei Busca R$ 86–101 · LICITAI R$ 199 · LicitaIA R$ 297 ·
+Licitei Premium R$ 393 · Siga Pregão R$ 397–497.
+
+**O que os concorrentes diretos têm e nós não:** gerador de declarações/propostas (Licitei Busca, LICITAI,
+LicitaIA), gestão de documentos de habilitação com alerta de vencimento (Licitei, LiciteAI), WhatsApp
+(LicitaIA), pesquisa/histórico de preços (LicitaIA, Portal Licita.ia), concorrentes, robô de lances (Licitei
+Premium). Nosso checklist lista o que o edital **exige**; ainda não diz o que **falta** à empresa — isso
+precisa da gestão de documentos com validade.
+
+### licitaia.pro e "LicitAI Editais" (28 set 2026)
+
+- **`licitaia.pro` (LICITA.IA)**: fora do ar (sem DNS em nenhum resolvedor; sem registro no whois). Pela cópia do
+  Internet Archive de 14 fev 2026 ("v2.0 Expandida", página única de ~11 KB): produto do lado **comprador**, para
+  estatais (Lei 13.303/2016) e administração direta (Lei 14.133/2021). O usuário escolhe o regime jurídico,
+  preenche um formulário (tipo de licitação, objeto, valor estimado, prazo) e clica "Gerar Análise IA", que devolve
+  uma "análise jurídica automatizada" gerada, mais banco de jurisprudência e modelos de documento. Sem busca de
+  editais, sem dados do PNCP, sem alertas, sem preço publicado; link "Admin" exposto na página pública; alega
+  "validação jurídica por especialistas" e "auditoria de segurança" sem evidência. Aparência de protótipo. Não
+  compete pelo nosso cliente (empresa licitante).
+- **`licitaieditais.com.br` ("LicitAI – Busca Inteligente de Licitações", "a partir de R$ 39,90/mês" segundo a
+  busca)**: domínio criado em 07 set 2025 e **expirado em 07 set 2026**; sem DNS. Não verificável e, ao que tudo
+  indica, descontinuado.

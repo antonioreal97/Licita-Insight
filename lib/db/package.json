@@ -9,7 +9,7 @@
     "./pool-config": "./src/pool-config.ts"
   },
   "scripts": {
-    "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts",
+    "migrate": "node --env-file-if-exists=../../.env scripts/migrate.mjs",
     "push": "drizzle-kit push --config ./drizzle.config.ts && node --import tsx scripts/apply-ai-ledger.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts && node --import tsx scripts/apply-ai-ledger.ts",
     "prepare-extensions": "node --env-file-if-exists=../../.env --import tsx scripts/prepare-extensions.ts",
@@ -19,7 +19,8 @@
     "verify:ai-jobs": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-jobs.ts",
     "verify:ai-purged-at": "node --env-file-if-exists=../../.env --import tsx scripts/verify-ai-purged-at.ts",
     "verify:qualification-checklist": "node --env-file-if-exists=../../.env --import tsx scripts/verify-qualification-checklist.ts",
-    "verify:search-index": "node --env-file-if-exists=../../.env --import tsx scripts/verify-search-index.ts"
+    "verify:search-index": "node --env-file-if-exists=../../.env --import tsx scripts/verify-search-index.ts",
+    "verify:migrations": "node --env-file-if-exists=../../.env scripts/verify-migrations.mjs"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

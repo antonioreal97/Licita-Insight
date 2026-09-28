@@ -1,0 +1,39 @@
+name: licitai-beta
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file: ["${HOME}/.licitai-secrets/beta.env"]
+    volumes: [beta_pg_data:/var/lib/postgresql/data]
+    healthcheck: { test: [CMD-SHELL, 'pg_isready -U licitai_beta -d licitai_beta'], interval: 5s, timeout: 3s, retries: 20 }
+  migrate:
+    platform: linux/amd64
+    build: { context: ../.., dockerfile: Dockerfile.prod }
+    restart: "no"
+    env_file: ["${HOME}/.licitai-secrets/beta.env"]
+    environment: { APP_ROLE: worker }
+    depends_on: { db: { condition: service_healthy } }
+    command: [node, /app/lib/db/scripts/migrate.mjs]
+  app:
+    platform: linux/amd64
+    build: { context: ../.., dockerfile: Dockerfile.prod }
+    restart: unless-stopped
+    env_file: ["${HOME}/.licitai-secrets/beta.env"]
+    environment:
+      APP_ROLE: all
+      STATIC_DIR: /app/artifacts/licitainsight/dist/public
+      TRUST_PROXY: "1"
+      NODE_ENV: production
+      PORT: "3001"
+      PNCP_DAILY_COLLECT: "true"
+      CULTURE_DAILY_COLLECT: "true"
+    expose: ["3001"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+  cloudflared:
+    image: cloudflare/cloudflared:2025.8.1
+    restart: unless-stopped
+    profiles: [tunnel]
+    env_file: ["${HOME}/.licitai-secrets/cloudflared-beta.env"]
+    command: [tunnel, run]
+    depends_on: [app]
+volumes: { beta_pg_data: }

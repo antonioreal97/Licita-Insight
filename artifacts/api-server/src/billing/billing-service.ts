@@ -21,6 +21,7 @@ import {
   type EntitlementSource,
   type SubscriptionStatus,
 } from "./billing-access";
+import { userHasBetaGrant } from "./beta-grants";
 import { webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
 import { TRIAL_DAYS } from "./trial-access";
 
@@ -48,7 +49,7 @@ export async function getBilling(userId: string): Promise<BillingView> {
     findByUser(userId),
     findTrialEndsAt(userId),
   ]);
-  return toView(row, trialEndsAt);
+  return toView(row, trialEndsAt, await userHasBetaGrant(userId, new Date()));
 }
 
 export const getBillingPlan = () => ({
@@ -136,7 +137,11 @@ export async function cancelSubscription(userId: string): Promise<BillingView> {
     .set({ status: "canceled", updatedAt })
     .where(eq(subscriptionsTable.userId, userId))
     .returning();
-  return toView(saved ?? { ...row, status: "canceled", updatedAt }, trialEndsAt);
+  return toView(
+    saved ?? { ...row, status: "canceled", updatedAt },
+    trialEndsAt,
+    await userHasBetaGrant(userId, updatedAt),
+  );
 }
 
 export async function applyAsaasWebhook(body: unknown): Promise<void> {
@@ -293,13 +298,15 @@ function optionalString(value: unknown): string | null {
 function toView(
   row: SubscriptionRow | null | undefined,
   trialEndsAt: Date | null,
+  betaGrant = false,
 ): BillingView {
   const now = new Date();
   const status = isStatus(row?.status) ? row.status : "none";
-  const source = entitlementSource(
+  let source = entitlementSource(
     { status: row?.status ?? null, currentPeriodEnd: row?.currentPeriodEnd ?? null, trialEndsAt },
     now,
   );
+  if (source === null && betaGrant) source = "beta";
   return {
     status,
     entitled: source !== null,

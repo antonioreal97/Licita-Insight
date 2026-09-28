@@ -2,7 +2,21 @@
 
 ## Foco agora
 
-Ciclo 9 (branch `antonioreal97/cycle9`, commits locais, sem push nem PR): antes do deploy, o owner pediu
+Ciclo 10 (branch `antonioreal97/cycle10`, commits locais, sem push nem PR): prontidão de deploy
+(HANDOFF-021). Decisões do owner em 27–28 set 2026: (1) custo fixo alto sem usuários → Fly enxuto (~US$ 20/mês:
+1 máquina `APP_ROLE=all` + Postgres próprio com volume; Managed Postgres só com ~20 assinantes; revisão na
+decisão 1 de `docs/architecture-scale.md`); (2) o **lançamento é um beta fechado gratuito no Mac do owner
+atrás de Cloudflare Tunnel** (`docs/ops/beta-local.md`), convidados liberados por `beta_access_grants`
+(migration 0018) — o Fly sobe com ~3 usuários ativos. Schema de produção agora só por migrations versionadas
+(`0000`–`0018`, `release_command`), com `verify:migrations` como guarda permanente contra divergência
+schema × migration. Validação completa em `docs/reviews/deploy-readiness-2026-09-28.md` (180/180 testes).
+Pendências: **nome/marca** — o espaço "Licita + IA" está saturado (10+ nomes parecidos; `licitai.com.br` e
+`licitaia.com.br` de terceiros; `lioedital.com.br` e `lieditais.com.br` livres em 28 set) e o domínio do beta
+depende disso; confirmar o IP real atrás do túnel; autenticação das rotas `/api/v1/ingest/*` (WAF da
+Cloudflare mitiga só no beta). Sugestão ao owner ainda sem resposta: próxima feature = documentos da empresa
+com validade (o checklist passaria a dizer o que **falta**) e "preço de fundador" R$ 49,90.
+
+Ciclo 9 (PR #11, mergeado): antes do deploy, o owner pediu
 verificar se a plataforma é competitiva e entrega o que promete (`docs/reviews/competitive-analysis-2026-09-27.md`).
 Achado principal: IA com trecho citado não é mais diferencial exclusivo (Acumi, Licitei já entregam); o
 que reforça a competitividade é preço (R$49,90 sem teto de análises) + chamadas culturais. Isso motivou o

@@ -9,6 +9,8 @@ import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
 import { requestContext } from "./middlewares/request-context";
 import { createRequestProtection } from "./middlewares/request-protection";
 import { httpMetricsMiddleware } from "./metrics";
+import { appRoleFromEnv, roleServesApi } from "./app-role";
+import { createStaticApp } from "./static-app";
 
 const app: Express = express();
 
@@ -54,6 +56,10 @@ app.use(express.json({ limit: bodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
 app.use("/api", router);
+const staticDir = process.env.STATIC_DIR?.trim();
+if (staticDir && roleServesApi(appRoleFromEnv())) {
+  app.use(createStaticApp(staticDir));
+}
 app.use(notFoundHandler);
 app.use(errorHandler);
 

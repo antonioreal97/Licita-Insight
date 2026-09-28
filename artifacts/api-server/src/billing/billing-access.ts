@@ -13,7 +13,7 @@ export type SubscriptionSnapshot = {
   trialEndsAt?: Date | null;
 };
 
-export type EntitlementSource = "subscription" | "trial" | "dev" | null;
+export type EntitlementSource = "subscription" | "trial" | "beta" | "dev" | null;
 
 export function devEntitlementEnabled(
   env: NodeJS.ProcessEnv = process.env,

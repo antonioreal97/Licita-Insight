@@ -15,5 +15,6 @@ export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typ
 export const BillingEntitlementSource = {
   subscription: 'subscription',
   trial: 'trial',
+  beta: 'beta',
   dev: 'dev',
 } as const;
