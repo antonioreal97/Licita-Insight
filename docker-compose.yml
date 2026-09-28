@@ -47,7 +47,7 @@ services:
       PORT: "3001"
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
       PUBLIC_APP_ORIGIN: http://localhost:24252
-      PNCP_DAILY_COLLECT: "false"
+      PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
       NODE_ENV: development
       METRICS_PORT: ${API_METRICS_PORT:-}
     ports:
