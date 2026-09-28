@@ -76,6 +76,19 @@ export const googleTrialTombstonesTable = pgTable("google_trial_tombstones", {
     .defaultNow(),
 });
 
+/** Owner-managed closed-beta grants; deliberately independent from Asaas rows. Emails are stored lowercase so the key is case-insensitive. */
+export const betaAccessGrantsTable = pgTable(
+  "beta_access_grants",
+  {
+    email: text("email").primaryKey(),
+    accessUntil: timestamp("access_until", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("beta_access_grants_email_lowercase_check", sql`${table.email} = lower(${table.email})`)],
+);
+
 export const sessionsTable = pgTable(
   "sessions",
   {

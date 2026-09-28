@@ -36,6 +36,7 @@ COPY --from=build --chown=node:node /app/artifacts/api-server/scripts/verify-dis
 COPY --from=build --chown=node:node /app/artifacts/licitainsight/dist/public ./artifacts/licitainsight/dist/public
 COPY --chown=node:node lib/db/migrations ./lib/db/migrations
 COPY --chown=node:node lib/db/scripts/migrate.mjs ./lib/db/scripts/migrate.mjs
+COPY --chown=node:node lib/db/scripts/beta-access.mjs ./lib/db/scripts/beta-access.mjs
 
 USER node
 EXPOSE 3001 3002

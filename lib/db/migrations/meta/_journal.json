@@ -127,6 +127,13 @@
       "when": 1790499600000,
       "tag": "0017_subscription_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790586000000,
+      "tag": "0018_beta_access",
+      "breakpoints": true
     }
   ]
 }
