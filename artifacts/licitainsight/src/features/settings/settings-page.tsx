@@ -272,7 +272,9 @@ function BillingSection() {
                 ? trialCopy(trial)
                 : billing.data.source === 'dev' && billing.data.status === 'none'
                   ? 'Acesso de desenvolvimento (BILLING_DEV_ENTITLED). Não é uma assinatura paga.'
-                  : billingCopy(billing.data)}
+                  : billing.data.source === 'beta'
+                    ? 'Acesso beta por convite, sem cobrança. Todas as funções estão liberadas.'
+                    : billingCopy(billing.data)}
             </p>
           )}
           <div className="mt-5 flex flex-wrap gap-2">

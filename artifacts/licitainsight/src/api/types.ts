@@ -190,7 +190,8 @@ export type SessionResponse = { user: User };
 export type BillingStatus = 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
 
 /** What grants access (priority subscription > trial > dev). Optional until every API ships it (CODEX_HANDOFF-006/007). */
-export type BillingSource = 'subscription' | 'trial' | 'dev';
+/** `beta`: free closed-beta access granted by the owner, outside Asaas. */
+export type BillingSource = 'subscription' | 'trial' | 'beta' | 'dev';
 
 export type BillingResponse = {
   status: BillingStatus;
