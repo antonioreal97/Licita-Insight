@@ -1,5 +1,7 @@
 # Progress — Licita Insight
 
+Deriva de [activeContext](activeContext.md).
+
 ## O que já funciona na interface
 
 - Landing pública com hero, método e CTA. O preview do radar lê editais abertos da API.
@@ -13,7 +15,7 @@
 
 ## O que já funciona
 
-- Pesquisa, filtros, facets, detalhe e sugestões no frontend, com contrato em `docs/contracts/search-v1.md`.
+- Pesquisa, filtros, facets, detalhe e sugestões no frontend, com contrato em [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md).
 - API em `/api/v1`: busca, detalhe e sugestões leem só o PostgreSQL. Sem `DATABASE_URL`, a busca responde 503.
 - Schema `tenders` e `ingest_runs`. Coletor do PNCP com upsert por `numeroControlePNCP`, carga dia a dia, repartição por UF em timeout, e revisão de processos abertos.
 - Calendário `ingest_days` aplicado no Postgres local. A coleta pula partições seladas, retoma UFs incompletas e preserva a revisão individual. Cobertura exposta no GET de ingestão; backfills com datas explícitas continuam forçados.
@@ -21,7 +23,7 @@
 - Validação final do calendário: 27 testes passaram, typecheck e build da API concluídos. A tentativa real em 22 set 2026 (DF, modalidade 6, publicação em 21 set) falhou por timeout do PNCP antes da primeira página; os 19 editais foram preservados e a partição ficou pendente. A verificação de duas execuções foi concluída com respostas controladas do PNCP no Postgres real, não no serviço externo.
 - Detalhe busca itens e arquivos do PNCP na primeira abertura e grava no banco.
 - A busca mostra `Atualizado em` a partir de `meta.indexUpdatedAt` (última `fetched_at`).
-- Chamadas de fomento audiovisual ficam fora de `tenders`. Tabela `cultural_opportunities`, coleta do Mapas Culturais (`source = mapas-culturais`) e lista em `/oportunidades`. Contrato: `docs/contracts/opportunities-v1.md`. `CULTURE_DAILY_COLLECT=false` desliga a agenda. Comando: `pnpm --filter @workspace/api-server run collect:opportunities`. A consulta por termo `linguagem` foi trocada por `@keyword` depois que as instalações responderam 500 ou HTML.
+- Chamadas de fomento audiovisual ficam fora de `tenders`. Tabela `cultural_opportunities`, coleta do Mapas Culturais (`source = mapas-culturais`) e lista em `/oportunidades`. Contrato: [`docs/contracts/opportunities-v1.md`](../docs/contracts/opportunities-v1.md). `CULTURE_DAILY_COLLECT=false` desliga a agenda. Comando: `pnpm --filter @workspace/api-server run collect:opportunities`. A consulta por termo `linguagem` foi trocada por `@keyword` depois que as instalações responderam 500 ou HTML.
 - Verificado em 22 set 2026: 19 pregões eletrônicos do DF publicados em 21 set 2026. A busca por “correios” abre o edital `34028316000103-1-000087-2026`, com link `https://pncp.gov.br/app/editais/34028316000103/2026/87`. O registro permanece depois de reiniciar a API. Uma segunda coleta não duplica a contagem.
 
 ## O que já funciona — assinatura (MVP)
@@ -40,7 +42,7 @@
 
 - Extração de PDF (inclusive dentro de ZIP) por página, trechos com `tsvector`, Jev (`jev-1.13.0`) ordena por noul, limiar 0,5, cota diária (teste 5, pago 30), cache por usuário.
 - UI: painel no detalhe com estados de acesso/índice/cota, melhor trecho com termos destacados, link para o documento oficial e página, aviso fixo.
-- CODEX_HANDOFF-012 concluído: `pdfjs` resolvido no bundle, `search_vector` gerado pelo `push-force`, índices com falha retentáveis, ligaduras corrigidas e corte relativo de 0,25. Stack Docker e PDF real de 29 páginas validados.
+- [CODEX_HANDOFF-012](../docs/handoffs/CODEX_HANDOFF-012-ask-fixes.md) concluído: `pdfjs` resolvido no bundle, `search_vector` gerado pelo `push-force`, índices com falha retentáveis, ligaduras corrigidas e corte relativo de 0,25. Stack Docker e PDF real de 29 páginas validados.
 
 ## O que já funciona — ficha do edital (Onda 3, item 3.5)
 
@@ -49,7 +51,7 @@
 
 ## O que já funciona — checklist automático de habilitação (Onda 3, item 3.5b)
 
-- Motivado pela análise competitiva de 27 set 2026 (`docs/reviews/competitive-analysis-2026-09-27.md`):
+- Motivado pela análise competitiva de 27 set 2026 ([`docs/reviews/competitive-analysis-2026-09-27.md`](../docs/reviews/competitive-analysis-2026-09-27.md)):
   Acumi e Licitei já entregam checklist de habilitação; decisão do owner foi fazer.
 - `GET /tenders/:id/sheet` ganhou o campo aditivo `qualificationChecklist: QualificationItem[]`
   (`{ type, evidence, confidence }`, 5 tipos: ato_societario, regularidade_fiscal, regularidade_trabalhista,
@@ -66,7 +68,7 @@
   na Ficha do Edital, ordem fixa por tipo, toggle "Ver trecho" por item, aviso de que não é lista exaustiva.
   QA visual headless (desktop 1440×900 + mobile 390×844) nos 3 editais de calibração: seção renderiza,
   ordem correta, toggle funciona, sem erros de console atribuíveis à feature.
-  Detalhes: `docs/reviews/qualification-checklist-2026-09-27.md`.
+  Detalhes: [`docs/reviews/qualification-checklist-2026-09-27.md`](../docs/reviews/qualification-checklist-2026-09-27.md).
 
 ## O que já funciona — prontidão de deploy (HANDOFF-021, ciclo 10)
 
@@ -74,7 +76,7 @@
   `verify:migrations` (migrate == push num banco vazio; idempotente; testado com mutação).
 - `Dockerfile.prod` (147 MiB, amd64, sem `tsx`), frontend servido pela API com `STATIC_DIR` (mesma origem;
   só `assets/` com cache imutável), `fly.toml` enxuto + `deploy/fly-db/` (Postgres próprio + dump para Tigris).
-- Beta fechado no Mac: `deploy/beta-local/` + `docs/ops/beta-local.md`; convites em `beta_access_grants`
+- Beta fechado no Mac: `deploy/beta-local/` + [`docs/ops/beta-local.md`](../docs/ops/beta-local.md); convites em `beta_access_grants`
   respeitados pelo gate 402, por `/me/billing` (`source: beta`) e pelos e-mails; runner na imagem.
 - Carga do PNCP medida: 1 dia útil nacional ≈ 5,3 mil editais, ~11 min, +28 MB.
 

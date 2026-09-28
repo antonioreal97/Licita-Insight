@@ -39,7 +39,7 @@
 - `users.trial_ends_at`: `timestamptz NOT NULL DEFAULT now() + interval '7 days'`.
 - `google_trial_tombstones`: `subject_hash` PK, `trial_ends_at`, `created_at`.
 - OpenAPI atualizado para `1.2.0`; clientes React e Zod regenerados.
-- Contratos atualizados em `docs/contracts/account-v1.md` e `docs/contracts/opportunities-v1.md`.
+- Contratos atualizados em [`docs/contracts/account-v1.md`](../contracts/account-v1.md) e [`docs/contracts/opportunities-v1.md`](../contracts/opportunities-v1.md).
 
 ## Como subir
 

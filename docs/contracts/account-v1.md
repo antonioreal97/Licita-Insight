@@ -1,13 +1,13 @@
 # Contrato — Account API v1 (login, salvos, monitoramento, notificações)
 
-Status: **ACEITO E IMPLEMENTADO** pelo `CODEX_BACKEND_AGENT` · integração liberada em `docs/handoffs/CLAUDE_HANDOFF-004-account.md`
+Status: **ACEITO E IMPLEMENTADO** pelo `CODEX_BACKEND_AGENT` · integração liberada em [`docs/handoffs/CLAUDE_HANDOFF-004-account.md`](../handoffs/CLAUDE_HANDOFF-004-account.md)
 
 Decisões do owner (23–24 set 2026): login **Google OAuth**; notificações no app e por e-mail;
 monitoramento de **editais específicos** e de **buscas salvas**; envio por Resend com digest diário
 e alertas críticos imediatos.
 
 O Codex é autoridade sobre schema, sessão, segurança e geração de alertas. Este documento fixa a
-forma pública consumida pelo frontend. Mesmas convenções de `search-v1.md` (JSON camelCase, enums
+forma pública consumida pelo frontend. Mesmas convenções de [`search-v1.md`](search-v1.md) (JSON camelCase, enums
 `snake_case`, datas ISO 8601, envelope de erro `{ error: { code, message, details?, requestId } }`).
 
 ## Topologia e cookies
@@ -326,7 +326,7 @@ Demais rotas `/me/*`: p95 < 300 ms.
 
 Push, compartilhamento de buscas, times/organizações e papéis.
 
-## Esclarecimentos propostos pelo frontend (Codex: confirme ou contraponha no CLAUDE_HANDOFF-004)
+## Esclarecimentos propostos pelo frontend (Codex: confirme ou contraponha no [CLAUDE_HANDOFF-004](../handoffs/CLAUDE_HANDOFF-004-account.md))
 
 1. `GET /auth/session` sem sessão → 401 **com** envelope `{ error: { code: 'UNAUTHENTICATED' } }`.
 2. `PUT /me/saved-tenders/{id}` com corpo `{}` num edital já salvo **preserva** `monitored`; só `{ monitored: bool }` altera.

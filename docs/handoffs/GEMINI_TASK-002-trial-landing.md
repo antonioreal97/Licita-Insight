@@ -6,10 +6,10 @@
 
 ## Contexto (leia antes)
 
-- Regras: `AGENTS.md`, `.cursorrules`, `memory-bank/systemPatterns.md`; design system em `design-system/*.md`.
+- Regras: [`AGENTS.md`](../../AGENTS.md), `.cursorrules`, [`memory-bank/systemPatterns.md`](../../memory-bank/systemPatterns.md); design system em `design-system/*.md`.
 - Decisões do owner (24 set 2026): **teste de 7 dias** com acesso completo, **plano único** (valor de `BILLING_MONTHLY_BRL`),
-  **oportunidades culturais só para quem tem acesso**. Roadmap: `docs/roadmap-monetizacao.md` (Onda 1).
-- Contrato: `docs/handoffs/CODEX_HANDOFF-007-trial.md` item 6 — rota pública `GET /api/v1/billing/plan`
+  **oportunidades culturais só para quem tem acesso**. Roadmap: [`docs/roadmap-monetizacao.md`](../roadmap-monetizacao.md) (Onda 1).
+- Contrato: [`docs/handoffs/CODEX_HANDOFF-007-trial.md`](CODEX_HANDOFF-007-trial.md) item 6 — rota pública `GET /api/v1/billing/plan`
   → `{ monthlyBrl: number | null, trialDays: number, currency: 'BRL' }`.
 - Regras do owner: PT-BR; **nunca inventar preço** — se `monthlyBrl` for `null` ou a rota falhar, não mostre valor
   (mostre só "7 dias grátis"); erros visíveis sem quebrar a página; menos código; tokens do DS, nada de cor crua.
@@ -60,4 +60,4 @@ arquivo (o Claude está em `features/billing`, `features/settings`, `features/op
 
 ## Resposta
 
-`docs/handoffs/GEMINI_REPORT-002-trial-landing.md` com arquivos alterados, o que fez, evidência e pendências.
+[`docs/handoffs/GEMINI_REPORT-002-trial-landing.md`](GEMINI_REPORT-002-trial-landing.md) com arquivos alterados, o que fez, evidência e pendências.

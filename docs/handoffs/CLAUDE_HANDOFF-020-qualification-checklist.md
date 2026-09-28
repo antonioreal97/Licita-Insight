@@ -11,7 +11,7 @@
 
 ## Contrato e persistência
 
-`qualificationChecklist` tem itens `{ type, evidence, confidence }`, nos cinco tipos documentados em `docs/contracts/ai-v1.md`. Fora de `ready`, ou sem documento/candidato válido, a lista é vazia.
+`qualificationChecklist` tem itens `{ type, evidence, confidence }`, nos cinco tipos documentados em [`docs/contracts/ai-v1.md`](../contracts/ai-v1.md). Fora de `ready`, ou sem documento/candidato válido, a lista é vazia.
 
 O cache continua global pela mesma chave `(tender_id, index_version, requested_model, prompt_version)`. A migration `0016_qualification_checklist.sql` e o schema Drizzle acrescentam `qualification_checklist jsonb not null default '[]'`; `SHEET_PROMPT_VERSION` subiu de `2` para `3`.
 

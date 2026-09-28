@@ -1,4 +1,4 @@
-# Baseline de escala — CODEX_HANDOFF-017
+# Baseline de escala — [CODEX_HANDOFF-017](../handoffs/CODEX_HANDOFF-017-scale-protect-measure.md)
 
 Data: 26 set 2026. Máquina: macOS 26.5 arm64, 10 CPUs, 16 GiB de RAM. PostgreSQL 16.15 no container já existente do Compose, sem reinício, com `shared_buffers=163848kB`, `effective_cache_size=5242888kB`, `work_mem=4096kB`, `max_connections=100` e `random_page_cost=4`.
 

@@ -28,6 +28,7 @@ API (`artifacts/api-server`) lê os editais no Postgres. A UI chama essa API; n�
 - Erros visíveis. Sem `catch` vazio e sem `null` no lugar de falha.
 - Menos código. Sem abstração até existir um segundo callsite real.
 - Não inventar endpoints, tipos ou libs. Conferir o arquivo antes de chamar.
+- Em `memory-bank/`, `docs/` e `design-system/`, citar outra nota `.md` como link Markdown relativo (``[`docs/x.md`](../docs/x.md)``), não só entre crases: a raiz é aberta como vault do Obsidian (`.obsidian/` fica no `.gitignore`).
 
 ## Visual
 

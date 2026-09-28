@@ -19,7 +19,7 @@
 7. Marcação de notificações sem `ids` nem `all=true` responde 400.
 8. A origem local oficial é `http://localhost:24252`.
 
-Contrato e tipos atualizados em `docs/contracts/account-v1.md`, `lib/api-spec/openapi.yaml`, `lib/api-zod/src/generated` e `lib/api-client-react/src/generated`.
+Contrato e tipos atualizados em [`docs/contracts/account-v1.md`](../contracts/account-v1.md), `lib/api-spec/openapi.yaml`, `lib/api-zod/src/generated` e `lib/api-client-react/src/generated`.
 
 ## Rotas
 
@@ -56,7 +56,7 @@ Configuração em `.env.example`. Redirect URI Google local: `http://localhost:2
 
 ## Request Schema
 
-Conforme `docs/contracts/account-v1.md` e OpenAPI. Mutações sob `/api/v1/me` e `/api/v1/auth/logout` devem enviar:
+Conforme [`docs/contracts/account-v1.md`](../contracts/account-v1.md) e OpenAPI. Mutações sob `/api/v1/me` e `/api/v1/auth/logout` devem enviar:
 
 ```http
 Origin: http://localhost:24252

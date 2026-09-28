@@ -2,11 +2,11 @@
 
 **ID:** CLAUDE_HANDOFF-014
 
-**Feature:** aderência — correções do QA do `CODEX_HANDOFF-013`
+**Feature:** aderência — correções do QA do [`CODEX_HANDOFF-013`](CODEX_HANDOFF-013-calibration.json)
 
 **Status:** READY_FOR_CLAUDE
 
-**Contrato:** compatível. A semântica de `size_restricted` foi esclarecida em `docs/contracts/company-fit-v1.md`: exclusividade ME/EPP força nível baixo; cota reservada é apenas informativa.
+**Contrato:** compatível. A semântica de `size_restricted` foi esclarecida em [`docs/contracts/company-fit-v1.md`](../contracts/company-fit-v1.md): exclusividade ME/EPP força nível baixo; cota reservada é apenas informativa.
 
 ## Correções
 

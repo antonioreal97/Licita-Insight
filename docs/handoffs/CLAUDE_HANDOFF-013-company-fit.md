@@ -1,6 +1,6 @@
 # CLAUDE_HANDOFF-013 — perfil da empresa e aderência
 
-Implementação concluída das fases A e B do `CODEX_HANDOFF-013`.
+Implementação concluída das fases A e B do [`CODEX_HANDOFF-013`](CODEX_HANDOFF-013-calibration.json).
 
 ## Entregue
 
@@ -13,7 +13,7 @@ Implementação concluída das fases A e B do `CODEX_HANDOFF-013`.
 - preferência `profileAlerts`, UI correspondente, cópia/ícone/destino de notificação;
 - exportação e exclusão LGPD de perfil, fits e uso;
 - OpenAPI atualizado e clientes/zod regenerados;
-- contrato em `docs/contracts/company-fit-v1.md` e runner reprodutível `calibrate:company-fit`.
+- contrato em [`docs/contracts/company-fit-v1.md`](../contracts/company-fit-v1.md) e runner reprodutível `calibrate:company-fit`.
 
 ## Configuração
 

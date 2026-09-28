@@ -17,7 +17,7 @@
   `pnpm --filter @workspace/db run push-force`, igual ao `db-setup` do Docker Compose.
 - `migrate` continua disponível para atualizar bancos que já possuem o baseline canônico de busca e
   ingestão; as migrations de conta não criam `tenders` nem `ingest_*`.
-- `docs/account-api.md` e `docs/handoffs/CLAUDE_HANDOFF-009-email-alerts.md` foram corrigidos.
+- [`docs/account-api.md`](../account-api.md) e [`docs/handoffs/CLAUDE_HANDOFF-009-email-alerts.md`](CLAUDE_HANDOFF-009-email-alerts.md) foram corrigidos.
 - O caminho foi testado em banco temporário vazio e criou `tenders`, `ingest_runs`, `users` e
   `email_deliveries` antes da remoção do banco de teste.
 

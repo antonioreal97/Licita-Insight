@@ -1,6 +1,6 @@
 # Account API v1 — operação local
 
-Implementação de autenticação Google, sessões revogáveis, editais salvos/monitorados, buscas salvas e notificações no app e por e-mail. O contrato público está em `docs/contracts/account-v1.md` e o OpenAPI em `lib/api-spec/openapi.yaml`.
+Implementação de autenticação Google, sessões revogáveis, editais salvos/monitorados, buscas salvas e notificações no app e por e-mail. O contrato público está em [`docs/contracts/account-v1.md`](contracts/account-v1.md) e o OpenAPI em `lib/api-spec/openapi.yaml`.
 
 ## Configuração
 

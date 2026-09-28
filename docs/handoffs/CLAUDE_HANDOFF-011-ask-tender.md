@@ -6,7 +6,7 @@
 
 **Status:** READY_FOR_CLAUDE
 
-**Contrato:** aceito, sem breaking change. Contrato final em `docs/contracts/ai-v1.md` e OpenAPI em `lib/api-spec/openapi.yaml`.
+**Contrato:** aceito, sem breaking change. Contrato final em [`docs/contracts/ai-v1.md`](../contracts/ai-v1.md) e OpenAPI em `lib/api-spec/openapi.yaml`.
 
 ## Rotas
 
@@ -98,7 +98,7 @@ pnpm --filter @workspace/api-server run calibrate:jev
 - `JEV_API_KEY` obrigatória apenas para `POST /ask`; ausência retorna `503 AI_UNAVAILABLE` sem afetar o restante da API.
 - `JEV_MODEL=jev-1.13.0` recomendado.
 - O frontend não recebe nem conhece a chave.
-- Demais opções estão documentadas em `docs/contracts/ai-v1.md`.
+- Demais opções estão documentadas em [`docs/contracts/ai-v1.md`](../contracts/ai-v1.md).
 
 ## Validação
 

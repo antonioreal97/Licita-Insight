@@ -19,10 +19,10 @@ Status: implementado e validado em 26 set 2026.
 - `ai-budget.ts`, `jev-scheduler.ts` e `jobs/job-lock.ts`: gasto diário ask+fit+sheet no calendário de São Paulo, cache de 30 s, transições do disjuntor, pausa exclusiva do lote e auditoria `skipped_budget`; limites Jev separados por papel.
 - `ai-document-retention.ts` e `scripts/report-retention.ts`: job diário com lock, deleção em lotes, preservação de salvos/fichas e CLI dry-run.
 - `metrics.ts`, `app.ts`, `index.ts` e `request-protection.ts`: métricas HTTP/processo/pool/fila/jobs/scheduler/orçamento/retenção em porta interna. Dependências de banco e IA são preguiçosas, mantendo middlewares importáveis sem `DATABASE_URL`.
-- `scripts/scale-seed.ts`, `scripts/scale-load.ts` e `docs/reviews/scale-baseline.md`: padrão de 1,5 M, amostras de 10 s e concorrências 10/50; a seção “1,5 M” registra a interrupção segura, planos e mitigação avaliada.
+- `scripts/scale-seed.ts`, `scripts/scale-load.ts` e [`docs/reviews/scale-baseline.md`](../reviews/scale-baseline.md): padrão de 1,5 M, amostras de 10 s e concorrências 10/50; a seção “1,5 M” registra a interrupção segura, planos e mitigação avaliada.
 - `lib/db/src/schema/{operations,ai,company-fit}.ts`, migrations `0013`–`0015` e scripts `verify:*`: `ai_jobs`, índices diários do orçamento, novo status de auditoria e `tender_ai_indexes.purged_at`, com paridade Drizzle.
 - `lib/api-spec/openapi.yaml`, `lib/api-zod` e `lib/api-client-react`: somente o valor público aditivo `expired`.
-- `docs/contracts/ai-queue-v1.md`, `ai-cost-v1.md`, `ai-v1.md`, `docs/ops/alerts.md` e `docs/reviews/queue-budget-metrics.md`: contratos, PromQL e evidências operacionais.
+- [`docs/contracts/ai-queue-v1.md`](../contracts/ai-queue-v1.md), [`ai-cost-v1.md`](../contracts/ai-cost-v1.md), [`ai-v1.md`](../contracts/ai-v1.md), [`docs/ops/alerts.md`](../ops/alerts.md) e [`docs/reviews/queue-budget-metrics.md`](../reviews/queue-budget-metrics.md): contratos, PromQL e evidências operacionais.
 - `.env.example` e `docker-compose.yml`: variáveis novas e portas internas opcionais; nenhum container foi iniciado ou reiniciado.
 
 ## Variáveis novas e padrões

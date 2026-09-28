@@ -144,7 +144,7 @@ O fluxo principal da Onda 1 funcionou de ponta a ponta: teste → últimos dias 
 
 ## Não testado
 
-1. **Tombstone antiabuso (recriar a conta sem reiniciar o teste).** Exige login Google real: usuários de dev-login não têm `google_sub`, então a exclusão não gera tombstone. Confirmei que `google_trial_tombstones` ficou em 0 antes e depois. A consequência é que, em dev, recriar a mesma conta pelo dev-login dá um teste novo de 7 dias, o que é esperado. A cobertura fica com os testes integrados do backend (`CLAUDE_HANDOFF-007`).
+1. **Tombstone antiabuso (recriar a conta sem reiniciar o teste).** Exige login Google real: usuários de dev-login não têm `google_sub`, então a exclusão não gera tombstone. Confirmei que `google_trial_tombstones` ficou em 0 antes e depois. A consequência é que, em dev, recriar a mesma conta pelo dev-login dá um teste novo de 7 dias, o que é esperado. A cobertura fica com os testes integrados do backend ([`CLAUDE_HANDOFF-007`](../handoffs/CLAUDE_HANDOFF-007-trial.md)).
 2. **Checkout com sucesso ou retorno do Asaas.** Sem as chaves `ASAAS_*`, só o caminho 503 foi verificado.
 
 ## Notas de ambiente

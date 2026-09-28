@@ -1,6 +1,6 @@
 # Onda 2 — QA de integração (e-mail)
 
-Data: 24 set 2026. Branch `antonioreal97/cycle4`. Backend: `c8e4837` (CLAUDE_HANDOFF-009). Frontend: seção Notificações em `/settings`, página `/descadastro`, textos da landing e da assinatura.
+Data: 24 set 2026. Branch `antonioreal97/cycle4`. Backend: `c8e4837` ([CLAUDE_HANDOFF-009](../handoffs/CLAUDE_HANDOFF-009-email-alerts.md)). Frontend: seção Notificações em `/settings`, página `/descadastro`, textos da landing e da assinatura.
 
 ## Ambiente
 
@@ -37,9 +37,9 @@ O stack Docker em execução vinha do checkout `main` (sem o backend de e-mail).
 2. **Âncora `#notificacoes` parava ~280 px abaixo.** O scroll rodava no mount, e a seção de assinatura crescia depois de carregar. O efeito agora roda de novo quando assinatura e preferências terminam de carregar.
 3. Landing: item do plano passou de "alertas no app" para "alertas no app e por e-mail".
 
-## Pendências para o backend (CODEX_HANDOFF-010)
+## Pendências para o backend ([CODEX_HANDOFF-010](../handoffs/CODEX_HANDOFF-010-email-followups.md))
 
-- `pnpm --filter @workspace/db run migrate` falha em banco vazio (`relation "public.tenders" does not exist`): `tenders` só nasce via `push`. O Compose usa `push-force` e não é afetado. O passo "Somente API no host" do CLAUDE_HANDOFF-009 é.
+- `pnpm --filter @workspace/db run migrate` falha em banco vazio (`relation "public.tenders" does not exist`): `tenders` só nasce via `push`. O Compose usa `push-force` e não é afetado. O passo "Somente API no host" do [CLAUDE_HANDOFF-009](../handoffs/CLAUDE_HANDOFF-009-email-alerts.md) é.
 - Texto do e-mail: plurais com parênteses ("atualização(ões)", "novo(s) resultado(s)"); prazo alterado mostra "Prazo" e "Novo prazo" com o mesmo valor, sem o anterior; rodapé diz "porque ativou o resumo diário", mas o padrão já vem ligado.
 - O token de descadastro é assinado com `SESSION_SECRET`: rotacionar o segredo invalida os links de todos os e-mails já enviados.
 

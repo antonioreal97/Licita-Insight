@@ -102,9 +102,9 @@ Tomadas por delegação do owner. Preços de terceiros conferidos nas páginas p
 
 | Handoff | Escopo | Estado |
 |---|---|---|
-| **CODEX_HANDOFF-017** (Fase 1a: proteger e medir) | harness de carga; índice trigrama na busca; pool, timeouts e desligamento limpo; `/readyz`; limite de taxa e de concorrência; cache HTTP público | entregue (PR #9) |
-| **CODEX_HANDOFF-018** (Fase 1b: custo e isolamento) | papéis `APP_ROLE=all|api|worker`; jobs seguros com várias réplicas (`pg_try_advisory_lock`); view `ai_usage_ledger` + `report:ai-cost`; faixas interativo/lote no cliente Jev (concorrência, taxa e pausa em 429); filtro lexical do fit em modo sombra + `report:fit-gate` | entregue |
-| **CODEX_HANDOFF-019** (Fase 2) | fila durável no Postgres para índice, fit e ficha; disjuntor de orçamento; partição de RPM; retenção com tombstone; métricas/alertas; baseline de 1,5 M | entregue; HTTP de 1,5 M interrompido por proteção da máquina, planos registrados |
+| **[CODEX_HANDOFF-017](handoffs/CODEX_HANDOFF-017-scale-protect-measure.md)** (Fase 1a: proteger e medir) | harness de carga; índice trigrama na busca; pool, timeouts e desligamento limpo; `/readyz`; limite de taxa e de concorrência; cache HTTP público | entregue (PR #9) |
+| **[CODEX_HANDOFF-018](handoffs/CODEX_HANDOFF-018-cost-isolation.md)** (Fase 1b: custo e isolamento) | papéis `APP_ROLE=all|api|worker`; jobs seguros com várias réplicas (`pg_try_advisory_lock`); view `ai_usage_ledger` + `report:ai-cost`; faixas interativo/lote no cliente Jev (concorrência, taxa e pausa em 429); filtro lexical do fit em modo sombra + `report:fit-gate` | entregue |
+| **[CODEX_HANDOFF-019](handoffs/CODEX_HANDOFF-019-durable-queue-budget-metrics.md)** (Fase 2) | fila durável no Postgres para índice, fit e ficha; disjuntor de orçamento; partição de RPM; retenção com tombstone; métricas/alertas; baseline de 1,5 M | entregue; HTTP de 1,5 M interrompido por proteção da máquina, planos registrados |
 
 **Fronteira após o 019:** a API só enfileira índice, fit e ficha em `ai_jobs`; o worker consome com visibilidade e retentativa. O disjuntor pausa somente fit/alertas de lote. O filtro lexical continua em modo sombra e só liga com recall medido (≥ 97% em ≥ 500 avaliações). Deploy Fly.io, balde de taxa compartilhado, cursor e busca dedicada continuam fora desta fase.
 

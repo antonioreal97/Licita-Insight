@@ -1,6 +1,6 @@
 # GEMINI_REPORT-002 — "7 dias grátis" na landing e no login
 
-**Executado por:** Claude (engenheiro de frontend), em nome da tarefa `GEMINI_TASK-002` (o agente Gemini ficou sem cota).
+**Executado por:** Claude (engenheiro de frontend), em nome da tarefa [`GEMINI_TASK-002`](GEMINI_TASK-002-trial-landing.md) (o agente Gemini ficou sem cota).
 **Branch:** `antonioreal97/cycle3` · **Data:** 24 set 2026 · **Sem commit, stash nem reset.**
 
 ## Arquivos alterados

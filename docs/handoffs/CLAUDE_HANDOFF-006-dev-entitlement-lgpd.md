@@ -8,8 +8,8 @@
 
 ## Contrato
 
-O contrato do `CODEX_HANDOFF-006` foi **aceito sem contraproposta**. A implementação é aditiva e o
-contrato público atualizado está em `docs/contracts/account-v1.md` e `lib/api-spec/openapi.yaml`.
+O contrato do [`CODEX_HANDOFF-006`](CODEX_HANDOFF-006-dev-entitlement-lgpd.md) foi **aceito sem contraproposta**. A implementação é aditiva e o
+contrato público atualizado está em [`docs/contracts/account-v1.md`](../contracts/account-v1.md) e `lib/api-spec/openapi.yaml`.
 
 ## Status por rota
 

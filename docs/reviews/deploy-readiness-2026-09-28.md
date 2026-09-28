@@ -1,6 +1,6 @@
 # QA — Prontidão de deploy (HANDOFF-021) — 27–28 set 2026
 
-Validação independente de `CODEX_HANDOFF-021`: itens 1–5 (caminho de migração, imagem de produção, estático,
+Validação independente de [`CODEX_HANDOFF-021`](../handoffs/CODEX_HANDOFF-021-deploy-readiness.md): itens 1–5 (caminho de migração, imagem de produção, estático,
 Fly enxuto, runbook) e item 6 (beta fechado no Mac atrás do Cloudflare Tunnel, decisão do owner de 28 set).
 
 ## Itens 1–5 — aceitos
@@ -39,10 +39,10 @@ typecheck, não commitou e devolveu as validações ao coordenador. Problemas en
 | E-mail como chave, sensível a maiúsculas | `Convidado@X` e `convidado@x` viravam duas linhas; expirar uma deixava a outra ativa | `CHECK (email = lower(email))` na migration `0018` e no schema |
 | E-mail consultava o banco por candidato (2ª entrega) | até 5.000 consultas a cada 15 min | uma consulta por rodada (`activeBetaGrantEmails`) |
 | `billing-access.ts` (puro) passou a acessar o banco, com imports no fim do arquivo | — | consultas movidas para `billing/beta-grants.ts` |
-| Contrato/Zod/frontend sem o valor `beta` | resposta fora do contrato; convidado aparecia como "sem assinatura" | OpenAPI + clientes regenerados + `account-v1.md` + tipo e texto em Configurações |
+| Contrato/Zod/frontend sem o valor `beta` | resposta fora do contrato; convidado aparecia como "sem assinatura" | OpenAPI + clientes regenerados + [`account-v1.md`](../contracts/account-v1.md) + tipo e texto em Configurações |
 | `restore.sh` dava `dropdb` com o app conectado | restauração falharia | para o app, `--force`, exige `--yes`, religa o app |
 | `backup.sh` escrevia direto no arquivo final e dependia da pasta atual | dump pela metade parecendo válido; launchd falharia | `.partial` + `mv`, caminho absoluto, `chmod 600` |
-| Runbook: comando de carga com `tsx` (inexistente na imagem), `PNCP_UF=SP,RJ` (o código aceita uma UF), host do túnel ≠ redirect do Google, sem `--yes`, launchd sem `PATH` | o owner travaria na primeira execução | runbook reescrito (`docs/ops/beta-local.md`) |
+| Runbook: comando de carga com `tsx` (inexistente na imagem), `PNCP_UF=SP,RJ` (o código aceita uma UF), host do túnel ≠ redirect do Google, sem `--yes`, launchd sem `PATH` | o owner travaria na primeira execução | runbook reescrito ([`docs/ops/beta-local.md`](../ops/beta-local.md)) |
 | Rotas `/api/v1/ingest/*` sem autenticação, agora públicas pelo túnel | qualquer um dispararia coletas (limite 3/min) | regra WAF da Cloudflare no runbook; correção no código segue pendente (achado do Hermes) |
 | Compose sem `platform: linux/amd64` | aviso e emulação implícita no Mac arm64 | declarado em `migrate` e `app` |
 
@@ -76,5 +76,5 @@ tabela a partir da migration `0018` no schema isolado (sem DDL no `public` do `l
   salto confiável, mas o comportamento exato do `cloudflared` com `X-Forwarded-For` só se confirma com o túnel
   real, que depende do domínio do owner.
 - Autenticação das rotas de ingestão (a regra WAF mitiga no beta; no Fly não há Cloudflare na frente).
-- Nome/marca: o espaço "Licita + IA" está saturado (`docs/reviews/competitive-analysis-2026-09-27.md`); o
+- Nome/marca: o espaço "Licita + IA" está saturado ([`docs/reviews/competitive-analysis-2026-09-27.md`](competitive-analysis-2026-09-27.md)); o
   domínio do beta depende dessa decisão.

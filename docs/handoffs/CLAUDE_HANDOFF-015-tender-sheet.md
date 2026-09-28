@@ -12,7 +12,7 @@
 
 ## Contrato final
 
-O contrato coincide com o item 3 do handoff e está documentado em `docs/contracts/ai-v1.md` e no OpenAPI. Os ids são:
+O contrato coincide com o item 3 do handoff e está documentado em [`docs/contracts/ai-v1.md`](../contracts/ai-v1.md) e no OpenAPI. Os ids são:
 
 `consortium`, `subcontracting`, `me_epp`, `site_visit`, `samples`, `bid_guarantee`, `contract_guarantee`, `penalties`, `technical_qualification`, `financial_qualification`, `contract_term`, `delivery_term`, `price_adjustment`.
 

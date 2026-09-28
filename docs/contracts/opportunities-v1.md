@@ -4,7 +4,7 @@ Chamadas de fomento audiovisual (Mapa da Cultura e instâncias estaduais do Mapa
 
 ## Convenções
 
-Iguais às de `docs/contracts/search-v1.md`: JSON `camelCase`, enums em inglês, datas ISO 8601, erro no envelope padrão. `null` explícito quando o campo existe e a fonte não trouxe o valor.
+Iguais às de [`docs/contracts/search-v1.md`](search-v1.md): JSON `camelCase`, enums em inglês, datas ISO 8601, erro no envelope padrão. `null` explícito quando o campo existe e a fonte não trouxe o valor.
 
 `OpportunityStatus`: `open` | `upcoming` | `closed` | `undated`
 

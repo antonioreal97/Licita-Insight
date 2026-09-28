@@ -1,5 +1,7 @@
 # Tech Context — Licita Insight
 
+Deriva de [projectbrief](projectbrief.md). Alimenta [activeContext](activeContext.md).
+
 ## Stack
 
 - pnpm workspaces, Node 24, TypeScript 5.9
@@ -7,7 +9,7 @@
 - UI kit (template, pouco usado pelas páginas): Radix, shadcn-style em `src/components/ui`
 - API: Express 5, Pino, CORS, esbuild (bundle CJS/ESM em `artifacts/api-server/build.mjs`)
 - DB: PostgreSQL + Drizzle. Env `DATABASE_URL`. Local: Postgres no Compose (`licita_pg`).
-- Contrato de busca: `docs/contracts/search-v1.md`. OpenAPI em `lib/api-spec`.
+- Contrato de busca: [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md). OpenAPI em `lib/api-spec`.
 - Contrato: OpenAPI 3.1 + Orval → `@workspace/api-client-react` e `@workspace/api-zod`
 - Validação no template de DB: Zod v4 (`zod/v4`) + `drizzle-zod`. O catalog do workspace ainda lista `zod` 3.25 para o frontend.
 
@@ -20,7 +22,7 @@ Na raiz, com `.env` copiado de `.env.example` (`SESSION_SECRET` com 32+ caracter
 - `pnpm --filter @workspace/api-server run dev` — API no host. Com `PORT=3001` e `DATABASE_URL` (lido de `.env` na raiz, se existir).
 - `pnpm --filter @workspace/api-server run collect:pncp` — carga do PNCP. Janela padrão: 30 dias, todas as modalidades. `PNCP_FROM`, `PNCP_TO`, `PNCP_UF`, `PNCP_MODALITIES` e `PNCP_REFRESH_LIMIT` restringem a execução.
 - `pnpm --filter @workspace/api-server run collect:opportunities` — chamadas de audiovisual do Mapa da Cultura e das instâncias estaduais do Mapas Culturais. Janela padrão: 30 dias (`CULTURE_LOOKBACK_DAYS`). Agenda própria, mesmo horário do PNCP, desligável com `CULTURE_DAILY_COLLECT=false`. UFs sem instalação oficial ficam como lacuna.
-- Sem `PNCP_FROM`/`PNCP_TO`, a coleta usa `ingest_days` e pula dias já selados; datas explícitas forçam backfill. A cobertura usa `America/Sao_Paulo`. Configuração e testes em `docs/ingest-pncp-calendar.md`.
+- Sem `PNCP_FROM`/`PNCP_TO`, a coleta usa `ingest_days` e pula dias já selados; datas explícitas forçam backfill. A cobertura usa `America/Sao_Paulo`. Configuração e testes em [`docs/ingest-pncp-calendar.md`](../docs/ingest-pncp-calendar.md).
 - `pnpm --filter @workspace/db run push-force` — aplica o schema Drizzle no Postgres local.
 - `pnpm run typecheck` — typecheck de libs e artifacts
 - `pnpm run build` — typecheck + build dos pacotes
@@ -47,9 +49,9 @@ Overrides removem binários nativos que não são linux-x64 (herança Replit). E
 
 ## Arquivos de referência
 
-- README do projeto (setup, comandos, problemas comuns): `README.md`
-- Brief original do produto: `docs/product-brief.md`
-- Notas de operação do template: `replit.md` (ainda genérico)
+- README do projeto (setup, comandos, problemas comuns): [`README.md`](../README.md)
+- Brief original do produto: [`docs/product-brief.md`](../docs/product-brief.md)
+- Notas de operação do template: [`replit.md`](../replit.md) (ainda genérico)
 - Tema: `artifacts/licitainsight/src/index.css`
 - Schema: `lib/db/src/schema/tenders.ts`
 - Rotas: `artifacts/licitainsight/src/App.tsx`

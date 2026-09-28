@@ -25,8 +25,8 @@
 
 ## Contratos
 
-- `docs/contracts/search-v1.md` explicita que publicação e prazo usam horário de Brasília.
-- `docs/contracts/opportunities-v1.md` já declarava a mesma regra e agora a implementação está alinhada.
+- [`docs/contracts/search-v1.md`](../contracts/search-v1.md) explicita que publicação e prazo usam horário de Brasília.
+- [`docs/contracts/opportunities-v1.md`](../contracts/opportunities-v1.md) já declarava a mesma regra e agora a implementação está alinhada.
 - O OpenAPI documenta `America/Sao_Paulo` nos seis parâmetros afetados.
 - Clientes React e Zod foram regenerados a partir do OpenAPI.
 - Formato de request e response permanece inalterado.

@@ -31,7 +31,7 @@ Question for every surface: *Does this look like a premium SaaS product ready fo
 ## 2. Prioritized findings
 
 Legend: **P1** = blocks a premium perception or a decision task · **P2** = visible polish debt · **P3** = refinement.
-Class changes are written `current → proposed`. Motion uses `duration-*` / `ease-*` tokens from `design-system/motion.md`.
+Class changes are written `current → proposed`. Motion uses `duration-*` / `ease-*` tokens from [`design-system/motion.md`](../../design-system/motion.md).
 
 ### P1
 

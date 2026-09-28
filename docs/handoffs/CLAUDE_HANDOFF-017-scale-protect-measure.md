@@ -15,7 +15,7 @@ Status: backend concluído; frontend não alterado.
 
 Rotas e formatos existentes foram preservados. `SERVICE_OVERLOADED`, `REQUEST_TIMEOUT` e `PAYLOAD_TOO_LARGE` são códigos aditivos; o Claude deve apenas garantir que qualquer união local de erros seja regenerada/atualizada antes de mexer no frontend. O cliente gerado deste worktree já contém os três.
 
-Oportunidades culturais continuam atrás de sessão + assinatura, como definido em `docs/account-api.md` e nos testes de monetização; por isso o middleware de cache emite `private, no-cache`, não cache público. Não remover esse gate neste handoff.
+Oportunidades culturais continuam atrás de sessão + assinatura, como definido em [`docs/account-api.md`](../account-api.md) e nos testes de monetização; por isso o middleware de cache emite `private, no-cache`, não cache público. Não remover esse gate neste handoff.
 
 ## Números
 

@@ -1,6 +1,6 @@
 # Onda 3, fatia 1 — QA de integração ("Perguntar ao edital")
 
-Data: 25 set 2026. Branch `antonioreal97/cycle4`. Backend: `fb9310a` (CLAUDE_HANDOFF-011). Frontend: painel no detalhe do edital.
+Data: 25 set 2026. Branch `antonioreal97/cycle4`. Backend: `fb9310a` ([CLAUDE_HANDOFF-011](../handoffs/CLAUDE_HANDOFF-011-ask-tender.md)). Frontend: painel no detalhe do edital.
 
 ## Ambiente
 
@@ -8,7 +8,7 @@ Data: 25 set 2026. Branch `antonioreal97/cycle4`. Backend: `fb9310a` (CLAUDE_HAN
 - API do cycle4 na `:3101` com `JEV_API_KEY` real, `JEV_MODEL=jev-1.13.0`, `AI_DAILY_ASK_LIMIT_TRIAL=4`.
 - Vite na `:24352`. Chromium headless em 1366×900 e 375×812.
 
-## Bloqueios do backend (CODEX_HANDOFF-012)
+## Bloqueios do backend ([CODEX_HANDOFF-012](../handoffs/CODEX_HANDOFF-012-ask-fixes.md))
 
 1. **PDF não extrai pelo `dist/`**: `pdf.worker.mjs` fica fora do bundle do esbuild. Todo PDF vira `failed` no caminho do Docker. Os testes rodam via `tsx` e não pegam isso.
 2. **`search_vector` nulo com `push-force`**: a migration cria coluna gerada; o schema Drizzle, coluna comum. Todo ask vira `not_found` sem chamar o Jev.
@@ -46,7 +46,7 @@ Para seguir o QA, a API rodou via `tsx` e a coluna foi recriada como gerada **s�
 - Build Docker do frontend e da API juntos (bloqueado pelo item 1).
 - Estado `failed` na UI com erro real de rede do PNCP (coberto por leitura do código: GET de quem tem acesso retenta).
 
-## Reteste após CODEX_HANDOFF-012 (`7ce9ef4`)
+## Reteste após [CODEX_HANDOFF-012](../handoffs/CODEX_HANDOFF-012-ask-fixes.md) (`7ce9ef4`)
 
 - Container do Compose (este worktree): `test:dist-pdf` PASS; `search_vector` gerado (`ALWAYS`) no banco `licita`.
 - `push-force` sobre banco que já tinha a coluna gerada: sem erro, coluna continua `ALWAYS`.

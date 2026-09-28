@@ -19,7 +19,7 @@ Status: implementado e validado em 26 set 2026.
 - scripts: `report-ai-cost.ts` e `report-fit-gate.ts`; verificações de view e coluna em `lib/db/scripts/`.
 - schema/migrations: `job_run_audit`, view `ai_usage_ledger` e `company_tender_fits.lexical_gate_pass`.
 - Compose: serviço `worker` somente no profile `scale`; `api` continua com o padrão `all`.
-- contratos e revisão: `ai-cost-v1.md`, complemento de `company-fit-v1.md`, `cost-isolation.md` e seção 8 de `architecture-scale.md`.
+- contratos e revisão: [`ai-cost-v1.md`](../contracts/ai-cost-v1.md), complemento de [`company-fit-v1.md`](../contracts/company-fit-v1.md), [`cost-isolation.md`](../reviews/cost-isolation.md) e seção 8 de [`architecture-scale.md`](../architecture-scale.md).
 
 ## Variáveis novas e padrões
 
@@ -68,7 +68,7 @@ Antes de `push-force` num banco novo, executar `prepare-extensions`. O script `p
 | document retry | retry state | advisory lock |
 | PNCP/cultural collect | `ingest_runs_one_running` | advisory lock no disparo + unique existente |
 
-O smoke de dois workers mostrou um sucesso e um salto por lock para cada ciclo de startup; detalhes estão em `docs/reviews/cost-isolation.md`.
+O smoke de dois workers mostrou um sucesso e um salto por lock para cada ciclo de startup; detalhes estão em [`docs/reviews/cost-isolation.md`](../reviews/cost-isolation.md).
 
 ## Resultados Jev
 

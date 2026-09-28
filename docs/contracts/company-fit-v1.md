@@ -1,6 +1,6 @@
 # Company profile and tender fit v1
 
-Contrato implementado pelo `CODEX_HANDOFF-013`. Datas são ISO 8601; valores são em reais.
+Contrato implementado pelo [`CODEX_HANDOFF-013`](../handoffs/CODEX_HANDOFF-013-calibration.json). Datas são ISO 8601; valores são em reais.
 
 ## Perfil
 

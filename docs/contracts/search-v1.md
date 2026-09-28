@@ -1,7 +1,7 @@
 # Contrato — Search API v1
 
-Status: **ACEITO** pelo `CODEX_BACKEND_AGENT` sem alterações (`docs/handoffs/CLAUDE_HANDOFF-001-search.md`) · integrado ao frontend via `VITE_API_MODE=http`
-Handoff: `docs/handoffs/CODEX_HANDOFF-001-search.md`
+Status: **ACEITO** pelo `CODEX_BACKEND_AGENT` sem alterações ([`docs/handoffs/CLAUDE_HANDOFF-001-search.md`](../handoffs/CLAUDE_HANDOFF-001-search.md)) · integrado ao frontend via `VITE_API_MODE=http`
+Handoff: [`docs/handoffs/CODEX_HANDOFF-001-search.md`](../handoffs/CODEX_HANDOFF-001-search.md)
 
 Nota de implementação: com `total = 0` a API retorna `totalPages = 0`; o frontend trata ambos (0 ou 1).
 

@@ -3,7 +3,7 @@
 **De:** Agente Gemini (Antigravity CLI)  
 **Para:** Claude Orchestrator  
 **Data:** 2026-09-23  
-**Referência:** `docs/handoffs/GEMINI_TASK-001-ds-primitives.md`  
+**Referência:** [`docs/handoffs/GEMINI_TASK-001-ds-primitives.md`](GEMINI_TASK-001-ds-primitives.md)  
 
 ---
 
@@ -20,9 +20,9 @@
 9. `artifacts/licitainsight/src/components/app-shell.tsx`
 10. `artifacts/licitainsight/src/features/search/search-page.tsx`
 11. `artifacts/licitainsight/src/index.css`
-12. `design-system/components.md`
-13. `design-system/tokens.md`
-14. `design-system/README.md`
+12. [`design-system/components.md`](../../design-system/components.md)
+13. [`design-system/tokens.md`](../../design-system/tokens.md)
+14. [`design-system/README.md`](../../design-system/README.md)
 
 *(Nenhum arquivo fora do escopo atribuído foi editado. `saved-searches-page.tsx` foi preservado intocado).*
 
@@ -43,7 +43,7 @@
   - Adicionado `'destructive'` ao tipo `ActionButtonVariant`.
   - Mapeado no record `variants`: `bg-destructive text-destructive-foreground shadow-xs enabled:hover:bg-destructive/90 enabled:active:bg-destructive`. Foco (`focus-visible:outline-ring`), escala ativa (`scale-[0.98]`), estado desabilitado e loading são herdados de forma padronizada da definição `base` e do componente `Button`.
   - `src/features/saved-searches/saved-searches-page.tsx` **não** foi tocado, conforme instrução.
-- Em `design-system/components.md`:
+- Em [`design-system/components.md`](../../design-system/components.md):
   - Atualizada a tabela de props com `'destructive'`.
   - Documentado o uso na tabela de variantes (`bg-destructive`, `text-destructive-foreground`, `shadow-xs`, `hover:bg-destructive/90`, active `bg-destructive`, `scale .98`).
   - Adicionada a linha correspondente na matriz de estados (`State matrix`).
@@ -52,10 +52,10 @@
 - Em `src/index.css`: adicionado `--spacing-header-mobile: 3.5rem;` em `@theme` junto de `--spacing-header: 76px;`.
 - Em `src/components/app-shell.tsx`: substituído `h-14` por `h-header-mobile` tanto no topo da sidebar quanto na tag `<header>` mobile.
 - Em `src/features/search/search-page.tsx`: substituído o valor literal `3.5rem` por `var(--spacing-header-mobile)` no cálculo sticky/max-height do rail lateral de filtros (`aside`).
-- Em `design-system/tokens.md`: documentado `header-mobile 3.5rem (56px)` junto dos tamanhos de layout nomeados.
+- Em [`design-system/tokens.md`](../../design-system/tokens.md): documentado `header-mobile 3.5rem (56px)` junto dos tamanhos de layout nomeados.
 
 ### Item 4 — Registro de dívida atualizado
-- Em `design-system/README.md`:
+- Em [`design-system/README.md`](../../design-system/README.md):
   - Verificados no código e movidos para "Itens resolvidos recentemente" todos os débitos que já haviam sido sanados: migração do `app-shell`, eliminação da paleta verde de landing/auth, substituição de cores literais/hex nas features, padronização do `page-title` e extensão do `tailwind-merge`.
   - Atualizada a lista de débitos em aberto com itens reais: adoção de `Button variant="destructive"` em `saved-searches-page.tsx` assim que o orquestrador liberar o arquivo, e os primitivos shadcn não utilizados que ainda possuem tokens padrão (`navigation-menu.tsx` e `command.tsx`).
 
@@ -104,6 +104,6 @@ $ PORT=24252 BASE_PATH=/ pnpm --filter @workspace/licitainsight run build
 ## 4. O que ficou pendente e por quê
 
 1. **Adoção de `variant="destructive"` em `saved-searches-page.tsx`:**
-   - **Motivo:** O arquivo estava sob edição ativa do Claude Orchestrator durante este ciclo. A instrução `GEMINI_TASK-001` determinou expressamente: *"Não edite saved-searches-page.tsx (o Claude está mexendo nela e vai adotar a variante depois)"*. A variante está pronta e documentada em `@/components/common/action-button`.
+   - **Motivo:** O arquivo estava sob edição ativa do Claude Orchestrator durante este ciclo. A instrução [`GEMINI_TASK-001`](GEMINI_TASK-001-ds-primitives.md) determinou expressamente: *"Não edite saved-searches-page.tsx (o Claude está mexendo nela e vai adotar a variante depois)"*. A variante está pronta e documentada em `@/components/common/action-button`.
 2. **Primitivos shadcn não utilizados com classes padrão (`navigation-menu.tsx` e `command.tsx`):**
-   - **Motivo:** Esses componentes não fazem parte dos primitivos de overlay elencados na tarefa e não são utilizados por nenhuma tela do produto atual. Foram catalogados no `design-system/README.md` para tratamento oportuno caso venham a ser adotados.
+   - **Motivo:** Esses componentes não fazem parte dos primitivos de overlay elencados na tarefa e não são utilizados por nenhuma tela do produto atual. Foram catalogados no [`design-system/README.md`](../../design-system/README.md) para tratamento oportuno caso venham a ser adotados.

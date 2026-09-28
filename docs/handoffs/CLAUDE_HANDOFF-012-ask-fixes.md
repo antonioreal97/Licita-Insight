@@ -6,7 +6,7 @@
 
 **Status:** READY_FOR_CLAUDE
 
-**Contrato:** sem alteração pública. Frontend e rotas permanecem compatíveis com `docs/contracts/ai-v1.md`.
+**Contrato:** sem alteração pública. Frontend e rotas permanecem compatíveis com [`docs/contracts/ai-v1.md`](../contracts/ai-v1.md).
 
 ## Correções
 

@@ -1,4 +1,4 @@
-# Revisão de fila, orçamento, métricas e escala — CODEX_HANDOFF-019
+# Revisão de fila, orçamento, métricas e escala — [CODEX_HANDOFF-019](../handoffs/CODEX_HANDOFF-019-durable-queue-budget-metrics.md)
 
 Data: 26 set 2026. PostgreSQL 16.15 do Compose, sem reiniciar ou subir containers. Dados sintéticos foram usados somente nos bancos descartáveis `licita_smoke019`, `licita_budget019` e `licita_scale`; os três foram apagados e a ausência foi conferida em `pg_database`.
 
@@ -61,7 +61,7 @@ O import da proteção HTTP foi testado em subprocesso sem `DATABASE_URL`; banco
 
 O seed determinístico chegou a 1.500.000 editais e 3.648.805.911 bytes. A primeira amostra HTTP, termo comum com 10 conexões por 10 s, elevou o VM do PostgreSQL a 826% de CPU e abriu 18 execuções ativas; a carga foi interrompida imediatamente. Não houve rodada HTTP válida com 10 ou 50 conexões.
 
-Os `EXPLAIN (ANALYZE, BUFFERS)` sequenciais foram concluídos: termo comum 731,4 ms + 378,1 ms de contagem exata; termo médio 179,6 + 124,5 ms; raro 18,6 + 4,4 ms; três termos 293,4 + 257,2 ms; filtros 65,8 + 51,7 ms; página profunda 413,1 + 372,7 ms. A avaliação de 5.000 candidatos teve sobreposição top-20 de 100% em 50 consultas, mas não foi implementada porque piorou o p50 (567,6→584,0 ms) e `contratacao` (1.724,9→2.441,5 ms). Detalhes estão em `docs/reviews/scale-baseline.md`, seção “1,5 M”.
+Os `EXPLAIN (ANALYZE, BUFFERS)` sequenciais foram concluídos: termo comum 731,4 ms + 378,1 ms de contagem exata; termo médio 179,6 + 124,5 ms; raro 18,6 + 4,4 ms; três termos 293,4 + 257,2 ms; filtros 65,8 + 51,7 ms; página profunda 413,1 + 372,7 ms. A avaliação de 5.000 candidatos teve sobreposição top-20 de 100% em 50 consultas, mas não foi implementada porque piorou o p50 (567,6→584,0 ms) e `contratacao` (1.724,9→2.441,5 ms). Detalhes estão em [`docs/reviews/scale-baseline.md`](scale-baseline.md), seção “1,5 M”.
 
 ## Validação final
 

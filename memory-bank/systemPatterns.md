@@ -1,5 +1,7 @@
 # System Patterns — Licita Insight
 
+Deriva de [projectbrief](projectbrief.md). Alimenta [activeContext](activeContext.md).
+
 ## Arquitetura atual
 
 Monorepo pnpm (template Replit) com três frentes:
@@ -25,7 +27,7 @@ Auth visual faz `history.pushState` para `/dashboard`. Não há sessão.
 
 ## Onde a UI mora
 
-Código em `artifacts/licitainsight/src/`, organizado por feature. Mapa completo em `artifacts/licitainsight/ARCHITECTURE.md`.
+Código em `artifacts/licitainsight/src/`, organizado por feature. Mapa completo em [`artifacts/licitainsight/ARCHITECTURE.md`](../artifacts/licitainsight/ARCHITECTURE.md).
 
 - `features/<feature>/` — página, `components/`, `hooks/` e `lib/` de cada área: `search`, `tenders` (linha de resultado, tabela, detalhe), `dashboard`, `saved-tenders`, `saved-searches`, `monitoring`, `settings`, `landing`, `auth`, `design-system`.
 - `api/` — tipos do contrato (`types.ts`), `ApiError` e o adapter HTTP. `services/` — `search-service` (normalização, URL ⇄ params) e `query-keys`.
@@ -37,7 +39,7 @@ Camadas obrigatórias: componente → hook → service → adapter → API. Comp
 
 ## Design system
 
-Documentação em `design-system/` (raiz): `README.md`, `tokens.md`, `components.md`, `motion.md`. Tokens em `artifacts/licitainsight/src/index.css` (Tailwind v4, variáveis HSL, `@theme inline`). Referência viva em `/design-system`.
+Documentação em `design-system/` (raiz): [`README.md`](../design-system/README.md), [`tokens.md`](../design-system/tokens.md), [`components.md`](../design-system/components.md), [`motion.md`](../design-system/motion.md). Tokens em `artifacts/licitainsight/src/index.css` (Tailwind v4, variáveis HSL, `@theme inline`). Referência viva em `/design-system`.
 
 - Primary: azul (`--primary: 210 78% 43%`; dark `210 82% 66%`). É a cor de ação.
 - Sidebar: navy (“instrument navy”), igual nos dois temas.
@@ -52,7 +54,7 @@ Status de edital usa cor **e** texto (`Aberto`, `Em análise`, `Encerrado`, `Sus
 
 ## Modelo de dados
 
-O contrato de busca está em `docs/contracts/search-v1.md` e em `artifacts/licitainsight/src/api/types.ts`. Status e modalidade são enums `snake_case` (`open`, `under_review`, `pregao_eletronico`, `concorrencia`, …). A UI traduz os rótulos em `src/lib/tender-labels.ts`, inclusive nos facets. Os registros ficam na tabela `tenders`.
+O contrato de busca está em [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md) e em `artifacts/licitainsight/src/api/types.ts`. Status e modalidade são enums `snake_case` (`open`, `under_review`, `pregao_eletronico`, `concorrencia`, …). A UI traduz os rótulos em `src/lib/tender-labels.ts`, inclusive nos facets. Os registros ficam na tabela `tenders`.
 
 ## Estado
 
@@ -64,7 +66,7 @@ Filtros, ordenação e página da busca vivem na URL. Editais salvos ficam no `l
 UI → hooks → searchService → HTTP /api/v1 → PostgreSQL
 ```
 
-A busca pagina no servidor. Sem `DATABASE_URL`, a API responde 503. O contrato está em `docs/contracts/search-v1.md` (v1 + aditivos v1.1) e em `lib/api-spec/openapi.yaml`. Handoffs entre frontend e backend ficam em `docs/handoffs/`.
+A busca pagina no servidor. Sem `DATABASE_URL`, a API responde 503. O contrato está em [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md) (v1 + aditivos v1.1) e em `lib/api-spec/openapi.yaml`. Handoffs entre frontend e backend ficam em `docs/handoffs/`.
 
 ## Convenções de código observadas
 

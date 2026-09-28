@@ -1,4 +1,4 @@
-# Revisão de custo e isolamento — CODEX_HANDOFF-018
+# Revisão de custo e isolamento — [CODEX_HANDOFF-018](../handoffs/CODEX_HANDOFF-018-cost-isolation.md)
 
 Data: 26 set 2026. Banco principal não recebeu dados sintéticos. As cargas controladas usaram `licita_cost` e `licita_smoke`, ambos apagados ao final; as verificações de schema criam e removem bancos com nome aleatório.
 

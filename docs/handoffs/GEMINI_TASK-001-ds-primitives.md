@@ -4,8 +4,8 @@
 
 ## Contexto (leia antes)
 
-- Regras do projeto: `AGENTS.md`, `.cursorrules`, `memory-bank/systemPatterns.md`.
-- Design system: `design-system/README.md`, `tokens.md`, `components.md`, `motion.md`.
+- Regras do projeto: [`AGENTS.md`](../../AGENTS.md), `.cursorrules`, [`memory-bank/systemPatterns.md`](../../memory-bank/systemPatterns.md).
+- Design system: [`design-system/README.md`](../../design-system/README.md), [`tokens.md`](../../design-system/tokens.md), [`components.md`](../../design-system/components.md), [`motion.md`](../../design-system/motion.md).
 - Tokens em `artifacts/licitainsight/src/index.css` (Tailwind 4, `@theme inline`, HSL, light/dark).
 - Regras do owner: copy em PT-BR; sem dado inventado; erros visíveis (sem `catch` vazio); menos código; não inventar libs.
 
@@ -21,11 +21,11 @@
 2. **Variante destrutiva do Button de produto.** Em `src/components/common/action-button.tsx` adicione
    `variant="destructive"` (tokens `bg-destructive text-destructive-foreground`, hover/active/focus como as demais).
    **Não edite** `saved-searches-page.tsx` (o Claude está mexendo nela e vai adotar a variante depois).
-   Documente a variante em `design-system/components.md`.
+   Documente a variante em [`design-system/components.md`](../../design-system/components.md).
 3. **Token de altura do header mobile.** Crie `--spacing-header-mobile: 3.5rem` em `index.css` (junto de
    `--spacing-header`) e use no shell (`h-14` → `h-header-mobile`) e no rail de filtros de
-   `src/features/search/search-page.tsx` (`3.5rem` literal → `var(--spacing-header-mobile)`). Documente em `tokens.md`.
-4. **Registro de dívida desatualizado.** Atualize a seção "Debt register" de `design-system/README.md`
+   `src/features/search/search-page.tsx` (`3.5rem` literal → `var(--spacing-header-mobile)`). Documente em [`tokens.md`](../../design-system/tokens.md).
+4. **Registro de dívida desatualizado.** Atualize a seção "Debt register" de [`design-system/README.md`](../../design-system/README.md)
    removendo itens já resolvidos (verifique no código antes de remover) e acrescentando o que você não resolver.
 
 ## Propriedade de arquivos (não edite nada fora disso)
@@ -52,5 +52,5 @@
 
 ## Resposta
 
-Escreva `docs/handoffs/GEMINI_REPORT-001-ds-primitives.md` com: arquivos alterados, o que foi feito por item,
+Escreva [`docs/handoffs/GEMINI_REPORT-001-ds-primitives.md`](GEMINI_REPORT-001-ds-primitives.md) com: arquivos alterados, o que foi feito por item,
 evidência (saída do tsc e do grep), o que ficou pendente e por quê. Depois avise no terminal que terminou.

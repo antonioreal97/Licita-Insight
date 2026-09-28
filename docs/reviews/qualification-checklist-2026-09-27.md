@@ -1,6 +1,6 @@
 # QA — Checklist automático de habilitação (HANDOFF-020) — 27 set 2026
 
-Validação independente da entrega de `CODEX_HANDOFF-020` (`docs/handoffs/CLAUDE_HANDOFF-020-qualification-checklist.md`)
+Validação independente da entrega de [`CODEX_HANDOFF-020`](../handoffs/CODEX_HANDOFF-020-qualification-checklist.md) ([`docs/handoffs/CLAUDE_HANDOFF-020-qualification-checklist.md`](../handoffs/CLAUDE_HANDOFF-020-qualification-checklist.md))
 mais a integração do frontend, feita por mim depois da entrega do Codex.
 
 ## Backend — reverificação independente

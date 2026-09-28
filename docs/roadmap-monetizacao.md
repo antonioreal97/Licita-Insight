@@ -16,13 +16,13 @@ O documento de análise descreve o produto como protótipo com mocks. O reposit�
 | "Pesquisas salvas e alertas — ✅ Previsto" | **Implementado.** `savedSearchesTable`, `evaluateSavedSearchNotifications()`, rotas `/api/v1/me/saved-searches`, UI em `features/saved-searches`. |
 | "Monitoramento de alterações — ✅ Previsto" | **Implementado.** `tenderChanges()` detecta mudança de prazo, status e valor; `createDocumentAddedNotifications()` detecta anexo novo. Dispara no upsert da coleta. |
 | "Tags e favoritos — ✅ Previsto" | Salvar e monitorar existem (`savedTendersTable`, flag `monitored`). **Tags não existem.** |
-| "Busca e filtros — core" | Implementado sobre Postgres, com facets, sugestões e contrato em `docs/contracts/search-v1.md`. Sem mocks. |
+| "Busca e filtros — core" | Implementado sobre Postgres, com facets, sugestões e contrato em [`docs/contracts/search-v1.md`](contracts/search-v1.md). Sem mocks. |
 | (não citado) Paywall | **Já existe.** Assinatura mensal Asaas, `subscriptions`, gate `402 SUBSCRIPTION_REQUIRED` aplicado em `router.use("/v1/me", …)` — ou seja, em **todas** as rotas `/me` (salvar, monitorar, buscas, notificações) —, UI de checkout em Configurações. |
 | (não citado) Fomento cultural | `cultural_opportunities` + `/oportunidades` — um diferencial que nenhum concorrente citado tem. |
 
 **Conclusão que muda a prioridade:** o que falta para cobrar não é funcionalidade, é (a) **operação** — chaves Asaas, deploy, base nacional carregada — e (b) **embalagem** — hoje o gate é binário (assinante ou não), sem plano gratuito nem limites, e o alerta só existe dentro do app.
 
-Nenhuma linha de IA, RAG ou embedding existe no código hoje (a busca semântica citada no `AGENTS.md` cai para palavra-chave). Não há nenhuma infra de e-mail (`resend`/`nodemailer`/SMTP ausentes).
+Nenhuma linha de IA, RAG ou embedding existe no código hoje (a busca semântica citada no [`AGENTS.md`](../AGENTS.md) cai para palavra-chave). Não há nenhuma infra de e-mail (`resend`/`nodemailer`/SMTP ausentes).
 
 ---
 
@@ -53,7 +53,7 @@ Robô de lances fica **fora do roadmap**: exige integração autenticada com Com
 | 0.3 | Deploy online (API + Postgres + Vite), origem pública e `PUBLIC_APP_ORIGIN`/redirect URI do Google corrigidos | `docker-compose.yml`, provedor | — | login Google e busca funcionam no domínio público |
 | 0.4 | Carga nacional dos últimos 30 dias do PNCP | `collect:pncp` com `PNCP_FROM`/`PNCP_TO` | 0.3 | `GET /api/v1/ingest/pncp` mostra as 27 UFs seladas no período |
 | 0.5 | Teste ponta a ponta com um CNPJ real: assinar → salvar → receber notificação | produção | 0.1–0.4 | ciclo completo sem intervenção manual |
-| 0.6 | ✅ (`CLAUDE_HANDOFF-006`) Assinatura de desenvolvimento: `BILLING_DEV_ENTITLED=true` (só com `NODE_ENV !== 'production'`, como o `AUTH_DEV_LOGIN`) trata o usuário como assinante | `billing/billing-access.ts`, `.env.example` | — | QA dos fluxos `/me` sem Asaas nem `INSERT` manual em `subscriptions` |
+| 0.6 | ✅ ([`CLAUDE_HANDOFF-006`](handoffs/CLAUDE_HANDOFF-006-dev-entitlement-lgpd.md)) Assinatura de desenvolvimento: `BILLING_DEV_ENTITLED=true` (só com `NODE_ENV !== 'production'`, como o `AUTH_DEV_LOGIN`) trata o usuário como assinante | `billing/billing-access.ts`, `.env.example` | — | QA dos fluxos `/me` sem Asaas nem `INSERT` manual em `subscriptions` |
 
 **Esforço:** 2–4 dias. **Risco:** timeout do PNCP na janela de 30 dias — a coleta já reparte por UF, mas a carga deve rodar fora do horário de pico e pode levar horas.
 
@@ -76,7 +76,7 @@ Isso substitui o desenho anterior de níveis Starter/Pro e limites por plano.
 | 1.5 | Oportunidades culturais atrás do gate | `routes/opportunities.ts` | anônimo → 401; sem acesso → 402; coleta diária inalterada |
 | 1.6 | Rota pública com preço e duração do teste | `GET /api/v1/billing/plan` | `{ monthlyBrl, trialDays }` para landing e login |
 | 1.7 | UI: selo "Teste · N dias", aviso nos últimos 3 dias, tela de assinatura ao expirar, textos "7 dias grátis" na landing/login, culturais com paywall | `features/billing`, `app-shell`, `landing`, `opportunities` | o upgrade aparece onde o acesso acaba |
-| 1.8 | LGPD da conta: exportar e excluir | **feito no backend** (`CLAUDE_HANDOFF-006`); UI em `/settings` | — |
+| 1.8 | LGPD da conta: exportar e excluir | **feito no backend** ([`CLAUDE_HANDOFF-006`](handoffs/CLAUDE_HANDOFF-006-dev-entitlement-lgpd.md)); UI em `/settings` | — |
 
 **Depende de:** Onda 0.1 para cobrar de fato; o desenvolvimento usa `BILLING_DEV_ENTITLED`. **Pronto quando:** um usuário novo usa tudo por 7 dias, recebe o aviso no dia 4 e, no dia 8, cai na tela de assinatura com o checkout.
 
@@ -184,7 +184,7 @@ Onda 5                        ████████  mercado + multi-CNPJ
 A Onda 3 depende só da Onda 1 (cota é atributo de plano), não da Onda 2: com a equipe atual (Codex no backend, Claude/Gemini no frontend) as Ondas 2 e 3 podem rodar em paralelo.
 
 Ondas 0 a 2 formam o **produto cobrável mínimo**: a assinatura já se justifica com alerta por e-mail e monitoramento de retificação, exatamente como conclui o documento de origem. A Onda 3 diferencia dentro da categoria "IA com fonte", não é mais exclusividade nossa: pesquisa de
-27 set 2026 (`docs/reviews/competitive-analysis-2026-09-27.md`) achou pelo menos dois concorrentes
+27 set 2026 ([`docs/reviews/competitive-analysis-2026-09-27.md`](reviews/competitive-analysis-2026-09-27.md)) achou pelo menos dois concorrentes
 (Acumi, Licitei) já entregando chat citado por página e ficha campo a campo. Nosso diferencial de preço
 (R$ 49,90 sem limite mensal de análises) e as chamadas de fomento cultural continuam sem equivalente
 encontrado no mercado.
@@ -203,7 +203,7 @@ Limiares da aderência aprovados em 25 set 2026, após a calibração (3 perfis 
 
 Ciclo 6 (25 set 2026): **ficha do edital (3.5)**. Campo sem trecho fica "não encontrado nos documentos"; ausência nunca vira resposta ("não exige").
 
-Em 26 set 2026: **valor do plano R$ 49,90/mês** (`BILLING_MONTHLY_BRL=49.90` no `.env` de produção), para ficar bem abaixo da concorrência; reajuste se o custo por assinante passar de R$ 25. Conta de margem, hospedagem, metas, limite de IA e retenção em `docs/architecture-scale.md`, seção 7.
+Em 26 set 2026: **valor do plano R$ 49,90/mês** (`BILLING_MONTHLY_BRL=49.90` no `.env` de produção), para ficar bem abaixo da concorrência; reajuste se o custo por assinante passar de R$ 25. Conta de margem, hospedagem, metas, limite de IA e retenção em [`docs/architecture-scale.md`](architecture-scale.md), seção 7.
 
 ---
 

@@ -1,5 +1,7 @@
 # Project Brief — Licita Insight
 
+Base de [productContext](productContext.md), [systemPatterns](systemPatterns.md) e [techContext](techContext.md).
+
 Plataforma web para **pesquisa, descoberta, filtragem e acompanhamento de licitações públicas**.
 
 A experiência central é **Search → Filter → Evaluate → Save → Monitor**. O usuário entra e entende imediatamente que consegue encontrar licitações relevantes para a empresa dele.
@@ -40,8 +42,8 @@ Nesta etapa **não** entra:
 
 ## Entidade central
 
-`Tender` (licitação). O formato enviado ao browser está em `docs/contracts/search-v1.md`.
+`Tender` (licitação). O formato enviado ao browser está em [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md).
 
 ## Fonte da especificação
 
-O brief completo do produto está em `docs/product-brief.md` (movido do `README.md` em 28 set 2026). Ele descreve a intenção, não o estado implementado. O `README.md` da raiz agora é o README do projeto: visão geral, setup, comandos e problemas comuns.
+O brief completo do produto está em [`docs/product-brief.md`](../docs/product-brief.md) (movido do [`README.md`](../README.md) em 28 set 2026). Ele descreve a intenção, não o estado implementado. O [`README.md`](../README.md) da raiz agora é o README do projeto: visão geral, setup, comandos e problemas comuns.

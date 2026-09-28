@@ -95,7 +95,7 @@ O comando `migrate` pressupõe que o schema canônico de busca/ingestão já foi
 - Clientes React e schemas Zod regenerados.
 - Hooks gerados: `useGetNotificationPreferences`, `useUpdateNotificationPreferences` e
   `useUnsubscribeEmail`.
-- Contrato consolidado na seção **E-mail** de `docs/contracts/account-v1.md`.
+- Contrato consolidado na seção **E-mail** de [`docs/contracts/account-v1.md`](../contracts/account-v1.md).
 
 ## Validação
 

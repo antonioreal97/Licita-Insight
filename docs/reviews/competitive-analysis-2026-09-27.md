@@ -1,6 +1,6 @@
 # Análise competitiva — 27 set 2026
 
-Verificação direta nos sites dos concorrentes, antes do deploy. Os números do roadmap original (`docs/roadmap-monetizacao.md`) vinham de um documento de terceiros, nunca conferidos na fonte.
+Verificação direta nos sites dos concorrentes, antes do deploy. Os números do roadmap original ([`docs/roadmap-monetizacao.md`](../roadmap-monetizacao.md)) vinham de um documento de terceiros, nunca conferidos na fonte.
 
 ## Preços (fonte pública, na data acima)
 
@@ -22,7 +22,7 @@ Verificação direta nos sites dos concorrentes, antes do deploy. Os números do
 - **Acumi:** "cada campo declara o status: encontrado, não encontrado ou incerto" e "no chat com o edital, cada resposta cita o trecho, e a citação é verificada contra o texto do documento". É quase a descrição literal da nossa Ficha do Edital e do Perguntar ao Edital.
 - **Licitei:** "a IA lê o edital e os anexos e responde com citação da página de origem", com checklist automático de habilitação (nossa Onda 3 ainda não tem isso).
 
-A frase do nosso roadmap interno "a Onda 3 é o que tira o LicitAI da comparação por preço" (`docs/roadmap-monetizacao.md`) está desatualizada: hoje competimos por **preço** dentro da categoria "IA com fonte", não por sermos os únicos a ter IA com fonte. Isso não invalida a Onda 3 — só muda a justificativa dela.
+A frase do nosso roadmap interno "a Onda 3 é o que tira o LicitAI da comparação por preço" ([`docs/roadmap-monetizacao.md`](../roadmap-monetizacao.md)) está desatualizada: hoje competimos por **preço** dentro da categoria "IA com fonte", não por sermos os únicos a ter IA com fonte. Isso não invalida a Onda 3 — só muda a justificativa dela.
 
 **O que continua sendo diferencial**, pelo que a pesquisa não achou em nenhum concorrente:
 - Chamadas de fomento cultural/audiovisual (`/oportunidades`) — nenhum concorrente pesquisado cobre isso.

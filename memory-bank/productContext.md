@@ -1,5 +1,7 @@
 # Product Context — Licita Insight
 
+Deriva de [projectbrief](projectbrief.md). Alimenta [activeContext](activeContext.md).
+
 ## Por que existe
 
 Pesquisar licitações públicas hoje é fragmentado: portais diferentes, linguagem burocrática, prazos espalhados, pouca visão do que mudou. A plataforma concentra oportunidades e deixa a pesquisa e o acompanhamento mais claros para quem vende para o setor público.

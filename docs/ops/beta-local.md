@@ -2,7 +2,7 @@
 
 Lançamento em beta gratuito para 3–5 convidados, rodando no Mac do owner e exposto na internet por um
 Cloudflare Tunnel com domínio próprio. Sem cobrança: o acesso é liberado por convite, até uma data. O Fly
-(`docs/ops/deploy-fly.md`) é o passo seguinte, com ~3 usuários ativos.
+([`docs/ops/deploy-fly.md`](deploy-fly.md)) é o passo seguinte, com ~3 usuários ativos.
 
 O stack do beta é independente do stack de desenvolvimento: projeto Compose `licitai-beta`, Postgres e
 volume próprios (`beta_pg_data`), **nenhuma porta publicada no Mac** e nada em comum com os containers
@@ -173,7 +173,7 @@ deploy/beta-local/restore.sh "<pasta>/licitai-beta-AAAAMMDDTHHMMSSZ.dump" --yes
 
 ## 8. Depois: levar o beta para o Fly
 
-Quando o Fly estiver pronto (`docs/ops/deploy-fly.md`): pare o túnel, faça um backup com
+Quando o Fly estiver pronto ([`docs/ops/deploy-fly.md`](deploy-fly.md)): pare o túnel, faça um backup com
 `deploy/beta-local/backup.sh`, restaure o dump no banco privado do Fly com `pg_restore --no-owner --no-acl`
 antes do primeiro `release_command` rodar migrations novas, aponte o DNS do domínio para o Fly e atualize a
 redirect URI do Google. Os convites continuam valendo, porque viajam no dump.
