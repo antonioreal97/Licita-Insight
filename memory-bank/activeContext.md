@@ -2,6 +2,15 @@
 
 ## Foco agora
 
+Ciclo 11 (branch `antonioreal97/cycle11`, sem deploy por decisão do owner): simplificação de UI/UX segundo os
+princípios de design da Apple — tipografia maior e sem monoespaçada/caixa-alta nos rótulos, menu e topo sem
+jargão, ficha do edital agrupada por pergunta e sem duplicatas, painel e landing enxutos. Relatório em
+`docs/reviews/ux-simplification-2026-09-28.md`. Backend reavaliado: as 9 correções de escala de
+`docs/architecture-scale.md` estão no código; TypeScript continua a escolha certa (gargalos são I/O de
+Postgres, PNCP e Jev, não CPU). Abertos: carga HTTP com 1,5 M de linhas nunca medida, termo comum na busca,
+limite de taxa em memória por processo (precisa ser compartilhado quando houver mais de uma réplica da API),
+rotas de ingestão sem autenticação.
+
 Ciclo 10 (branch `antonioreal97/cycle10`, commits locais, sem push nem PR): prontidão de deploy
 (HANDOFF-021). Decisões do owner em 27–28 set 2026: (1) custo fixo alto sem usuários → Fly enxuto (~US$ 20/mês:
 1 máquina `APP_ROLE=all` + Postgres próprio com volume; Managed Postgres só com ~20 assinantes; revisão na
