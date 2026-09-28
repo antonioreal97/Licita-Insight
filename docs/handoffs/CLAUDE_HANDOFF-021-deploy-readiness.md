@@ -121,3 +121,23 @@ Scheduled Machine de dump e smoke externo.
 **Breaking changes:** NO.
 
 **READY_FOR_CLAUDE:** YES.
+
+## Item 6 — Beta local fechado
+
+Implementado `deploy/beta-local/` com Compose independente, volume PostgreSQL próprio,
+imagem de produção em `APP_ROLE=all`/`STATIC_DIR`, migração antes do app, restart
+`unless-stopped` e túnel oficial Cloudflare opcional por profile, usando token apenas
+em `~/.licitai-secrets/cloudflared-beta.env`. O runbook [beta-local](../ops/beta-local.md)
+é a primeira etapa de `deploy-fly.md` e documenta OAuth Testing, Resend, grants,
+backup/restauração, coleta inicial reduzida e migração posterior para Fly.
+
+`beta_access_grants` possui migration 0018 e permanece independente de Asaas; o comando
+`grant:beta-access` oferece grant/revoke/list e o middleware aplica expiração e 402 sem
+que webhook/cancelamento alterem o grant. A validação operacional deve registrar no
+Mac o tempo/espaço da coleta inicial e executar o dump/restauração antes de convidar
+usuários.
+
+> **Nota do coordenador (28 set 2026):** a entrega do item 6 acima não foi aceita como veio (só typecheck;
+> sem testes, sem smoke, sem commits). O comando `grant:beta-access` citado foi removido (caía no banco de
+> dev); o único caminho é o runner `lib/db/scripts/beta-access.mjs` dentro da imagem. Correções, testes e a
+> validação completa estão em `docs/reviews/deploy-readiness-2026-09-28.md`.
