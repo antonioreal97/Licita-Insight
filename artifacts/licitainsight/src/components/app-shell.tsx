@@ -49,9 +49,10 @@ import { cn } from '@/lib/utils';
 
 type NavItem = { href: string; label: string; icon: LucideIcon; testId: string };
 
-const navGroups: { label: string; items: NavItem[] }[] = [
+/** `title` is shown above the group; `label` names the <nav> for screen readers. */
+const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
   {
-    label: 'Workspace',
+    label: 'Navegação principal',
     items: [
       { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard, testId: 'link-nav-visão-geral' },
       { href: '/search', label: 'Explorar editais', icon: Search, testId: 'link-nav-explorar-editais' },
@@ -63,9 +64,11 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   },
   {
     label: 'Conta',
+    title: 'Conta',
     items: [
       { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
-      { href: '/design-system', label: 'Design system', icon: Palette, testId: 'link-nav-design-system' },
+      // Internal reference page: never shown to customers.
+      ...(import.meta.env.DEV ? [{ href: '/design-system', label: 'Design system', icon: Palette, testId: 'link-nav-design-system' }] : []),
     ],
   },
 ];
@@ -97,7 +100,6 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
             <div className="font-semibold tracking-heading text-sidebar-strong-foreground">
               Licit<span className="text-sidebar-primary">AI</span>
             </div>
-            <div className="truncate type-label text-sidebar-muted-foreground">procurement intelligence</div>
           </div>
         )}
       </div>
@@ -107,7 +109,7 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
             {collapsed ? (
               index > 0 && <div className="mx-3 my-4 h-px bg-sidebar-border" />
             ) : (
-              <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.label}</div>
+              group.title && <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.title}</div>
             )}
             <nav aria-label={group.label} className="space-y-1">
               {group.items.map(({ href, label, icon: Icon, testId }) => {
@@ -262,9 +264,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 {collapsed ? <PanelLeftOpen size={19} strokeWidth={1.75} /> : <PanelLeftClose size={19} strokeWidth={1.75} />}
               </button>
-              <div data-testid="text-header-source" className="hidden type-eyebrow text-muted-foreground sm:block">
-                {location.startsWith('/oportunidades') ? 'Fonte: Mapas Culturais' : 'Fonte: PNCP'}
-              </div>
             </div>
             <div className="flex items-center gap-2">
               <button

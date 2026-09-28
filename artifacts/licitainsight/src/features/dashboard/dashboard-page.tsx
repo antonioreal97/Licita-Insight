@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, Bell, RefreshCw, Search, Target } from 'lucide-react';
+import { ArrowRight, Bell, Search, Target } from 'lucide-react';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
@@ -172,20 +172,13 @@ export default function DashboardPage() {
   // deadlineFrom=today keeps "open" tenders whose deadline already passed (status lags the source) out of the top.
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], deadlineFrom: today, facets: false });
   const fits = useTenderFits(priority.data?.data.map((tender) => tender.id) ?? []);
-  const refreshing = catalog.isFetching || recent.isFetching || soon.isFetching || priority.isFetching;
-  const refresh = () => {
-    void catalog.refetch();
-    void recent.refetch();
-    void soon.refetch();
-    void priority.refetch();
-  };
 
   return (
     <>
       <PageTitle
         eyebrow={eyebrow}
         title={firstName ? `${greeting()}, ${firstName}.` : `${greeting()}.`}
-        description="Uma leitura rápida das publicações do PNCP que estão no banco."
+        description="Os prazos que estão chegando e o que merece sua atenção hoje."
         action={
           <Link
             href="/search"
@@ -199,16 +192,16 @@ export default function DashboardPage() {
       />
       <div className="mb-8 grid grid-cols-3 gap-3 rounded-xl border border-border bg-card px-4 py-5 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
         <MiniMetric
-          label="Editais no banco"
-          value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
-          detail="publicações coletadas"
-        />
-        <MiniMetric label="Últimos 7 dias" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="publicados até hoje" />
-        <MiniMetric
-          label="Prazos próximos"
+          label="Prazo nos próximos 7 dias"
           value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)}
-          detail="em aberto, prazo de proposta em até 7 dias"
+          detail="editais em aberto"
           attention
+        />
+        <MiniMetric label="Publicados na semana" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="nos últimos 7 dias" />
+        <MiniMetric
+          label="Editais disponíveis"
+          value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)}
+          detail="de todo o Brasil"
         />
       </div>
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -246,23 +239,6 @@ export default function DashboardPage() {
           <ProfileInviteCard />
           <MonitoringCard />
           <OpportunitiesCard />
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="type-section text-foreground">Coleta</h2>
-              <button
-                data-testid="button-refresh-activity"
-                aria-label="Atualizar leitura"
-                aria-busy={refreshing || undefined}
-                onClick={refresh}
-                className="rounded-md p-1 text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
-              >
-                <RefreshCw size={14} strokeWidth={1.75} className={refreshing ? 'animate-spin' : undefined} />
-              </button>
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              A API atualiza as publicações novas todo dia e revisa os editais que ainda estão em aberto. O histórico que já entrou no banco permanece.
-            </p>
-          </div>
         </aside>
       </div>
     </>

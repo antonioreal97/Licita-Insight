@@ -89,7 +89,6 @@ export default function SavedTendersPage() {
   return (
     <>
       <PageTitle
-        eyebrow="sua shortlist"
         title="Editais salvos"
         description="Salvos na sua conta. Os dados de cada edital vêm do banco."
         action={

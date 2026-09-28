@@ -39,55 +39,60 @@ const QUALIFICATION_LABELS: Record<QualificationType, string> = {
 };
 const QUALIFICATION_ORDER: QualificationType[] = ['ato_societario', 'regularidade_fiscal', 'regularidade_trabalhista', 'qualificacao_tecnica', 'qualificacao_economica'];
 
-function QualificationRow({ item }: { item: QualificationItem }) {
+/** One row per requirement type; each official passage keeps its own page link. */
+function QualificationRow({ type, items }: { type: QualificationType; items: QualificationItem[] }) {
   const [open, setOpen] = useState(false);
+  const passagesId = useId();
+  const single = items.length === 1;
   return (
-    <div className="py-3 first:pt-0 last:pb-0" data-testid="qualification-item" data-type={item.type}>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[item.type]}</span>
-        <div className="flex items-center gap-3">
-          <SourceLink evidence={item.evidence} />
+    <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4" data-testid="qualification-item" data-type={type}>
+      <dt className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[type]}</dt>
+      <dd className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="type-meta text-muted-foreground">{single ? 'Exigido' : `Exigido em ${items.length} trechos`}</span>
+          {items.map((item) => (
+            <SourceLink key={`${item.evidence.documentUrl}-${item.evidence.page}`} evidence={item.evidence} />
+          ))}
           <button
             type="button"
             aria-expanded={open}
+            aria-controls={passagesId}
             onClick={() => setOpen((value) => !value)}
             className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
             data-testid="button-qualification-toggle"
           >
-            {open ? 'Ocultar trecho' : 'Ver trecho'}
+            {open ? 'Ocultar' : single ? 'Ver trecho' : 'Ver trechos'}
             <ChevronDown size={13} aria-hidden="true" className={cn('transition-transform duration-fast ease-standard', open && 'rotate-180')} />
           </button>
         </div>
-      </div>
-      {open && <blockquote className="mt-2 border-l-2 border-primary/50 pl-3 type-meta break-words text-foreground/90">{item.evidence.text}</blockquote>}
+        {open && (
+          <div id={passagesId} className="mt-2 space-y-2">
+            {items.map((item) => (
+              <blockquote key={`${item.evidence.documentUrl}-${item.evidence.page}`} className="border-l-2 border-primary/50 pl-3 type-meta break-words text-foreground/90">
+                {!single && <span className="mr-1.5 font-semibold text-muted-foreground">p. {item.evidence.page}</span>}
+                {item.evidence.text}
+              </blockquote>
+            ))}
+          </div>
+        )}
+      </dd>
     </div>
   );
 }
 
-function QualificationChecklist({ items }: { items: QualificationItem[] }) {
-  if (items.length === 0) return null;
-  const ordered = QUALIFICATION_ORDER.flatMap((type) => items.filter((item) => item.type === type));
-  return (
-    <section aria-label="Requisitos de habilitação encontrados">
-      <h3 className="mb-2 type-eyebrow text-muted-foreground">Requisitos de habilitação encontrados</h3>
-      <p className="mb-2 type-meta text-muted-foreground">
-        Não é uma lista completa: pode haver mais de uma exigência do mesmo tipo na mesma página, e só uma aparece aqui. Confira sempre o edital.
-      </p>
-      <dl className="divide-y divide-border-subtle">
-        {ordered.map((item, index) => (
-          <QualificationRow key={`${item.type}-${item.evidence.page}-${index}`} item={item} />
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-const GROUPS: { title: string; ids: SheetFieldId[] }[] = [
-  { title: 'Participação', ids: ['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples'] },
-  { title: 'Garantias e penalidades', ids: ['bid_guarantee', 'contract_guarantee', 'penalties'] },
-  { title: 'Habilitação', ids: ['technical_qualification', 'financial_qualification'] },
-  { title: 'Execução', ids: ['contract_term', 'delivery_term', 'price_adjustment'] },
+/** Groups, in the order a bidder asks: can I take part, what must I present, what is at stake, how it runs. */
+const GROUPS: { title: string; ids: SheetFieldId[]; qualification?: boolean }[] = [
+  { title: 'Quem pode participar', ids: ['consortium', 'subcontracting', 'me_epp', 'site_visit', 'samples'] },
+  { title: 'Documentos exigidos', ids: ['technical_qualification', 'financial_qualification'], qualification: true },
+  { title: 'Garantias e multas', ids: ['bid_guarantee', 'contract_guarantee', 'penalties'] },
+  { title: 'Execução do contrato', ids: ['contract_term', 'delivery_term', 'price_adjustment'] },
 ];
+
+/** A checklist item of these types already cites the passage; the single fixed field would repeat it. */
+const COVERED_BY_CHECKLIST: Partial<Record<SheetFieldId, QualificationType>> = {
+  technical_qualification: 'qualificacao_tecnica',
+  financial_qualification: 'qualificacao_economica',
+};
 
 const noteBox = 'flex gap-2.5 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground';
 const errorBox = 'flex gap-2.5 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-4 py-3 type-meta text-destructive-subtle-foreground';
@@ -176,6 +181,42 @@ function FieldRow({ field }: { field: SheetField }) {
 function SheetBody({ sheet }: { sheet: TenderSheet }) {
   const byId = new Map(sheet.fields.map((field) => [field.id, field]));
   const found = sheet.fields.filter((field) => field.status === 'found').length;
+  const checklist = new Map<QualificationType, QualificationItem[]>();
+  for (const item of sheet.qualificationChecklist) checklist.set(item.type, [...(checklist.get(item.type) ?? []), item]);
+  const covered = (id: SheetFieldId) => {
+    const type = COVERED_BY_CHECKLIST[id];
+    return type !== undefined && checklist.has(type);
+  };
+  // Absence is not an answer: the fields the documents never mention are named together at the end, as "não encontrados".
+  const missing: SheetField[] = [];
+
+  const sections = GROUPS.map((group) => {
+    const fields = group.ids
+      .filter((id) => !covered(id))
+      .map((id) => byId.get(id))
+      .filter((field): field is SheetField => Boolean(field));
+    const shown = fields.filter((field) => field.status !== 'not_found' && field.evidence);
+    missing.push(...fields.filter((field) => !shown.includes(field)));
+    const qualification = group.qualification ? QUALIFICATION_ORDER.filter((type) => checklist.has(type)) : [];
+    if (shown.length === 0 && qualification.length === 0) return null;
+    return (
+      <section key={group.title} aria-label={group.title}>
+        <h3 className="mb-2 type-eyebrow text-muted-foreground">{group.title}</h3>
+        <dl className="divide-y divide-border-subtle">
+          {qualification.map((type) => (
+            <QualificationRow key={type} type={type} items={checklist.get(type)!} />
+          ))}
+          {shown.map((field) => (
+            <FieldRow key={field.id} field={field} />
+          ))}
+        </dl>
+        {qualification.length > 0 && (
+          <p className="mt-2 type-meta text-muted-foreground">Pode haver outras exigências do mesmo tipo. Confira sempre o edital.</p>
+        )}
+      </section>
+    );
+  });
+
   return (
     <>
       <p className="mb-4 type-meta text-muted-foreground" data-testid="text-sheet-summary">
@@ -186,21 +227,13 @@ function SheetBody({ sheet }: { sheet: TenderSheet }) {
           ` ${sheet.unreadDocuments === 1 ? '1 documento não pôde ser lido' : `${sheet.unreadDocuments} documentos não puderam ser lidos`}; a ficha pode estar incompleta.`}
       </p>
       <div className="space-y-6">
-        <QualificationChecklist items={sheet.qualificationChecklist} />
-        {GROUPS.map((group) => {
-          const fields = group.ids.map((id) => byId.get(id)).filter((field): field is SheetField => Boolean(field));
-          if (fields.length === 0) return null;
-          return (
-            <section key={group.title} aria-label={group.title}>
-              <h3 className="mb-2 type-eyebrow text-muted-foreground">{group.title}</h3>
-              <dl className="divide-y divide-border-subtle">
-                {fields.map((field) => (
-                  <FieldRow key={field.id} field={field} />
-                ))}
-              </dl>
-            </section>
-          );
-        })}
+        {sections}
+        {missing.length > 0 && (
+          <p className="type-meta text-muted-foreground" data-testid="text-sheet-missing">
+            <span className="font-semibold text-foreground/80">Não encontrados nos documentos:</span>{' '}
+            {missing.map((field) => FIELDS[field.id].label).join(', ')}.
+          </p>
+        )}
       </div>
     </>
   );

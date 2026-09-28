@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageTitle eyebrow="workspace" title="Configurações" description="Sua conta e como o LicitAI avisa você." />
+      <PageTitle title="Configurações" description="Sua conta e como o LicitAI avisa você." />
       <p
         role="note"
         data-testid="text-settings-readonly"

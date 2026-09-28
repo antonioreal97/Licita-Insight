@@ -284,7 +284,11 @@ export default function TenderDetailPage() {
         data-stuck={stuck}
         className="z-raised mb-6 rounded-xl border border-border bg-card transition-shadow duration-base ease-standard xl:sticky xl:top-[calc(var(--spacing-header)+0.75rem)] xl:data-[stuck=true]:shadow-sm"
       >
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-[1.2fr_1.4fr_1.2fr_1fr_1fr_1.2fr]">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-[1.5fr_1.2fr_1.2fr_1fr_1fr_1.1fr]">
+          {/* The deadline decides everything else: first, and widest. */}
+          <MetaItem variant="stacked" icon={CalendarClock} label="Prazo de propostas" className="col-span-2 sm:col-span-1">
+            <DeadlineIndicator deadline={tender.proposalDeadline} status={tender.status} variant="block" />
+          </MetaItem>
           <MetaItem variant="stacked" icon={Banknote} label="Valor estimado">
             <ValueDisplay
               value={tender.estimatedValue}
@@ -292,9 +296,6 @@ export default function TenderDetailPage() {
               nullLabel="Sigiloso / não informado"
               className="whitespace-normal text-base"
             />
-          </MetaItem>
-          <MetaItem variant="stacked" icon={CalendarClock} label="Prazo de propostas" className="col-span-2 sm:col-span-1">
-            <DeadlineIndicator deadline={tender.proposalDeadline} status={tender.status} variant="block" />
           </MetaItem>
           {/* PNCP `dataAberturaProposta` → openingAt: when proposals start being received (before the deadline), not the session. */}
           <MetaItem variant="stacked" icon={Inbox} label="Início das propostas">

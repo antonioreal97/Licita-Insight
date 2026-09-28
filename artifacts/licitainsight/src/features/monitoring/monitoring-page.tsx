@@ -209,7 +209,6 @@ export default function MonitoringPage() {
   return (
     <>
       <PageTitle
-        eyebrow="sinais importantes"
         title="Monitoramento"
         description="Mudanças nos editais que você monitora e editais novos das suas buscas salvas com alertas. Tudo aqui no app."
       />

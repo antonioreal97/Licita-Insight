@@ -92,7 +92,7 @@ export default function AuthPage() {
             Organize o mercado público em um lugar feito para leitura rápida e ação segura.
           </p>
         </div>
-        <div className="type-eyebrow text-sidebar-subtle-foreground">Fonte: PNCP · {new Date().getFullYear()}</div>
+        <div className="type-eyebrow text-sidebar-subtle-foreground">Dados públicos do PNCP · {new Date().getFullYear()}</div>
       </div>
       <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[400px]">
@@ -103,8 +103,7 @@ export default function AuthPage() {
             </span>
           </Link>
           <div className="mb-8">
-            <div className="mb-3 type-eyebrow font-bold text-primary">acesso</div>
-            <h1 className="text-3xl font-semibold tracking-display">Entre no seu workspace.</h1>
+            <h1 className="text-3xl font-semibold tracking-display">Entre com sua conta Google.</h1>
             <p className="mt-2 type-body text-muted-foreground">Salve editais, monitore mudanças e receba alertas das suas buscas.</p>
           </div>
           {error && (

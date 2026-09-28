@@ -96,7 +96,6 @@ export default function SearchPage() {
   return (
     <>
       <PageTitle
-        eyebrow="central de pesquisa"
         title="Explorar editais"
         description="Pesquise por objeto, órgão ou localização nas publicações coletadas do PNCP."
         action={<SaveSearchButton />}

@@ -94,7 +94,7 @@ function LiveIndexFacts() {
   return (
     <dl data-testid="landing-live-facts" className="mt-10 grid max-w-lg grid-cols-2 gap-x-8 gap-y-4 border-t border-border pt-6 sm:grid-cols-3">
       <div>
-        <dt className="type-label text-muted-foreground">Editais no índice</dt>
+        <dt className="type-label text-muted-foreground">Editais disponíveis</dt>
         <dd className="mt-1 type-data text-xl font-bold text-foreground">{formatNumber(total)}</dd>
       </div>
       {open.isSuccess && (
@@ -326,38 +326,6 @@ function EvidenceSection() {
   );
 }
 
-const steps: [string, string, string][] = [
-  ['01', 'Descubra', 'Busque no PNCP inteiro ou deixe o perfil da empresa apontar o que combina com vocês.'],
-  ['02', 'Entenda', 'Abra a ficha, pergunte ao edital e vá direto à página que importa.'],
-  ['03', 'Acompanhe', 'Monitore o que salvou. Mudou prazo, status ou documento, você fica sabendo.'],
-];
-
-function MethodSection() {
-  return (
-    <section id="como-funciona" aria-labelledby="metodo-titulo" className="border-y border-border bg-surface py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]">
-          <div>
-            <div className={eyebrow}>O método</div>
-            <h2 id="metodo-titulo" className={cn(sectionTitle, 'max-w-sm')}>
-              Menos ruído. Mais convicção.
-            </h2>
-          </div>
-          <ol className="grid gap-8 sm:grid-cols-3">
-            {steps.map(([number, title, text]) => (
-              <li key={number} className="border-t border-primary/40 pt-4">
-                <div className="type-data type-meta text-primary">{number}</div>
-                <h3 className="mt-7 text-lg font-semibold">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function ExtrasSection() {
   const items: { icon: LucideIcon; title: string; text: ReactNode }[] = [
     {
@@ -377,30 +345,21 @@ function ExtrasSection() {
     },
   ];
   return (
-    <section id="instrumento" aria-label="Mais recursos" className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
-      <div className="grid gap-10 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
-        <div>
-          <div className={eyebrow}>Feito para decidir</div>
-          <h2 className={cn(sectionTitle, 'max-w-lg')}>Um instrumento de pesquisa para quem não pode perder tempo.</h2>
-          <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
-            Salve o que merece atenção, compare o que importa e mantenha o contexto por perto. Sem planilhas espalhadas, sem voltar ao portal toda manhã.
-          </p>
-          <Link href="/search" data-testid="link-landing-search" className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
-            Conhecer a experiência <ArrowRight size={15} aria-hidden />
-          </Link>
-        </div>
-        <ul className="grid gap-3">
-          {items.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex gap-4 rounded-2xl border border-border bg-surface p-5">
-              <Icon size={19} aria-hidden className="mt-0.5 shrink-0 text-primary" />
-              <div>
-                <h3 className="text-sm font-semibold">{title}</h3>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <section id="instrumento" aria-labelledby="instrumento-titulo" className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
+      <h2 id="instrumento-titulo" className={cn(sectionTitle, 'max-w-lg')}>
+        Também no LicitAI
+      </h2>
+      <ul className="mt-8 grid gap-3 md:grid-cols-3">
+        {items.map(({ icon: Icon, title, text }) => (
+          <li key={title} className="flex gap-4 rounded-2xl border border-border bg-surface p-5">
+            <Icon size={19} aria-hidden className="mt-0.5 shrink-0 text-primary" />
+            <div>
+              <h3 className="text-sm font-semibold">{title}</h3>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -572,7 +531,6 @@ export default function LandingPage() {
         </section>
         <ServicesSection />
         <EvidenceSection />
-        <MethodSection />
         <ExtrasSection />
         <PlanSection />
         <FaqSection />
