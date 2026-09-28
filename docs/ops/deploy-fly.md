@@ -1,3 +1,7 @@
+# Beta local (primeiro lançamento)
+
+O lançamento inicial é o beta fechado no Mac do owner via Cloudflare Tunnel. Siga o [runbook do beta local](beta-local.md) antes desta etapa Fly; ele cobre OAuth, convidados e backup/restauração.
+
 # Deploy de produção no Fly.io
 
 Este runbook prepara o lançamento enxuto do LicitAI em `gru`: um app monolítico
