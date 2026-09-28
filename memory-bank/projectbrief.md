@@ -44,4 +44,4 @@ Nesta etapa **não** entra:
 
 ## Fonte da especificação
 
-O brief completo do produto está no `README.md` da raiz. Ele descreve a intenção, não o estado implementado.
+O brief completo do produto está em `docs/product-brief.md` (movido do `README.md` em 28 set 2026). Ele descreve a intenção, não o estado implementado. O `README.md` da raiz agora é o README do projeto: visão geral, setup, comandos e problemas comuns.

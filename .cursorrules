@@ -6,7 +6,7 @@ Frontend de pesquisa e acompanhamento de licitações públicas. Fluxo: Search �
 
 Etapa atual: editais vêm do PostgreSQL, com coleta diária do PNCP. Sem auth real, sem amarrar a Supabase/Lovable/Netlify Identity.
 
-Spec longa: `README.md`. Estado vivo: `memory-bank/`.
+Visão geral e setup: `README.md`. Brief original (intenção): `docs/product-brief.md`. Estado vivo: `memory-bank/`.
 
 ## Onde mexer
 

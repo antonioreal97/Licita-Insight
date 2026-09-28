@@ -47,7 +47,8 @@ Overrides removem binários nativos que não são linux-x64 (herança Replit). E
 
 ## Arquivos de referência
 
-- Spec de produto: `README.md`
+- README do projeto (setup, comandos, problemas comuns): `README.md`
+- Brief original do produto: `docs/product-brief.md`
 - Notas de operação do template: `replit.md` (ainda genérico)
 - Tema: `artifacts/licitainsight/src/index.css`
 - Schema: `lib/db/src/schema/tenders.ts`

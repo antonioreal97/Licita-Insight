@@ -1,3 +1,5 @@
+> Brief original do produto, escrito para a primeira etapa (frontend com mocks, no Lovable). Descreve a intenção, não o estado atual: hoje os editais vêm do PostgreSQL via API, não há mocks e existe auth real. Estado atual no [`README.md`](../README.md) e em `memory-bank/`.
+
 Quero criar uma aplicação web profissional para **pesquisa, descoberta, filtragem e acompanhamento de licitações públicas**.
 
 O objetivo desta primeira etapa NÃO é desenvolver o motor de scraping, indexação, banco de dados ou automações.
