@@ -15,6 +15,7 @@ import type {
   SavedTenderIdsResponse,
   SavedTendersParams,
   SavedTendersResponse,
+  SaveTenderBody,
   SessionResponse,
   UnreadCountResponse,
   UnsubscribeResponse,
@@ -46,7 +47,9 @@ export interface AccountAdapter {
 
   listSavedTenders(params: SavedTendersParams, signal?: AbortSignal): Promise<SavedTendersResponse>;
   getSavedTenderIds(signal?: AbortSignal): Promise<SavedTenderIdsResponse>;
-  saveTender(tenderId: string, body: { monitored?: boolean }): Promise<SavedTender>;
+  /** One saved tender with the user's participation (docs/contracts/participation-v1.md). 404 `NOT_FOUND` when not saved. */
+  getSavedTender(tenderId: string, signal?: AbortSignal): Promise<SavedTender>;
+  saveTender(tenderId: string, body: SaveTenderBody): Promise<SavedTender>;
   removeSavedTender(tenderId: string): Promise<void>;
   importSavedTenders(ids: string[]): Promise<ImportSavedTendersResponse>;
 

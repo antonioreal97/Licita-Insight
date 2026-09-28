@@ -3,6 +3,7 @@ import {
   isApiError,
   type NotificationsParams,
   type SavedTendersParams,
+  type SaveTenderBody,
   type TenderSearchParams,
   type UnsubscribeScope,
   type UpdateNotificationPreferencesBody,
@@ -60,6 +61,9 @@ export const accountService = {
   getSavedTenderIds: (signal?: AbortSignal) => accountAdapter.getSavedTenderIds(signal),
   /** PUT is idempotent: saves the tender or updates `monitored` (omitted = keep / default false). Monitoring implies saving. */
   saveTender: (tenderId: string, monitored?: boolean) => accountAdapter.saveTender(tenderId, monitored === undefined ? {} : { monitored }),
+  getSavedTender: (tenderId: string, signal?: AbortSignal) => accountAdapter.getSavedTender(tenderId, signal),
+  /** Same PUT: saves the tender when needed (stage `analyzing` by default) and patches the participation fields sent. */
+  updateParticipation: (tenderId: string, body: SaveTenderBody) => accountAdapter.saveTender(tenderId, body),
   removeSavedTender: (tenderId: string) => accountAdapter.removeSavedTender(tenderId),
   importSavedTenders: (ids: string[]) => {
     const unique = [...new Set(ids)];

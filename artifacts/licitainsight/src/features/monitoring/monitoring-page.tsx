@@ -1,13 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { BellOff, CheckCheck, Target } from 'lucide-react';
 import { isApiError, type Notification } from '@/api';
 import { Button } from '@/components/common/action-button';
+import { EmptyState } from '@/components/common/empty-state';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
+import { ProvenanceLabel } from '@/features/participation/components/provenance-label';
+import { STAGE_LABELS } from '@/features/participation/lib/stages';
 import { useMarkSavedSearchSeen } from '@/features/saved-searches/hooks/use-saved-searches';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-tenders-list';
@@ -21,16 +24,6 @@ import { useMarkNotificationsRead, useNotifications, useUnreadCount } from './ho
 const PAGE_SIZE = 20;
 
 const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-sm';
-
-function EmptyState({ icon: Icon, title, children }: { icon: typeof BellOff; title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-dashed border-border-strong bg-card px-6 py-14 text-center">
-      <Icon size={18} aria-hidden className="mx-auto text-foreground-subtle" />
-      <h2 className="mt-3 type-ui font-semibold text-foreground">{title}</h2>
-      <p className="mx-auto mt-1 max-w-md type-meta text-muted-foreground">{children}</p>
-    </div>
-  );
-}
 
 /** Returns to the last page when the current one empties (after marking read or stopping monitoring). */
 function useClampPage(page: number, totalPages: number | undefined, setPage: (page: number) => void) {
@@ -178,13 +171,16 @@ function MonitoredSection() {
   return (
     <div className="@container/results">
       <ul aria-label="Editais monitorados" className="overflow-hidden rounded-xl border border-border bg-card">
-        {rows.map(({ tender, monitoredAt }) => (
+        {rows.map(({ tender, monitoredAt, stage }) => (
           <li key={tender.id} className="border-b border-border last:border-0 [&>article]:border-0">
             <TenderRow tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-surface-sunken/60 px-4 py-2 sm:px-5">
-              <span className="inline-flex items-center gap-1.5 type-meta text-muted-foreground">
-                <Target size={13} aria-hidden className="text-primary" />
-                {monitoredAt ? `Monitorando desde ${formatDate(monitoredAt)}` : 'Monitorando'}
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="inline-flex items-center gap-1.5 type-meta text-muted-foreground">
+                  <Target size={13} aria-hidden className="text-primary" />
+                  {monitoredAt ? `Monitorando desde ${formatDate(monitoredAt)}` : 'Monitorando'}
+                </span>
+                <ProvenanceLabel kind="user">Você marcou: {STAGE_LABELS[stage]}</ProvenanceLabel>
               </span>
               <Button variant="ghost" size="sm" onClick={() => stop(tender.id)} data-testid={`button-stop-monitor-${tender.id}`}>
                 Parar de monitorar

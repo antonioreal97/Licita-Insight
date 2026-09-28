@@ -19,6 +19,7 @@ import {
   Globe,
   Hash,
   Inbox,
+  Info,
   Layers,
   MapPin,
   Megaphone,
@@ -35,7 +36,9 @@ import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tender
 import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
-import { TenderFitPanel } from '@/features/company-profile/components/tender-fit-panel';
+import { DecisionPanel } from '@/features/participation/components/decision-panel';
+import { NextStepsPanel } from '@/features/participation/components/next-steps-panel';
+import { ParticipationPanel } from '@/features/participation/components/participation-panel';
 import { AskTenderPanel } from './components/ask-tender-panel';
 import { TenderSheetPanel } from './components/tender-sheet-panel';
 import { DeadlineIndicator } from './components/deadline-indicator';
@@ -58,8 +61,8 @@ function DetailSkeleton() {
   );
 }
 
-const Panel = ({ title, aside, children, className }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) => (
-  <section className={cn('rounded-xl border border-border bg-card p-5 sm:p-7', className)}>
+const Panel = ({ id, title, aside, children, className }: { id?: string; title: string; aside?: ReactNode; children: ReactNode; className?: string }) => (
+  <section id={id} className={cn('scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7', className)}>
     <div className="mb-4 flex items-baseline justify-between gap-3">
       <h2 className="type-section text-foreground">{title}</h2>
       {aside && <span className="shrink-0 type-data text-2xs text-muted-foreground">{aside}</span>}
@@ -324,6 +327,9 @@ export default function TenderDetailPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
+          <DecisionPanel tender={tender} />
+          <ParticipationPanel tenderId={tender.id} />
+          <NextStepsPanel tender={tender} monitored={monitored} />
           <Panel title="Objeto">
             {summary && <p className="break-words type-body text-foreground/90">{withEllipsis(summary)}</p>}
             {description && <p className={cn('break-words type-body', summary ? 'mt-3 text-muted-foreground' : 'text-foreground/90')}>{description}</p>}
@@ -362,10 +368,14 @@ export default function TenderDetailPage() {
         </div>
 
         <aside className="min-w-0 space-y-6">
-          <TenderFitPanel tenderId={tender.id} />
           <DocumentsPanel documents={tender.documents} />
         </aside>
       </div>
+
+      <p className="mt-6 flex gap-2 type-meta text-muted-foreground" data-testid="text-sheet-disclaimer">
+        <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+        Os trechos são escolhidos automaticamente e podem não ser os únicos relevantes. Confira o edital original antes de decidir.
+      </p>
 
       {/* Mobile: one sticky action bar instead of the header buttons. */}
       <div aria-hidden="true" className="h-16 sm:hidden" />
@@ -604,7 +614,7 @@ const timelineMeta: Record<TimelineEvent['type'], { icon: LucideIcon; label: str
 function TimelinePanel({ events }: { events: TimelineEvent[] }) {
   const sorted = [...events].sort((a, b) => a.at.localeCompare(b.at));
   return (
-    <Panel title="Cronologia" aside={`${events.length} ${events.length === 1 ? 'evento' : 'eventos'}`}>
+    <Panel id="cronologia" title="Cronologia" aside={`${events.length} ${events.length === 1 ? 'evento' : 'eventos'}`}>
       {sorted.length === 0 ? (
         <p className="type-meta text-muted-foreground">Nenhum evento registrado.</p>
       ) : (

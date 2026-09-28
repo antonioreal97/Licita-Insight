@@ -5,8 +5,10 @@
  * Public Licita Insight API
  * OpenAPI spec version: 1.3.0
  */
+import type { ListSavedTendersSort } from './listSavedTendersSort';
 import type { PageParameter } from './pageParameter';
 import type { PageSizeParameter } from './pageSizeParameter';
+import type { ParticipationStage } from './participationStage';
 
 export type ListSavedTendersParams = {
 /**
@@ -19,4 +21,7 @@ page?: PageParameter;
  */
 pageSize?: PageSizeParameter;
 monitored?: boolean;
+stage?: ParticipationStage;
+sort?: ListSavedTendersSort;
+upcoming?: boolean;
 };

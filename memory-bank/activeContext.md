@@ -2,6 +2,21 @@
 
 ## Foco agora
 
+28 set 2026 — MVP de participação implementado e ativado na stack Docker local: migration 0019, etapas,
+checklist Tenho/Não tenho/Não sei, protocolo declarado, próxima ação/prazo e histórico. P0.6 e P1 conectados
+à API; testes de API (184), frontend (16), migrations, typechecks/build e navegador desktop/mobile passaram.
+Detalhes em `docs/reviews/participation-implementation-2026-09-28.md` e contrato `participation-v1.md`.
+Backend e revisão final pelo coordenador Codex; Cursor gravou a integração, mas parou por erro de conexão.
+Stack local agora aponta para este workspace em `http://localhost:24252`; API/web saudáveis, Postgres/volume
+preservados. Histórico reconciliado por paridade de schema até 0018; 0019 aplicada e integridade das 26 tabelas
+conferida antes/depois. Checksum histórico divergente da 0004 preservado/documentado, sem reescrever o registro.
+Backup: `.local/backups/0019-aTSS4o/before-0019.dump`. Reinício usa `.local/compose-activation-0019.yml` e o `.env`
+real de `/Users/antonio/CODE/MY/LicitAI/Licita-Insight`, **não** o `.env` de dev deste workspace.
+Usar `up -d --no-deps api web` com projeto `licita-insight` e os dois arquivos compose para não executar
+`db-setup`/`push-force`. Procedimento completo em `docs/reviews/participation-activation-2026-09-28.md`.
+Verificação anônima desktop/mobile passou; timeout externo no coletor Mapas Culturais CE permanece.
+Sem deploy Fly, cofre de documentos ou envio oficial.
+
 Ciclo 11 (branch `antonioreal97/cycle11`, sem deploy por decisão do owner): simplificação de UI/UX segundo os
 princípios de design da Apple — tipografia maior e sem monoespaçada/caixa-alta nos rótulos, menu e topo sem
 jargão, ficha do edital agrupada por pergunta e sem duplicatas, painel e landing enxutos. Relatório em

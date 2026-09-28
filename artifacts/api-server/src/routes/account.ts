@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import {
   createSavedSearch,
+  getSavedTender,
   deleteSavedSearch,
   deleteSavedTender,
   importSavedTenders,
@@ -35,6 +36,7 @@ import {
 } from "../auth/http";
 import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
+import { parseParticipationPatch, parseStage } from '../account/participation';
 
 const router: IRouter = Router();
 
@@ -222,11 +224,17 @@ router.use("/v1/me", requireAuth, requireSubscription);
 router.get(
   "/v1/me/saved-tenders",
   asyncHandler(async (req, res) => {
+    if (req.query.sort !== undefined && req.query.sort !== 'saved_at' && req.query.sort !== 'deadline') {
+      throw new InvalidParameterError('sort is invalid', [{ field: 'sort', issue: 'invalid_enum' }]);
+    }
     const data = await listSavedTenders({
       userId: authContext(res).user.id,
       page: integer(req.query.page, "page", 1, Number.MAX_SAFE_INTEGER),
       pageSize: integer(req.query.pageSize, "pageSize", 20, 100),
       monitored: boolean(req.query.monitored, "monitored"),
+      stage: parseStage(req.query.stage),
+      sort: req.query.sort as 'saved_at' | 'deadline' | undefined,
+      upcoming: boolean(req.query.upcoming, 'upcoming'),
     });
     res.json(data);
   }),
@@ -262,6 +270,13 @@ router.post(
   }),
 );
 
+router.get(
+  '/v1/me/saved-tenders/:tenderId',
+  asyncHandler(async (req, res) => {
+    res.json(await getSavedTender(authContext(res).user.id, pathParam(req.params.tenderId, 'tenderId')));
+  }),
+);
+
 router.put(
   "/v1/me/saved-tenders/:tenderId",
   requireCsrf,
@@ -270,6 +285,7 @@ router.put(
     const monitored = boolean(body.monitored, "monitored");
     res.json(
       await putSavedTender({
+        ...parseParticipationPatch(body),
         userId: authContext(res).user.id,
         tenderId: pathParam(req.params.tenderId, "tenderId"),
         monitored,

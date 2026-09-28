@@ -5,7 +5,27 @@
  * Public Licita Insight API
  * OpenAPI spec version: 1.3.0
  */
+import type { ParticipationChecklistPatch } from './participationChecklistPatch';
+import type { ParticipationStage } from './participationStage';
 
 export interface PutSavedTenderRequest {
   monitored?: boolean;
+  stage?: ParticipationStage;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  protocol?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  nextAction?: string | null;
+  /** @nullable */
+  nextActionDeadline?: Date | null;
+  /**
+     * Patch by key; omitted keys and notes are preserved.
+     * @maxItems 8
+     */
+  checklist?: ParticipationChecklistPatch[];
 }

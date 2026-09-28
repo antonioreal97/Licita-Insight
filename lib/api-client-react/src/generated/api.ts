@@ -2428,6 +2428,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getImportSavedTendersMutationOptions(options));
     }
 
+export const getGetSavedTenderUrl = (tenderId: string,) => {
+
+
+
+
+  return `/api/v1/me/saved-tenders/${tenderId}`
+}
+
+export const getSavedTender = async (tenderId: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedTender> => {
+
+  return customFetch<SavedTender>(getGetSavedTenderUrl(tenderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSavedTenderQueryKey = (tenderId: string,) => {
+    return [
+    `/api/v1/me/saved-tenders/${tenderId}`
+    ] as const;
+    }
+
+
+export const getGetSavedTenderQueryOptions = <TData = Awaited<ReturnType<typeof getSavedTender>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse>>(tenderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedTender>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSavedTenderQueryKey(tenderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSavedTender>>> = ({ signal }) => getSavedTender(tenderId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: tenderId !== null && tenderId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSavedTender>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSavedTenderQueryResult = NonNullable<Awaited<ReturnType<typeof getSavedTender>>>
+export type GetSavedTenderQueryError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse>
+
+
+
+export function useGetSavedTender<TData = Awaited<ReturnType<typeof getSavedTender>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse>>(
+ tenderId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSavedTender>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSavedTenderQueryOptions(tenderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getPutSavedTenderUrl = (tenderId: string,) => {
 
 

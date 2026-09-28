@@ -38,6 +38,13 @@ The UI does not ship tender fixtures. Search, detail and suggestions always call
 - Hooks: `useSavedTenders` (ids + optimistic save/monitor; signed out → Google sign-in; imports the legacy `licita-saved-tenders`
   localStorage ids once), `useSavedTendersList`, `useSavedSearches` + mutations (`features/saved-searches/hooks`),
   `useNotifications` / `useUnreadCount` (60 s poll, visible tab only) / `useMarkNotificationsRead` (`features/monitoring/hooks`).
+- Participation: `useSavedTender` / `useUpdateParticipation` use the individual saved-tender GET/PUT, under the same
+  session and access gate. Six stages, tri-state checklist, personal next action/deadline, declared protocol and history
+  persist in PostgreSQL, never localStorage. Contract: `docs/contracts/participation-v1.md`.
+- Dashboard personal deadlines merge the first four server-sorted results from each active preparation stage;
+  no client-side first-page truncation. Profile matching explicitly covers only the four public deadline candidates.
+- Removing a saved tender requires confirmation because it deletes its participation data. “Salvar novamente” creates
+  a new participation; it does not restore the old history. Form drafts stay in component state when a save fails.
 
 ## Directory map
 
@@ -50,6 +57,7 @@ src/
     tenders/           tender-detail-page, components/ (tender-row, status-badge, highlighted-text), hooks/use-tender
     auth/              auth-page, hooks/use-session, components/require-auth
     saved-tenders/     page + hooks/use-saved-tenders, use-saved-tenders-list (/me/saved-tenders)
+    participation/     declared stages, checklist, next action/protocol/history, API hooks and pure next-step rules
     saved-searches/    page + hooks/use-saved-searches (/me/saved-searches)
     monitoring/        page + hooks/use-notifications (/me/notifications)
     dashboard/ settings/ landing/ design-system/

@@ -25,7 +25,7 @@ function applyChange(ids: SavedTenderIdsResponse, change: Change): SavedTenderId
   return { saved, monitored: change.monitored ? [...without(ids.monitored), change.id] : without(ids.monitored) };
 }
 
-function errorDescription(error: unknown) {
+export function errorDescription(error: unknown) {
   if (isApiError(error) && error.code === 'SUBSCRIPTION_REQUIRED') return 'Assine para salvar e acompanhar editais.';
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 500 editais salvos. Remova alguns e tente de novo.';
   if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
@@ -132,19 +132,19 @@ export function useSavedTenders() {
           : 'Não foi possível atualizar o monitoramento';
       toast({ variant: 'destructive', title, description: errorDescription(error) });
     },
-    // Unsaving a monitored tender also stops monitoring it: say so and offer to undo both.
+    // Declarations are deleted with the save. Re-saving is not an undo of that data loss.
     onSuccess: (_data, change) => {
-      if (change.save || !change.wasMonitored) return;
+      if (change.save) return;
       toast({
         title: 'Edital removido dos salvos',
-        description: 'O monitoramento deste edital também foi desligado.',
+        description: 'O monitoramento foi desligado, e a etapa e as marcações deste edital foram apagadas.',
         action: (
           <ToastAction
-            altText="Desfazer remoção"
+            altText="Salvar novamente sem restaurar a participação anterior"
             data-testid="button-undo-unsave-monitored"
-            onClick={() => mutation.mutate({ id: change.id, save: true, monitored: true })}
+            onClick={() => mutation.mutate({ id: change.id, save: true, monitored: change.wasMonitored })}
           >
-            Desfazer
+            Salvar novamente
           </ToastAction>
         ),
       });
@@ -181,12 +181,15 @@ export function useSavedTenders() {
     [queryClient, mutate, requireEntitled],
   );
   const toggle = useCallback(
-    (id: string) =>
+    (id: string) => {
+      const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      if (current?.saved.includes(id) && !window.confirm('Remover este edital dos salvos? Isso apaga sua etapa, checklist, protocolo, próxima ação e histórico, e desliga o monitoramento. Salvar novamente não recupera esses dados.')) return;
       change((current) => {
         if (!current.saved.includes(id)) return { id, save: true };
         return { id, save: false, wasMonitored: current.monitored.includes(id) };
-      }),
-    [change],
+      });
+    },
+    [change, queryClient],
   );
   /** Monitoring implies saving: turning it on saves the tender too; turning it off keeps it saved. */
   const toggleMonitor = useCallback((id: string) => change((current) => ({ id, save: true, monitored: !current.monitored.includes(id) })), [change]);
