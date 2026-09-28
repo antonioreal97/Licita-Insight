@@ -95,3 +95,17 @@ LicitaIA), gestão de documentos de habilitação com alerta de vencimento (Lici
 (LicitaIA), pesquisa/histórico de preços (LicitaIA, Portal Licita.ia), concorrentes, robô de lances (Licitei
 Premium). Nosso checklist lista o que o edital **exige**; ainda não diz o que **falta** à empresa — isso
 precisa da gestão de documentos com validade.
+
+### licitaia.pro e "LicitAI Editais" (28 set 2026)
+
+- **`licitaia.pro` (LICITA.IA)**: fora do ar (sem DNS em nenhum resolvedor; sem registro no whois). Pela cópia do
+  Internet Archive de 14 fev 2026 ("v2.0 Expandida", página única de ~11 KB): produto do lado **comprador**, para
+  estatais (Lei 13.303/2016) e administração direta (Lei 14.133/2021). O usuário escolhe o regime jurídico,
+  preenche um formulário (tipo de licitação, objeto, valor estimado, prazo) e clica "Gerar Análise IA", que devolve
+  uma "análise jurídica automatizada" gerada, mais banco de jurisprudência e modelos de documento. Sem busca de
+  editais, sem dados do PNCP, sem alertas, sem preço publicado; link "Admin" exposto na página pública; alega
+  "validação jurídica por especialistas" e "auditoria de segurança" sem evidência. Aparência de protótipo. Não
+  compete pelo nosso cliente (empresa licitante).
+- **`licitaieditais.com.br` ("LicitAI – Busca Inteligente de Licitações", "a partir de R$ 39,90/mês" segundo a
+  busca)**: domínio criado em 07 set 2025 e **expirado em 07 set 2026**; sem DNS. Não verificável e, ao que tudo
+  indica, descontinuado.
