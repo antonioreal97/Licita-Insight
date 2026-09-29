@@ -171,7 +171,7 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
         <h3 className="mb-2 type-eyebrow text-muted-foreground">{group.title}</h3>
         {empty ? (
           <p className="type-meta text-muted-foreground" data-testid="text-prepare-empty">
-            Nenhuma exigência de documento foi encontrada nos documentos lidos. Confira o edital.
+            Nenhuma exigência encontrada nos documentos lidos. Confira o edital.
           </p>
         ) : (
           <>

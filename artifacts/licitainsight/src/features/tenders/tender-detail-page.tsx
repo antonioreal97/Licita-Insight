@@ -19,7 +19,6 @@ import {
   Globe,
   Hash,
   Inbox,
-  Info,
   Layers,
   MapPin,
   Megaphone,
@@ -371,11 +370,6 @@ export default function TenderDetailPage() {
           <DocumentsPanel documents={tender.documents} />
         </aside>
       </div>
-
-      <p className="mt-6 flex gap-2 type-meta text-muted-foreground" data-testid="text-sheet-disclaimer">
-        <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Os trechos são escolhidos automaticamente e podem não ser os únicos relevantes. Confira o edital original antes de decidir.
-      </p>
 
       {/* Mobile: one sticky action bar instead of the header buttons. */}
       <div aria-hidden="true" className="h-16 sm:hidden" />

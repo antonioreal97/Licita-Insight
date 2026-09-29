@@ -113,8 +113,8 @@ export function NotificationPreferencesSection() {
                 />
               }
             >
-              Um e-mail por dia, às 07:00 (horário de Brasília), com os avisos novos: mudanças nos editais monitorados e editais novos das buscas salvas com
-              alertas. Sem novidade, não enviamos.
+              Um e-mail por dia, às 07:00 (horário de Brasília), com os avisos novos (mudanças nos editais monitorados e editais novos das buscas salvas com
+              alertas) e os prazos dos próximos 3 dias dos editais que você está analisando ou preparando. Sem novidade nem prazo próximo, não enviamos.
             </PreferenceRow>
             <PreferenceRow
               id="switch-email-immediate"
