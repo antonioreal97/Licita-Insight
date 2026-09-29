@@ -26,6 +26,7 @@ import { useRelaxation } from './hooks/use-relaxation';
 import { useSearchUrlState } from './hooks/use-search-url-state';
 import { useTenderSearch } from './hooks/use-tender-search';
 import { rememberFacetLabels, rememberLabel } from './lib/facet-config';
+import { searchDefaultsToUrl } from './lib/search-defaults';
 import { relevanceVaries } from '@/features/tenders/lib/tender-display';
 
 const SORTS = Object.keys(sortLabels) as SortOption[];
@@ -49,13 +50,14 @@ export default function SearchPage() {
   // A shared link can point past the last page (the total shrank): jump to the last page instead of an empty page.
   // Judged on the response's own page so the skeleton stays up while the corrected page loads (no empty-state flash).
   const pageOutOfRange = Boolean(pagination && pagination.total > 0 && pagination.page > pagination.totalPages);
-  const activeFilters = countActiveFilters(params);
+  // Counted on the URL form: the default status is not a user choice, "Todos os status" is (clearing returns to the default).
+  const activeFilters = countActiveFilters(searchDefaultsToUrl(params));
   const unavailable = search.isError && isApiError(search.error) && search.error.code === 'SEARCH_UNAVAILABLE';
   const refreshing = search.isFetching && !search.isPending;
 
   // Keep human labels for chips even when a value drops out of the current buckets.
   useMemo(() => rememberFacetLabels(facets), [facets]);
-  const relaxation = useRelaxation(params, facets, response?.data.length === 0 && !pageOutOfRange && !search.isPlaceholderData, activeFilters > 0);
+  const relaxation = useRelaxation(params, facets, response?.data.length === 0 && !pageOutOfRange && !search.isPlaceholderData, countActiveFilters(params) > 0);
   // Without a query the backend orders by publication date even when sort is "relevance" (contract §1): show that.
   const effectiveSort: SortOption = params.sort ?? (params.q ? 'relevance' : 'published_desc');
 
@@ -228,7 +230,7 @@ export default function SearchPage() {
             </div>
 
             <div className="mb-3 empty:hidden">
-              <ActiveFilters params={params} onRemove={update} onClearAll={clearFilters} />
+              <ActiveFilters params={params} onRemove={update} onClearAll={clearFilters} canClear={activeFilters > 0} />
             </div>
 
             <div

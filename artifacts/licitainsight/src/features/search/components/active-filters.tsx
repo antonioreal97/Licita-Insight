@@ -2,11 +2,11 @@ import { X } from 'lucide-react';
 import type { TenderSearchParams } from '@/api';
 import { buildFilterChips } from '../lib/filter-chips';
 
-type Props = { params: TenderSearchParams; onRemove: (patch: Partial<TenderSearchParams>) => void; onClearAll: () => void };
+type Props = { params: TenderSearchParams; onRemove: (patch: Partial<TenderSearchParams>) => void; onClearAll: () => void; canClear: boolean };
 
 /** One removable chip per selected value/range. Labels come from the facet label cache (see facet-config). */
-export function ActiveFilters({ params, onRemove, onClearAll }: Props) {
-  const chips = buildFilterChips(params);
+export function ActiveFilters({ params, onRemove, onClearAll, canClear }: Props) {
+  const chips = buildFilterChips(params, { statusDefault: true });
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="region" aria-label="Filtros ativos" data-testid="active-filters">
@@ -26,14 +26,16 @@ export function ActiveFilters({ params, onRemove, onClearAll }: Props) {
           </span>
         </button>
       ))}
-      <button
-        type="button"
-        onClick={onClearAll}
-        data-testid="button-clear-all-filters"
-        className="min-h-8 rounded-md px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
-      >
-        Limpar tudo
-      </button>
+      {canClear && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          data-testid="button-clear-all-filters"
+          className="min-h-8 rounded-md px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+        >
+          Limpar tudo
+        </button>
+      )}
     </div>
   );
 }

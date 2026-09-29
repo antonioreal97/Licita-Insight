@@ -1,9 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 import { Info, Sparkles } from 'lucide-react';
 import type { SearchMode, TenderSearchResponse } from '@/api';
-
-/** Single switch to hide the semantic-search affordance entirely. */
-export const SEARCH_MODE_ENABLED = true;
+import { SEARCH_MODE_ENABLED } from '../lib/search-defaults';
 
 type Props = {
   /** Requested mode (URL). `undefined` = keyword. */

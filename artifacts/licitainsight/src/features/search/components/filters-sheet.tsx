@@ -7,6 +7,7 @@ import { SheetOverlay, SheetPortal } from '@/components/ui/sheet';
 import { formatNumber } from '@/lib/format';
 import { countActiveFilters } from '@/services/search-service';
 import { useTenderSearch } from '../hooks/use-tender-search';
+import { searchDefaultsToUrl, withoutFilters } from '../lib/search-defaults';
 import { FacetPanel } from './facet-panel';
 
 type Props = {
@@ -16,28 +17,6 @@ type Props = {
   onApply: (next: TenderSearchParams) => void;
   /** The "Filtros" button. The sheet is opened from state, not a Radix Trigger, so focus is returned here by hand. */
   triggerRef: RefObject<HTMLButtonElement | null>;
-};
-
-const FILTER_KEYS = [
-  'status',
-  'modality',
-  'state',
-  'city',
-  'organizationId',
-  'sourceId',
-  'category',
-  'valueMin',
-  'valueMax',
-  'publishedFrom',
-  'publishedTo',
-  'deadlineFrom',
-  'deadlineTo',
-] as const;
-
-const withoutFilters = (params: TenderSearchParams): TenderSearchParams => {
-  const next = { ...params };
-  for (const key of FILTER_KEYS) delete next[key];
-  return next;
 };
 
 /**
@@ -53,7 +32,7 @@ export function FiltersSheet({ open, onOpenChange, params, onApply, triggerRef }
 
   const preview = useTenderSearch({ ...draft, page: 1 }, { enabled: open });
   const total = preview.data?.pagination.total;
-  const draftCount = countActiveFilters(draft);
+  const draftCount = countActiveFilters(searchDefaultsToUrl(draft));
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>

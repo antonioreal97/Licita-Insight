@@ -12,6 +12,7 @@ import { useCreateSavedSearch, useSavedSearches } from '@/features/saved-searche
 import { savedSearchQuery } from '@/services/account-service';
 import { searchParamsFromUrl } from '@/services/search-service';
 import { useSearchUrlState } from '../hooks/use-search-url-state';
+import { withoutDisabledMode } from '../lib/search-defaults';
 import { SearchSummary } from './search-summary';
 
 const NAME_MAX = 80;
@@ -40,7 +41,7 @@ export function SaveSearchButton() {
 
   const query = savedSearchQuery(params);
   // Re-canonicalize the stored query so a different key order/encoding from the server still matches.
-  const existing = savedSearches.data?.data.find((search) => savedSearchQuery(searchParamsFromUrl(search.query)) === query);
+  const existing = savedSearches.data?.data.find((search) => savedSearchQuery(withoutDisabledMode(searchParamsFromUrl(search.query))) === query);
 
   const start = () => {
     if (!requireEntitled()) return;

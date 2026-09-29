@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
 import { SearchSummary } from '@/features/search/components/search-summary';
+import { savedQueryHref } from '@/features/search/lib/search-defaults';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { searchParamsFromUrl } from '@/services/search-service';
 import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
@@ -185,7 +186,7 @@ function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch
   const open = () => {
     if (search.newMatchesCount > 0)
       markSeen.mutate(search.id, { onError: (error) => console.error('[saved-searches] Falha ao marcar a busca como vista.', error) });
-    navigate(`/search${search.query ? `?${search.query}` : ''}`);
+    navigate(savedQueryHref(search.query));
   };
 
   const rename = (event: FormEvent) => {
