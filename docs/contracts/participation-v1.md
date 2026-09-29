@@ -23,6 +23,8 @@ Ao mudar para `participating`, `submitted` ou `awaiting_result`, o servidor liga
 
 GET lista aceita `stage?` (uma etapa), `sort?: saved_at | deadline` e `upcoming?: boolean` (somente prazos futuros). Ordenação por prazo coloca nulos por último e desempata pelo id. Filtros e paginação ocorrem no servidor.
 
+E-mail: o resumo diário (07:00, Brasília) inclui a seção "Seus prazos" com os editais em `analyzing` ou `participating` cujo `nextActionDeadline` ou prazo oficial de proposta cai até o fim do 3º dia seguinte. O prazo pessoal aparece como "informado por você" e a etapa como "Sua etapa", nunca como status oficial. Regras completas em `account-v1.md` §5.
+
 Os mesmos campos são incluídos na exportação de dados pessoais. Remover o edital salvo ou a conta apaga também as declarações e o histórico correspondente.
 
 Rótulos: Analisando; Preparando documentos; Participação enviada; Aguardando resultado; Concluída; Não vou participar. "Analisando" distingue a etapa pessoal do status oficial "Em análise". Checklist: Tenho; Não tenho; Não sei. Protocolo: Protocolo informado por você. Todas as mudanças são atômicas e isoladas por usuário.
