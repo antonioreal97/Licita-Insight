@@ -119,6 +119,15 @@ preferências e o de descadastro com token. A imagem do HTML renderizado é `dig
 Também passou o teste de integração da tarefa A: assunto, ordem, escape de `<certidões>`, exclusão das etapas
 `submitted`/`dismissed` e de prazos vencidos, conta beta, e nenhum reenvio no mesmo dia.
 
+## 4b. Links de busca salva no e-mail (tarefa E)
+
+`savedSearchHref` (`artifacts/api-server/src/email/email-template.ts:89-93`) acrescenta `status=all` quando a
+busca salva não tem `status` e deixa o link como está quando tem. É a mesma regra do `savedQueryHref` do app
+(`search-defaults.ts`), que também é usada nas notificações do sino (`notification-copy.ts:84`). Teste
+`links a saved search without status to every status, as the app does`: pass, dentro dos 199. No navegador,
+a busca salva sem status reabriu em `/search?q=serviço&status=all`, e a tela mostrou "Todos" e 484 resultados
+(seção 3). Então o link do e-mail e o botão da lista abrem a mesma coisa.
+
 ## 5. Achados
 
 Nenhum defeito do ciclo 12. Os dois achados abaixo não bloqueiam a entrega; nenhum foi corrigido.
