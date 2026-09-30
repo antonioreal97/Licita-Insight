@@ -4,6 +4,25 @@ Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.m
 
 ## Foco agora
 
+Ciclo 13 (30 set 2026, branch `antonioreal97/cycle13` a partir do `main` com o PR #15 mergeado; sem deploy).
+Decisões do owner: "Seus prazos" com **uma linha por edital**; link de perfil abrindo em **todos os status**;
+na segurança, **só rate limiting agora** (a auditoria detalhada vem depois). Run do Orca `run_6e6f2c351510`:
+- F `1ff8761` (Cursor): um item por edital (começa pelo prazo mais próximo e cita o outro na mesma linha;
+  limite de 10 conta editais; o assunto continua contando prazos). `profile_new_matches` abre
+  `/search?status=all` no e-mail e no app.
+- G `54bbc3c` (Claude; o worker não commitou, eu fiz o commit após revisar): toda rota `/api` tem janela.
+  Perfis independentes: IA (ask, ask-status, sheet, fit) 60/min por usuário (subiu de 30 porque o polling do
+  detalhe faz ~16/min), gravações 60/min, checkout/cancelamento Asaas 5/min, exportação/exclusão 5/hora,
+  gravações sem sessão (descadastro) 10/min por IP, e o resto no bucket público. Store em memória com varredura
+  e teto `RATE_LIMIT_MAX_ENTRIES`; `RateLimit-Reset` em segundos até o fim da janela, mais `RateLimit-Policy`.
+  O store compartilhado entre réplicas continua fora de escopo (uma máquina só). Contrato: `scale-protection-v1.md`.
+- I: QA em `docs/reviews/cycle13-qa.md`. API 218/218 em 17 rodadas, frontend 27/27, 47/47 verificações de 429
+  e zero 429 na navegação normal. A falha intermitente (1 em 218, vista uma vez por mim) não se reproduziu.
+  Candidatos: testes de concorrência com `sleep` em `request-protection.test.ts:174-275`, anteriores ao ciclo.
+Pendências baixas: na stack Docker local, anônimos dividem o bucket (sem `TRUST_PROXY`; o beta e o Fly usam
+`TRUST_PROXY=1`); o bucket preauth conta também sessões válidas; ai e write anunciam a mesma `RateLimit-Policy`.
+Falta confirmar o IP real atrás do túnel (pendência do ciclo 10). O Codex segue sem subir no Orca (SUN_LEN).
+
 Ciclo 12 (29–30 set 2026, branch `antonioreal97/cycle12` a partir do `origin/main` com os PRs #13 e #14 do
 ciclo 11 já mergeados; sem deploy). Decisões do owner em 29 set: (1) a auditoria de segurança de 26 set **fica
 para depois de novo** ("ainda não"; SEC-01, ingestão sem autenticação, e os demais seguem abertos no código);

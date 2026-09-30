@@ -66,6 +66,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   const now = new Date("2026-09-29T10:00:00.000Z");
   const tomorrow = new Date("2026-09-30T15:00:00.000Z");
   const inTwoDays = new Date("2026-10-01T15:00:00.000Z");
+  const inThreeDays = new Date("2026-10-02T17:00:00.000Z");
   const farAway = new Date("2026-10-30T20:00:00.000Z");
 
   const tenders = {
@@ -74,6 +75,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
     submitted: { sequence: 903, title: "TEST DATA participação enviada", deadline: farAway },
     dismissed: { sequence: 904, title: "TEST DATA não vou participar", deadline: tomorrow },
     expired: { sequence: 905, title: "TEST DATA prazo vencido", deadline: new Date("2026-09-28T20:00:00.000Z") },
+    both: { sequence: 906, title: "TEST DATA dois prazos", deadline: inThreeDays },
   };
   const tenderId = (sequence: number) => `00394460000141-1-${String(sequence).padStart(6, "0")}-2026`;
   await upsertPublications(
@@ -162,6 +164,13 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
       nextAction: "Prazo que já passou",
       nextActionDeadline: new Date("2026-09-29T09:00:00.000Z"),
     },
+    {
+      userId: "deadline-owner",
+      tenderId: tenderId(tenders.both.sequence),
+      stage: "participating",
+      nextAction: "Enviar proposta",
+      nextActionDeadline: new Date("2026-09-30T14:00:00.000Z"),
+    },
     ...["deadline-beta", "deadline-no-access", "deadline-digest-off"].map((userId) => ({
       userId,
       tenderId: tenderId(tenders.proposal.sequence),
@@ -199,7 +208,14 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   ]);
 
   const owner = byRecipient.get("deadline-owner@example.test")!;
-  assert.equal(owner.subject, "LicitAI: 2 prazos e 1 atualização no seu resumo");
+  assert.equal(owner.subject, "LicitAI: 4 prazos e 1 atualização no seu resumo");
+  // A tender with both deadlines in the window is one entry, the closest deadline first.
+  assert.equal(owner.text.match(/Sua etapa:/g)?.length, 3);
+  assert.match(
+    owner.text,
+    /^Seu prazo \(informado por você\): Enviar proposta — 30\/09\/2026, 11:00 \(amanhã\) · Prazo oficial de proposta: 02\/10\/2026, 14:00 \(em 3 dias\)$/m,
+  );
+  assert.ok(owner.text.indexOf("TEST DATA dois prazos") < owner.text.indexOf("TEST DATA proposta amanhã"));
   assert.match(owner.text, /TEST DATA proposta amanhã/);
   assert.match(owner.text, /Prazo oficial de proposta: 30\/09\/2026, 12:00 \(amanhã\)/);
   assert.match(owner.text, /TEST DATA prazo pessoal/);

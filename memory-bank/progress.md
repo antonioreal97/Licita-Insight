@@ -91,6 +91,13 @@ Deriva de [activeContext](activeContext.md).
 - Detalhe: um único aviso de trechos automáticos, próxima ação e prazo acima do histórico.
 - QA: `docs/reviews/cycle12-qa.md` (199 + 9 testes de API, 25 de frontend, 104 verificações de navegador).
 
+## O que já funciona — rate limiting por perfil (ciclo 13)
+
+- Toda rota `/api` tem janela, com perfis independentes: IA, gravações, billing, privacidade, gravações públicas
+  e leitura. 429 com `Retry-After` e `RateLimit-*`; store em memória com teto. Contrato em `scale-protection-v1.md`.
+- "Seus prazos" com uma linha por edital; perfil e buscas salvas sem status abrem em todos os status.
+- QA: `docs/reviews/cycle13-qa.md`.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).

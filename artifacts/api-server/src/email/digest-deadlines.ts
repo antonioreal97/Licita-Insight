@@ -11,15 +11,17 @@ export const DIGEST_DEADLINE_LIMIT = 10;
 const DIGEST_DEADLINE_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1_000;
 
+/** One saved tender in "Seus prazos"; at least one of its deadlines falls in the window. */
 export type EmailDeadlineSnapshot = {
   tenderId: string;
   tenderTitle: string;
   tenderOrganizationName: string;
   stage: DigestDeadlineStage;
-  /** `personal`: `nextActionDeadline` informed by the user; `proposal`: official `proposal_deadline`. */
-  kind: "personal" | "proposal";
-  deadline: Date;
   nextAction: string | null;
+  /** `nextActionDeadline` informed by the user, when in the window. */
+  personalDeadline: Date | null;
+  /** Official `proposal_deadline`, when in the window and the tender is still active. */
+  proposalDeadline: Date | null;
 };
 
 const saoPauloDay = (value: Date): number =>
@@ -43,18 +45,24 @@ export const relativeDeadlineDay = (deadline: Date, now: Date): string => {
   return `em ${days} dias`;
 };
 
+/** Closest of the tender's deadlines in the window; the personal one wins a tie. */
+export const nearestDeadline = (deadline: EmailDeadlineSnapshot): Date =>
+  deadline.personalDeadline &&
+  (!deadline.proposalDeadline || deadline.personalDeadline <= deadline.proposalDeadline)
+    ? deadline.personalDeadline
+    : deadline.proposalDeadline!;
+
 export const sortDeadlines = (
   deadlines: readonly EmailDeadlineSnapshot[],
 ): EmailDeadlineSnapshot[] =>
   [...deadlines].sort(
     (left, right) =>
-      left.deadline.getTime() - right.deadline.getTime() ||
-      left.tenderId.localeCompare(right.tenderId) ||
-      left.kind.localeCompare(right.kind),
+      nearestDeadline(left).getTime() - nearestDeadline(right).getTime() ||
+      left.tenderId.localeCompare(right.tenderId),
   );
 
-/** One entry per deadline in the window; a tender can show both its personal and proposal deadline. */
-export const deadlinesForSavedTender = (
+/** The tender's entry in "Seus prazos", or `null` when none of its deadlines counts. */
+export const deadlineForSavedTender = (
   row: {
     tenderId: string;
     tenderTitle: string;
@@ -66,25 +74,26 @@ export const deadlinesForSavedTender = (
     nextActionDeadline: Date | null;
   },
   now: Date,
-): EmailDeadlineSnapshot[] => {
-  if (!DIGEST_DEADLINE_STAGES.includes(row.stage as DigestDeadlineStage)) return [];
-  const base = {
+): EmailDeadlineSnapshot | null => {
+  if (!DIGEST_DEADLINE_STAGES.includes(row.stage as DigestDeadlineStage)) return null;
+  const personalDeadline =
+    row.nextActionDeadline && isInDigestDeadlineWindow(row.nextActionDeadline, now)
+      ? row.nextActionDeadline
+      : null;
+  const proposalDeadline =
+    row.proposalDeadline &&
+    !(INACTIVE_TENDER_STATUSES as readonly string[]).includes(row.tenderStatus) &&
+    isInDigestDeadlineWindow(row.proposalDeadline, now)
+      ? row.proposalDeadline
+      : null;
+  if (!personalDeadline && !proposalDeadline) return null;
+  return {
     tenderId: row.tenderId,
     tenderTitle: row.tenderTitle,
     tenderOrganizationName: row.tenderOrganizationName,
     stage: row.stage as DigestDeadlineStage,
     nextAction: row.nextAction,
+    personalDeadline,
+    proposalDeadline,
   };
-  const deadlines: EmailDeadlineSnapshot[] = [];
-  if (row.nextActionDeadline && isInDigestDeadlineWindow(row.nextActionDeadline, now)) {
-    deadlines.push({ ...base, kind: "personal", deadline: row.nextActionDeadline });
-  }
-  if (
-    row.proposalDeadline &&
-    !(INACTIVE_TENDER_STATUSES as readonly string[]).includes(row.tenderStatus) &&
-    isInDigestDeadlineWindow(row.proposalDeadline, now)
-  ) {
-    deadlines.push({ ...base, kind: "proposal", deadline: row.proposalDeadline });
-  }
-  return deadlines;
 };

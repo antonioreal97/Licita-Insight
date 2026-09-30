@@ -32,7 +32,7 @@ import { createUnsubscribeToken } from "./unsubscribe-token";
 import {
   DIGEST_DEADLINE_STAGES,
   INACTIVE_TENDER_STATUSES,
-  deadlinesForSavedTender,
+  deadlineForSavedTender,
   digestDeadlineWindowEnd,
   sortDeadlines,
   type EmailDeadlineSnapshot,
@@ -211,7 +211,8 @@ const digestDeadlines = async (
       notifications: [],
       deadlines: [],
     };
-    group.deadlines.push(...deadlinesForSavedTender(row, now));
+    const deadline = deadlineForSavedTender(row, now);
+    if (deadline) group.deadlines.push(deadline);
     grouped.set(row.userId, group);
   }
   for (const group of grouped.values()) group.deadlines = sortDeadlines(group.deadlines);

@@ -4,6 +4,7 @@ import type {
 } from "@workspace/db/schema";
 import {
   DIGEST_DEADLINE_LIMIT,
+  nearestDeadline,
   relativeDeadlineDay,
   sortDeadlines,
   type EmailDeadlineSnapshot,
@@ -102,7 +103,7 @@ const notificationLink = (
   if (notification.savedSearchQuery !== null) {
     return `${origin}${savedSearchHref(notification.savedSearchQuery)}`;
   }
-  if (notification.type === "profile_new_matches") return `${origin}/search`;
+  if (notification.type === "profile_new_matches") return `${origin}/search?status=${ALL_STATUSES}`;
   return `${origin}/settings#notificacoes`;
 };
 
@@ -195,13 +196,21 @@ const stageLabels: Record<EmailDeadlineSnapshot["stage"], string> = {
   participating: "Preparando documentos",
 };
 
+/** One line per tender: the closest deadline first, then the other one when it is also in the window. */
 const deadlineDescription = (deadline: EmailDeadlineSnapshot, now: Date): string => {
-  const when = `${dateTime(deadline.deadline)} (${relativeDeadlineDay(deadline.deadline, now)})`;
-  if (deadline.kind === "proposal") return `Prazo oficial de proposta: ${when}`;
+  const when = (value: Date) => `${dateTime(value)} (${relativeDeadlineDay(value, now)})`;
   const action = deadline.nextAction?.trim();
-  return action
-    ? `Seu prazo (informado por você): ${truncate(action, 200)} — ${when}`
-    : `Seu prazo (informado por você): ${when}`;
+  const personal = deadline.personalDeadline
+    ? action
+      ? `Seu prazo (informado por você): ${truncate(action, 200)} — ${when(deadline.personalDeadline)}`
+      : `Seu prazo (informado por você): ${when(deadline.personalDeadline)}`
+    : null;
+  const proposal = deadline.proposalDeadline
+    ? `Prazo oficial de proposta: ${when(deadline.proposalDeadline)}`
+    : null;
+  const parts =
+    nearestDeadline(deadline) === deadline.personalDeadline ? [personal, proposal] : [proposal, personal];
+  return parts.filter(Boolean).join(" · ");
 };
 
 const tenderLink = (tenderId: string, origin: string): string =>
@@ -219,7 +228,7 @@ const deadlinesSection = (
   const savedUrl = `${origin}/saved-tenders`;
   const more =
     remaining > 0
-      ? `e mais ${quantity(remaining, "prazo", "prazos")} nos seus editais salvos`
+      ? `e mais ${quantity(remaining, "edital salvo", "editais salvos")} com prazo nos próximos dias`
       : null;
   const text = [
     "Seus prazos (até o fim do 3º dia a partir de hoje, horário de Brasília)",
@@ -267,7 +276,9 @@ export const renderNotificationEmail = (input: {
     input.mode === "digest"
       ? deadlinesSection(input.deadlines ?? [], input.now ?? new Date(), input.origin)
       : null;
-  const deadlineCount = deadlines ? input.deadlines!.length : 0;
+  const deadlineCount = deadlines
+    ? input.deadlines!.flatMap(({ personalDeadline, proposalDeadline }) => [personalDeadline, proposalDeadline]).filter(Boolean).length
+    : 0;
   const why =
     input.mode === "digest"
       ? deadlines
