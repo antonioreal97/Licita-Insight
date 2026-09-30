@@ -12,7 +12,10 @@ import {
   createRequestProtection,
   MemoryRateLimitStore,
   publicHttpCache,
+  rateLimitProfile,
   type ProtectionConfig,
+  type RateLimitResult,
+  type RateLimitStore,
 } from "./request-protection";
 
 const execFileAsync = promisify(execFile);
@@ -33,7 +36,13 @@ const defaults: ProtectionConfig = {
   authenticatedPerMinute: 240,
   authPerMinute: 20,
   ingestPerMinute: 3,
+  aiPerMinute: 60,
+  writePerMinute: 60,
+  billingPerMinute: 5,
+  privacyPerHour: 5,
+  publicWritePerMinute: 10,
   preAuthPerMinute: 600,
+  rateLimitMaxEntries: 100_000,
   maxInflightAnonymous: 10,
   maxInflightAuthenticated: 20,
   maxInflightGlobal: 200,
@@ -51,7 +60,10 @@ const listen = async (app: Express) => {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 };
 
-const protectedApp = (config: Partial<ProtectionConfig> = {}) => {
+const protectedApp = (
+  config: Partial<ProtectionConfig> = {},
+  options: { now?: () => number; store?: RateLimitStore; metrics?: Array<Record<string, string>> } = {},
+) => {
   const app = express();
   app.set("trust proxy", true);
   app.use(requestContext, cookieParser());
@@ -63,7 +75,12 @@ const protectedApp = (config: Partial<ProtectionConfig> = {}) => {
   app.use(
     createRequestProtection(
       { ...defaults, ...config },
-      new MemoryRateLimitStore(),
+      options.store ?? new MemoryRateLimitStore(),
+      options.now ?? Date.now,
+      undefined,
+      (name, labels = {}) => {
+        if (name === "licitai_http_rate_limited_total") options.metrics?.push(labels);
+      },
     ),
   );
   return app;
@@ -441,4 +458,199 @@ test("ingest is strictly limited while token-protected Asaas webhook is window-e
   } finally {
     server.close();
   }
+});
+
+const fakeRequest = (method: string, path: string) => ({ method, path }) as express.Request;
+
+test("each route maps to its rate limit profile and the first match wins", () => {
+  const cases: Array<[string, string, boolean, string | null]> = [
+    ["GET", "/api/healthz", false, null],
+    ["GET", "/api/readyz", false, null],
+    ["POST", "/api/v1/billing/asaas/webhook", false, null],
+    ["GET", "/assets/index.js", false, null],
+    ["GET", "/api/v1/auth/google/start", false, "auth"],
+    ["GET", "/api/v1/auth/google/callback", false, "auth"],
+    ["POST", "/api/v1/auth/dev-login", false, "auth"],
+    ["POST", "/api/v1/ingest/pncp", false, "ingest"],
+    ["GET", "/api/v1/tenders/t1/ask-status", true, "ai"],
+    ["POST", "/api/v1/tenders/t1/ask", true, "ai"],
+    ["GET", "/api/v1/tenders/t1/sheet", true, "ai"],
+    ["GET", "/api/v1/me/fit", true, "ai"],
+    ["POST", "/api/v1/me/billing/checkout", true, "billing"],
+    ["POST", "/api/v1/me/billing/cancel", true, "billing"],
+    ["GET", "/api/v1/me/export", true, "privacy"],
+    ["DELETE", "/api/v1/me", true, "privacy"],
+    ["POST", "/api/v1/email/unsubscribe", false, "public_write"],
+    ["POST", "/api/v1/email/unsubscribe", true, "public_write"],
+    ["POST", "/api/v1/auth/logout", false, "public_write"],
+    ["POST", "/api/v1/auth/logout", true, "write"],
+    ["PUT", "/api/v1/me/saved-tenders/t1", true, "write"],
+    ["PATCH", "/api/v1/me/saved-searches/s1", true, "write"],
+    ["DELETE", "/api/v1/me/saved-searches/s1", true, "write"],
+    ["PUT", "/api/v1/me/company-profile", true, "write"],
+    ["POST", "/api/v1/me/notifications/read", true, "write"],
+    ["GET", "/api/v1/tenders/search", false, "public"],
+    ["GET", "/api/v1/tenders/t1", true, "public"],
+    ["GET", "/api/v1/me/billing", true, "public"],
+    ["GET", "/api/v1/auth/session", false, "public"],
+    ["GET", "/api/v1/billing/plan", false, "public"],
+    ["GET", "/api/v1/not-mapped-yet", false, "public"],
+  ];
+  for (const [method, path, authenticated, expected] of cases) {
+    assert.equal(rateLimitProfile(fakeRequest(method, path), authenticated), expected, `${method} ${path}`);
+  }
+});
+
+test("each profile answers 429 with Retry-After and RateLimit-* for its own window", async () => {
+  const clock = 1_000_000;
+  const metrics: Array<Record<string, string>> = [];
+  const app = protectedApp(
+    { aiPerMinute: 1, writePerMinute: 1, billingPerMinute: 1, privacyPerHour: 1, publicWritePerMinute: 1 },
+    { now: () => clock, metrics },
+  );
+  app.all(/.*/, (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const cases: Array<{ method: string; path: string; user?: string; profile: string; windowSeconds: number }> = [
+      { method: "GET", path: "/api/v1/tenders/t1/ask-status", user: "u1", profile: "ai", windowSeconds: 60 },
+      { method: "PUT", path: "/api/v1/me/saved-tenders/t1", user: "u1", profile: "write", windowSeconds: 60 },
+      { method: "POST", path: "/api/v1/me/billing/checkout", user: "u1", profile: "billing", windowSeconds: 60 },
+      { method: "GET", path: "/api/v1/me/export", user: "u1", profile: "privacy", windowSeconds: 3600 },
+      { method: "POST", path: "/api/v1/email/unsubscribe", profile: "public_write", windowSeconds: 60 },
+    ];
+    for (const { method, path, user, profile, windowSeconds } of cases) {
+      const init = { method, headers: user ? { "x-test-user": user } : {} };
+      const allowed = await fetch(`${baseUrl}${path}`, init);
+      assert.equal(allowed.status, 200, `${profile}: first request`);
+      assert.equal(allowed.headers.get("ratelimit-limit"), "1");
+      assert.equal(allowed.headers.get("ratelimit-remaining"), "0");
+      assert.equal(allowed.headers.get("ratelimit-reset"), String(windowSeconds));
+      assert.equal(allowed.headers.get("ratelimit-policy"), `1;w=${windowSeconds}`);
+      const limited = await fetch(`${baseUrl}${path}`, init);
+      assert.equal(limited.status, 429, `${profile}: second request`);
+      assert.equal(limited.headers.get("retry-after"), String(windowSeconds), profile);
+      const body = (await limited.json()) as { error: { code: string; requestId: string } };
+      assert.equal(body.error.code, "RATE_LIMITED");
+      assert.ok(body.error.requestId);
+    }
+    assert.deepEqual(
+      metrics.map((labels) => labels.profile),
+      ["ai", "write", "billing", "privacy", "public_write"],
+    );
+    assert.ok(metrics.every((labels) => labels.type === "window"));
+  } finally {
+    server.close();
+  }
+});
+
+test("buckets of different profiles are independent", async () => {
+  const app = protectedApp({ aiPerMinute: 1, writePerMinute: 1, authenticatedPerMinute: 2 });
+  app.all(/.*/, (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const as = (user: string, method = "GET") => ({ method, headers: { "x-test-user": user } });
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/t1/ask-status`, as("u1"))).status, 200);
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/t2/sheet`, as("u1"))).status, 429);
+    // Blowing the AI limit neither blocks search nor writes for the same user…
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/search`, as("u1"))).status, 200);
+    assert.equal((await fetch(`${baseUrl}/api/v1/me/saved-tenders/t1`, as("u1", "PUT"))).status, 200);
+    // …and it does not touch another user's AI bucket.
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/t1/ask-status`, as("u2"))).status, 200);
+    // An unmapped API route shares the read bucket (2/min for users): search + this one exhaust it.
+    assert.equal((await fetch(`${baseUrl}/api/v1/me/notifications/unread-count`, as("u1"))).status, 200);
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/search`, as("u1"))).status, 429);
+  } finally {
+    server.close();
+  }
+});
+
+test("unmapped API routes fall into the public read bucket while exempt paths have no window", async () => {
+  const app = protectedApp({
+    anonymousPerMinute: 1,
+    publicWritePerMinute: 1,
+    aiPerMinute: 1,
+    writePerMinute: 1,
+    billingPerMinute: 1,
+    privacyPerHour: 1,
+  });
+  app.all(/.*/, (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const unmapped = await fetch(`${baseUrl}/api/v1/some-new-route`);
+    assert.equal(unmapped.status, 200);
+    assert.equal(unmapped.headers.get("ratelimit-policy"), "1;w=60");
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/search`)).status, 429);
+    for (let i = 0; i < 5; i += 1) {
+      const health = await fetch(`${baseUrl}/api/healthz`);
+      assert.equal(health.status, 200);
+      assert.equal(health.headers.get("ratelimit-limit"), null);
+      assert.equal((await fetch(`${baseUrl}/api/readyz`)).status, 200);
+      const webhook = await fetch(`${baseUrl}/api/v1/billing/asaas/webhook`, { method: "POST" });
+      assert.equal(webhook.status, 200);
+      assert.equal(webhook.headers.get("ratelimit-limit"), null);
+      // The static app (non-API paths) keeps only the concurrency limits.
+      assert.equal((await fetch(`${baseUrl}/assets/app.js`)).status, 200);
+    }
+  } finally {
+    server.close();
+  }
+});
+
+test("an asynchronous store (shared between replicas) plugs into the same middleware", async () => {
+  const memory = new MemoryRateLimitStore();
+  const keys: string[] = [];
+  const asyncStore: RateLimitStore = {
+    consume: async (key, limit, windowMs, now): Promise<RateLimitResult> => {
+      keys.push(key);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      return memory.consume(key, limit, windowMs, now);
+    },
+  };
+  const app = protectedApp({ aiPerMinute: 1 }, { store: asyncStore });
+  app.all(/.*/, (_req, res) => res.json({ ok: true }));
+  app.use(errorHandler);
+  const { server, baseUrl } = await listen(app);
+  try {
+    const init = { method: "POST", headers: { "x-test-user": "u1" } };
+    assert.equal((await fetch(`${baseUrl}/api/v1/tenders/t1/ask`, init)).status, 200);
+    const limited = await fetch(`${baseUrl}/api/v1/tenders/t1/ask`, init);
+    assert.equal(limited.status, 429);
+    assert.ok(limited.headers.get("retry-after"));
+    assert.deepEqual(keys, ["ai:user:u1", "ai:user:u1"]);
+  } finally {
+    server.close();
+  }
+});
+
+test("memory store sweeps expired windows and never grows past its cap", () => {
+  const store = new MemoryRateLimitStore({ maxEntries: 100, sweepEvery: 50 });
+  for (let i = 0; i < 10_000; i += 1) store.consume(`ip:${i}`, 10, 60_000, 0);
+  assert.equal(store.size, 100, "a flood of new IPs is bounded by maxEntries");
+
+  // Below the cap, expired windows go away on the amortized sweep (every 50 calls), not only when the cap is hit.
+  const amortized = new MemoryRateLimitStore({ maxEntries: 1_000, sweepEvery: 50 });
+  for (let i = 0; i < 100; i += 1) amortized.consume(`ip:${i}`, 10, 60_000, 0);
+  for (let i = 0; i < 49; i += 1) amortized.consume("ip:steady", 1_000, 60_000, 120_000);
+  assert.equal(amortized.size, 101, "no sweep before the 50th call");
+  amortized.consume("ip:steady", 1_000, 60_000, 120_000);
+  assert.equal(amortized.size, 1);
+
+  // Live windows below the cap keep counting: eviction never resets an active client early.
+  const small = new MemoryRateLimitStore({ maxEntries: 10, sweepEvery: 1_000 });
+  small.consume("ip:a", 2, 60_000, 0);
+  for (let i = 0; i < 5; i += 1) small.consume(`ip:other-${i}`, 2, 60_000, 0);
+  small.consume("ip:a", 2, 60_000, 1);
+  assert.equal(small.consume("ip:a", 2, 60_000, 2).allowed, false);
+
+  // At the cap with only live windows, the oldest window is dropped first.
+  const full = new MemoryRateLimitStore({ maxEntries: 2, sweepEvery: 1_000 });
+  full.consume("ip:old", 1, 60_000, 0);
+  full.consume("ip:mid", 1, 60_000, 1);
+  full.consume("ip:new", 1, 60_000, 2);
+  assert.equal(full.size, 2);
+  assert.equal(full.consume("ip:mid", 1, 60_000, 3).allowed, false, "mid is still tracked");
+  assert.equal(full.consume("ip:new", 1, 60_000, 3).allowed, false, "new is still tracked");
 });
