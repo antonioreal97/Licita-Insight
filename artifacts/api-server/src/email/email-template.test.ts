@@ -187,6 +187,9 @@ describe("notification email template", () => {
     assert.match(rendered.text, /2 novos editais com alta aderência/);
     assert.match(rendered.html, /Aquisição de servidores/);
     assert.match(rendered.html, /tender%2Ffit/);
+    // The search page opens on open tenders without `status`; the profile matches can be in any status.
+    assert.match(rendered.text, /^https:\/\/licitai\.example\/search\?status=all$/m);
+    assert.match(rendered.html, /<a href="https:\/\/licitai\.example\/search\?status=all">Ver oportunidades<\/a>/);
   });
 });
 
@@ -200,9 +203,9 @@ describe("daily digest deadlines section", () => {
     tenderTitle: "TEST DATA edital de computadores",
     tenderOrganizationName: "Órgão de teste",
     stage: "analyzing",
-    kind: "personal",
-    deadline: new Date("2026-10-01T15:00:00.000Z"),
     nextAction: "Enviar certidões",
+    personalDeadline: new Date("2026-10-01T15:00:00.000Z"),
+    proposalDeadline: null,
     ...overrides,
   });
   const notification = {
@@ -238,9 +241,9 @@ describe("daily digest deadlines section", () => {
         deadline({
           tenderId: "tender-2",
           stage: "participating",
-          kind: "proposal",
-          deadline: new Date("2026-09-30T13:00:00.000Z"),
           nextAction: null,
+          personalDeadline: null,
+          proposalDeadline: new Date("2026-09-30T13:00:00.000Z"),
         }),
       ],
       [notification],
@@ -269,6 +272,41 @@ describe("daily digest deadlines section", () => {
     assert.equal(rendered.subject, "LicitAI: 1 prazo nos próximos dias");
     assert.match(rendered.html, /Seus prazos/);
     assert.doesNotMatch(rendered.html, /Novidades/);
+    assert.equal(rendered.html.match(/Ver edital/g)?.length, 1);
+    assert.doesNotMatch(rendered.text, /Prazo oficial de proposta| · /);
+  });
+
+  it("shows a tender with both deadlines in one line, the closest first", () => {
+    const proposalFirst = render([
+      deadline({ proposalDeadline: new Date("2026-09-30T13:00:00.000Z") }),
+    ]);
+    assert.equal(proposalFirst.subject, "LicitAI: 2 prazos nos próximos dias");
+    assert.equal(proposalFirst.html.match(/Ver edital/g)?.length, 1);
+    assert.match(
+      proposalFirst.text,
+      /^Prazo oficial de proposta: 30\/09\/2026, 10:00 \(amanhã\) · Seu prazo \(informado por você\): Enviar certidões — 01\/10\/2026, 12:00 \(em 2 dias\)$/m,
+    );
+    assert.equal(proposalFirst.text.match(/Sua etapa/g)?.length, 1);
+
+    const personalFirst = render([
+      deadline({ proposalDeadline: new Date("2026-10-02T17:00:00.000Z") }),
+    ]);
+    assert.match(
+      personalFirst.html,
+      /Seu prazo \(informado por você\): Enviar certidões — 01\/10\/2026, 12:00 \(em 2 dias\) · Prazo oficial de proposta: 02\/10\/2026, 14:00 \(em 3 dias\)<br>/,
+    );
+  });
+
+  it("orders tenders by their closest deadline", () => {
+    const rendered = render([
+      deadline({ tenderId: "tender-late", personalDeadline: new Date("2026-10-02T12:00:00.000Z") }),
+      deadline({
+        tenderId: "tender-soon",
+        personalDeadline: new Date("2026-10-02T13:00:00.000Z"),
+        proposalDeadline: new Date("2026-09-30T13:00:00.000Z"),
+      }),
+    ]);
+    assert.ok(rendered.text.indexOf("tender-soon") < rendered.text.indexOf("tender-late"));
   });
 
   it("omits the section without deadlines", () => {
@@ -280,29 +318,33 @@ describe("daily digest deadlines section", () => {
 
   it("labels today and tomorrow by the Brasília day, across the UTC turn", () => {
     const rendered = render([
-      deadline({ tenderId: "late-today", deadline: new Date("2026-09-30T02:30:00.000Z") }),
-      deadline({ tenderId: "early-tomorrow", deadline: new Date("2026-09-30T03:30:00.000Z") }),
+      deadline({ tenderId: "late-today", personalDeadline: new Date("2026-09-30T02:30:00.000Z") }),
+      deadline({ tenderId: "early-tomorrow", personalDeadline: new Date("2026-09-30T03:30:00.000Z") }),
     ]);
     assert.match(rendered.text, /29\/09\/2026, 23:30 \(hoje\)/);
     assert.match(rendered.text, /30\/09\/2026, 00:30 \(amanhã\)/);
   });
 
-  it("shows at most 10 deadlines and counts the rest", () => {
+  it("shows at most 10 tenders and counts the remaining tenders", () => {
     const deadlines = Array.from({ length: 13 }, (_, index) =>
       deadline({
         tenderId: `tender-${String(index).padStart(2, "0")}`,
-        deadline: new Date(Date.UTC(2026, 8, 30, 12, index)),
+        personalDeadline: new Date(Date.UTC(2026, 8, 30, 12, index)),
+        proposalDeadline: new Date(Date.UTC(2026, 9, 1, 12, index)),
       }),
     );
     const rendered = render(deadlines.reverse());
-    assert.equal(rendered.subject, "LicitAI: 13 prazos nos próximos dias");
+    assert.equal(rendered.subject, "LicitAI: 26 prazos nos próximos dias");
     assert.equal(rendered.html.match(/Ver edital/g)?.length, 10);
     assert.match(rendered.text, /tender-09/);
     assert.doesNotMatch(rendered.text, /tender-1[0-2]/);
-    assert.match(rendered.text, /e mais 3 prazos nos seus editais salvos: https:\/\/licitai\.example\/saved-tenders/);
-    assert.match(rendered.html, /e mais 3 prazos/);
+    assert.match(
+      rendered.text,
+      /e mais 3 editais salvos com prazo nos próximos dias: https:\/\/licitai\.example\/saved-tenders/,
+    );
+    assert.match(rendered.html, /e mais 3 editais salvos com prazo/);
     assert.doesNotMatch(render(deadlines.slice(0, 10)).text, /e mais/);
-    assert.match(render(deadlines.slice(0, 11)).text, /e mais 1 prazo nos/);
+    assert.match(render(deadlines.slice(0, 11)).text, /e mais 1 edital salvo com prazo nos/);
   });
 
   it("escapes the text informed by the user", () => {

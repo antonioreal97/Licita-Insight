@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  deadlinesForSavedTender,
+  deadlineForSavedTender,
   digestDeadlineWindowEnd,
   isInDigestDeadlineWindow,
+  nearestDeadline,
   relativeDeadlineDay,
+  sortDeadlines,
 } from "./digest-deadlines";
 
 // 07:00 in Brasília, when the digest runs.
@@ -60,23 +62,22 @@ describe("saved tender deadlines", () => {
     nextActionDeadline: new Date("2026-10-01T15:00:00.000Z"),
   };
 
-  it("returns both the personal and the proposal deadline inside the window", () => {
-    assert.deepEqual(
-      deadlinesForSavedTender(row, now).map(({ kind }) => kind),
-      ["personal", "proposal"],
-    );
+  it("returns one entry per tender with both deadlines inside the window", () => {
+    const deadline = deadlineForSavedTender(row, now)!;
+    assert.equal(deadline.personalDeadline, row.nextActionDeadline);
+    assert.equal(deadline.proposalDeadline, row.proposalDeadline);
+    assert.equal(nearestDeadline(deadline), row.proposalDeadline);
   });
 
   it("ignores other personal stages, inactive tenders and deadlines outside the window", () => {
     for (const stage of ["submitted", "awaiting_result", "completed", "dismissed"]) {
-      assert.deepEqual(deadlinesForSavedTender({ ...row, stage }, now), []);
+      assert.equal(deadlineForSavedTender({ ...row, stage }, now), null);
     }
-    assert.deepEqual(
-      deadlinesForSavedTender({ ...row, tenderStatus: "cancelled" }, now).map(({ kind }) => kind),
-      ["personal"],
-    );
-    assert.deepEqual(
-      deadlinesForSavedTender(
+    const cancelled = deadlineForSavedTender({ ...row, tenderStatus: "cancelled" }, now)!;
+    assert.equal(cancelled.proposalDeadline, null);
+    assert.equal(nearestDeadline(cancelled), row.nextActionDeadline);
+    assert.equal(
+      deadlineForSavedTender(
         {
           ...row,
           nextActionDeadline: new Date("2026-09-29T09:00:00.000Z"),
@@ -84,7 +85,26 @@ describe("saved tender deadlines", () => {
         },
         now,
       ),
-      [],
+      null,
+    );
+  });
+
+  it("sorts tenders by their closest deadline", () => {
+    const personalFirst = deadlineForSavedTender(
+      { ...row, tenderId: "tender-a", nextActionDeadline: new Date("2026-09-30T12:00:00.000Z") },
+      now,
+    )!;
+    const proposalOnly = deadlineForSavedTender(
+      { ...row, tenderId: "tender-b", nextActionDeadline: null, proposalDeadline: new Date("2026-09-30T13:00:00.000Z") },
+      now,
+    )!;
+    const later = deadlineForSavedTender(
+      { ...row, tenderId: "tender-c", proposalDeadline: new Date("2026-10-02T15:00:00.000Z") },
+      now,
+    )!;
+    assert.deepEqual(
+      sortDeadlines([later, proposalOnly, personalFirst]).map(({ tenderId }) => tenderId),
+      ["tender-a", "tender-b", "tender-c"],
     );
   });
 });

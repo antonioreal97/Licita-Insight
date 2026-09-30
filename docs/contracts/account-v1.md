@@ -214,10 +214,13 @@ type NotificationPreferences = {
   pessoais `analyzing` (Analisando) e `participating` (Preparando documentos) cujo `nextActionDeadline`
   (prazo pessoal, informado pelo usuário, com o texto de `nextAction`) ou prazo oficial de proposta
   (`proposal_deadline`) cai depois de agora e até o fim do 3º dia seguinte no horário de Brasília.
-  Cada prazo é uma linha (um edital pode aparecer com os dois): título, órgão, etapa pessoal, tipo de
-  prazo, data/hora em Brasília, "hoje"/"amanhã"/"em N dias" e link `/tenders/{id}` em
-  `PUBLIC_APP_ORIGIN`. Ordem: prazo mais próximo primeiro, no máximo 10 linhas e "e mais N prazos"
-  com link para `/saved-tenders`. Prazos vencidos não entram; o prazo de proposta de edital
+  Cada edital é um item: título, órgão, etapa pessoal e uma linha de prazo que começa pelo mais
+  próximo e, se o outro também estiver na janela, cita-o na mesma linha separado por " · ". Cada
+  prazo diz se é "Seu prazo (informado por você)" ou "Prazo oficial de proposta", com data/hora em
+  Brasília e "hoje"/"amanhã"/"em N dias"; o item leva link `/tenders/{id}` em `PUBLIC_APP_ORIGIN`.
+  Ordem: editais pelo prazo mais próximo de cada um, no máximo 10 editais e "e mais N editais salvos
+  com prazo" com link para `/saved-tenders`. O assunto conta prazos (um edital com os dois conta 2).
+  Prazos vencidos não entram; o prazo de proposta de edital
   `suspended`, `cancelled` ou `closed` também não. Sem novidades, o digest sai só com os prazos; sem
   nenhum dos dois, nada é enviado. Vale a mesma preferência `digest`, o mesmo gate de acesso
   (assinatura/teste vigente ou convite beta, sem a exceção de `trial_ending`), o mesmo descadastro
