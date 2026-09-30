@@ -16,6 +16,7 @@ import { useTenderSheet } from '@/features/tenders/hooks/use-tender-sheet';
 import { FIELDS } from '@/features/tenders/lib/sheet-labels';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { AUTO_PASSAGES_NOTICE } from '../lib/provenance';
 import { ErrorLine, withRef } from './error-line';
 import { ProvenanceLabel } from './provenance-label';
 
@@ -167,6 +168,8 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
   }
 
   let found: ReactNode = null;
+  /** True only once the sheet's passages are on screen; loading, error and reading states get no notice. */
+  let passagesShown = false;
   let gate: ReactNode = null;
   if (session.status === 'anonymous') {
     gate = (
@@ -207,6 +210,7 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
       </p>
     );
   } else {
+    passagesShown = true;
     found = (
       <dl className="divide-y divide-border-subtle">
         <FoundRows sheet={sheet.data} profile={companyProfile} />
@@ -241,7 +245,12 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
       {gate && <div className="mt-5">{gate}</div>}
       {found && (
         <div className="mt-5 border-t border-border-subtle pt-5">
-          <ProvenanceLabel kind="found" className="mb-3 flex" />
+          {/* The detail's only warning about automatic passages: here they first appear, before the decision. */}
+          {passagesShown && (
+            <p className="mb-3" data-testid="text-sheet-disclaimer">
+              <ProvenanceLabel kind="found">Encontrado no edital. {AUTO_PASSAGES_NOTICE}</ProvenanceLabel>
+            </p>
+          )}
           {found}
         </div>
       )}

@@ -210,6 +210,19 @@ type NotificationPreferences = {
   descadastro em um clique.
 - O digest roda às 07:00 em `America/Sao_Paulo` por padrão, agrega notificações lidas ou não que
   ainda não foram vinculadas a uma entrega e não envia e-mail vazio.
+- **Seus prazos** (seção do digest, antes das novidades): editais salvos do usuário nas etapas
+  pessoais `analyzing` (Analisando) e `participating` (Preparando documentos) cujo `nextActionDeadline`
+  (prazo pessoal, informado pelo usuário, com o texto de `nextAction`) ou prazo oficial de proposta
+  (`proposal_deadline`) cai depois de agora e até o fim do 3º dia seguinte no horário de Brasília.
+  Cada prazo é uma linha (um edital pode aparecer com os dois): título, órgão, etapa pessoal, tipo de
+  prazo, data/hora em Brasília, "hoje"/"amanhã"/"em N dias" e link `/tenders/{id}` em
+  `PUBLIC_APP_ORIGIN`. Ordem: prazo mais próximo primeiro, no máximo 10 linhas e "e mais N prazos"
+  com link para `/saved-tenders`. Prazos vencidos não entram; o prazo de proposta de edital
+  `suspended`, `cancelled` ou `closed` também não. Sem novidades, o digest sai só com os prazos; sem
+  nenhum dos dois, nada é enviado. Vale a mesma preferência `digest`, o mesmo gate de acesso
+  (assinatura/teste vigente ou convite beta, sem a exceção de `trial_ending`), o mesmo descadastro
+  em um clique e a mesma idempotência por usuário e dia de Brasília (`email:digest:{userId}:{data}`):
+  rodar o job de novo no mesmo dia não reenvia. Não cria notificação nem preferência nova.
 - Alertas imediatos agrupam por 10 minutos mudanças de prazo e mudanças de status para
   `suspended`/`cancelled` em editais que continuam monitorados. `trial_ending` também é enviado
   imediatamente uma única vez.

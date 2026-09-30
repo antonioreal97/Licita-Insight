@@ -3,10 +3,13 @@ import {
   and,
   asc,
   eq,
+  gt,
+  inArray,
   isNotNull,
   isNull,
   lt,
   lte,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -17,6 +20,7 @@ import {
   notificationsTable,
   savedTendersTable,
   subscriptionsTable,
+  tendersTable,
   usersTable,
 } from "@workspace/db";
 import { publicAppOrigin } from "../auth/config";
@@ -25,6 +29,14 @@ import { activeBetaGrantEmails } from "../billing/beta-grants";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { logger } from "../lib/logger";
 import { createUnsubscribeToken } from "./unsubscribe-token";
+import {
+  DIGEST_DEADLINE_STAGES,
+  INACTIVE_TENDER_STATUSES,
+  deadlinesForSavedTender,
+  digestDeadlineWindowEnd,
+  sortDeadlines,
+  type EmailDeadlineSnapshot,
+} from "./digest-deadlines";
 import {
   renderNotificationEmail,
   type EmailNotificationSnapshot,
@@ -38,13 +50,22 @@ import {
 type EmailMode = "digest" | "immediate";
 type DeliveryRow = typeof emailDeliveriesTable.$inferSelect;
 
-type Candidate = EmailNotificationSnapshot & {
+type Recipient = {
   userId: string;
   email: string;
   unsubscribeId: string;
+};
+
+type Candidate = EmailNotificationSnapshot & Recipient & {
   trialEndsAt: Date;
   subscriptionStatus: string | null;
   currentPeriodEnd: Date | null;
+};
+
+type EmailGroup = {
+  recipient: Recipient;
+  notifications: Candidate[];
+  deadlines: EmailDeadlineSnapshot[];
 };
 
 export type EmailJobResult = {
@@ -109,17 +130,98 @@ export const hasEmailAccess = (
     now,
   );
 
-const groupByUser = (rows: Candidate[]): Candidate[][] => {
-  const grouped = new Map<string, Candidate[]>();
+const groupByUser = (
+  rows: Candidate[],
+  deadlines: Map<string, EmailGroup> = new Map(),
+): EmailGroup[] => {
+  const grouped = new Map<string, EmailGroup>();
   for (const row of rows) {
-    const group = grouped.get(row.userId) ?? [];
-    group.push(row);
+    const group = grouped.get(row.userId) ?? {
+      recipient: { userId: row.userId, email: row.email, unsubscribeId: row.unsubscribeId },
+      notifications: [],
+      deadlines: deadlines.get(row.userId)?.deadlines ?? [],
+    };
+    group.notifications.push(row);
     grouped.set(row.userId, group);
+  }
+  for (const [userId, group] of deadlines) {
+    if (!grouped.has(userId)) grouped.set(userId, group);
   }
   return [...grouped.values()];
 };
 
-const digestCandidates = async (now: Date): Promise<Candidate[]> => {
+/**
+ * "Seus prazos": saved tenders in a personal stage (analyzing/participating) whose personal
+ * `nextActionDeadline` or official proposal deadline falls between now and the end of the
+ * 3rd following day in Brasília. Same preference and access gate as the digest.
+ */
+const digestDeadlines = async (
+  now: Date,
+  betaEmails: ReadonlySet<string>,
+): Promise<Map<string, EmailGroup>> => {
+  const end = digestDeadlineWindowEnd(now);
+  const rows = await db
+    .select({
+      userId: usersTable.id,
+      email: usersTable.email,
+      unsubscribeId: usersTable.emailUnsubscribeId,
+      trialEndsAt: usersTable.trialEndsAt,
+      subscriptionStatus: subscriptionsTable.status,
+      currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
+      tenderId: tendersTable.id,
+      tenderTitle: tendersTable.title,
+      tenderOrganizationName: tendersTable.organizationName,
+      tenderStatus: tendersTable.status,
+      proposalDeadline: tendersTable.proposalDeadline,
+      stage: savedTendersTable.stage,
+      nextAction: savedTendersTable.nextAction,
+      nextActionDeadline: savedTendersTable.nextActionDeadline,
+    })
+    .from(savedTendersTable)
+    .innerJoin(usersTable, eq(usersTable.id, savedTendersTable.userId))
+    .innerJoin(tendersTable, eq(tendersTable.id, savedTendersTable.tenderId))
+    .leftJoin(
+      subscriptionsTable,
+      eq(subscriptionsTable.userId, usersTable.id),
+    )
+    .where(
+      and(
+        eq(usersTable.emailDigest, "daily"),
+        inArray(savedTendersTable.stage, [...DIGEST_DEADLINE_STAGES]),
+        or(
+          and(
+            gt(savedTendersTable.nextActionDeadline, now),
+            lt(savedTendersTable.nextActionDeadline, end),
+          ),
+          and(
+            gt(tendersTable.proposalDeadline, now),
+            lt(tendersTable.proposalDeadline, end),
+            notInArray(tendersTable.status, [...INACTIVE_TENDER_STATUSES]),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(usersTable.id))
+    .limit(20_000);
+  const grouped = new Map<string, EmailGroup>();
+  for (const row of rows) {
+    if (!hasEmailAccess({ ...row, type: "digest_deadline" }, now, betaEmails)) continue;
+    const group = grouped.get(row.userId) ?? {
+      recipient: { userId: row.userId, email: row.email, unsubscribeId: row.unsubscribeId },
+      notifications: [],
+      deadlines: [],
+    };
+    group.deadlines.push(...deadlinesForSavedTender(row, now));
+    grouped.set(row.userId, group);
+  }
+  for (const group of grouped.values()) group.deadlines = sortDeadlines(group.deadlines);
+  return grouped;
+};
+
+const digestCandidates = async (
+  now: Date,
+  betaEmails: ReadonlySet<string>,
+): Promise<Candidate[]> => {
   const rows = await db
     .select(notificationSelection)
     .from(notificationsTable)
@@ -144,7 +246,6 @@ const digestCandidates = async (now: Date): Promise<Candidate[]> => {
     )
     .orderBy(asc(notificationsTable.createdAt))
     .limit(5_000);
-  const betaEmails = await activeBetaGrantEmails(now);
   return rows.filter((row) => hasEmailAccess(row, now, betaEmails));
 };
 
@@ -214,21 +315,22 @@ const immediateKey = (userId: string, notificationIds: string[]): string => {
 
 const queueDelivery = async (
   mode: EmailMode,
-  candidates: Candidate[],
+  group: EmailGroup,
   dedupeKey: string,
   now: Date,
 ): Promise<DeliveryRow | null> => {
-  if (candidates.length === 0) return null;
+  const { recipient, notifications: candidates, deadlines } = group;
+  if (candidates.length === 0 && deadlines.length === 0) return null;
   return db.transaction(async (tx) => {
     const id = randomUUID();
     const [created] = await tx
       .insert(emailDeliveriesTable)
       .values({
         id,
-        userId: candidates[0]!.userId,
+        userId: recipient.userId,
         mode,
         dedupeKey,
-        recipientEmail: candidates[0]!.email,
+        recipientEmail: recipient.email,
         subject: "",
         htmlBody: "",
         textBody: "",
@@ -241,17 +343,20 @@ const queueDelivery = async (
       .returning();
     if (!created) return null;
 
-    const linked = await tx
-      .insert(emailDeliveryNotificationsTable)
-      .values(
-        candidates.map((candidate) => ({
-          deliveryId: id,
-          notificationId: candidate.id,
-        })),
-      )
-      .onConflictDoNothing()
-      .returning({ notificationId: emailDeliveryNotificationsTable.notificationId });
-    if (linked.length === 0) {
+    const linked =
+      candidates.length === 0
+        ? []
+        : await tx
+            .insert(emailDeliveryNotificationsTable)
+            .values(
+              candidates.map((candidate) => ({
+                deliveryId: id,
+                notificationId: candidate.id,
+              })),
+            )
+            .onConflictDoNothing()
+            .returning({ notificationId: emailDeliveryNotificationsTable.notificationId });
+    if (linked.length === 0 && deadlines.length === 0) {
       await tx.delete(emailDeliveriesTable).where(eq(emailDeliveriesTable.id, id));
       return null;
     }
@@ -263,8 +368,10 @@ const queueDelivery = async (
     const rendered = renderNotificationEmail({
       mode,
       notifications,
+      deadlines,
+      now,
       origin: publicAppOrigin(),
-      unsubscribeToken: createUnsubscribeToken(candidates[0]!.unsubscribeId),
+      unsubscribeToken: createUnsubscribeToken(recipient.unsubscribeId),
     });
     const [delivery] = await tx
       .update(emailDeliveriesTable)
@@ -324,21 +431,27 @@ const deliver = async (
 
 const queueGroups = async (
   mode: EmailMode,
-  groups: Candidate[][],
+  groups: EmailGroup[],
   now: Date,
   sendEmail: SendEmail,
 ): Promise<EmailJobResult> => {
   const result = emptyResult();
   for (const group of groups) {
-    const candidates = mode === "digest" ? group.slice(0, 100) : group;
+    const candidates =
+      mode === "digest" ? group.notifications.slice(0, 100) : group.notifications;
     const key =
       mode === "digest"
-        ? digestKey(candidates[0]!.userId, now)
+        ? digestKey(group.recipient.userId, now)
         : immediateKey(
-            candidates[0]!.userId,
+            group.recipient.userId,
             candidates.map(({ id }) => id),
           );
-    const delivery = await queueDelivery(mode, candidates, key, now);
+    const delivery = await queueDelivery(
+      mode,
+      { ...group, notifications: candidates },
+      key,
+      now,
+    );
     if (!delivery) continue;
     const sent = await deliver(delivery, now, sendEmail);
     addResult(result, sent.status);
@@ -350,9 +463,13 @@ export const runDailyEmailDigest = async (
   now = new Date(),
   sendEmail: SendEmail = (message, key) => sendWithResend(message, key),
 ): Promise<EmailJobResult> => {
+  const betaEmails = await activeBetaGrantEmails(now);
   const result = await queueGroups(
     "digest",
-    groupByUser(await digestCandidates(now)),
+    groupByUser(
+      await digestCandidates(now, betaEmails),
+      await digestDeadlines(now, betaEmails),
+    ),
     now,
     sendEmail,
   );
@@ -373,9 +490,7 @@ export const runImmediateEmailAlerts = async (
 ): Promise<EmailJobResult> =>
   queueGroups(
     "immediate",
-    groupByUser(
-      await immediateCandidates(now, options.windowMinutes ?? 10),
-    ),
+    groupByUser(await immediateCandidates(now, options.windowMinutes ?? 10)),
     now,
     options.sendEmail ?? ((message, key) => sendWithResend(message, key)),
   );

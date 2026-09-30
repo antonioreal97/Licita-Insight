@@ -60,7 +60,7 @@ function ParticipationForm({ current, saving, onSave }: { current: SavedTender; 
           data-testid="input-next-action"
         />
         <span id={`${ids}-action-hint`} className="type-meta font-normal">
-          O que falta fazer, do seu jeito. {nextAction.trim().length}/500
+          O que falta fazer. {nextAction.trim().length}/500
         </span>
       </label>
       <label className="field">
@@ -69,7 +69,7 @@ function ParticipationForm({ current, saving, onSave }: { current: SavedTender; 
         <span className="type-meta font-normal">Seu prazo, não o do edital.</span>
       </label>
       <label className="field">
-        Protocolo informado por você
+        Protocolo
         <input
           value={protocol}
           maxLength={200}
@@ -101,7 +101,7 @@ function History({ history }: { history: SavedTender['history'] }) {
   const listId = useId();
   if (history.length < 2) return null;
   return (
-    <div className="mt-3">
+    <div className="mt-5">
       <button
         type="button"
         aria-expanded={open}
@@ -194,7 +194,6 @@ export function ParticipationPanel({ tenderId }: { tenderId: string }) {
             Você marcou: {STAGE_LABELS[current.stage]} · {formatDateTime(current.stageAt)}
           </ProvenanceLabel>
         </p>
-        <History history={current.history} />
         <div className="mt-6 border-t border-border-subtle pt-6">
           <ParticipationForm
             // Remount with the saved values after each save (or a change from another tab).
@@ -204,6 +203,8 @@ export function ParticipationPanel({ tenderId }: { tenderId: string }) {
             onSave={(patch) => update({ tenderId, previous: current, body: patch })}
           />
         </div>
+        {/* Secondary: the next action and its deadline come first. */}
+        <History history={current.history} />
       </>
     );
   }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderNotificationEmail } from "./email-template";
+import type { EmailDeadlineSnapshot } from "./digest-deadlines";
+import { renderNotificationEmail, savedSearchHref } from "./email-template";
 
 describe("notification email template", () => {
   it("renders a deadline change without repeating the current deadline", () => {
@@ -82,6 +83,44 @@ describe("notification email template", () => {
     assert.doesNotMatch(plural.text, /\(s\)/);
   });
 
+  it("links a saved search without status to every status, as the app does", () => {
+    assert.equal(
+      savedSearchHref("q=limpeza&state=DF"),
+      "/search?q=limpeza&state=DF&status=all",
+    );
+    assert.equal(
+      savedSearchHref("?q=limpeza&status=open&status=suspended"),
+      "/search?q=limpeza&status=open&status=suspended",
+    );
+    // An empty saved query also means every status.
+    assert.equal(savedSearchHref(""), "/search?status=all");
+
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [
+        {
+          id: "saved-search-link",
+          type: "saved_search_new_matches",
+          createdAt: new Date("2026-09-24T12:00:00Z"),
+          tenderId: null,
+          tenderTitle: null,
+          tenderOrganizationName: null,
+          tenderProposalDeadline: null,
+          change: null,
+          savedSearchName: "Software",
+          savedSearchQuery: "q=software",
+          matchCount: 1,
+        },
+      ],
+    });
+    assert.match(
+      rendered.text,
+      /https:\/\/licitai\.example\/search\?q=software&status=all/,
+    );
+  });
+
   it("shows only the new deadline when the previous value is unavailable", () => {
     const rendered = renderNotificationEmail({
       mode: "immediate",
@@ -148,5 +187,147 @@ describe("notification email template", () => {
     assert.match(rendered.text, /2 novos editais com alta aderência/);
     assert.match(rendered.html, /Aquisição de servidores/);
     assert.match(rendered.html, /tender%2Ffit/);
+  });
+});
+
+describe("daily digest deadlines section", () => {
+  // 07:00 in Brasília.
+  const now = new Date("2026-09-29T10:00:00.000Z");
+  const deadline = (
+    overrides: Partial<EmailDeadlineSnapshot> = {},
+  ): EmailDeadlineSnapshot => ({
+    tenderId: "tender/1",
+    tenderTitle: "TEST DATA edital de computadores",
+    tenderOrganizationName: "Órgão de teste",
+    stage: "analyzing",
+    kind: "personal",
+    deadline: new Date("2026-10-01T15:00:00.000Z"),
+    nextAction: "Enviar certidões",
+    ...overrides,
+  });
+  const notification = {
+    id: "saved-search-1",
+    type: "saved_search_new_matches",
+    createdAt: new Date("2026-09-28T12:00:00Z"),
+    tenderId: null,
+    tenderTitle: null,
+    tenderOrganizationName: null,
+    tenderProposalDeadline: null,
+    change: null,
+    savedSearchName: "Software",
+    savedSearchQuery: "q=software",
+    matchCount: 2,
+  };
+  const render = (
+    deadlines: EmailDeadlineSnapshot[],
+    notifications: (typeof notification)[] = [],
+  ) =>
+    renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications,
+      deadlines,
+      now,
+    });
+
+  it("renders the deadlines before the updates", () => {
+    const rendered = render(
+      [
+        deadline(),
+        deadline({
+          tenderId: "tender-2",
+          stage: "participating",
+          kind: "proposal",
+          deadline: new Date("2026-09-30T13:00:00.000Z"),
+          nextAction: null,
+        }),
+      ],
+      [notification],
+    );
+    assert.equal(rendered.subject, "LicitAI: 2 prazos e 1 atualização no seu resumo");
+    assert.match(rendered.html, /<h3[^>]*>Seus prazos<\/h3>/);
+    assert.match(rendered.html, /<h3[^>]*>Novidades<\/h3>/);
+    assert.ok(rendered.html.indexOf("Seus prazos") < rendered.html.indexOf("Novidades"));
+    assert.ok(rendered.text.indexOf("Seus prazos") < rendered.text.indexOf("Busca salva: Software"));
+    // Closest deadline first.
+    assert.ok(rendered.text.indexOf("tender-2") < rendered.text.indexOf("tender%2F1"));
+    assert.match(
+      rendered.text,
+      /Seu prazo \(informado por você\): Enviar certidões — 01\/10\/2026, 12:00 \(em 2 dias\)/,
+    );
+    assert.match(rendered.text, /Prazo oficial de proposta: 30\/09\/2026, 10:00 \(amanhã\)/);
+    assert.match(rendered.text, /Sua etapa: Analisando/);
+    assert.match(rendered.text, /Sua etapa: Preparando documentos/);
+    assert.match(rendered.text, /https:\/\/licitai\.example\/tenders\/tender%2F1/);
+    assert.match(rendered.text, /a etapa é sua, não o status oficial do edital/);
+    assert.equal(rendered.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
+  });
+
+  it("sends only the deadlines when there are no updates", () => {
+    const rendered = render([deadline()]);
+    assert.equal(rendered.subject, "LicitAI: 1 prazo nos próximos dias");
+    assert.match(rendered.html, /Seus prazos/);
+    assert.doesNotMatch(rendered.html, /Novidades/);
+  });
+
+  it("omits the section without deadlines", () => {
+    const rendered = render([], [notification]);
+    assert.equal(rendered.subject, "LicitAI: 1 atualização no seu resumo");
+    assert.doesNotMatch(rendered.html, /Seus prazos|Novidades/);
+    assert.doesNotMatch(rendered.text, /Seus prazos|Novidades/);
+  });
+
+  it("labels today and tomorrow by the Brasília day, across the UTC turn", () => {
+    const rendered = render([
+      deadline({ tenderId: "late-today", deadline: new Date("2026-09-30T02:30:00.000Z") }),
+      deadline({ tenderId: "early-tomorrow", deadline: new Date("2026-09-30T03:30:00.000Z") }),
+    ]);
+    assert.match(rendered.text, /29\/09\/2026, 23:30 \(hoje\)/);
+    assert.match(rendered.text, /30\/09\/2026, 00:30 \(amanhã\)/);
+  });
+
+  it("shows at most 10 deadlines and counts the rest", () => {
+    const deadlines = Array.from({ length: 13 }, (_, index) =>
+      deadline({
+        tenderId: `tender-${String(index).padStart(2, "0")}`,
+        deadline: new Date(Date.UTC(2026, 8, 30, 12, index)),
+      }),
+    );
+    const rendered = render(deadlines.reverse());
+    assert.equal(rendered.subject, "LicitAI: 13 prazos nos próximos dias");
+    assert.equal(rendered.html.match(/Ver edital/g)?.length, 10);
+    assert.match(rendered.text, /tender-09/);
+    assert.doesNotMatch(rendered.text, /tender-1[0-2]/);
+    assert.match(rendered.text, /e mais 3 prazos nos seus editais salvos: https:\/\/licitai\.example\/saved-tenders/);
+    assert.match(rendered.html, /e mais 3 prazos/);
+    assert.doesNotMatch(render(deadlines.slice(0, 10)).text, /e mais/);
+    assert.match(render(deadlines.slice(0, 11)).text, /e mais 1 prazo nos/);
+  });
+
+  it("escapes the text informed by the user", () => {
+    const rendered = render([
+      deadline({
+        nextAction: '<script>alert("x")</script> & "certidões"',
+        tenderTitle: "Edital <b>TEST</b>",
+        tenderOrganizationName: "Órgão & Cia",
+      }),
+    ]);
+    assert.doesNotMatch(rendered.html, /<script>|<b>TEST/);
+    assert.match(rendered.html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt; &amp; &quot;certidões&quot;/);
+    assert.match(rendered.html, /Edital &lt;b&gt;TEST&lt;\/b&gt;/);
+    assert.match(rendered.html, /Órgão &amp; Cia/);
+  });
+
+  it("ignores deadlines in immediate alerts", () => {
+    const rendered = renderNotificationEmail({
+      mode: "immediate",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [notification],
+      deadlines: [deadline()],
+      now,
+    });
+    assert.doesNotMatch(rendered.html, /Seus prazos/);
   });
 });

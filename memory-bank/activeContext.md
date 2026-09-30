@@ -4,6 +4,31 @@ Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.m
 
 ## Foco agora
 
+Ciclo 12 (29–30 set 2026, branch `antonioreal97/cycle12` a partir do `origin/main` com os PRs #13 e #14 do
+ciclo 11 já mergeados; sem deploy). Decisões do owner em 29 set: (1) a auditoria de segurança de 26 set **fica
+para depois de novo** ("ainda não"; SEC-01, ingestão sem autenticação, e os demais seguem abertos no código);
+(2) a busca passa a abrir em **Abertos** por padrão. Entregue e validado (Run do Orca `run_59d691d015fb`):
+- A `b0a5670`: seção "Seus prazos" no resumo diário por e-mail. Entram as etapas Analisando e Preparando
+  documentos, com prazo pessoal ou de proposta até o fim do 3º dia em Brasília. Até 10 itens + "e mais N".
+  O resumo pode sair só com prazos. Mesmo gate de preferência e acesso (incluindo beta), idempotência diária.
+  Se os dois prazos caem na janela, saem duas linhas (escolha a revisar com o owner).
+- B `99e3461`: busca abre em `status=open`; "Todos os status" = `status=all`, só na URL (nunca vai para a API
+  nem para a busca salva); "Limpar filtros" volta a Abertos. Seletor Palavra-chave/Semântica escondido atrás
+  de `SEARCH_MODE_ENABLED=false` (o backend não tem embeddings). Buscas salvas sem status abrem com `status=all`.
+- C `3e3c905`: aviso único de trechos automáticos em "Antes de decidir"; próxima ação e prazo antes do
+  histórico; Configurações cita os prazos no resumo.
+- E `11bb25e`: links de e-mail de busca salva sem status ganham `status=all`.
+- D: QA em `docs/reviews/cycle12-qa.md`. API 199/199 + 9/9, frontend 25/25, typecheck, build e
+  verify:migrations passaram; Playwright 104/104 em 1440 e 390 px.
+Os dois achados baixos do QA foram corrigidos no mesmo PR (#15), a pedido do owner: glob do `pnpm test` da
+API entre aspas (os 4 testes da raiz de `src` voltaram a rodar; 208/208 com banco) e aviso de trechos só com a
+ficha pronta (não no esqueleto/erro). PR #15 aberto em 30 set 2026; merge é do owner.
+Workers: o Codex não sobe pelo Orca (`path must be shorter than SUN_LEN` no socket da conta; o modo auto negou
+relançar), então A foi feita por Claude com autorização do owner. O Cursor pediu aprovação para cada comando
+de shell (o owner aprovou no terminal dele) e pôs `Co-authored-by: Cursor` no commit, removido com amend.
+Stack: API e web desta branch saudáveis em :3001/:24252 (subidas com `--no-deps`). Ao subir, a API tentou a
+coleta PNCP diária, que falhou com `fetch failed` e 0 upserts.
+
 28 set 2026 — MVP de participação implementado e ativado na stack Docker local: migration 0019, etapas,
 checklist Tenho/Não tenho/Não sei, protocolo declarado, próxima ação/prazo e histórico. P0.6 e P1 conectados
 à API; testes de API (184), frontend (16), migrations, typechecks/build e navegador desktop/mobile passaram.

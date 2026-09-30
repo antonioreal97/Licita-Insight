@@ -23,7 +23,7 @@
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test:dist-sheet": "node ./build.mjs && node scripts/verify-dist-sheet.mjs",
-    "test": "tsx --test src/**/*.test.ts && pnpm run test:dist-sheet",
+    "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

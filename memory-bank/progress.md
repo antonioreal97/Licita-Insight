@@ -80,6 +80,17 @@ Deriva de [activeContext](activeContext.md).
   respeitados pelo gate 402, por `/me/billing` (`source: beta`) e pelos e-mails; runner na imagem.
 - Carga do PNCP medida: 1 dia útil nacional ≈ 5,3 mil editais, ~11 min, +28 MB.
 
+## O que já funciona — ajustes finais (ciclo 12)
+
+- Resumo diário por e-mail com "Seus prazos": editais salvos em Analisando e Preparando documentos, com
+  prazo pessoal ou de proposta nos próximos 3 dias (Brasília). O resumo pode sair só com prazos. Contratos
+  em `account-v1.md` §5 e `participation-v1.md`.
+- Busca abre em Abertos. "Todos os status" persiste na URL (`status=all`, só no app). Busca por palavra-chave
+  só (seletor semântico escondido até haver embeddings). Buscas salvas, notificações e e-mails sem status
+  abrem com todos os status.
+- Detalhe: um único aviso de trechos automáticos, próxima ação e prazo acima do histórico.
+- QA: `docs/reviews/cycle12-qa.md` (199 + 9 testes de API, 25 de frontend, 104 verificações de navegador).
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).
