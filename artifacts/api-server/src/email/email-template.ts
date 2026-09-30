@@ -79,6 +79,19 @@ const changeDescription = (
   return "Há uma nova atualização.";
 };
 
+/** App URL value for "Todos os status" (same as the frontend's search-defaults); the API never sees it. */
+const ALL_STATUSES = "all";
+
+/**
+ * A saved query without `status` covers every status, but the search page opens on open tenders
+ * when the URL has none, so the link says `status=all` explicitly. An explicit status is kept as is.
+ */
+export const savedSearchHref = (savedQuery: string): string => {
+  const query = savedQuery.replace(/^\?/, "");
+  if (new URLSearchParams(query).has("status")) return `/search?${query}`;
+  return `/search?${query ? `${query}&` : ""}status=${ALL_STATUSES}`;
+};
+
 const notificationLink = (
   notification: EmailNotificationSnapshot,
   origin: string,
@@ -87,8 +100,7 @@ const notificationLink = (
     return `${origin}/tenders/${encodeURIComponent(notification.tenderId)}`;
   }
   if (notification.savedSearchQuery !== null) {
-    const query = notification.savedSearchQuery.replace(/^\?/, "");
-    return `${origin}/search${query ? `?${query}` : ""}`;
+    return `${origin}${savedSearchHref(notification.savedSearchQuery)}`;
   }
   if (notification.type === "profile_new_matches") return `${origin}/search`;
   return `${origin}/settings#notificacoes`;

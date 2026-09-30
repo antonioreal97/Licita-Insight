@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EmailDeadlineSnapshot } from "./digest-deadlines";
-import { renderNotificationEmail } from "./email-template";
+import { renderNotificationEmail, savedSearchHref } from "./email-template";
 
 describe("notification email template", () => {
   it("renders a deadline change without repeating the current deadline", () => {
@@ -81,6 +81,44 @@ describe("notification email template", () => {
     assert.equal(plural.subject, "LicitAI: 3 atualizações no seu resumo");
     assert.match(plural.text, /4 novos resultados/);
     assert.doesNotMatch(plural.text, /\(s\)/);
+  });
+
+  it("links a saved search without status to every status, as the app does", () => {
+    assert.equal(
+      savedSearchHref("q=limpeza&state=DF"),
+      "/search?q=limpeza&state=DF&status=all",
+    );
+    assert.equal(
+      savedSearchHref("?q=limpeza&status=open&status=suspended"),
+      "/search?q=limpeza&status=open&status=suspended",
+    );
+    // An empty saved query also means every status.
+    assert.equal(savedSearchHref(""), "/search?status=all");
+
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications: [
+        {
+          id: "saved-search-link",
+          type: "saved_search_new_matches",
+          createdAt: new Date("2026-09-24T12:00:00Z"),
+          tenderId: null,
+          tenderTitle: null,
+          tenderOrganizationName: null,
+          tenderProposalDeadline: null,
+          change: null,
+          savedSearchName: "Software",
+          savedSearchQuery: "q=software",
+          matchCount: 1,
+        },
+      ],
+    });
+    assert.match(
+      rendered.text,
+      /https:\/\/licitai\.example\/search\?q=software&status=all/,
+    );
   });
 
   it("shows only the new deadline when the previous value is unavailable", () => {
