@@ -130,7 +130,8 @@ a busca salva sem status reabriu em `/search?q=serviço&status=all`, e a tela mo
 
 ## 5. Achados
 
-Nenhum defeito do ciclo 12. Os dois achados abaixo não bloqueiam a entrega; nenhum foi corrigido.
+Nenhum defeito do ciclo 12. Os dois achados abaixo não bloqueavam a entrega. O owner pediu que fossem corrigidos
+no mesmo PR (#15), e os dois foram corrigidos depois deste QA; ver "Correção" em cada um.
 
 ### 5.1 `pnpm test` da API não roda os testes da raiz de `src/` — baixa, backend, anterior ao ciclo
 
@@ -141,6 +142,10 @@ ficam fora: `src/static-app.test.ts`, `src/server-runtime.test.ts`, `src/metrics
 pôr o glob entre aspas simples, como já faz o frontend (`'src/**/*.test.ts'`). O `tsx`/Node então expande o
 padrão de forma recursiva. Fica para o coordenador redistribuir, porque é configuração do backend.
 
+**Correção:** glob entre aspas simples. `pnpm --filter @workspace/api-server run test` com
+`PNCP_TEST_DATABASE_URL` roda agora **208 testes, 208 pass, 0 fail, 0 skipped** (199 + os 9 da raiz); sem o
+banco, são 174 testes: 165 pass, 0 fail e 9 skipped.
+
 ### 5.2 Aviso de trechos aparece também sem trechos na tela — baixa, UX, frontend
 
 `artifacts/licitainsight/src/features/participation/components/decision-panel.tsx:243-249`: o aviso
@@ -150,6 +155,11 @@ então "Encontrado no edital. Os trechos são…" aparece acima de uma linha de 
 com a ficha que caiu em 503. O aviso continua único e fica no lugar certo, como pedia a tarefa C.
 Mostrar o aviso só com a ficha pronta é uma mudança de uma linha, mas é escolha de design, porque o aviso
 sobre o esqueleto evita que o layout pule. Por isso não corrigi e deixo a decisão ao coordenador.
+
+**Correção:** o aviso só aparece quando a ficha está pronta e os trechos estão na tela (`passagesShown` no
+último ramo). No esqueleto, em "Lendo os documentos…" e no erro, ele não aparece. Honestidade antes do
+layout estável: um aviso sobre trechos inexistentes confunde mais do que um pequeno deslocamento.
+Frontend 25/25, typecheck e build OK.
 
 ### Observação de ambiente (não é defeito)
 

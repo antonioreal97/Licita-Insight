@@ -20,8 +20,9 @@ para depois de novo** ("ainda não"; SEC-01, ingestão sem autenticação, e os 
 - E `11bb25e`: links de e-mail de busca salva sem status ganham `status=all`.
 - D: QA em `docs/reviews/cycle12-qa.md`. API 199/199 + 9/9, frontend 25/25, typecheck, build e
   verify:migrations passaram; Playwright 104/104 em 1440 e 390 px.
-Achados baixos abertos: glob sem aspas em `artifacts/api-server/package.json:26` deixa 4 testes da raiz de
-`src` fora do `pnpm test` (anterior ao ciclo); o aviso de trechos também aparece no esqueleto/erro da ficha.
+Os dois achados baixos do QA foram corrigidos no mesmo PR (#15), a pedido do owner: glob do `pnpm test` da
+API entre aspas (os 4 testes da raiz de `src` voltaram a rodar; 208/208 com banco) e aviso de trechos só com a
+ficha pronta (não no esqueleto/erro). PR #15 aberto em 30 set 2026; merge é do owner.
 Workers: o Codex não sobe pelo Orca (`path must be shorter than SUN_LEN` no socket da conta; o modo auto negou
 relançar), então A foi feita por Claude com autorização do owner. O Cursor pediu aprovação para cada comando
 de shell (o owner aprovou no terminal dele) e pôs `Co-authored-by: Cursor` no commit, removido com amend.
