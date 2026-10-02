@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { TenderSearchParams } from '@/api/types';
 import { SearchModeControl } from '../components/search-mode-control';
 import { buildFilterChips } from './filter-chips';
+import { readRememberedSearch, rememberSearch } from './search-navigation-state';
 import { savedQueryHref, searchDefaultsToUrl, withoutFilters, withSearchDefaults } from './search-defaults';
 
 // `parsed` stands for `searchParamsFromUrl(search)`, which keeps only valid statuses (drops `all` and `bogus`).
@@ -71,4 +72,19 @@ test('busca salva sem status abre com todos os status; com status, abre igual', 
   assert.equal(savedQueryHref('q=limpeza&state=DF'), '/search?q=limpeza&state=DF&status=all');
   assert.equal(savedQueryHref(''), '/search?status=all');
   assert.equal(savedQueryHref('q=limpeza&status=open'), '/search?q=limpeza&status=open');
+});
+
+test('estado da busca permanece na navegação da aba até voltar ao padrão', () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+
+  rememberSearch('?state=SP&modality=dispensa&view=table', storage);
+  assert.equal(readRememberedSearch(storage), 'state=SP&modality=dispensa&view=table');
+
+  rememberSearch('', storage);
+  assert.equal(readRememberedSearch(storage), '');
 });

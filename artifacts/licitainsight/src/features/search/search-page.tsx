@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { List, Loader2, SlidersHorizontal, Table2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { List, Loader2, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Table2 } from 'lucide-react';
 import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
@@ -38,8 +38,10 @@ export default function SearchPage() {
   const { isSaved, toggle } = useSavedTenders();
   const recent = useRecentSearches();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState(false);
   const resultsRef = useRef<HTMLElement>(null);
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
+  const desktopFiltersRef = useRef<HTMLDivElement>(null);
 
   const response = search.data;
   const fits = useTenderFits(response?.data.map((tender) => tender.id) ?? []);
@@ -64,6 +66,41 @@ export default function SearchPage() {
   useEffect(() => {
     if (pageOutOfRange && pagination && page > pagination.totalPages) update({ page: pagination.totalPages }, { replace: true });
   }, [pageOutOfRange, pagination, page, update]);
+
+  useLayoutEffect(() => {
+    let frame = 0;
+
+    const fitFiltersToViewport = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        // Let sticky positioning settle for one paint before measuring its final viewport offset.
+        frame = requestAnimationFrame(() => {
+          const panel = desktopFiltersRef.current;
+          if (!panel) return;
+
+          // While the rail is below its sticky position, its real top edge determines how much of the
+          // viewport is available. Once stuck, getBoundingClientRect() already reports the sticky top.
+          const availableHeight = Math.max(240, window.innerHeight - panel.getBoundingClientRect().top - 16);
+          if (desktopFiltersCollapsed) {
+            panel.style.height = `${availableHeight}px`;
+            panel.style.maxHeight = '';
+          } else {
+            panel.style.height = '';
+            panel.style.maxHeight = `${availableHeight}px`;
+          }
+        });
+      });
+    };
+
+    fitFiltersToViewport();
+    window.addEventListener('scroll', fitFiltersToViewport, { passive: true });
+    window.addEventListener('resize', fitFiltersToViewport);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', fitFiltersToViewport);
+      window.removeEventListener('resize', fitFiltersToViewport);
+    };
+  }, [desktopFiltersCollapsed, params.q, response?.meta.searchMode, response?.meta.searchModeFallbackReason]);
 
   const submitQuery = (q: string) => {
     if (q) recent.add(q);
@@ -117,26 +154,65 @@ export default function SearchPage() {
 
       {/* Container query: the facet sidebar appears when the content column (not the viewport) is wide enough. */}
       <div className="@container/page">
-        <div className="grid gap-6 @min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]">
-          <aside aria-labelledby="facets-title" className="hidden @min-[52rem]/page:block">
+        <div
+          className={`grid gap-6 transition-[grid-template-columns] duration-slow ease-emphasized ${
+            desktopFiltersCollapsed
+              ? '@min-[52rem]/page:grid-cols-[40px_minmax(0,1fr)]'
+              : '@min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]'
+          }`}
+        >
+          <aside
+            aria-label={desktopFiltersCollapsed ? 'Filtros' : undefined}
+            aria-labelledby={desktopFiltersCollapsed ? undefined : 'facets-title'}
+            className="hidden @min-[52rem]/page:block"
+          >
             {/* A flat rail, not a card. Offsets follow the header token. */}
-            <div className="sticky top-[calc(var(--spacing-header-mobile)+1rem)] max-h-[calc(100dvh-var(--spacing-header-mobile)-2rem)] lg:top-[calc(var(--spacing-header)+1rem)] lg:max-h-[calc(100dvh-var(--spacing-header)-2rem)] overflow-y-auto overscroll-contain border-r border-border-subtle pr-4 pb-2 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]">
-              <div className="sticky top-0 z-raised flex items-center justify-between border-b border-border-subtle bg-background pb-3">
-                <h2 id="facets-title" className="type-section">
-                  Filtros
-                </h2>
-                {activeFilters > 0 && (
+            <div
+              ref={desktopFiltersRef}
+              className={`sticky top-[calc(var(--spacing-header-mobile)+1rem)] border-r border-border-subtle pb-2 lg:top-[calc(var(--spacing-header)+1rem)] ${
+                desktopFiltersCollapsed
+                  ? 'pr-1'
+                  : 'overflow-y-auto overscroll-contain pr-4 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]'
+              }`}
+            >
+              <div
+                className={`sticky top-0 z-raised flex items-center border-b border-border-subtle bg-background pb-3 ${
+                  desktopFiltersCollapsed ? 'justify-center' : 'justify-between'
+                }`}
+              >
+                {!desktopFiltersCollapsed && (
+                  <h2 id="facets-title" className="type-section">
+                    Filtros
+                  </h2>
+                )}
+                <div className="flex items-center gap-1">
+                  {!desktopFiltersCollapsed && activeFilters > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      data-testid="button-sidebar-clear"
+                      className="rounded-sm px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+                    >
+                      Limpar ({activeFilters})
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={clearFilters}
-                    data-testid="button-sidebar-clear"
-                    className="rounded-sm px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+                    aria-controls="desktop-facets"
+                    aria-expanded={!desktopFiltersCollapsed}
+                    aria-label={desktopFiltersCollapsed ? 'Expandir filtros' : 'Recolher filtros'}
+                    title={desktopFiltersCollapsed ? 'Expandir filtros' : 'Recolher filtros'}
+                    data-testid="button-collapse-filters"
+                    onClick={() => setDesktopFiltersCollapsed((collapsed) => !collapsed)}
+                    className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground focus-visible:focus-ring"
                   >
-                    Limpar ({activeFilters})
+                    {desktopFiltersCollapsed ? <PanelLeftOpen size={17} aria-hidden /> : <PanelLeftClose size={17} aria-hidden />}
                   </button>
-                )}
+                </div>
               </div>
-              <FacetPanel params={params} facets={facets} onChange={update} loading={search.isPending} />
+              <div id="desktop-facets" hidden={desktopFiltersCollapsed}>
+                <FacetPanel params={params} facets={facets} onChange={update} loading={search.isPending} />
+              </div>
             </div>
           </aside>
 
