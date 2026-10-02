@@ -357,7 +357,7 @@ export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 /** Public `POST /api/v1/email/unsubscribe { token, scope }` (no session). Invalid token → 400 INVALID_PARAMETER. */
 export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPreferences };
 
-// AI v1 ("Perguntar ao edital") — source of truth: docs/contracts/ai-v1.md. Jev selects official passages; nothing is generated.
+// AI v1 ("Perguntar ao edital") — source of truth: docs/contracts/ai-v1.md. Jev selects official passages; OpenAI may write a grounded summary from them.
 
 /** `expired`: the documents were dropped from the index 90 days after the proposal deadline (unless a user saved the tender). Saving reopens it. */
 export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
@@ -374,8 +374,16 @@ export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAs
 /** `relevance` is Jev's probability (0–1) that the passage answers the question; only passages above the threshold come back. */
 export type AskTenderPassage = { documentId: string; documentTitle: string; documentUrl: string; page: number; text: string; relevance: number };
 
+export type AiGeneratedSummary = { text: string; citations: number[]; model: string };
+
 /** `POST /api/v1/tenders/:id/ask { question }` (session + CSRF + access). */
-export type AskTenderResult = { status: 'answered' | 'not_found' | 'processing'; passages: AskTenderPassage[]; model: string; quota: AiQuota };
+export type AskTenderResult = {
+  status: 'answered' | 'not_found' | 'processing';
+  passages: AskTenderPassage[];
+  summary: AiGeneratedSummary | null;
+  model: string;
+  quota: AiQuota;
+};
 
 // Ficha do edital (CODEX_HANDOFF-015, proposal): one official passage per key field. Absence is `not_found`, never a "no".
 
@@ -410,6 +418,7 @@ export type TenderSheet = {
   fields: SheetField[];
   /** Not exhaustive: dedup keeps the strongest passage per (type, page), so a sibling requirement sharing a page can be left out. */
   qualificationChecklist: QualificationItem[];
+  summary: AiGeneratedSummary | null;
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;

@@ -6,6 +6,7 @@ import {
   tenderAiDocumentsTable,
   tenderAiIndexesTable,
   tenderAiSheetsTable,
+  type AiGeneratedSummary,
   type QualificationItem,
   type TenderSheetDiagnostic,
   type TenderSheetField,
@@ -15,7 +16,7 @@ import { AiQuotaExceededError, AiUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { ensureTenderIndex } from "./ask-tender-service";
-import { aiConfig } from "./config";
+import { aiConfig, openAiConfig } from "./config";
 import {
   classifyQualificationCandidate,
   classifySheetField,
@@ -40,6 +41,11 @@ import {
   stitchIndexedPage,
   type QualificationScoredCandidate,
 } from "./qualification-checklist-policy";
+import {
+  generateSheetSummary,
+  SHEET_SUMMARY_PROMPT_VERSION,
+  type SummaryAttempt,
+} from "./openai-summary";
 
 type SheetStatus =
   | "not_started"
@@ -54,10 +60,94 @@ export type TenderSheetResponse = {
   status: SheetStatus;
   fields: TenderSheetField[];
   qualificationChecklist: QualificationItem[];
+  summary: AiGeneratedSummary | null;
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
 };
+
+const EMPTY_SUMMARY_ATTEMPT: SummaryAttempt = {
+  summary: null,
+  model: null,
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+};
+
+async function safelyGenerateSheetSummary(
+  fields: TenderSheetField[],
+  qualificationChecklist: QualificationItem[],
+): Promise<SummaryAttempt> {
+  try {
+    return await generateSheetSummary(fields, qualificationChecklist);
+  } catch (error) {
+    logger.warn({ err: error }, "OpenAI tender-sheet summary was discarded");
+    return EMPTY_SUMMARY_ATTEMPT;
+  }
+}
+
+type TenderAiSheetRow = typeof tenderAiSheetsTable.$inferSelect;
+type SummaryConfig = ReturnType<typeof openAiConfig>;
+
+const sheetSummaryDedupeKey = (
+  sheetId: string,
+  model: string,
+  promptVersion: number,
+) => `sheet_summary:${sheetId}:${model}:v${promptVersion}`;
+
+const summaryStateIsCurrent = (
+  sheet: TenderAiSheetRow,
+  config: SummaryConfig,
+): boolean =>
+  sheet.summaryPromptVersion === SHEET_SUMMARY_PROMPT_VERSION &&
+  sheet.summaryRequestedModel === config.model;
+
+async function enqueueMissingSheetSummary(
+  sheet: TenderAiSheetRow,
+  config: SummaryConfig,
+): Promise<void> {
+  if (!config.apiKey || summaryStateIsCurrent(sheet, config)) return;
+  const dedupeKey = sheetSummaryDedupeKey(
+    sheet.id,
+    config.model,
+    SHEET_SUMMARY_PROMPT_VERSION,
+  );
+  try {
+    await enqueueAiJob({
+      kind: "sheet_summary",
+      dedupeKey,
+      tenderId: sheet.tenderId,
+      userId: null,
+      payload: {
+        sheetId: sheet.id,
+        model: config.model,
+        promptVersion: SHEET_SUMMARY_PROMPT_VERSION,
+      },
+      lane: "batch",
+      maxAttempts: 1,
+    });
+    if (appRoleFromEnv() === "all") void runEnqueuedAiJobNow(dedupeKey);
+  } catch (error) {
+    logger.warn({ err: error, sheetId: sheet.id }, "Tender-sheet summary enqueue failed");
+  }
+}
+
+async function readySheetResponse(
+  sheet: TenderAiSheetRow,
+  config: SummaryConfig,
+): Promise<TenderSheetResponse> {
+  const current = summaryStateIsCurrent(sheet, config);
+  if (!current) await enqueueMissingSheetSummary(sheet, config);
+  return {
+    status: "ready",
+    fields: sheet.fields,
+    qualificationChecklist: sheet.qualificationChecklist,
+    summary: current ? sheet.summary : null,
+    unreadDocuments: sheet.unreadDocuments,
+    model: sheet.responseModel ?? sheet.requestedModel,
+    generatedAt: sheet.generatedAt?.toISOString() ?? null,
+  };
+}
 
 export type TenderSheetCalculation = {
   fields: TenderSheetField[];
@@ -100,6 +190,7 @@ const EMPTY_RESPONSE = (
   status,
   fields: [],
   qualificationChecklist: [],
+  summary: null,
   unreadDocuments,
   model: null,
   generatedAt: null,
@@ -382,6 +473,14 @@ async function processSheet(
 ): Promise<void> {
   try {
     const calculated = await calculateTenderSheet(tenderId, indexVersion);
+    const summaryConfig = openAiConfig();
+    const summaryRequestedModel = summaryConfig.apiKey
+      ? summaryConfig.model
+      : "disabled";
+    const summaryAttempt = await safelyGenerateSheetSummary(
+      calculated.fields,
+      calculated.qualificationChecklist,
+    );
     const estimatedCost = calculated.inputTokens * 0.000000042;
     const generatedAt = new Date();
     await db
@@ -390,6 +489,14 @@ async function processSheet(
         status: "ready",
         fields: calculated.fields,
         qualificationChecklist: calculated.qualificationChecklist,
+        summary: summaryAttempt.summary,
+        summaryPromptVersion: SHEET_SUMMARY_PROMPT_VERSION,
+        summaryRequestedModel,
+        summaryResponseModel: summaryAttempt.model,
+        summaryGeneratedAt: summaryAttempt.model ? generatedAt : null,
+        summaryInputTokens: summaryAttempt.inputTokens,
+        summaryOutputTokens: summaryAttempt.outputTokens,
+        summaryEstimatedCostUsd: summaryAttempt.costUsd.toFixed(8),
         diagnostics: calculated.diagnostics,
         unreadDocuments,
         responseModel: calculated.model,
@@ -433,22 +540,61 @@ export async function executeTenderSheetJob(sheetId: string, tenderId: string): 
   );
 }
 
+export async function executeTenderSheetSummaryJob(
+  sheetId: string,
+  tenderId: string,
+  requestedModel: string,
+  promptVersion: number,
+): Promise<void> {
+  const [sheet] = await db.select().from(tenderAiSheetsTable)
+    .where(and(
+      eq(tenderAiSheetsTable.id, sheetId),
+      eq(tenderAiSheetsTable.tenderId, tenderId),
+      eq(tenderAiSheetsTable.status, "ready"),
+    ))
+    .limit(1);
+  if (!sheet || promptVersion !== SHEET_SUMMARY_PROMPT_VERSION) return;
+
+  const config = openAiConfig();
+  if (config.apiKey && config.model !== requestedModel) return;
+  const attempt = config.apiKey
+    ? await safelyGenerateSheetSummary(sheet.fields, sheet.qualificationChecklist)
+    : EMPTY_SUMMARY_ATTEMPT;
+  const completedAt = new Date();
+  await db
+    .update(tenderAiSheetsTable)
+    .set({
+      summary: attempt.summary,
+      summaryPromptVersion: promptVersion,
+      summaryRequestedModel: requestedModel,
+      ...(attempt.model ? {
+        summaryResponseModel: attempt.model,
+        summaryGeneratedAt: completedAt,
+        summaryInputTokens: attempt.inputTokens,
+        summaryOutputTokens: attempt.outputTokens,
+        summaryEstimatedCostUsd: attempt.costUsd.toFixed(8),
+      } : {}),
+      updatedAt: completedAt,
+    })
+    .where(and(
+      eq(tenderAiSheetsTable.id, sheetId),
+      eq(tenderAiSheetsTable.status, "ready"),
+    ));
+}
+
 export async function getTenderSheet(
   tenderId: string,
   userId?: string,
   now = new Date(),
 ): Promise<TenderSheetResponse> {
+  const summaryConfig = openAiConfig();
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   const unreadDocuments = await unreadDocumentCount(tenderId);
   if (indexStatus === "expired") {
     const [cachedSheet] = await db.select().from(tenderAiSheetsTable)
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
       .limit(1);
-    if (cachedSheet) return {
-      status: "ready", fields: cachedSheet.fields, qualificationChecklist: cachedSheet.qualificationChecklist, unreadDocuments: cachedSheet.unreadDocuments,
-      model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
-      generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
-    };
+    if (cachedSheet) return readySheetResponse(cachedSheet, summaryConfig);
   }
   if (indexStatus !== "ready")
     return EMPTY_RESPONSE(indexStatus, unreadDocuments);
@@ -473,14 +619,7 @@ export async function getTenderSheet(
     .where(cacheWhere)
     .limit(1);
   if (cached?.status === "ready") {
-    return {
-      status: "ready",
-      fields: cached.fields,
-      qualificationChecklist: cached.qualificationChecklist,
-      unreadDocuments: cached.unreadDocuments,
-      model: cached.responseModel ?? cached.requestedModel,
-      generatedAt: cached.generatedAt?.toISOString() ?? null,
-    };
+    return readySheetResponse(cached, summaryConfig);
   }
   const staleProcessing =
     cached?.status === "processing" &&
@@ -533,6 +672,14 @@ export async function getTenderSheet(
         status: "processing",
         fields: [],
         qualificationChecklist: [],
+        summary: null,
+        summaryPromptVersion: SHEET_SUMMARY_PROMPT_VERSION,
+        summaryRequestedModel: "disabled",
+        summaryResponseModel: null,
+        summaryGeneratedAt: null,
+        summaryInputTokens: 0,
+        summaryOutputTokens: 0,
+        summaryEstimatedCostUsd: "0",
         diagnostics: [],
         unreadDocuments,
         responseModel: null,

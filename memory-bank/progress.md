@@ -98,6 +98,14 @@ Deriva de [activeContext](activeContext.md).
 - "Seus prazos" com uma linha por edital; perfil e buscas salvas sem status abrem em todos os status.
 - QA: `docs/reviews/cycle13-qa.md`.
 
+## O que já funciona — resumos redigidos pela OpenAI (ciclo 14)
+
+- Perguntar ao edital e ficha ganham `summary` opcional, redigido pelo `gpt-4o-mini` só a partir do que o Jev
+  selecionou, com citações clicáveis. Sem `OPENAI_API_KEY`, a tela fica como antes.
+- Ligar a chave ou trocar o modelo não recalcula a ficha no Jev; o resumo vem de um job próprio.
+- Custos `ask_summary` e `sheet_summary` no ledger e no disjuntor. Contratos: `ai-v1.md`, `ai-cost-v1.md`,
+  `ai-queue-v1.md`.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).

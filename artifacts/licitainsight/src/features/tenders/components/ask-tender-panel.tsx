@@ -11,6 +11,7 @@ import { ASK_MAX_LENGTH, ASK_MIN_LENGTH } from '@/services/ai-service';
 import { cn } from '@/lib/utils';
 import { useAskStatus, useAskTender } from '../hooks/use-ask-tender';
 import { markQuestionTerms, questionStems } from '../lib/question-terms';
+import { AutomaticSummary } from './automatic-summary';
 
 /** Fill the field, never submit: each question spends quota (5 a day on the trial). */
 const SUGGESTIONS = [
@@ -68,10 +69,10 @@ function unreadDocuments(status: TenderAskStatus | undefined) {
 const unreadNote = (count: number) =>
   count === 1 ? '1 documento não pôde ser lido' : `${count} documentos não puderam ser lidos`;
 
-function Passage({ passage, stems }: { passage: AskTenderPassage; stems: Set<string> }) {
+function Passage({ passage, stems, id }: { passage: AskTenderPassage; stems: Set<string>; id: string }) {
   const pct = Math.round(Math.min(1, Math.max(0, passage.relevance)) * 100);
   return (
-    <li className="rounded-lg border border-border-subtle bg-surface p-4" data-testid="ask-passage">
+    <li id={id} className="scroll-mt-24 rounded-lg border border-border-subtle bg-surface p-4" data-testid="ask-passage">
       {/* Marks only help the eye find the answer inside ~700 chars; the text itself is the official passage, unchanged. */}
       <blockquote className="border-l-2 border-primary/50 pl-3 type-body break-words text-foreground/90">
         {markQuestionTerms(passage.text, stems).map((part, index) =>
@@ -111,21 +112,22 @@ function Passage({ passage, stems }: { passage: AskTenderPassage; stems: Set<str
 const passageKey = (passage: AskTenderPassage) => `${passage.documentId}-${passage.page}-${passage.text.slice(0, 24)}`;
 
 /** The best passage first; the rest, also above the threshold, are labelled as supporting so they don't read as equally good answers. */
-function Passages({ question, passages }: { question: string; passages: AskTenderPassage[] }) {
+function Passages({ entryId, question, passages, summary }: { entryId: number; question: string; passages: AskTenderPassage[]; summary: AskTenderResult['summary'] }) {
   const stems = questionStems(question);
   const [best, ...others] = [...passages].sort((a, b) => b.relevance - a.relevance);
   if (!best) return null;
   return (
     <>
+      <AutomaticSummary summary={summary} heading="Resposta" citationHref={(citation) => `#ask-passage-${entryId}-${citation}`} />
       <ol className="space-y-3" aria-label="Trecho que melhor responde">
-        <Passage passage={best} stems={stems} />
+        <Passage passage={best} stems={stems} id={`ask-passage-${entryId}-1`} />
       </ol>
       {others.length > 0 && (
         <>
           <h3 className="pt-1 type-meta font-semibold text-muted-foreground">Outros trechos que podem ajudar</h3>
           <ol className="space-y-3" aria-label="Outros trechos que podem ajudar">
-            {others.map((passage) => (
-              <Passage key={passageKey(passage)} passage={passage} stems={stems} />
+            {others.map((passage, index) => (
+              <Passage key={passageKey(passage)} passage={passage} stems={stems} id={`ask-passage-${entryId}-${index + 2}`} />
             ))}
           </ol>
         </>
@@ -163,7 +165,9 @@ function Answer({ entry, status }: { entry: Entry; status: TenderAskStatus | und
           </span>
         </p>
       )}
-      {entry.state === 'done' && entry.result.status === 'answered' && <Passages question={entry.question} passages={entry.result.passages} />}
+      {entry.state === 'done' && entry.result.status === 'answered' && (
+        <Passages entryId={entry.id} question={entry.question} passages={entry.result.passages} summary={entry.result.summary} />
+      )}
       {entry.state === 'done' && entry.result.status === 'not_found' && (
         <div className={noteBox} data-testid="text-ask-not-found">
           <SearchX size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
@@ -334,7 +338,7 @@ function IndexState({ status, onRetry, retrying }: { status: TenderAskStatus; on
 }
 
 /**
- * "Perguntar ao edital" (ai-v1). Jev picks official passages; the panel never shows generated text.
+ * "Perguntar ao edital" (ai-v1). Jev picks official passages; an optional summary only rewrites those passages.
  * Visitors and accounts without access see the title and one line ("Antes de decidir" explains the gate); with access → index state, quota and the question form.
  */
 export function AskTenderPanel({ tenderId }: { tenderId: string }) {
@@ -381,7 +385,7 @@ export function AskTenderPanel({ tenderId }: { tenderId: string }) {
       </div>
       {!gated && (
         <>
-          <p className="mt-1 mb-4 type-meta text-muted-foreground">A resposta é sempre um trecho dos documentos oficiais, com a página, nunca um texto gerado.</p>
+          <p className="mt-1 mb-4 type-meta text-muted-foreground">Os trechos vêm dos documentos oficiais; quando disponível, um resumo curto ajuda a lê-los.</p>
           {body}
         </>
       )}

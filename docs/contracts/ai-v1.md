@@ -19,6 +19,14 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 - `AI_SHEET_ANSWER_THRESHOLD`: confiança mínima da Choice para expor a categoria, padrão `0.6`.
 - `AI_SHEET_CANDIDATE_LIMIT`: máximo de candidatos lexicais por campo, padrão `6`.
 - `AI_QUALIFICATION_CANDIDATE_LIMIT`: máximo de segmentos candidatos ao checklist por edital, padrão `40`.
+- `OPENAI_API_KEY`: chave server-side opcional. Ausente desliga somente os resumos e preserva os trechos e a ficha atuais.
+- `OPENAI_MODEL`: modelo de redação, padrão `gpt-4o-mini`.
+- `OPENAI_BASE_URL`: base da API, padrão `https://api.openai.com/v1`.
+- `OPENAI_TIMEOUT_MS`: timeout por tentativa, padrão `15000`.
+- `OPENAI_INPUT_USD_PER_MTOK`: custo por milhão de tokens de entrada, padrão `0.15`.
+- `OPENAI_OUTPUT_USD_PER_MTOK`: custo por milhão de tokens de saída, padrão `0.60`.
+
+Os preços padrão do `gpt-4o-mini` foram conferidos em 02/10/2026 na [documentação oficial do modelo](https://developers.openai.com/api/docs/models/gpt-4o-mini): US$ 0,15 por 1 milhão de tokens de entrada e US$ 0,60 por 1 milhão de tokens de saída. As variáveis de preço permitem atualizar o cálculo sem alterar código.
 
 ## Rotas
 
@@ -33,6 +41,14 @@ A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsup
 Exige sessão, CSRF e acesso vigente. Corpo: `{ "question": "texto de 3 a 300 caracteres" }`.
 
 Retorna `answered` com até três trechos acima do limiar, `not_found` sem evidência suficiente ou `processing` enquanto o índice é construído. O link sempre aponta para o documento oficial e a página é explícita.
+
+Quando o status é `answered` e a OpenAI está configurada, a resposta também pode trazer um campo aditivo:
+
+```ts
+summary: { text: string; citations: number[]; model: string } | null;
+```
+
+O `gpt-4o-mini` redige em até três frases somente a partir dos trechos `[1..3]` que o Jev já selecionou. Cada afirmação deve citar um desses números; a API descarta texto vazio, texto acima de 600 caracteres, JSON inválido e citação fora da faixa. `not_found` e `processing` não chamam a OpenAI. Chave ausente, disjuntor aberto, timeout ou falha deixam `summary: null` e não transformam a rota em 5xx. A versão do prompt e o modelo de redação fazem parte da chave de cache, e o resumo não consome uma segunda unidade da cota diária do usuário.
 
 Erros específicos: `402 SUBSCRIPTION_REQUIRED`, `429 AI_QUOTA_EXCEEDED` e `503 AI_UNAVAILABLE`.
 
@@ -56,6 +72,7 @@ type TenderSheet = {
     | "expired";
   fields: SheetField[];
   qualificationChecklist: QualificationItem[];
+  summary: { text: string; citations: number[]; model: string } | null;
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
@@ -116,10 +133,12 @@ Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_fo
 
 Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas após 5 minutos, 30 minutos, 2 horas e, daí em diante, uma vez por dia, até o teto configurado. HTTP 404, URL/arquivo inválido e limites de tamanho são definitivos. Uma recuperação incrementa `indexVersion`, invalida perguntas e fichas em cache e preserva os trechos dos demais documentos. Se a reextração falhar, uma extração anterior que ainda seja legível não é removida.
 
-A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt atual é `3`. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
+A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt da ficha continua `3`; ligar ou trocar o modelo OpenAI invalida somente o resumo e não recalcula os campos. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
+
+O resumo opcional tem versão própria (`SHEET_SUMMARY_PROMPT_VERSION = 1`) e usa somente campos `found` e itens do `qualificationChecklist`, em 2 a 4 frases; as citações numéricas apontam para esses itens na ordem em que aparecem na resposta. Ausência só pode ser descrita como “não encontrado nos documentos lidos”, nunca como inexistência ou dispensa. Uma ficha nova pode gerar o resumo no próprio job `sheet`; uma ficha pronta com modelo ou versão diferente é devolvida imediatamente com `summary: null`, enquanto um job deduplicado `sheet_summary` chama somente a OpenAI e atualiza a mesma linha. Sem chave não há job; falha ou disjuntor aberto deixam o estado atual com resumo nulo, sem 5xx nem repetição do Jev. Tokens e custo aparecem no ledger como `sheet_summary`, sem entrar em `ai_sheet_daily_usage`, que mede apenas o teto e o custo do Jev para gerar fichas.
 
 ## Privacidade e retenção
 
-Somente pergunta e trechos do edital são enviados ao Jev. Perguntas ficam no export LGPD, são excluídas com a conta e expiram após 90 dias. Respostas em cache do próprio usuário não consomem nova cota.
+Somente pergunta e trechos do edital são enviados ao Jev. Quando o resumo está habilitado, a OpenAI recebe a pergunta e no máximo os três trechos já selecionados; nenhum id, e-mail ou nome de usuário é enviado, e a chamada usa `store: false`. Perguntas ficam no export LGPD, são excluídas com a conta e expiram após 90 dias. Respostas em cache do próprio usuário não consomem nova cota.
 
 Trechos, documentos extraídos e o índice são purgados 90 dias após `proposalDeadline`, exceto quando algum usuário salvou o edital. O edital permanece na base e o índice recebe um tombstone. `ask-status` e ficha sem cache retornam `expired`; ficha já pronta continua `ready`. `POST ask` retorna `409 CONFLICT` com `details: [{ "field": "index", "issue": "index_expired" }]`. Salvar o edital depois do purge permite uma nova indexação para o usuário que o salvou.

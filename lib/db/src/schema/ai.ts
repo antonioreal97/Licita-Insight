@@ -18,6 +18,12 @@ export type AiPassageRecord = {
   relevance: number;
 };
 
+export type AiGeneratedSummary = {
+  text: string;
+  citations: number[];
+  model: string;
+};
+
 export type TenderSheetFieldId =
   | "consortium"
   | "subcontracting"
@@ -190,6 +196,18 @@ export const aiAskRequestsTable = pgTable(
       .$type<AiPassageRecord[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    summary: jsonb("summary").$type<AiGeneratedSummary>(),
+    summaryPromptVersion: integer("summary_prompt_version").notNull().default(1),
+    summaryRequestedModel: text("summary_requested_model").notNull().default("disabled"),
+    summaryResponseModel: text("summary_response_model"),
+    summaryInputTokens: integer("summary_input_tokens").notNull().default(0),
+    summaryOutputTokens: integer("summary_output_tokens").notNull().default(0),
+    summaryEstimatedCostUsd: numeric("summary_estimated_cost_usd", {
+      precision: 14,
+      scale: 8,
+    })
+      .notNull()
+      .default("0"),
     inputTokens: integer("input_tokens").notNull().default(0),
     estimatedCostUsd: numeric("estimated_cost_usd", {
       precision: 14,
@@ -202,7 +220,15 @@ export const aiAskRequestsTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("ai_ask_requests_cache_uidx").on(table.userId, table.tenderId, table.normalizedQuestion, table.indexVersion, table.requestedModel),
+    uniqueIndex("ai_ask_requests_cache_uidx").on(
+      table.userId,
+      table.tenderId,
+      table.normalizedQuestion,
+      table.indexVersion,
+      table.requestedModel,
+      table.summaryPromptVersion,
+      table.summaryRequestedModel,
+    ),
     index("ai_ask_requests_user_created_idx").on(table.userId, table.createdAt),
     check(
       "ai_ask_requests_status_check",
@@ -234,6 +260,19 @@ export const tenderAiSheetsTable = pgTable(
       .$type<TenderSheetDiagnostic[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    summary: jsonb("summary").$type<AiGeneratedSummary>(),
+    summaryPromptVersion: integer("summary_prompt_version").notNull().default(1),
+    summaryRequestedModel: text("summary_requested_model").notNull().default("disabled"),
+    summaryResponseModel: text("summary_response_model"),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
+    summaryInputTokens: integer("summary_input_tokens").notNull().default(0),
+    summaryOutputTokens: integer("summary_output_tokens").notNull().default(0),
+    summaryEstimatedCostUsd: numeric("summary_estimated_cost_usd", {
+      precision: 14,
+      scale: 8,
+    })
+      .notNull()
+      .default("0"),
     unreadDocuments: integer("unread_documents").notNull().default(0),
     responseModel: text("response_model"),
     inputTokens: integer("input_tokens").notNull().default(0),
@@ -248,7 +287,12 @@ export const tenderAiSheetsTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("tender_ai_sheets_cache_uidx").on(table.tenderId, table.indexVersion, table.requestedModel, table.promptVersion),
+    uniqueIndex("tender_ai_sheets_cache_uidx").on(
+      table.tenderId,
+      table.indexVersion,
+      table.requestedModel,
+      table.promptVersion,
+    ),
     index("tender_ai_sheets_tender_idx").on(table.tenderId, table.updatedAt),
     check(
       "tender_ai_sheets_status_check",

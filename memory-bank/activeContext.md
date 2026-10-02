@@ -4,6 +4,24 @@ Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.m
 
 ## Foco agora
 
+Ciclo 14 (02 out 2026, branch `antonioreal97/cycle14` a partir do `main` com o PR #16 mergeado; sem deploy).
+Decisão do owner: o Jev continua escolhendo os trechos e decidindo se há evidência; o `gpt-4o-mini` só **redige**
+a partir deles. A chave da OpenAI é do owner e ainda não existe; sem ela tudo funciona como antes. Run do Orca
+`run_bf86b565bdb1` (Codex, que voltou a subir no Orca; parou uma vez no limite de uso e retomou):
+- J `2567865`: resumo no Perguntar ao edital (até 3 frases, citações [n] validadas, cache com a versão do prompt)
+  e na ficha (2 a 4 frases, gerado no worker). Falha, timeout, sem chave ou disjuntor aberto → `summary: null`.
+  Ledger com `ask_summary`/`sheet_summary`; padrão US$ 0,15/0,60 por MTok (conferido em 02/10/2026).
+  Migration `0020_openai_summaries`.
+- J2 `b00f34b` (correção pedida na revisão): a J tinha subido `SHEET_PROMPT_VERSION` e posto o modelo do resumo
+  na chave da ficha, o que faria o Jev recalcular todas as fichas no deploy e de novo ao ligar a chave. Agora a
+  ficha fica na versão 3 com a chave histórica; o resumo tem versão própria e job `sheet_summary` que só chama a
+  OpenAI. O custo dele fica fora de `ai_sheet_daily_usage` (teto do Jev) e conta no disjuntor via
+  `summary_generated_at`.
+- Verificação (minha, além do worker): API 225/225 com banco migrado, frontend 29/29, typecheck OK. Sem QA de
+  navegador neste ciclo.
+Para ligar: `OPENAI_API_KEY` no `.env` real e no `beta.env` e limite de gasto no projeto da OpenAI. A 0020 ainda
+não foi aplicada no banco `licita` local.
+
 Ciclo 13 (30 set 2026, branch `antonioreal97/cycle13` a partir do `main` com o PR #15 mergeado; sem deploy).
 Decisões do owner: "Seus prazos" com **uma linha por edital**; link de perfil abrindo em **todos os status**;
 na segurança, **só rate limiting agora** (a auditoria detalhada vem depois). Run do Orca `run_6e6f2c351510`:

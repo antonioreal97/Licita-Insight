@@ -8,6 +8,20 @@ const probability = (name: string, fallback: number): number => {
   return Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
 };
 
+const nonNegativeDecimal = (name: string, fallback: number): number => {
+  const value = Number(process.env[name] ?? fallback);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+};
+
+export const openAiConfig = () => ({
+  apiKey: process.env.OPENAI_API_KEY?.trim() || null,
+  model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+  baseUrl: (process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1").replace(/\/$/u, ""),
+  timeoutMs: positiveInteger("OPENAI_TIMEOUT_MS", 15_000),
+  inputUsdPerMtok: nonNegativeDecimal("OPENAI_INPUT_USD_PER_MTOK", 0.15),
+  outputUsdPerMtok: nonNegativeDecimal("OPENAI_OUTPUT_USD_PER_MTOK", 0.6),
+});
+
 export const aiConfig = () => ({
   apiKey: process.env.JEV_API_KEY?.trim() || null,
   model: process.env.JEV_MODEL?.trim() || "jev-1.13.0",

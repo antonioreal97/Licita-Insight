@@ -4,7 +4,7 @@ import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { incrementMetric, observeMetric } from "../metrics";
 
-export type AiJobKind = "index" | "fit" | "sheet";
+export type AiJobKind = "index" | "fit" | "sheet" | "sheet_summary";
 export type AiJobLane = "interactive" | "batch";
 
 export type AiJob = {
@@ -79,11 +79,13 @@ export const aiJobQueueConfig = () => ({
     index: positiveInteger("AI_QUEUE_MAX_DEPTH_INDEX", 1_000),
     fit: positiveInteger("AI_QUEUE_MAX_DEPTH_FIT", 10_000),
     sheet: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
+    sheet_summary: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
   } satisfies Record<AiJobKind, number>,
   concurrency: {
     index: positiveInteger("WORKER_INDEX_CONCURRENCY", 2),
     fit: positiveInteger("WORKER_FIT_CONCURRENCY", 8),
     sheet: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
+    sheet_summary: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
   } satisfies Record<AiJobKind, number>,
   indexPerUserPerHour: positiveInteger("AI_INDEX_ENQUEUE_PER_USER_PER_HOUR", 60),
 });
@@ -230,6 +232,16 @@ export async function executeAiJob(job: AiJob): Promise<void> {
     await executeCompanyFitJob(String(job.payload.fitId));
     return;
   }
+  if (job.kind === "sheet_summary") {
+    const { executeTenderSheetSummaryJob } = await import("./tender-sheet-service");
+    await executeTenderSheetSummaryJob(
+      String(job.payload.sheetId),
+      job.tenderId,
+      String(job.payload.model),
+      Number(job.payload.promptVersion),
+    );
+    return;
+  }
   const { executeTenderSheetJob } = await import("./tender-sheet-service");
   await executeTenderSheetJob(String(job.payload.sheetId), job.tenderId);
 }
@@ -267,7 +279,12 @@ export function startAiJobWorker(options: {
   let stopped = false;
   let recovering = false;
   const active = new Set<Promise<void>>();
-  const activeByKind: Record<AiJobKind, number> = { index: 0, fit: 0, sheet: 0 };
+  const activeByKind: Record<AiJobKind, number> = {
+    index: 0,
+    fit: 0,
+    sheet: 0,
+    sheet_summary: 0,
+  };
 
   const handle = (job: AiJob): void => {
     observeMetric("licitai_ai_job_queue_wait_seconds", Math.max(0, (Date.now() - job.createdAt.getTime()) / 1_000), {
@@ -306,7 +323,7 @@ export function startAiJobWorker(options: {
     }
     const { isAiBatchBudgetPaused } = await import("./ai-budget");
     const budgetPaused = await isAiBatchBudgetPaused();
-    for (const kind of ["index", "sheet", "fit"] as const) {
+    for (const kind of ["index", "sheet", "sheet_summary", "fit"] as const) {
       if (kind === "fit" && budgetPaused) continue;
       const available = config.concurrency[kind] - activeByKind[kind];
       if (available < 1) continue;

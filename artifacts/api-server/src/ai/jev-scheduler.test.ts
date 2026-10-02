@@ -71,7 +71,11 @@ test("interactive queue times out instead of hanging", async () => {
 });
 
 test("real concurrent mix respects 50% batch and global ceilings", async () => {
-  const scheduler = new JevScheduler(config({ maxConcurrency: 10, batchMaxShare: 0.5 }));
+  const scheduler = new JevScheduler(config({
+    maxConcurrency: 10,
+    batchMaxShare: 0.5,
+    interactiveQueueTimeoutMs: 500,
+  }));
   let batchPeak = 0;
   let totalPeak = 0;
   const operation = (lane: "interactive" | "batch") => scheduler.schedule(lane, async () => {

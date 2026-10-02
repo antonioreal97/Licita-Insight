@@ -12,9 +12,10 @@ import { useTenderSheet } from '../hooks/use-tender-sheet';
 import { sheetExcerpt } from '../lib/sheet-excerpt';
 import { FIELDS, QUALIFICATION_LABELS, QUALIFICATION_ORDER } from '../lib/sheet-labels';
 import { SourceLink } from './source-link';
+import { AutomaticSummary } from './automatic-summary';
 
 /** One row per requirement type; each official passage keeps its own page link. `prep`: the user's mark, in "O que preparar". */
-function QualificationRow({ type, items, prep }: { type: QualificationType; items: QualificationItem[]; prep?: ReactNode }) {
+function QualificationRow({ type, items, sourceNumbers, prep }: { type: QualificationType; items: QualificationItem[]; sourceNumbers: number[]; prep?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const passagesId = useId();
   const single = items.length === 1;
@@ -24,8 +25,10 @@ function QualificationRow({ type, items, prep }: { type: QualificationType; item
       <dd className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="type-meta text-muted-foreground">{single ? 'Exigido' : `Exigido em ${items.length} trechos`}</span>
-          {items.map((item) => (
-            <SourceLink key={`${item.evidence.documentUrl}-${item.evidence.page}`} evidence={item.evidence} />
+          {items.map((item, index) => (
+            <span key={`${item.evidence.documentUrl}-${item.evidence.page}`} id={`sheet-summary-source-${sourceNumbers[index]}`} className="scroll-mt-24">
+              <SourceLink evidence={item.evidence} />
+            </span>
           ))}
           <button
             type="button"
@@ -85,7 +88,7 @@ function PreviewText({ field }: { field: SheetField }) {
   return <>{excerpt.trimmed ? `…${excerpt.text}` : excerpt.text}</>;
 }
 
-function FieldRow({ field, prep }: { field: SheetField; prep?: ReactNode }) {
+function FieldRow({ field, sourceNumber, prep }: { field: SheetField; sourceNumber?: number; prep?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const passageId = useId();
   const copy = FIELDS[field.id];
@@ -93,7 +96,12 @@ function FieldRow({ field, prep }: { field: SheetField; prep?: ReactNode }) {
   const categorical = Boolean(copy.answers);
 
   return (
-    <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4" data-testid={`sheet-field-${field.id}`} data-status={field.status}>
+    <div
+      id={sourceNumber ? `sheet-summary-source-${sourceNumber}` : undefined}
+      className="scroll-mt-24 grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4"
+      data-testid={`sheet-field-${field.id}`}
+      data-status={field.status}
+    >
       <dt className="type-ui font-medium text-foreground">{copy.label}</dt>
       <dd className="min-w-0">
         {field.status === 'not_found' || !field.evidence ? (
@@ -143,6 +151,13 @@ function FieldRow({ field, prep }: { field: SheetField; prep?: ReactNode }) {
 function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }) {
   const byId = new Map(sheet.fields.map((field) => [field.id, field]));
   const found = sheet.fields.filter((field) => field.status === 'found').length;
+  const fieldSourceNumbers = new Map<SheetFieldId, number>();
+  const qualificationSourceNumbers = new Map<QualificationItem, number>();
+  let sourceNumber = 1;
+  for (const field of sheet.fields) {
+    if (field.status === 'found' && field.evidence) fieldSourceNumbers.set(field.id, sourceNumber++);
+  }
+  for (const item of sheet.qualificationChecklist) qualificationSourceNumbers.set(item, sourceNumber++);
   const checklist = new Map<QualificationType, QualificationItem[]>();
   for (const item of sheet.qualificationChecklist) checklist.set(item.type, [...(checklist.get(item.type) ?? []), item]);
   const covered = (id: SheetFieldId) => {
@@ -182,6 +197,7 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
                   key={type}
                   type={type}
                   items={checklist.get(type)!}
+                  sourceNumbers={checklist.get(type)!.map((item) => qualificationSourceNumbers.get(item)!)}
                   prep={<ChecklistControl tenderId={tenderId} itemKey={type} label={QUALIFICATION_LABELS[type]} />}
                 />
               ))}
@@ -189,6 +205,7 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
                 <FieldRow
                   key={field.id}
                   field={field}
+                  sourceNumber={fieldSourceNumbers.get(field.id)}
                   prep={group.prepare ? <ChecklistControl tenderId={tenderId} itemKey={PREP_KEY[field.id]!} label={FIELDS[field.id].label} /> : undefined}
                 />
               ))}
@@ -202,6 +219,11 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
 
   return (
     <>
+      {sheet.summary && (
+        <div className="mb-4">
+          <AutomaticSummary summary={sheet.summary} heading="Resumo" citationHref={(citation) => `#sheet-summary-source-${citation}`} />
+        </div>
+      )}
       <p className="mb-4 type-meta text-muted-foreground" data-testid="text-sheet-summary">
         {found === 0
           ? 'Nenhum dos campos foi encontrado nos documentos lidos.'

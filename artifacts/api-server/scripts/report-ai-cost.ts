@@ -51,14 +51,14 @@ try {
   if (userId) ledgerParams.push(userId);
   const [byFeatureResult, dailyResult, usersResult, askCapsResult, fitCapsResult] = await Promise.all([
     client.query<{ feature: string; calls: string; tokens: string; cost_usd: string }>(`
-      select feature, count(*)::text as calls, coalesce(sum(input_tokens), 0)::text as tokens,
+      select feature, count(*)::text as calls, coalesce(sum(input_tokens + output_tokens), 0)::text as tokens,
              coalesce(sum(cost_usd), 0)::text as cost_usd
       from ai_usage_ledger
       where occurred_at >= now() - ($1::int * interval '1 day') ${userClause}
       group by feature order by feature`, ledgerParams),
     client.query<{ day: string; calls: string; tokens: string; cost_usd: string }>(`
       select (occurred_at at time zone 'America/Sao_Paulo')::date::text as day,
-             count(*)::text as calls, coalesce(sum(input_tokens), 0)::text as tokens,
+             count(*)::text as calls, coalesce(sum(input_tokens + output_tokens), 0)::text as tokens,
              coalesce(sum(cost_usd), 0)::text as cost_usd
       from ai_usage_ledger
       where occurred_at >= now() - ($1::int * interval '1 day') ${userClause}
@@ -110,11 +110,15 @@ try {
   const report = {
     period: { days: options.days, userId: userId ?? null, generatedAt: new Date().toISOString() },
     total, byFeature,
-    platform: byFeature.sheet ?? { calls: 0, tokens: 0, costUsd: 0 },
+    platform: ["sheet", "sheet_summary"].reduce((sum, feature) => ({
+      calls: sum.calls + (byFeature[feature]?.calls ?? 0),
+      tokens: sum.tokens + (byFeature[feature]?.tokens ?? 0),
+      costUsd: sum.costUsd + (byFeature[feature]?.costUsd ?? 0),
+    }), { calls: 0, tokens: 0, costUsd: 0 }),
     userAttributed: {
-      calls: (byFeature.ask?.calls ?? 0) + (byFeature.fit?.calls ?? 0),
-      tokens: (byFeature.ask?.tokens ?? 0) + (byFeature.fit?.tokens ?? 0),
-      costUsd: (byFeature.ask?.costUsd ?? 0) + (byFeature.fit?.costUsd ?? 0),
+      calls: (byFeature.ask?.calls ?? 0) + (byFeature.ask_summary?.calls ?? 0) + (byFeature.fit?.calls ?? 0),
+      tokens: (byFeature.ask?.tokens ?? 0) + (byFeature.ask_summary?.tokens ?? 0) + (byFeature.fit?.tokens ?? 0),
+      costUsd: (byFeature.ask?.costUsd ?? 0) + (byFeature.ask_summary?.costUsd ?? 0) + (byFeature.fit?.costUsd ?? 0),
     },
     daily: dailyResult.rows.map((row) => ({ day: row.day, calls: numeric(row.calls), tokens: numeric(row.tokens), costUsd: numeric(row.cost_usd) })),
     users: { ...userStats, top10: usersResult.rows.slice(0, 10).map((row) => ({ userId: row.user_id, email: row.email, costUsd: numeric(row.cost_usd) })) },
@@ -139,7 +143,7 @@ try {
   else {
     process.stdout.write(`Custo de IA — últimos ${options.days} dias${userId ? ` — usuário ${userId}` : ""}\n`);
     process.stdout.write(`Total: ${total.calls} chamadas | ${total.tokens} tokens | US$ ${total.costUsd.toFixed(8)}\n`);
-    for (const feature of ["ask", "fit", "sheet"]) {
+    for (const feature of ["ask", "ask_summary", "fit", "sheet", "sheet_summary"]) {
       const row = byFeature[feature] ?? { calls: 0, tokens: 0, costUsd: 0 };
       process.stdout.write(`${feature}: ${row.calls} chamadas | ${row.tokens} tokens | US$ ${row.costUsd.toFixed(8)}\n`);
     }

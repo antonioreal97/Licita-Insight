@@ -1,12 +1,14 @@
 # Contrato interno — fila durável de IA v1
 
-`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`) e ficha (`sheet`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada Jev de lote.
+`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`), ficha (`sheet`) e resumo de ficha (`sheet_summary`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada aos modelos.
+
+Uma ficha nova pode produzir o resumo OpenAI ao fim do próprio job `sheet`. Para fichas prontas cujo modelo ou versão do resumo esteja desatualizado, `GET /sheet` devolve imediatamente os campos em cache com `summary: null` e enfileira `sheet_summary`; esse job lê os campos e o checklist gravados e chama somente a OpenAI, sem repetir o Jev. Falha, disjuntor aberto ou ausência posterior da chave deixam o resumo nulo e encerram o job sem retentativa automática.
 
 ## Estados e prioridade
 
 O ciclo é `queued → running → succeeded`. Falha transitória volta a `queued` com backoff exponencial limitado a cinco minutos; ao atingir `max_attempts`, passa a `dead`. A visibilidade de um job `running` é renovada durante a execução. Se `locked_until` vencer, outro worker o recoloca na fila ou o encerra como `dead`. O claim usa uma única instrução `UPDATE … FOR UPDATE SKIP LOCKED … RETURNING`, prioriza `interactive` sobre `batch` e, na faixa, o job mais antigo.
 
-O `dedupe_key` é único e inclui o tipo, edital e a versão relevante: fingerprint do índice, versão do perfil/prompt/modelo no fit e chave global do cache da ficha. Assim, requisições concorrentes observam o mesmo trabalho. O status público `processing`/`pending` representa tanto fila quanto execução.
+O `dedupe_key` é único e inclui o tipo, edital e a versão relevante: fingerprint do índice, versão do perfil/prompt/modelo no fit e chave global do cache da ficha. Para `sheet_summary`, inclui id da ficha, modelo OpenAI solicitado e versão do prompt do resumo; assim, dois GETs concorrentes criam um único job. O status público `processing`/`pending` representa tanto fila quanto execução da ficha; a atualização isolada do resumo não muda uma ficha pronta para `processing`.
 
 ## Contenção
 
