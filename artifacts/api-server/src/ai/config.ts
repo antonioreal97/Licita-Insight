@@ -42,7 +42,7 @@ export const aiConfig = () => ({
   fitExcludedThreshold: probability("AI_FIT_EXCLUDED_THRESHOLD", 0.65),
   maxDocumentBytes: positiveInteger("AI_MAX_DOCUMENT_BYTES", 25 * 1024 * 1024),
   maxPdfPages: positiveInteger("AI_MAX_PDF_PAGES", 300),
-  documentTimeoutMs: positiveInteger("AI_DOCUMENT_TIMEOUT_MS", 30_000),
+  documentTimeoutMs: positiveInteger("AI_DOCUMENT_TIMEOUT_MS", 300_000),
   documentRetryMaxAttempts: positiveInteger(
     "AI_DOCUMENT_RETRY_MAX_ATTEMPTS",
     6,
