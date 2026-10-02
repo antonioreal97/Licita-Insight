@@ -19,6 +19,7 @@
     "scale:load": "node --env-file-if-exists=../../.env --import tsx scripts/scale-load.ts",
     "scale:drop": "node --env-file-if-exists=../../.env --import tsx scripts/scale-drop.ts",
     "report:ai-cost": "node --env-file-if-exists=../../.env --import tsx scripts/report-ai-cost.ts",
+    "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",

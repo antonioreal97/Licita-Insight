@@ -2,6 +2,8 @@
 
 `ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`) e ficha (`sheet`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada Jev de lote.
 
+O resumo OpenAI da ficha roda dentro do job `sheet`, depois que os campos e o checklist foram calculados. Ele não cria uma nova espécie de job e nunca é executado pelo `GET /sheet`; falha ou ausência da chave preserva a ficha pronta com `summary: null`.
+
 ## Estados e prioridade
 
 O ciclo é `queued → running → succeeded`. Falha transitória volta a `queued` com backoff exponencial limitado a cinco minutos; ao atingir `max_attempts`, passa a `dead`. A visibilidade de um job `running` é renovada durante a execução. Se `locked_until` vencer, outro worker o recoloca na fila ou o encerra como `dead`. O claim usa uma única instrução `UPDATE … FOR UPDATE SKIP LOCKED … RETURNING`, prioriza `interactive` sobre `batch` e, na faixa, o job mais antigo.

@@ -6,6 +6,7 @@ import {
   tenderAiDocumentsTable,
   tenderAiIndexesTable,
   tenderAiSheetsTable,
+  type AiGeneratedSummary,
   type QualificationItem,
   type TenderSheetDiagnostic,
   type TenderSheetField,
@@ -15,7 +16,7 @@ import { AiQuotaExceededError, AiUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { ensureTenderIndex } from "./ask-tender-service";
-import { aiConfig } from "./config";
+import { aiConfig, openAiConfig } from "./config";
 import {
   classifyQualificationCandidate,
   classifySheetField,
@@ -40,6 +41,10 @@ import {
   stitchIndexedPage,
   type QualificationScoredCandidate,
 } from "./qualification-checklist-policy";
+import {
+  generateSheetSummary,
+  type SummaryAttempt,
+} from "./openai-summary";
 
 type SheetStatus =
   | "not_started"
@@ -54,10 +59,31 @@ export type TenderSheetResponse = {
   status: SheetStatus;
   fields: TenderSheetField[];
   qualificationChecklist: QualificationItem[];
+  summary: AiGeneratedSummary | null;
   unreadDocuments: number;
   model: string | null;
   generatedAt: string | null;
 };
+
+const EMPTY_SUMMARY_ATTEMPT: SummaryAttempt = {
+  summary: null,
+  model: null,
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+};
+
+async function safelyGenerateSheetSummary(
+  fields: TenderSheetField[],
+  qualificationChecklist: QualificationItem[],
+): Promise<SummaryAttempt> {
+  try {
+    return await generateSheetSummary(fields, qualificationChecklist);
+  } catch (error) {
+    logger.warn({ err: error }, "OpenAI tender-sheet summary was discarded");
+    return EMPTY_SUMMARY_ATTEMPT;
+  }
+}
 
 export type TenderSheetCalculation = {
   fields: TenderSheetField[];
@@ -100,6 +126,7 @@ const EMPTY_RESPONSE = (
   status,
   fields: [],
   qualificationChecklist: [],
+  summary: null,
   unreadDocuments,
   model: null,
   generatedAt: null,
@@ -382,6 +409,10 @@ async function processSheet(
 ): Promise<void> {
   try {
     const calculated = await calculateTenderSheet(tenderId, indexVersion);
+    const summaryAttempt = await safelyGenerateSheetSummary(
+      calculated.fields,
+      calculated.qualificationChecklist,
+    );
     const estimatedCost = calculated.inputTokens * 0.000000042;
     const generatedAt = new Date();
     await db
@@ -390,6 +421,11 @@ async function processSheet(
         status: "ready",
         fields: calculated.fields,
         qualificationChecklist: calculated.qualificationChecklist,
+        summary: summaryAttempt.summary,
+        summaryResponseModel: summaryAttempt.model,
+        summaryInputTokens: summaryAttempt.inputTokens,
+        summaryOutputTokens: summaryAttempt.outputTokens,
+        summaryEstimatedCostUsd: summaryAttempt.costUsd.toFixed(8),
         diagnostics: calculated.diagnostics,
         unreadDocuments,
         responseModel: calculated.model,
@@ -402,8 +438,8 @@ async function processSheet(
     await db
       .update(aiSheetDailyUsageTable)
       .set({
-        inputTokens: sql`${aiSheetDailyUsageTable.inputTokens} + ${calculated.inputTokens}`,
-        estimatedCostUsd: sql`${aiSheetDailyUsageTable.estimatedCostUsd} + ${estimatedCost.toFixed(8)}`,
+        inputTokens: sql`${aiSheetDailyUsageTable.inputTokens} + ${calculated.inputTokens + summaryAttempt.inputTokens + summaryAttempt.outputTokens}`,
+        estimatedCostUsd: sql`${aiSheetDailyUsageTable.estimatedCostUsd} + ${(estimatedCost + summaryAttempt.costUsd).toFixed(8)}`,
         updatedAt: generatedAt,
       })
       .where(eq(aiSheetDailyUsageTable.quotaDay, quotaDay));
@@ -445,7 +481,8 @@ export async function getTenderSheet(
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
       .limit(1);
     if (cachedSheet) return {
-      status: "ready", fields: cachedSheet.fields, qualificationChecklist: cachedSheet.qualificationChecklist, unreadDocuments: cachedSheet.unreadDocuments,
+      status: "ready", fields: cachedSheet.fields, qualificationChecklist: cachedSheet.qualificationChecklist, summary: cachedSheet.summary,
+      unreadDocuments: cachedSheet.unreadDocuments,
       model: cachedSheet.responseModel ?? cachedSheet.requestedModel,
       generatedAt: cachedSheet.generatedAt?.toISOString() ?? null,
     };
@@ -454,18 +491,21 @@ export async function getTenderSheet(
     return EMPTY_RESPONSE(indexStatus, unreadDocuments);
 
   const config = aiConfig();
+  const summaryConfig = openAiConfig();
+  const summaryRequestedModel = summaryConfig.apiKey ? summaryConfig.model : "disabled";
   const [index] = await db
     .select({ version: tenderAiIndexesTable.version })
     .from(tenderAiIndexesTable)
     .where(eq(tenderAiIndexesTable.tenderId, tenderId))
     .limit(1);
   if (!index) return EMPTY_RESPONSE("not_started", unreadDocuments);
-  const cacheKey = sheetCacheKey(tenderId, index.version, config.model);
+  const cacheKey = `${sheetCacheKey(tenderId, index.version, config.model)}:openai:${summaryRequestedModel}`;
   const cacheWhere = and(
     eq(tenderAiSheetsTable.tenderId, tenderId),
     eq(tenderAiSheetsTable.indexVersion, index.version),
     eq(tenderAiSheetsTable.requestedModel, config.model),
     eq(tenderAiSheetsTable.promptVersion, SHEET_PROMPT_VERSION),
+    eq(tenderAiSheetsTable.summaryRequestedModel, summaryRequestedModel),
   );
   const [cached] = await db
     .select()
@@ -477,6 +517,7 @@ export async function getTenderSheet(
       status: "ready",
       fields: cached.fields,
       qualificationChecklist: cached.qualificationChecklist,
+      summary: cached.summary,
       unreadDocuments: cached.unreadDocuments,
       model: cached.responseModel ?? cached.requestedModel,
       generatedAt: cached.generatedAt?.toISOString() ?? null,
@@ -507,6 +548,7 @@ export async function getTenderSheet(
         indexVersion: index.version,
         requestedModel: config.model,
         promptVersion: SHEET_PROMPT_VERSION,
+        summaryRequestedModel,
         status: "processing",
         unreadDocuments,
         updatedAt: now,
@@ -533,6 +575,11 @@ export async function getTenderSheet(
         status: "processing",
         fields: [],
         qualificationChecklist: [],
+        summary: null,
+        summaryResponseModel: null,
+        summaryInputTokens: 0,
+        summaryOutputTokens: 0,
+        summaryEstimatedCostUsd: "0",
         diagnostics: [],
         unreadDocuments,
         responseModel: null,

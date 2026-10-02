@@ -1,0 +1,63 @@
+ALTER TABLE ai_ask_requests
+  ADD COLUMN summary jsonb,
+  ADD COLUMN summary_prompt_version integer NOT NULL DEFAULT 1,
+  ADD COLUMN summary_requested_model text NOT NULL DEFAULT 'disabled',
+  ADD COLUMN summary_response_model text,
+  ADD COLUMN summary_input_tokens integer NOT NULL DEFAULT 0,
+  ADD COLUMN summary_output_tokens integer NOT NULL DEFAULT 0,
+  ADD COLUMN summary_estimated_cost_usd numeric(14, 8) NOT NULL DEFAULT '0';
+--> statement-breakpoint
+DROP INDEX ai_ask_requests_cache_uidx;
+--> statement-breakpoint
+CREATE UNIQUE INDEX ai_ask_requests_cache_uidx ON ai_ask_requests (
+  user_id, tender_id, normalized_question, index_version, requested_model,
+  summary_prompt_version, summary_requested_model
+);
+--> statement-breakpoint
+ALTER TABLE tender_ai_sheets
+  ADD COLUMN summary jsonb,
+  ADD COLUMN summary_requested_model text NOT NULL DEFAULT 'disabled',
+  ADD COLUMN summary_response_model text,
+  ADD COLUMN summary_input_tokens integer NOT NULL DEFAULT 0,
+  ADD COLUMN summary_output_tokens integer NOT NULL DEFAULT 0,
+  ADD COLUMN summary_estimated_cost_usd numeric(14, 8) NOT NULL DEFAULT '0';
+--> statement-breakpoint
+DROP INDEX tender_ai_sheets_cache_uidx;
+--> statement-breakpoint
+CREATE UNIQUE INDEX tender_ai_sheets_cache_uidx ON tender_ai_sheets (
+  tender_id, index_version, requested_model, prompt_version, summary_requested_model
+);
+--> statement-breakpoint
+DROP VIEW ai_usage_ledger;
+--> statement-breakpoint
+CREATE VIEW ai_usage_ledger AS
+  SELECT created_at AS occurred_at, user_id, 'ask'::text AS feature,
+         tender_id, response_model AS model, input_tokens,
+         0::integer AS output_tokens, estimated_cost_usd AS cost_usd
+  FROM ai_ask_requests
+  WHERE status IN ('answered', 'not_found')
+  UNION ALL
+  SELECT created_at AS occurred_at, user_id, 'ask_summary'::text AS feature,
+         tender_id, summary_response_model AS model, summary_input_tokens AS input_tokens,
+         summary_output_tokens AS output_tokens, summary_estimated_cost_usd AS cost_usd
+  FROM ai_ask_requests
+  WHERE summary_input_tokens > 0 OR summary_output_tokens > 0 OR summary_estimated_cost_usd > 0
+  UNION ALL
+  SELECT checked_at AS occurred_at, user_id, 'fit'::text AS feature,
+         tender_id, response_model AS model, input_tokens,
+         0::integer AS output_tokens, estimated_cost_usd AS cost_usd
+  FROM company_tender_fits
+  WHERE status = 'ready' AND checked_at IS NOT NULL
+  UNION ALL
+  SELECT generated_at AS occurred_at, NULL::text AS user_id, 'sheet'::text AS feature,
+         tender_id, response_model AS model, input_tokens,
+         0::integer AS output_tokens, estimated_cost_usd AS cost_usd
+  FROM tender_ai_sheets
+  WHERE status = 'ready' AND generated_at IS NOT NULL
+  UNION ALL
+  SELECT generated_at AS occurred_at, NULL::text AS user_id, 'sheet_summary'::text AS feature,
+         tender_id, summary_response_model AS model, summary_input_tokens AS input_tokens,
+         summary_output_tokens AS output_tokens, summary_estimated_cost_usd AS cost_usd
+  FROM tender_ai_sheets
+  WHERE generated_at IS NOT NULL
+    AND (summary_input_tokens > 0 OR summary_output_tokens > 0 OR summary_estimated_cost_usd > 0);

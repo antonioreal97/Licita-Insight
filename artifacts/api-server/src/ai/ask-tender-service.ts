@@ -9,6 +9,7 @@ import {
   tenderAiIndexesTable,
   tenderAiPassagesTable,
   usersTable,
+  type AiGeneratedSummary,
   type AiPassageRecord,
 } from "@workspace/db";
 import { entitlementSource, type EntitlementSource } from "../billing/billing-access";
@@ -16,8 +17,13 @@ import { AiQuotaExceededError, AiUnavailableError, ConflictError } from "../lib/
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
-import { aiConfig } from "./config";
+import { aiConfig, openAiConfig } from "./config";
 import { JevUnavailableError, scoreTenderPassage } from "./jev-client";
+import {
+  ASK_SUMMARY_PROMPT_VERSION,
+  generateAskSummary,
+  type SummaryAttempt,
+} from "./openai-summary";
 import { aiDailyLimit, aiQuotaResetsAt, lexicalSearchQuery, selectEvidencePassages, type PassageCandidate } from "./policy";
 import { ensureTenderIndex, type IndexStatus } from "./tender-index-service";
 
@@ -37,6 +43,26 @@ export type AskStatus = {
 };
 
 const normalizeQuestion = (value: string): string => value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+
+const EMPTY_SUMMARY_ATTEMPT: SummaryAttempt = {
+  summary: null,
+  model: null,
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+};
+
+async function safelyGenerateAskSummary(
+  question: string,
+  passages: AiPassageRecord[],
+): Promise<SummaryAttempt> {
+  try {
+    return await generateAskSummary(question, passages);
+  } catch (error) {
+    logger.warn({ err: error }, "OpenAI ask summary was discarded");
+    return EMPTY_SUMMARY_ATTEMPT;
+  }
+}
 
 async function accessSource(userId: string, now: Date): Promise<EntitlementSource> {
   const [row] = await db
@@ -143,10 +169,13 @@ export async function askTender(
 ): Promise<{
   status: "answered" | "not_found" | "processing";
   passages: AiPassageRecord[];
+  summary: AiGeneratedSummary | null;
   model: string;
   quota: Quota;
 }> {
   const config = aiConfig();
+  const summaryConfig = openAiConfig();
+  const summaryRequestedModel = summaryConfig.apiKey ? summaryConfig.model : "disabled";
   if (!config.apiKey) throw new AiUnavailableError();
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   if (indexStatus === "expired") {
@@ -158,6 +187,7 @@ export async function askTender(
     return {
       status: "processing",
       passages: [],
+      summary: null,
       model: config.model,
       quota: await quotaFor(userId, now),
     };
@@ -170,6 +200,7 @@ export async function askTender(
     return {
       status: "not_found",
       passages: [],
+      summary: null,
       model: config.model,
       quota: await quotaFor(userId, now),
     };
@@ -184,6 +215,8 @@ export async function askTender(
         eq(aiAskRequestsTable.normalizedQuestion, normalizedQuestion),
         eq(aiAskRequestsTable.indexVersion, index.version),
         eq(aiAskRequestsTable.requestedModel, config.model),
+        eq(aiAskRequestsTable.summaryPromptVersion, ASK_SUMMARY_PROMPT_VERSION),
+        eq(aiAskRequestsTable.summaryRequestedModel, summaryRequestedModel),
       ),
     )
     .limit(1);
@@ -191,6 +224,7 @@ export async function askTender(
     return {
       status: cached.status,
       passages: cached.passages,
+      summary: cached.summary,
       model: cached.responseModel ?? config.model,
       quota: await quotaFor(userId, now),
     };
@@ -200,6 +234,7 @@ export async function askTender(
     return {
       status: "not_found",
       passages: [],
+      summary: null,
       model: config.model,
       quota: await quotaFor(userId, now),
     };
@@ -215,6 +250,8 @@ export async function askTender(
       normalizedQuestion,
       indexVersion: index.version,
       requestedModel: config.model,
+      summaryPromptVersion: ASK_SUMMARY_PROMPT_VERSION,
+      summaryRequestedModel,
       status: "processing",
       updatedAt: now,
     })
@@ -225,8 +262,20 @@ export async function askTender(
         aiAskRequestsTable.normalizedQuestion,
         aiAskRequestsTable.indexVersion,
         aiAskRequestsTable.requestedModel,
+        aiAskRequestsTable.summaryPromptVersion,
+        aiAskRequestsTable.summaryRequestedModel,
       ],
-      set: { question, status: "processing", passages: [], updatedAt: now },
+      set: {
+        question,
+        status: "processing",
+        passages: [],
+        summary: null,
+        summaryResponseModel: null,
+        summaryInputTokens: 0,
+        summaryOutputTokens: 0,
+        summaryEstimatedCostUsd: "0",
+        updatedAt: now,
+      },
     });
   try {
     const scores = await Promise.all(candidates.map(({ text }) => scoreTenderPassage(question, text)));
@@ -235,11 +284,19 @@ export async function askTender(
     const estimatedCost = inputTokens * 0.000000042;
     const responseModel = scores[0]?.model ?? config.model;
     const status = passages.length > 0 ? "answered" : "not_found";
+    const summaryAttempt = status === "answered"
+      ? await safelyGenerateAskSummary(question, passages)
+      : EMPTY_SUMMARY_ATTEMPT;
     await db
       .update(aiAskRequestsTable)
       .set({
         status,
         passages,
+        summary: summaryAttempt.summary,
+        summaryResponseModel: summaryAttempt.model,
+        summaryInputTokens: summaryAttempt.inputTokens,
+        summaryOutputTokens: summaryAttempt.outputTokens,
+        summaryEstimatedCostUsd: summaryAttempt.costUsd.toFixed(8),
         responseModel,
         inputTokens,
         estimatedCostUsd: estimatedCost.toFixed(8),
@@ -249,12 +306,18 @@ export async function askTender(
     await db
       .update(aiDailyUsageTable)
       .set({
-        inputTokens: sql`${aiDailyUsageTable.inputTokens} + ${inputTokens}`,
-        estimatedCostUsd: sql`${aiDailyUsageTable.estimatedCostUsd} + ${estimatedCost.toFixed(8)}`,
+        inputTokens: sql`${aiDailyUsageTable.inputTokens} + ${inputTokens + summaryAttempt.inputTokens + summaryAttempt.outputTokens}`,
+        estimatedCostUsd: sql`${aiDailyUsageTable.estimatedCostUsd} + ${(estimatedCost + summaryAttempt.costUsd).toFixed(8)}`,
         updatedAt: new Date(),
       })
       .where(and(eq(aiDailyUsageTable.userId, userId), eq(aiDailyUsageTable.quotaDay, dateInSaoPaulo(now))));
-    return { status, passages, model: responseModel, quota };
+    return {
+      status,
+      passages,
+      summary: summaryAttempt.summary,
+      model: responseModel,
+      quota,
+    };
   } catch (error) {
     await db.update(aiAskRequestsTable).set({ status: "failed", updatedAt: new Date() }).where(eq(aiAskRequestsTable.id, requestId));
     if (error instanceof JevUnavailableError) throw new AiUnavailableError();
