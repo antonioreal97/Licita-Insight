@@ -11,7 +11,7 @@ O recurso retorna somente trechos extraídos de documentos oficiais. O Jev class
 - `AI_DAILY_ASK_LIMIT_PAID`: cota diária paga, padrão `30`.
 - `AI_MAX_DOCUMENT_BYTES`: limite por download, padrão `26214400`.
 - `AI_MAX_PDF_PAGES`: limite por PDF, padrão `300`.
-- `AI_DOCUMENT_TIMEOUT_MS`: timeout do download de cada documento, padrão `30000`.
+- `AI_DOCUMENT_TIMEOUT_MS`: tempo total do download de cada documento, incluindo o corpo, padrão `300000`. Em 02/10/2026 o PNCP entregou arquivos a 50–70 KB/s, e um ZIP de 6 MB levou 91 s; 5 minutos cobrem cerca de 15 MB nessa velocidade (o teto de `AI_MAX_DOCUMENT_BYTES` é 25 MB), e um estouro de tempo segue o retry transitório. O download roda no job de índice, que renova a visibilidade enquanto baixa os documentos em série.
 - `AI_DOCUMENT_RETRY_MAX_ATTEMPTS`: teto de tentativas por documento, padrão `6`.
 - `AI_DOCUMENT_HOSTS`: allowlist de hosts HTTPS separados por vírgula, padrão `pncp.gov.br`.
 - `AI_DAILY_SHEET_LIMIT`: teto global de fichas novas por dia, padrão `500`.
