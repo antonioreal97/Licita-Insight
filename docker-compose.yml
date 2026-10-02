@@ -50,6 +50,7 @@ services:
       PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
       NODE_ENV: development
       METRICS_PORT: ${API_METRICS_PORT:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     ports:
       - "3001:3001"
     command: pnpm --filter @workspace/api-server run dev
@@ -79,6 +80,7 @@ services:
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
       NODE_ENV: development
       METRICS_PORT: ${WORKER_METRICS_PORT:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     command: pnpm --filter @workspace/api-server run dev:worker
     depends_on:
       db-setup:

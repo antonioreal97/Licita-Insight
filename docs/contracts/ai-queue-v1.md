@@ -1,8 +1,10 @@
 # Contrato interno — fila durável de IA v1
 
-`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`), ficha (`sheet`) e resumo de ficha (`sheet_summary`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada aos modelos.
+`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`), ficha (`sheet`), resumo de ficha (`sheet_summary`) e reescrita de título pelo professor local (`title_rewrite`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada aos modelos.
 
 Uma ficha nova pode produzir o resumo OpenAI ao fim do próprio job `sheet`. Para fichas prontas cujo modelo ou versão do resumo esteja desatualizado, `GET /sheet` devolve imediatamente os campos em cache com `summary: null` e enfileira `sheet_summary`; esse job lê os campos e o checklist gravados e chama somente a OpenAI, sem repetir o Jev. Falha, disjuntor aberto ou ausência posterior da chave deixam o resumo nulo e encerram o job sem retentativa automática.
+
+`title_rewrite` usa o Ollama local (sem custo) e não passa pelo orçamento de IA. A API o enfileira depois de responder a busca (primeira página) ou o detalhe, só com `TITLE_TEACHER_ENABLED=true` e para editais com título `rules` marcado com `display_title_needs_model`. O `dedupe_key` é `title_rewrite:<edital>:p<versão do prompt>`, a lane é `batch`, `max_attempts` é 3 e são criados no máximo `TITLE_REWRITE_DAILY_LIMIT` (padrão 2000) por dia em America/Sao_Paulo. O worker executa um por vez e não reivindica esse tipo com a flag desligada; Ollama fora do ar faz o job voltar à fila com backoff. Detalhes em [títulos e categorias](./tender-titles-v1.md).
 
 ## Estados e prioridade
 
@@ -21,9 +23,12 @@ Novos índices disparados por usuário estão limitados a `AI_INDEX_ENQUEUE_PER_
 | `WORKER_INDEX_CONCURRENCY` | `2` |
 | `WORKER_SHEET_CONCURRENCY` | `2` |
 | `WORKER_FIT_CONCURRENCY` | `8` |
+| concorrência de `title_rewrite` | `1` (fixa) |
 | `AI_INDEX_ENQUEUE_PER_USER_PER_HOUR` | `60` |
 | `AI_QUEUE_MAX_DEPTH_INDEX` | `1000` |
 | `AI_QUEUE_MAX_DEPTH_SHEET` | `1000` |
 | `AI_QUEUE_MAX_DEPTH_FIT` | `10000` |
+| `AI_QUEUE_MAX_DEPTH_TITLE_REWRITE` | `2000` |
+| `TITLE_REWRITE_DAILY_LIMIT` | `2000` |
 
 `APP_ROLE=all` executa o consumidor no mesmo processo para desenvolvimento. `APP_ROLE=api` nunca consome; `APP_ROLE=worker` consome sem servir a API pública.

@@ -67,3 +67,60 @@ test("invariante sem invenção cobre 200 títulos sintéticos", () => {
     assert.ok(result.title.length <= 100);
   }
 });
+
+const fixtureText = (id: number): string => {
+  const item = fixture.items.find((candidate) => candidate.id === id);
+  assert.ok(item, `item ${id} ausente da fixture`);
+  return item.text;
+};
+
+test("item 31: remove conectivo solto depois da placa e sinaliza o fragmento", () => {
+  const result = normalizeTenderTitle(fixtureText(31));
+  assert.equal(result.title, "Serviço de reparo em veículo do tipo ônibus m.benz/caio lo 916.ORE");
+  assert.ok(result.reasons.includes("removal_fragment"));
+  assert.equal(result.needsModel, true);
+  assert.equal(normalizeTenderTitle("Manutenção do veículo de placa ABC1234").title, "Manutenção do veículo");
+});
+
+test("parênteses vazios deixados por uma remoção somem e marcam needsModel", () => {
+  const result = normalizeTenderTitle("Reparo do caminhão (placa ABC1D23) da frota municipal");
+  assert.equal(result.title, "Reparo do caminhão da frota municipal");
+  assert.ok(result.reasons.includes("removal_fragment"));
+});
+
+test("conectivo final só é removido depois de remoção ou corte", () => {
+  assert.equal(normalizeTenderTitle("Aquisição de vacina contra hepatite A").title, "Aquisição de vacina contra hepatite A");
+});
+
+test("item 40: corta em 'destinados a atender'", () => {
+  assert.equal(normalizeTenderTitle(fixtureText(40)).title, "Material de informática");
+  assert.equal(
+    normalizeTenderTitle("Aquisição de cestas básicas destinadas a atender famílias carentes").title,
+    "Aquisição de cestas básicas",
+  );
+});
+
+test("item 26: prefixo repetido aparece uma vez só", () => {
+  const title = normalizeTenderTitle(fixtureText(26)).title;
+  assert.match(title, /^Contratação de serviço de manutenção e fornecimento de peças para os elevadores/u);
+  assert.equal(title.match(/Contratação/gu)?.length, 1);
+});
+
+test("item 30 e similares: sem ponto final", () => {
+  assert.equal(normalizeTenderTitle(fixtureText(30)).title, "Aquisição de carga e recarga de extintores de incêndio");
+  assert.equal(normalizeTenderTitle("Aquisição de material de limpeza.").title, "Aquisição de material de limpeza");
+  for (const item of fixture.items) {
+    assert.doesNotMatch(normalizeTenderTitle(item.text).title, /(?<!\.)\.$/u, `item ${item.id} termina em ponto`);
+  }
+});
+
+test("'Contratação de empresa para serviços de' vira 'Contratação de serviço de'", () => {
+  assert.equal(
+    normalizeTenderTitle("Contratação de empresa para serviços de coffee break").title,
+    "Contratação de serviço de coffee break",
+  );
+  assert.equal(
+    normalizeTenderTitle("Contratação de empresa para serviço de chaveiro").title,
+    "Contratação de serviço de chaveiro",
+  );
+});

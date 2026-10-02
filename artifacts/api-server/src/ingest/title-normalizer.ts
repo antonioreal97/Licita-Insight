@@ -1,4 +1,4 @@
-export const DISPLAY_TITLE_RULES_VERSION = 1;
+export const DISPLAY_TITLE_RULES_VERSION = 2;
 
 export const KNOWN_TITLE_ACRONYMS = [
   "SUS", "UBS", "CRAS", "CREAS", "CAPS", "GLP", "EPI", "TI", "VoIP",
@@ -30,10 +30,20 @@ const trimPunctuation = (value: string): string =>
   value
     .replace(/^[\s,;:.\-–]+/, "")
     .replace(/[\s,;:\-–]+$/, "")
+    .replace(/(?<!\.)\.$/u, "")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/([,;:]){2,}/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
+
+const DANGLING_CONNECTOR = /(?:\s+(?:de|do|da|dos|das|para|com|em|no|na|e|a|o))+$/iu;
+
+// Applied only after a removal or cut, so an object such as "Vitamina A" keeps its last word.
+const trimDanglingConnectors = (value: string): string =>
+  trimPunctuation(trimPunctuation(value).replace(DANGLING_CONNECTOR, ""));
+
+const removeRepeatedPrefix = (value: string): string =>
+  value.replace(/^(.{12,80}?)\s+\1(?=\s|$)/iu, "$1");
 
 const removeOpening = (value: string): string => {
   let title = value.replace(/^\[[^\]]{2,60}\]\s*[-:]?\s*/iu, "");
@@ -83,6 +93,10 @@ const shortenFormulas = (value: string): string => {
     "Aquisição de ",
   );
   title = title.replace(
+    /^contrata(?:ç|c)[aã]o de empresa para servi(?:ç|c)os? de\s+/iu,
+    "Contratação de serviço de ",
+  );
+  title = title.replace(
     /^contrata(?:ç|c)[aã]o de empresa(?: especializada)? em presta(?:ç|c)[aã]o de servi(?:ç|c)os de\s+/iu,
     "Contratação de serviço de ",
   );
@@ -96,17 +110,28 @@ const shortenFormulas = (value: string): string => {
 const PERSON_AFTER_COLON = /:\s*(?:[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]{2,}(?:\s+(?:DE|DA|DO|DAS|DOS|E))?\s*){2,8}[.,;]?\s*$/u;
 const PROPER_PERSON_AFTER_COLON = /:\s*[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ][\p{L}'-]+(?:\s+(?:de|da|do|das|dos|e))?(?:\s+[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ][\p{L}'-]+){1,5}[.,;]?\s*$/u;
 
-const removeSensitiveIdentifiers = (value: string): string => {
-  let title = value.replace(PERSON_AFTER_COLON, "").replace(PROPER_PERSON_AFTER_COLON, "");
-  title = title
-    .replace(/\b(?:CNPJ|CPF)\s*:?(?:\s*n[º°o.]?\s*)?\d{2,3}[.\s]?\d{3}[.\s]?\d{3}[\/.\s-]?\d{2,4}(?:[-\s]?\d{2})?\b/giu, "")
-    .replace(/\b(?:placa|placas)\s*:?[\s,]*(?:[A-Z]{3}[-\s]?\d{4}|[A-Z]{3}[-\s]?\d[A-Z]\d{2})\b/giu, "")
-    .replace(/\b[A-Z]{3}[-\s]?(?:\d{4}|\d[A-Z]\d{2})\b/gu, "")
-    .replace(/\b(?:processo(?: administrativo)?|SEC)\s*(?:n[º°o.]?|n[uú]mero)?\s*[:.-]?\s*(?=[A-Z0-9./-]*\d)[A-Z0-9][A-Z0-9./-]*\b/giu, "")
-    .replace(/\s+,/g, ",")
-    .replace(/,\s*,/g, ", ");
-  return trimPunctuation(title);
+const SENSITIVE_IDENTIFIERS: RegExp[] = [
+  /\b(?:CNPJ|CPF)\s*:?(?:\s*n[º°o.]?\s*)?\d{2,3}[.\s]?\d{3}[.\s]?\d{3}[\/.\s-]?\d{2,4}(?:[-\s]?\d{2})?\b/giu,
+  /\b(?:placa|placas)\s*:?[\s,]*(?:[A-Z]{3}[-\s]?\d{4}|[A-Z]{3}[-\s]?\d[A-Z]\d{2})\b/giu,
+  /\b[A-Z]{3}[-\s]?(?:\d{4}|\d[A-Z]\d{2})\b/gu,
+  /\b(?:processo(?: administrativo)?|SEC)\s*(?:n[º°o.]?|n[uú]mero)?\s*[:.-]?\s*(?=[A-Z0-9./-]*\d)[A-Z0-9][A-Z0-9./-]*\b/giu,
+];
+
+const removeSensitiveIdentifiers = (value: string): { value: string; removed: boolean } => {
+  let title = value;
+  let removed = false;
+  for (const pattern of [PERSON_AFTER_COLON, PROPER_PERSON_AFTER_COLON, ...SENSITIVE_IDENTIFIERS]) {
+    const next = title.replace(pattern, "");
+    if (next === title) continue;
+    removed = true;
+    title = trimDanglingConnectors(next.replace(/\s+,/g, ",").replace(/,\s*,/g, ", "));
+  }
+  return { value: trimPunctuation(title), removed };
 };
+
+// A removal can leave a glued abbreviation ("916.ORE") or empty parentheses behind.
+const FRAGMENT_TOKEN = /[\p{L}\d]\.\p{L}/u;
+const EMPTY_PARENTHESES = /\(\s*\)/u;
 
 const cutTail = (value: string): { value: string; cut: boolean } => {
   const tails = [
@@ -118,6 +143,7 @@ const cutTail = (value: string): { value: string; cut: boolean } => {
     /\s+em atendimento\b/iu,
     /\s+pertencente(?:s)? (?:à|a|ao)\b/iu,
     /\s+com recursos\b/iu,
+    /\s+destinad(?:o|a|os|as) a atender\b/iu,
   ];
   let index = value.length;
   for (const tail of tails) {
@@ -125,7 +151,7 @@ const cutTail = (value: string): { value: string; cut: boolean } => {
     if (match && match.index >= 12) index = Math.min(index, match.index);
   }
   return index < value.length
-    ? { value: trimPunctuation(value.slice(0, index)), cut: true }
+    ? { value: trimDanglingConnectors(value.slice(0, index)), cut: true }
     : { value, cut: false };
 };
 
@@ -165,7 +191,7 @@ const limitTitle = (value: string): string => {
   if (natural && natural.index >= 60) return trimPunctuation(value.slice(0, natural.index + 1));
   const candidate = value.slice(0, 97).trimEnd();
   const boundary = candidate.lastIndexOf(" ");
-  return `${trimPunctuation(boundary >= 60 ? candidate.slice(0, boundary) : candidate)}...`;
+  return `${trimDanglingConnectors(boundary >= 60 ? candidate.slice(0, boundary) : candidate)}...`;
 };
 
 const GENERIC_TITLE = /^(?:objeto n[aã]o informado pelo pncp|solicita(?:ç|c)[aã]o gerada para cota(?:ç|c)[aã]o|servi(?:ç|c)os? de m[aã]o de obra especializada)\b/iu;
@@ -174,14 +200,18 @@ const PROCEDURAL_OPENING = /^(?:dispensa de licita(?:ç|c)[aã]o|ades[aã]o (?:�
 export const normalizeTenderTitle = (raw: string): NormalizedTenderTitle => {
   const source = collapse(raw);
   const hadPersonPattern = PERSON_AFTER_COLON.test(source) || PROPER_PERSON_AFTER_COLON.test(source);
-  let title = removeOpening(source);
+  let title = removeRepeatedPrefix(removeOpening(source));
   title = shortenFormulas(title);
-  title = removeSensitiveIdentifiers(title);
+  const identifiers = removeSensitiveIdentifiers(title);
+  title = identifiers.value;
+  const emptyParentheses = identifiers.removed && EMPTY_PARENTHESES.test(title);
+  if (emptyParentheses) title = trimDanglingConnectors(title.replace(/\(\s*\)/gu, " "));
+  const fragment = emptyParentheses || (identifiers.removed && FRAGMENT_TOKEN.test(title));
   const tail = cutTail(title);
   title = tail.value;
   if (upperLetterRatio(title) >= 0.6) title = sentenceCase(title);
   title = limitTitle(trimPunctuation(title));
-  if (title === "") title = limitTitle(sentenceCase(source || "Objeto não informado pelo PNCP"));
+  if (title === "") title = limitTitle(trimPunctuation(sentenceCase(source || "Objeto não informado pelo PNCP")));
 
   const reasons: string[] = [];
   const words = title.match(/[\p{L}\d]+/gu) ?? [];
@@ -189,6 +219,7 @@ export const normalizeTenderTitle = (raw: string): NormalizedTenderTitle => {
   if (words.length < 3) reasons.push("too_short");
   if (GENERIC_TITLE.test(title)) reasons.push("generic_title");
   if (hadPersonPattern) reasons.push("person_name");
+  if (fragment) reasons.push("removal_fragment");
   if (PROCEDURAL_OPENING.test(title) || (!tail.cut && /^(?:licita(?:ç|c)[aã]o|objeto|contrata(?:ç|c)[aã]o direta)\b/iu.test(title))) {
     reasons.push("unclear_object");
   }

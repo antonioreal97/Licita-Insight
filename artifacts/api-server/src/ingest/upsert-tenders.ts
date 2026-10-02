@@ -141,6 +141,8 @@ export async function upsertPublications(
           target: tendersTable.pncpControlNumber,
           set: {
             title: values.title,
+            // A changed official title sends student categories back to the classifier.
+            categorizedAt: sql`case when ${tendersTable.categorySource} = 'student' and ${tendersTable.title} is distinct from ${values.title} then null else ${tendersTable.categorizedAt} end`,
             displayTitle: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitle} else ${tendersTable.displayTitle} end`,
             displayTitleSource: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then 'rules' else ${tendersTable.displayTitleSource} end`,
             displayTitleVersion: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleVersion} else ${tendersTable.displayTitleVersion} end`,

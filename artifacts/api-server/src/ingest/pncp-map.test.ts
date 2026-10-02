@@ -7,6 +7,7 @@ import {
   mergeTimeline,
   pncpTenderNumberShort,
 } from "./pncp-map";
+import { DISPLAY_TITLE_RULES_VERSION } from "./title-normalizer";
 
 const now = new Date("2026-09-22T15:00:00-03:00");
 
@@ -45,7 +46,7 @@ describe("PNCP publication mapping", () => {
     assert.equal(draft.id, "00394460000141-1-000123-2026");
     assert.equal(draft.displayTitle, "Aquisição de equipamentos de informática");
     assert.equal(draft.displayTitleSource, "rules");
-    assert.equal(draft.displayTitleVersion, 1);
+    assert.equal(draft.displayTitleVersion, DISPLAY_TITLE_RULES_VERSION);
     assert.equal(draft.displayTitleNeedsModel, false);
     assert.equal(draft.pncpControlNumber, "00394460000141-1-000123/2026");
     assert.equal(draft.modality, "pregao_eletronico");

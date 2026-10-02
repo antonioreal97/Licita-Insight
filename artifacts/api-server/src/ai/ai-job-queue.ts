@@ -4,7 +4,7 @@ import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { incrementMetric, observeMetric } from "../metrics";
 
-export type AiJobKind = "index" | "fit" | "sheet" | "sheet_summary";
+export type AiJobKind = "index" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
 export type AiJobLane = "interactive" | "batch";
 
 export type AiJob = {
@@ -80,12 +80,15 @@ export const aiJobQueueConfig = () => ({
     fit: positiveInteger("AI_QUEUE_MAX_DEPTH_FIT", 10_000),
     sheet: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
     sheet_summary: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
+    title_rewrite: positiveInteger("AI_QUEUE_MAX_DEPTH_TITLE_REWRITE", 2_000),
   } satisfies Record<AiJobKind, number>,
   concurrency: {
     index: positiveInteger("WORKER_INDEX_CONCURRENCY", 2),
     fit: positiveInteger("WORKER_FIT_CONCURRENCY", 8),
     sheet: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
     sheet_summary: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
+    // The local teacher model takes 10-17 s per title; one at a time.
+    title_rewrite: 1,
   } satisfies Record<AiJobKind, number>,
   indexPerUserPerHour: positiveInteger("AI_INDEX_ENQUEUE_PER_USER_PER_HOUR", 60),
 });
@@ -232,6 +235,11 @@ export async function executeAiJob(job: AiJob): Promise<void> {
     await executeCompanyFitJob(String(job.payload.fitId));
     return;
   }
+  if (job.kind === "title_rewrite") {
+    const { executeTitleRewriteJob } = await import("../titles/title-rewrite");
+    await executeTitleRewriteJob(job.tenderId);
+    return;
+  }
   if (job.kind === "sheet_summary") {
     const { executeTenderSheetSummaryJob } = await import("./tender-sheet-service");
     await executeTenderSheetSummaryJob(
@@ -284,6 +292,7 @@ export function startAiJobWorker(options: {
     fit: 0,
     sheet: 0,
     sheet_summary: 0,
+    title_rewrite: 0,
   };
 
   const handle = (job: AiJob): void => {
@@ -323,8 +332,10 @@ export function startAiJobWorker(options: {
     }
     const { isAiBatchBudgetPaused } = await import("./ai-budget");
     const budgetPaused = await isAiBatchBudgetPaused();
-    for (const kind of ["index", "sheet", "sheet_summary", "fit"] as const) {
+    const { titleTeacherEnabled } = await import("./ollama-client");
+    for (const kind of ["index", "sheet", "sheet_summary", "fit", "title_rewrite"] as const) {
       if (kind === "fit" && budgetPaused) continue;
+      if (kind === "title_rewrite" && !titleTeacherEnabled()) continue;
       const available = config.concurrency[kind] - activeByKind[kind];
       if (available < 1) continue;
       const claimed = await claimAiJobs([kind], available, workerId);
