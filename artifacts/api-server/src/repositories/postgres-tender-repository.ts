@@ -34,7 +34,9 @@ import {
 import {
   createValueHistogram,
   modalityLabels,
+  nonNegativeValues,
   normalizePageRelevance,
+  numberRange,
   statusLabels,
   toSummary,
 } from "../services/search-service";
@@ -478,9 +480,12 @@ export class PostgresTenderRepository {
         .where(searchWhereFor(criteria, "valueRange")),
     ]);
 
-    const values = valueRows
-      .map((row) => (row.value === null ? null : requireNumber(row.value, "estimatedValue")))
-      .filter((value): value is number => value !== null);
+    const values = nonNegativeValues(
+      valueRows
+        .map((row) => (row.value === null ? null : requireNumber(row.value, "estimatedValue")))
+        .filter((value): value is number => value !== null),
+    );
+    const range = numberRange(values);
 
     return {
       status: status.map((bucket) => ({
@@ -505,8 +510,8 @@ export class PostgresTenderRepository {
         organization: organizationTotal,
       },
       valueRange: {
-        min: values.length > 0 ? Math.min(...values) : null,
-        max: values.length > 0 ? Math.max(...values) : null,
+        min: range?.min ?? null,
+        max: range?.max ?? null,
         histogram: createValueHistogram(values),
       },
     };

@@ -269,22 +269,23 @@ const countBuckets = (
 export const createValueHistogram = (
   values: number[],
 ): NonNullable<SearchFacets["valueRange"]["histogram"]> => {
-  if (values.length === 0) return [];
+  const histogramValues = nonNegativeValues(values);
+  const range = numberRange(histogramValues);
+  if (!range) return [];
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  if (min === max) return [{ from: min, to: max, count: values.length }];
+  const { min, max } = range;
+  if (min === max) return [{ from: min, to: max, count: histogramValues.length }];
 
   const bucketCount = Math.min(
     12,
-    Math.max(1, Math.ceil(Math.sqrt(values.length))),
+    Math.max(1, Math.ceil(Math.sqrt(histogramValues.length))),
   );
   const logMin = Math.log1p(min);
   const logMax = Math.log1p(max);
   const width = (logMax - logMin) / bucketCount;
   const counts = Array.from({ length: bucketCount }, () => 0);
 
-  for (const value of values) {
+  for (const value of histogramValues) {
     const index = Math.min(
       bucketCount - 1,
       Math.floor((Math.log1p(value) - logMin) / width),
@@ -302,6 +303,23 @@ export const createValueHistogram = (
     count,
   }));
 };
+
+export const numberRange = (
+  values: readonly number[],
+): { min: number; max: number } | null => {
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (const value of values) {
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+
+  return min === Infinity ? null : { min, max };
+};
+
+export const nonNegativeValues = (values: readonly number[]): number[] =>
+  values.filter((value) => Number.isFinite(value) && value >= 0);
 
 const includeSelectedOrganizations = (
   topBuckets: FacetBucket[],
@@ -344,7 +362,8 @@ const createFacets = (
   const byOrganization = applyFilters(tenders, criteria, "organization");
   const byValue = applyFilters(tenders, criteria, "valueRange")
     .map((tender) => tender.estimatedValue)
-    .filter((value): value is number => value !== null);
+    .filter((value): value is number => value !== null && value >= 0);
+  const valueRange = numberRange(byValue);
   const allOrganizationBuckets = countBuckets(
     byOrganization.map((tender) => ({
       value: tender.organization.id,
@@ -415,8 +434,8 @@ const createFacets = (
       organization: byOrganization.length,
     },
     valueRange: {
-      min: byValue.length > 0 ? Math.min(...byValue) : null,
-      max: byValue.length > 0 ? Math.max(...byValue) : null,
+      min: valueRange?.min ?? null,
+      max: valueRange?.max ?? null,
       histogram: createValueHistogram(byValue),
     },
   };

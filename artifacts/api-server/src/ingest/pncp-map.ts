@@ -171,7 +171,7 @@ export const mapEstimatedValue = (
     return { estimatedValue: null, estimatedValueStatus: "confidential" };
   }
   const amount = asMoney(rawValue);
-  if (amount === null || amount === 0) {
+  if (amount === null || amount <= 0) {
     return { estimatedValue: null, estimatedValueStatus: "not_published" };
   }
   return { estimatedValue: roundMoney(amount), estimatedValueStatus: "disclosed" };

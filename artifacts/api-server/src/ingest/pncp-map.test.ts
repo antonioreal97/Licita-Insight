@@ -122,6 +122,10 @@ describe("PNCP publication mapping", () => {
       mapEstimatedValue(0, null, null),
       { estimatedValue: null, estimatedValueStatus: "not_published" },
     );
+    assert.deepEqual(
+      mapEstimatedValue(-10, null, null),
+      { estimatedValue: null, estimatedValueStatus: "not_published" },
+    );
   });
 
   it("appends timeline entries only when status or deadline changed", () => {

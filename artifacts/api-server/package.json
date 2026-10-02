@@ -22,6 +22,7 @@
     "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
+    "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test:dist-sheet": "node ./build.mjs && node scripts/verify-dist-sheet.mjs",
     "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet",

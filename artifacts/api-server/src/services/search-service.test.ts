@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { TenderSummary } from "@workspace/api-zod";
 import {
+  createValueHistogram,
   modalityLabels,
   normalizePageRelevance,
+  nonNegativeValues,
+  numberRange,
   statusLabels,
 } from "./search-service";
 
@@ -76,5 +79,25 @@ describe("search response semantics", () => {
       result.map(({ relevance }) => relevance.score),
       [1, 0.5, 0],
     );
+  });
+
+  it("calculates value ranges without spreading large result sets", () => {
+    const values = Array.from({ length: 200_000 }, (_, index) => index + 1);
+
+    assert.deepEqual(numberRange(values), { min: 1, max: 200_000 });
+    assert.equal(
+      createValueHistogram(values).reduce((total, bucket) => total + bucket.count, 0),
+      values.length,
+    );
+  });
+
+  it("ignores invalid negative values in value facets", () => {
+    const values = [-10, 0, 50, 150];
+    const histogram = createValueHistogram(values);
+
+    assert.deepEqual(nonNegativeValues(values), [0, 50, 150]);
+    assert.deepEqual(numberRange(nonNegativeValues(values)), { min: 0, max: 150 });
+    assert.equal(histogram.reduce((total, bucket) => total + bucket.count, 0), 3);
+    assert.equal(histogram[0]?.from, 0);
   });
 });
