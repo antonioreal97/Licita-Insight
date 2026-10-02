@@ -24,7 +24,7 @@ A projeção mensal é `custo do período / dias solicitados × 30`. Ela é uma 
 
 ## Disjuntor diário
 
-`AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `ask_summary`, `fit`, `sheet` e `sheet_summary` no dia de `America/Sao_Paulo`. A leitura usa os três contadores diários, que acumulam os custos Jev e OpenAI de seu fluxo, com cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso. Quando o disjuntor está aberto, os resumos não chamam a OpenAI e retornam `null`.
+`AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `ask_summary`, `fit`, `sheet` e `sheet_summary` no dia de `America/Sao_Paulo`, com cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso. A leitura combina os três contadores diários com `summary_estimated_cost_usd` das fichas cujo `summary_generated_at` pertence ao dia; `ai_sheet_daily_usage` permanece exclusivo das chamadas Jev que criam a ficha. Quando o disjuntor está aberto, os resumos não chamam a OpenAI e retornam `null`.
 
 Ao atingir o teto, somente o lote é pausado: jobs `fit` permanecem `queued` e o alerta de perfil registra `skipped_budget`. Perguntas e fichas continuam. A fila retoma automaticamente após a virada do dia ou aumento do teto.
 

@@ -18,7 +18,7 @@ type FieldSpec = {
   choices?: Readonly<Record<string, string>>;
 };
 
-export const SHEET_PROMPT_VERSION = 4;
+export const SHEET_PROMPT_VERSION = 3;
 
 export const SHEET_FIELDS: readonly FieldSpec[] = [
   {

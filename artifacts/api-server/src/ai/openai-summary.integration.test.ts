@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { eq } from "drizzle-orm";
+import type { TenderSheetField } from "@workspace/db";
 
-test("ask caches an OpenAI summary and the sheet worker records both summary ledger features", {
+test("ask caches its summary and existing sheets refresh only their OpenAI summary", {
   skip: !process.env.PNCP_TEST_DATABASE_URL,
   timeout: 30_000,
 }, async () => {
@@ -61,10 +62,10 @@ test("ask caches an OpenAI summary and the sheet worker records both summary led
       from ai_ask_requests
       where summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0
       union all
-      select generated_at, null::text, 'sheet_summary'::text, tender_id, summary_response_model,
+      select summary_generated_at, null::text, 'sheet_summary'::text, tender_id, summary_response_model,
              summary_input_tokens, summary_output_tokens, summary_estimated_cost_usd
       from tender_ai_sheets
-      where generated_at is not null
+      where summary_generated_at is not null
         and (summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0)
   `);
 
@@ -110,7 +111,7 @@ test("ask caches an OpenAI summary and the sheet worker records both summary led
       }
       sheetSummaryCalls += 1;
       return new Response(JSON.stringify({
-        model: "gpt-4o-mini-2024-07-18",
+        model: process.env.OPENAI_MODEL,
         choices: [{ message: { content: '{"summary":"A entrega ocorre em dez dias [1]. O prazo consta no edital [1].","citations":[1]}' } }],
         usage: { prompt_tokens: 150, completion_tokens: 24 },
       }), { status: 200, headers: { "content-type": "application/json" } });
@@ -199,25 +200,166 @@ test("ask caches an OpenAI summary and the sheet worker records both summary led
     assert.equal(askSummaryCalls, 1);
 
     const { SHEET_PROMPT_VERSION } = await import("./tender-sheet-policy");
+    const { SHEET_SUMMARY_PROMPT_VERSION } = await import("./openai-summary");
     const { dateInSaoPaulo } = await import("../lib/sao-paulo-date");
+    const { getTenderSheet } = await import("./tender-sheet-service");
+    const { runEnqueuedAiJobNow } = await import("./ai-job-queue");
     const sheetId = `S-${randomUUID()}`;
-    await db.insert(aiSheetDailyUsageTable).values({ quotaDay: dateInSaoPaulo(new Date()) });
+    const fields = [{
+      id: "delivery_term",
+      status: "found",
+      answer: null,
+      confidence: 0.96,
+      evidence: {
+        documentTitle: "Edital.pdf",
+        documentUrl: documents[0]!.url,
+        page: 1,
+        text: "O prazo de entrega é de dez dias corridos após a assinatura.",
+      },
+    }] satisfies TenderSheetField[];
+    const quotaDay = dateInSaoPaulo(new Date());
+    await db.insert(aiSheetDailyUsageTable).values({
+      quotaDay,
+      used: 1,
+      inputTokens: 90,
+      estimatedCostUsd: "0.00000378",
+    });
     await db.insert(tenderAiSheetsTable).values({
       id: sheetId,
       tenderId,
       indexVersion: 1,
       requestedModel: "jev-1.13.0",
       promptVersion: SHEET_PROMPT_VERSION,
-      summaryRequestedModel: "gpt-4o-mini",
-      status: "processing",
+      status: "ready",
+      fields,
       unreadDocuments: 0,
+      responseModel: "jev-1.13.0",
+      inputTokens: 90,
+      estimatedCostUsd: "0.00000378",
+      generatedAt: new Date(),
     });
-    const { executeTenderSheetJob } = await import("./tender-sheet-service");
-    await executeTenderSheetJob(sheetId, tenderId);
-    const [sheet] = await db.select().from(tenderAiSheetsTable).where(eq(tenderAiSheetsTable.id, sheetId));
-    assert.equal(sheet?.status, "ready");
-    assert.ok(sheet?.summary);
+
+    const jevCallsBeforeSheet = jevCalls;
+    const [firstSheetRead, concurrentSheetRead] = await Promise.all([
+      getTenderSheet(tenderId, userId),
+      getTenderSheet(tenderId, userId),
+    ]);
+    assert.equal(firstSheetRead.status, "ready");
+    assert.equal(firstSheetRead.summary, null);
+    assert.deepEqual(firstSheetRead.fields, fields);
+    assert.deepEqual(concurrentSheetRead.fields, fields);
+    assert.equal(jevCalls, jevCallsBeforeSheet);
+    const queued = await pool.query<{ dedupe_key: string; status: string }>(
+      "select dedupe_key, status from ai_jobs where kind = 'sheet_summary' order by created_at",
+    );
+    assert.equal(queued.rowCount, 1);
+    assert.equal(queued.rows[0]?.status, "queued");
+    assert.equal(await runEnqueuedAiJobNow(queued.rows[0]!.dedupe_key), true);
+
+    const summarized = await getTenderSheet(tenderId, userId);
+    assert.ok(summarized.summary);
+    assert.deepEqual(summarized.fields, fields);
     assert.equal(sheetSummaryCalls, 1);
+    assert.equal(jevCalls, jevCallsBeforeSheet);
+
+    process.env.OPENAI_MODEL = "gpt-4o-mini-next";
+    const changedModel = await getTenderSheet(tenderId, userId);
+    assert.equal(changedModel.summary, null);
+    assert.deepEqual(changedModel.fields, fields);
+    const modelJobs = await pool.query<{ dedupe_key: string }>(
+      "select dedupe_key from ai_jobs where kind = 'sheet_summary' order by created_at",
+    );
+    assert.equal(modelJobs.rowCount, 2);
+    assert.equal(await runEnqueuedAiJobNow(modelJobs.rows[1]!.dedupe_key), true);
+    const resummarized = await getTenderSheet(tenderId, userId);
+    assert.ok(resummarized.summary);
+    assert.deepEqual(resummarized.fields, fields);
+    assert.equal(sheetSummaryCalls, 2);
+    assert.equal(jevCalls, jevCallsBeforeSheet);
+
+    const [usage] = await db.select().from(aiSheetDailyUsageTable)
+      .where(eq(aiSheetDailyUsageTable.quotaDay, quotaDay));
+    assert.equal(usage?.inputTokens, 90);
+    assert.equal(usage?.estimatedCostUsd, "0.00000378");
+
+    await pool.query("update ai_daily_usage set estimated_cost_usd = 0");
+    await pool.query("update ai_fit_daily_usage set estimated_cost_usd = 0");
+    await pool.query("update ai_sheet_daily_usage set estimated_cost_usd = 0");
+    process.env.AI_DAILY_BUDGET_USD = "0.00003";
+    const { refreshAiBudgetState } = await import("./ai-budget");
+    const budget = await refreshAiBudgetState(true);
+    assert.equal(budget.ask, 0);
+    assert.equal(budget.fit, 0);
+    assert.ok(budget.sheet >= 0.0000369);
+    assert.equal(budget.paused, true);
+
+    process.env.OPENAI_MODEL = "gpt-4o-mini-budget-paused";
+    const pausedRead = await getTenderSheet(tenderId, userId);
+    assert.equal(pausedRead.summary, null);
+    const pausedJobs = await pool.query<{ dedupe_key: string }>(
+      "select dedupe_key from ai_jobs where kind = 'sheet_summary' order by created_at",
+    );
+    assert.equal(pausedJobs.rowCount, 3);
+    assert.equal(await runEnqueuedAiJobNow(pausedJobs.rows[2]!.dedupe_key), true);
+    assert.equal(sheetSummaryCalls, 2);
+    assert.equal((await getTenderSheet(tenderId, userId)).summary, null);
+
+    const noKeyTenderId = `T-${randomUUID()}`;
+    const noKeySheetId = `S-${randomUUID()}`;
+    await db.insert(tendersTable).values({
+      id: noKeyTenderId,
+      pncpControlNumber: noKeyTenderId,
+      title: "Edital sem resumo",
+      organizationId: "ORG",
+      organizationName: "Órgão de teste",
+      modality: "other",
+      modalityLabel: "Outra",
+      status: "open",
+      estimatedValueStatus: "not_published",
+      sourceId: noKeyTenderId,
+      sourceName: "TEST",
+      categories: [],
+      items: [],
+      documents,
+      timeline: [],
+      searchText: "prazo entrega",
+      titleNorm: "edital sem resumo",
+      objectNorm: "",
+      itemsNorm: "",
+      organizationNorm: "orgao teste",
+      otherNorm: "",
+      rawPayload: {},
+      fetchedAt: new Date(),
+    });
+    await db.insert(tenderAiIndexesTable).values({
+      tenderId: noKeyTenderId,
+      version: 1,
+      sourceFingerprint,
+      status: "ready",
+      completedAt: new Date(),
+    });
+    await db.insert(tenderAiSheetsTable).values({
+      id: noKeySheetId,
+      tenderId: noKeyTenderId,
+      indexVersion: 1,
+      requestedModel: "jev-1.13.0",
+      promptVersion: SHEET_PROMPT_VERSION,
+      status: "ready",
+      fields,
+      unreadDocuments: 0,
+      responseModel: "jev-1.13.0",
+      generatedAt: new Date(),
+    });
+    delete process.env.OPENAI_API_KEY;
+    const jobsBeforeNoKey = await pool.query<{ count: number }>(
+      "select count(*)::int as count from ai_jobs where kind = 'sheet_summary'",
+    );
+    const withoutKey = await getTenderSheet(noKeyTenderId, userId);
+    assert.equal(withoutKey.summary, null);
+    const jobsAfterNoKey = await pool.query<{ count: number }>(
+      "select count(*)::int as count from ai_jobs where kind = 'sheet_summary'",
+    );
+    assert.equal(jobsAfterNoKey.rows[0]?.count, jobsBeforeNoKey.rows[0]?.count);
 
     const ledger = await pool.query<{ feature: string; input_tokens: number; output_tokens: number }>(
       "select feature, input_tokens, output_tokens from ai_usage_ledger order by feature",
@@ -225,6 +367,12 @@ test("ask caches an OpenAI summary and the sheet worker records both summary led
     assert.deepEqual(ledger.rows.map(({ feature }) => feature), ["ask", "ask_summary", "sheet_summary"]);
     assert.equal(Number(ledger.rows.find(({ feature }) => feature === "ask_summary")?.output_tokens), 18);
     assert.equal(Number(ledger.rows.find(({ feature }) => feature === "sheet_summary")?.output_tokens), 24);
+    const [storedSheet] = await db.select().from(tenderAiSheetsTable)
+      .where(eq(tenderAiSheetsTable.id, sheetId));
+    assert.equal(storedSheet?.promptVersion, 3);
+    assert.equal(storedSheet?.summaryPromptVersion, SHEET_SUMMARY_PROMPT_VERSION);
+    assert.equal(storedSheet?.summaryRequestedModel, "gpt-4o-mini-budget-paused");
+    assert.equal(storedSheet?.summary, null);
   } finally {
     globalThis.fetch = originalFetch;
     await pool.query(`drop schema "${schema}" cascade`);

@@ -261,8 +261,10 @@ export const tenderAiSheetsTable = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     summary: jsonb("summary").$type<AiGeneratedSummary>(),
+    summaryPromptVersion: integer("summary_prompt_version").notNull().default(1),
     summaryRequestedModel: text("summary_requested_model").notNull().default("disabled"),
     summaryResponseModel: text("summary_response_model"),
+    summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
     summaryInputTokens: integer("summary_input_tokens").notNull().default(0),
     summaryOutputTokens: integer("summary_output_tokens").notNull().default(0),
     summaryEstimatedCostUsd: numeric("summary_estimated_cost_usd", {
@@ -290,7 +292,6 @@ export const tenderAiSheetsTable = pgTable(
       table.indexVersion,
       table.requestedModel,
       table.promptVersion,
-      table.summaryRequestedModel,
     ),
     index("tender_ai_sheets_tender_idx").on(table.tenderId, table.updatedAt),
     check(

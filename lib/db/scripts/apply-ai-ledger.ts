@@ -32,11 +32,11 @@ try {
       from tender_ai_sheets
       where status = 'ready' and generated_at is not null
       union all
-      select generated_at as occurred_at, null::text as user_id, 'sheet_summary'::text as feature,
+      select summary_generated_at as occurred_at, null::text as user_id, 'sheet_summary'::text as feature,
              tender_id, summary_response_model as model, summary_input_tokens as input_tokens,
              summary_output_tokens as output_tokens, summary_estimated_cost_usd as cost_usd
       from tender_ai_sheets
-      where generated_at is not null
+      where summary_generated_at is not null
         and (summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0)
   `);
 } finally {

@@ -16,8 +16,10 @@ CREATE UNIQUE INDEX ai_ask_requests_cache_uidx ON ai_ask_requests (
 --> statement-breakpoint
 ALTER TABLE tender_ai_sheets
   ADD COLUMN summary jsonb,
+  ADD COLUMN summary_prompt_version integer NOT NULL DEFAULT 1,
   ADD COLUMN summary_requested_model text NOT NULL DEFAULT 'disabled',
   ADD COLUMN summary_response_model text,
+  ADD COLUMN summary_generated_at timestamp with time zone,
   ADD COLUMN summary_input_tokens integer NOT NULL DEFAULT 0,
   ADD COLUMN summary_output_tokens integer NOT NULL DEFAULT 0,
   ADD COLUMN summary_estimated_cost_usd numeric(14, 8) NOT NULL DEFAULT '0';
@@ -25,8 +27,13 @@ ALTER TABLE tender_ai_sheets
 DROP INDEX tender_ai_sheets_cache_uidx;
 --> statement-breakpoint
 CREATE UNIQUE INDEX tender_ai_sheets_cache_uidx ON tender_ai_sheets (
-  tender_id, index_version, requested_model, prompt_version, summary_requested_model
+  tender_id, index_version, requested_model, prompt_version
 );
+--> statement-breakpoint
+ALTER TABLE ai_jobs DROP CONSTRAINT ai_jobs_kind_check;
+--> statement-breakpoint
+ALTER TABLE ai_jobs ADD CONSTRAINT ai_jobs_kind_check
+  CHECK (kind IN ('index', 'fit', 'sheet', 'sheet_summary'));
 --> statement-breakpoint
 DROP VIEW ai_usage_ledger;
 --> statement-breakpoint
@@ -55,9 +62,9 @@ CREATE VIEW ai_usage_ledger AS
   FROM tender_ai_sheets
   WHERE status = 'ready' AND generated_at IS NOT NULL
   UNION ALL
-  SELECT generated_at AS occurred_at, NULL::text AS user_id, 'sheet_summary'::text AS feature,
+  SELECT summary_generated_at AS occurred_at, NULL::text AS user_id, 'sheet_summary'::text AS feature,
          tender_id, summary_response_model AS model, summary_input_tokens AS input_tokens,
          summary_output_tokens AS output_tokens, summary_estimated_cost_usd AS cost_usd
   FROM tender_ai_sheets
-  WHERE generated_at IS NOT NULL
+  WHERE summary_generated_at IS NOT NULL
     AND (summary_input_tokens > 0 OR summary_output_tokens > 0 OR summary_estimated_cost_usd > 0);
