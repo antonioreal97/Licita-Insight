@@ -148,6 +148,13 @@
       "when": 1790919259000,
       "tag": "0020_openai_summaries",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791007200000,
+      "tag": "0021_tender_display_titles",
+      "breakpoints": true
     }
   ]
 }

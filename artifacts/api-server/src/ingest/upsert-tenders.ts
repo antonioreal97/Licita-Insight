@@ -1,7 +1,8 @@
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { db, tendersTable } from "@workspace/db";
 import type { TenderTimelineRecord } from "@workspace/db/schema";
 import {
+  buildSearchColumns,
   mapPublication,
   mergeTimeline,
   parsePncpDate,
@@ -20,6 +21,10 @@ export type ExistingTender = {
   estimatedValueStatus: string;
   timeline: TenderTimelineRecord[];
   itemsNorm: string;
+  displayTitle: string | null;
+  displayTitleSource: "rules" | "model" | null;
+  displayTitleNorm: string;
+  categories: { slug: string; label: string }[];
 };
 
 const publicationChanged = (
@@ -53,6 +58,10 @@ export async function upsertPublications(
       estimatedValueStatus: tendersTable.estimatedValueStatus,
       timeline: tendersTable.timeline,
       itemsNorm: tendersTable.itemsNorm,
+      displayTitle: tendersTable.displayTitle,
+      displayTitleSource: tendersTable.displayTitleSource,
+      displayTitleNorm: tendersTable.displayTitleNorm,
+      categories: tendersTable.categories,
     })
     .from(tendersTable)
     .where(inArray(tendersTable.pncpControlNumber, controlNumbers));
@@ -62,21 +71,33 @@ export async function upsertPublications(
 
   for (const { record, draft } of drafts) {
     const existing = existingByControl.get(draft.pncpControlNumber);
-    const searchText = [
-      draft.titleNorm,
-      draft.objectNorm,
-      existing?.itemsNorm ?? "",
-      draft.organizationNorm,
-      draft.otherNorm,
-    ]
-      .filter(Boolean)
-      .join(" ");
+    const displayTitle = existing?.displayTitleSource === "model"
+      ? existing.displayTitle
+      : draft.displayTitle;
+    const search = buildSearchColumns({
+      title: draft.title,
+      displayTitle,
+      objectSummary: draft.objectSummary,
+      itemDescriptions: [],
+      organizationName: draft.organizationName,
+      purchasingUnit: draft.purchasingUnit,
+      city: draft.city,
+      state: draft.state,
+      modalityLabel: draft.modalityLabel,
+      itemsNorm: existing?.itemsNorm ?? "",
+      categories: existing?.categories ?? draft.categories,
+    });
     const timeline = mergeTimeline(existing ?? null, draft, now);
     const changed = publicationChanged(existing, draft);
     const values = {
       id: draft.id,
       pncpControlNumber: draft.pncpControlNumber,
       title: draft.title,
+      displayTitle: draft.displayTitle,
+      displayTitleSource: draft.displayTitleSource,
+      displayTitleVersion: draft.displayTitleVersion,
+      displayTitleNorm: draft.displayTitleNorm,
+      displayTitleNeedsModel: draft.displayTitleNeedsModel,
       objectSummary: draft.objectSummary,
       description: draft.description,
       organizationId: draft.organizationId,
@@ -99,7 +120,7 @@ export async function upsertPublications(
       sourceName: draft.sourceName,
       sourceUrl: draft.sourceUrl,
       categories: draft.categories,
-      searchText,
+      searchText: search.searchText,
       titleNorm: draft.titleNorm,
       objectNorm: draft.objectNorm,
       itemsNorm: existing?.itemsNorm ?? "",
@@ -120,6 +141,11 @@ export async function upsertPublications(
           target: tendersTable.pncpControlNumber,
           set: {
             title: values.title,
+            displayTitle: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitle} else ${tendersTable.displayTitle} end`,
+            displayTitleSource: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then 'rules' else ${tendersTable.displayTitleSource} end`,
+            displayTitleVersion: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleVersion} else ${tendersTable.displayTitleVersion} end`,
+            displayTitleNorm: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleNorm} else ${tendersTable.displayTitleNorm} end`,
+            displayTitleNeedsModel: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleNeedsModel} else ${tendersTable.displayTitleNeedsModel} end`,
             objectSummary: values.objectSummary,
             description: values.description,
             organizationId: values.organizationId,
@@ -141,7 +167,28 @@ export async function upsertPublications(
             sourceId: values.sourceId,
             sourceName: values.sourceName,
             sourceUrl: values.sourceUrl,
-            searchText: values.searchText,
+            searchText: sql`trim(concat_ws(' ',
+              case when ${tendersTable.displayTitleSource} = 'model'
+                then ${tendersTable.displayTitleNorm}
+                else ${values.displayTitleNorm}
+              end,
+              cast(${values.titleNorm} as text),
+              cast(${values.objectNorm} as text),
+              ${tendersTable.itemsNorm},
+              cast(${values.organizationNorm} as text),
+              cast(${values.otherNorm} as text),
+              coalesce((
+                select string_agg(
+                  translate(
+                    lower(category->>'label'),
+                    'áàâãäéèêëíìîïóòôõöúùûüç',
+                    'aaaaaeeeeiiiiooooouuuuc'
+                  ),
+                  ' '
+                )
+                from jsonb_array_elements(${tendersTable.categories}) as category
+              ), '')
+            ))`,
             titleNorm: values.titleNorm,
             objectNorm: values.objectNorm,
             organizationNorm: values.organizationNorm,

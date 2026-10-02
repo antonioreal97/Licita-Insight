@@ -179,6 +179,7 @@ export * from './tenderItem';
 export * from './tenderSheet';
 export * from './tenderStatus';
 export * from './tenderSummary';
+export * from './tenderSummaryDisplayTitleSource';
 export * from './tenderTimelineEntry';
 export * from './tenderTimelineEntryType';
 export * from './unauthenticatedResponse';

@@ -13,10 +13,14 @@ import type { Organization } from './organization';
 import type { Relevance } from './relevance';
 import type { Source } from './source';
 import type { TenderStatus } from './tenderStatus';
+import type { TenderSummaryDisplayTitleSource } from './tenderSummaryDisplayTitleSource';
 
 export interface TenderSummary {
   id: string;
   title: string;
+  displayTitle: string;
+  /** @nullable */
+  displayTitleSource: TenderSummaryDisplayTitleSource;
   /** @nullable */
   objectSummary: string | null;
   organization: Organization;

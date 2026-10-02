@@ -165,6 +165,7 @@ const scoreSql = (tokens: string[]): SQL => {
   const parts = tokens.map((token) => {
     const pattern = likePattern(token);
     return sql`case
+      when ${tendersTable.displayTitleNorm} like ${pattern} escape '\\' then 5
       when ${tendersTable.titleNorm} like ${pattern} escape '\\' then 5
       when ${tendersTable.objectNorm} like ${pattern} escape '\\' then 4
       when ${tendersTable.itemsNorm} like ${pattern} escape '\\' then 3
@@ -246,6 +247,8 @@ export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
   return {
     id: row.id,
     title: row.title,
+    displayTitle: row.displayTitle ?? row.title,
+    displayTitleSource: row.displayTitleSource,
     objectSummary:
       row.sourceId === "pncp"
         ? summarizeOfficialObject(row.objectSummary ?? row.title)

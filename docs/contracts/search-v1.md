@@ -116,6 +116,8 @@ type FacetBucket = { value: string; label: string; count: number };
 type TenderSummary = {
   id: string;                        // estável, URL-safe
   title: string;                     // objeto oficial, preservado sem reescrita
+  displayTitle: string;              // título padronizado; fallback para title
+  displayTitleSource: 'rules' | 'model' | null;
   objectSummary: string | null;      // até ~300 chars
   organization: { id: string; name: string };
   purchasingUnit: string | null;
@@ -299,6 +301,13 @@ Para o PNCP, `tenderNumberShort` é formado por `numeroCompra/anoCompra`, usando
 modalidade para preservar compatibilidade. `title` preserva integralmente `objetoCompra`, enquanto
 `objectSummary` é uma síntese mecânica de no máximo 300 caracteres, cortada no limite de palavra e
 finalizada com `…`, sem reescrever o texto oficial.
+
+O contrato de títulos padronizados acrescenta `displayTitle` e `displayTitleSource` conforme
+[`tender-titles-v1.md`](./tender-titles-v1.md). A consulta textual pesquisa tanto o título
+padronizado quanto o objeto oficial e os rótulos das categorias; assim, termos como `limpeza` e
+`veículos` encontram os editais classificados com esses rótulos. Highlights com `field: title`
+podem trazer o fragmento do título padronizado ou do título oficial, sem alterar os campos de
+highlight existentes.
 
 ### Facets e relevância
 

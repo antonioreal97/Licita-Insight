@@ -51,6 +51,7 @@ export async function enrichTenderById(id: string): Promise<void> {
   const documents = keepDocuments ? row.documents : fetchedDocuments;
   const search = buildSearchColumns({
     title: row.title,
+    displayTitle: row.displayTitle,
     objectSummary: row.objectSummary,
     itemDescriptions: items.map((item) => item.description),
     organizationName: row.organizationName,
@@ -58,6 +59,7 @@ export async function enrichTenderById(id: string): Promise<void> {
     city: row.city,
     state: row.state,
     modalityLabel: row.modalityLabel,
+    categories: row.categories,
   });
   const previousDocuments = row.documents;
   const previousDocumentIds = new Set(previousDocuments.map(({ id }) => id));

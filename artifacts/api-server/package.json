@@ -20,6 +20,7 @@
     "scale:drop": "node --env-file-if-exists=../../.env --import tsx scripts/scale-drop.ts",
     "report:ai-cost": "node --env-file-if-exists=../../.env --import tsx scripts/report-ai-cost.ts",
     "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
+    "backfill:display-titles": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-display-titles.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",

@@ -2021,6 +2021,11 @@ components:
           type: string
         title:
           type: string
+        displayTitle:
+          type: string
+        displayTitleSource:
+          type: [string, "null"]
+          enum: [rules, model, null]
         objectSummary:
           type: [string, "null"]
         organization:
@@ -2067,6 +2072,8 @@ components:
       required:
         - id
         - title
+        - displayTitle
+        - displayTitleSource
         - objectSummary
         - organization
         - purchasingUnit

@@ -62,6 +62,8 @@ export type Highlight = { field: 'title' | 'objectSummary' | 'items'; fragments:
 export type TenderSummary = {
   id: string;
   title: string;
+  displayTitle: string;
+  displayTitleSource: 'rules' | 'model' | null;
   objectSummary: string | null;
   organization: { id: string; name: string };
   purchasingUnit: string | null;
