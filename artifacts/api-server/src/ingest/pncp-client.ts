@@ -1,6 +1,11 @@
 import { timeoutSignal } from "../lib/http-timeout";
 
 const PNCP_CONSULTA = "https://pncp.gov.br/api/consulta/v1";
+// Items and files of a purchase are only served by the PNCP integration API;
+// the consultation API answers 404 for them.
+const PNCP_API = "https://pncp.gov.br/api/pncp/v1";
+const ITEMS_PAGE_SIZE = 50;
+const MAX_ITEM_PAGES = 200;
 
 export const PNCP_UFS = [
   "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
@@ -197,13 +202,18 @@ export const unwrapPncpList = (body: unknown): PncpList => {
   };
 };
 
-async function fetchList(url: string): Promise<PncpList> {
+async function fetchListBody(url: string): Promise<unknown> {
   try {
-    return unwrapPncpList(await pncpGet(url));
+    return await pncpGet(url);
   } catch (error) {
-    if (error instanceof PncpNotFoundError) return { rows: [], totalPages: 1 };
+    if (error instanceof PncpNotFoundError) return null;
     throw error;
   }
+}
+
+async function fetchList(url: string): Promise<PncpList> {
+  const body = await fetchListBody(url);
+  return body === null ? { rows: [], totalPages: 1 } : unwrapPncpList(body);
 }
 
 export async function fetchCompra(
@@ -228,15 +238,18 @@ export async function fetchCompraItens(
   sequencial: number,
 ): Promise<Record<string, unknown>[]> {
   const rows: Record<string, unknown>[] = [];
-  let page = 1;
-  let totalPages = 1;
-  while (page <= totalPages) {
-    const list = await fetchList(
-      `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}/itens?pagina=${page}&tamanhoPagina=50`,
+  for (let page = 1; page <= MAX_ITEM_PAGES; page += 1) {
+    const body = await fetchListBody(
+      `${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}/itens?pagina=${page}&tamanhoPagina=${ITEMS_PAGE_SIZE}`,
     );
+    if (body === null) break;
+    const list = unwrapPncpList(body);
     rows.push(...list.rows);
-    totalPages = list.totalPages;
-    page += 1;
+    // A plain array carries no page count: a short page is the last one.
+    const lastPage = Array.isArray(body)
+      ? list.rows.length < ITEMS_PAGE_SIZE
+      : page >= list.totalPages;
+    if (lastPage) break;
   }
   return rows;
 }
@@ -247,7 +260,7 @@ export async function fetchCompraArquivos(
   sequencial: number,
 ): Promise<Record<string, unknown>[]> {
   const list = await fetchList(
-    `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}/arquivos`,
+    `${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}/arquivos`,
   );
   return list.rows;
 }
