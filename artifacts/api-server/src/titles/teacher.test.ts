@@ -103,3 +103,70 @@ test("chama o Ollama em lotes de 10", async () => {
   assert.equal(run.results[22]?.title, "Aquisição de item 22");
   assert.deepEqual(run.results[0]?.categories, ["outros"]);
 });
+
+test("o professor OpenAI manda o mesmo prompt com schema estrito e rateia o uso", async () => {
+  const saved = { ...process.env };
+  process.env.OPENAI_API_KEY = "test-openai-key";
+  process.env.OPENAI_MODEL = "gpt-4o-mini";
+  try {
+    const { openAiTeacher, OPENAI_TEACHER_SCHEMA } = await import("./teacher");
+    let calls = 0;
+    const teacher = openAiTeacher({
+      requestFetch: async (input, init) => {
+        calls += 1;
+        assert.equal(String(input), "https://api.openai.com/v1/chat/completions");
+        const body = JSON.parse(String(init?.body)) as {
+          messages: { role: string; content: string }[];
+          response_format: { json_schema: { strict: boolean; schema: unknown; name: string } };
+          temperature: number;
+          store: boolean;
+        };
+        assert.equal(body.messages[0]?.role, "system");
+        assert.ok(body.messages[0]?.content.startsWith(TEACHER_INSTRUCTIONS));
+        assert.deepEqual(JSON.parse(body.messages[1]?.content ?? "{}"), {
+          itens: [{ id: 1, texto: "Recarga de extintores" }, { id: 2, texto: "Aquisição de pneus" }, { id: 3, texto: "Compra de café" }],
+        });
+        assert.equal(body.response_format.json_schema.strict, true);
+        assert.equal(body.response_format.json_schema.name, "title_teacher_v1");
+        assert.deepEqual(body.response_format.json_schema.schema, OPENAI_TEACHER_SCHEMA);
+        assert.equal(body.temperature, 0.1);
+        assert.equal(body.store, false);
+        return new Response(JSON.stringify({
+          model: "gpt-4o-mini-2024-07-18",
+          choices: [{ message: { content: JSON.stringify({ itens: [
+            { id: 1, titulo: "Recarga de extintores", categorias: ["Segurança, vigilância e prevenção de incêndio"] },
+            { id: 2, titulo: "Aquisição de pneus", categorias: ["Veículos, peças e manutenção"] },
+            { id: 3, titulo: "Aquisição de café", categorias: ["Alimentação"] },
+          ] }) } }],
+          usage: { prompt_tokens: 1_001, completion_tokens: 98 },
+        }), { status: 200 });
+      },
+    });
+    assert.equal(teacher.provider, "openai");
+    const run = await runTeacher(["Recarga de extintores", "Aquisição de pneus", "Compra de café"], teacher);
+    assert.equal(calls, 1);
+    assert.equal(run.model, "gpt-4o-mini-2024-07-18");
+    assert.deepEqual(run.results.map(({ categories }) => categories[0]), ["seguranca-incendio", "veiculos-pecas", "alimentacao"]);
+    assert.deepEqual(run.usage.map((usage) => [usage?.inputTokens, usage?.outputTokens]), [[334, 33], [334, 33], [333, 32]]);
+    const cost = run.usage.reduce((sum, usage) => sum + (usage?.costUsd ?? 0), 0);
+    assert.ok(Math.abs(cost - (1_001 * 0.15 + 98 * 0.6) / 1_000_000) < 1e-12);
+  } finally {
+    process.env = saved;
+  }
+});
+
+test("o schema estrito da OpenAI fecha todos os objetos", async () => {
+  const { OPENAI_TEACHER_SCHEMA } = await import("./teacher");
+  assert.equal(OPENAI_TEACHER_SCHEMA.additionalProperties, false);
+  assert.equal(OPENAI_TEACHER_SCHEMA.properties.itens.items.additionalProperties, false);
+  assert.deepEqual([...OPENAI_TEACHER_SCHEMA.properties.itens.items.required], ["id", "titulo", "categorias"]);
+  assert.equal(OPENAI_TEACHER_SCHEMA.properties.itens.items.properties.categorias.items.enum.length, 29);
+});
+
+test("o modelo local não gera custo", async () => {
+  const client = createOllamaClient({
+    fetch: async () => new Response(JSON.stringify({ response: '{"itens":[{"id":1,"titulo":"Aquisição de café","categorias":[]}]}' })),
+  });
+  const run = await runTeacher(["Aquisição de café"], client);
+  assert.deepEqual(run.usage, [null]);
+});

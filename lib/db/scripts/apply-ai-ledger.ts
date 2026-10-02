@@ -38,6 +38,10 @@ try {
       from tender_ai_sheets
       where summary_generated_at is not null
         and (summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0)
+      union all
+      select created_at as occurred_at, null::text as user_id, 'title'::text as feature,
+             tender_id, model, input_tokens, output_tokens, estimated_cost_usd as cost_usd
+      from ai_title_usage
   `);
 } finally {
   await client.end();

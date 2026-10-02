@@ -10,6 +10,7 @@ import {
   type PublicationDraft,
 } from "./pncp-map";
 import { createTenderChangeNotifications } from "../account/notification-service";
+import { enqueueCollectedTitleRewrites } from "../titles/title-rewrite";
 
 export type ExistingTender = {
   pncpControlNumber: string;
@@ -69,8 +70,10 @@ export async function upsertPublications(
     existingRows.map((row) => [row.pncpControlNumber, row]),
   );
 
+  const newOrRetitled: string[] = [];
   for (const { record, draft } of drafts) {
     const existing = existingByControl.get(draft.pncpControlNumber);
+    if (!existing || existing.title !== draft.title) newOrRetitled.push(draft.id);
     const displayTitle = existing?.displayTitleSource === "model"
       ? existing.displayTitle
       : draft.displayTitle;
@@ -235,5 +238,6 @@ export async function upsertPublications(
     });
   }
 
+  await enqueueCollectedTitleRewrites(newOrRetitled);
   return drafts.length;
 }

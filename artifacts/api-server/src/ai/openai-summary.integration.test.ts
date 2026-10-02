@@ -44,6 +44,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     "ai_daily_usage",
     "ai_fit_daily_usage",
     "ai_sheet_daily_usage",
+    "ai_title_usage",
     "ai_ask_requests",
     "tender_ai_sheets",
     "ai_jobs",

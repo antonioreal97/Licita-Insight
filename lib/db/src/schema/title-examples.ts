@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, real, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, check, index, integer, numeric, pgTable, real, text, timestamp } from "drizzle-orm/pg-core";
 import { tendersTable } from "./tenders";
 
 export type TitleExampleSplit = "train" | "holdout";
@@ -26,4 +26,19 @@ export const tenderTitleExamplesTable = pgTable(
       .where(sql`${table.embedding} is null`),
     check("tender_title_examples_split_check", sql`${table.split} in ('train', 'holdout')`),
   ],
+);
+
+/** Paid teacher calls (OpenAI), one row per tender with the batch usage split across its items. */
+export const aiTitleUsageTable = pgTable(
+  "ai_title_usage",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    tenderId: text("tender_id").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull(),
+    outputTokens: integer("output_tokens").notNull(),
+    estimatedCostUsd: numeric("estimated_cost_usd", { precision: 14, scale: 8 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("ai_title_usage_created_idx").on(table.createdAt)],
 );

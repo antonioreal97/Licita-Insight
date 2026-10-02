@@ -103,6 +103,8 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     delete process.env.TITLE_TEACHER_ENABLED;
     delete process.env.CATEGORY_STUDENT_ENABLED;
     delete process.env.TITLE_REWRITE_DAILY_LIMIT;
+    delete process.env.TITLE_TEACHER_OPENAI_ENABLED;
+    delete process.env.TITLE_OPENAI_DAILY_LIMIT;
   });
   after(async () => {
     await cleanup();
@@ -236,11 +238,15 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     assert.deepEqual(enqueued, { created: 2, deduplicated: 0, dailyLimited: 1, ineligible: 0 });
     const repeated = await rewrite.enqueueTitleRewrites([first]);
     assert.equal(repeated.deduplicated, 1);
-    const jobs = await pool.query<{ dedupe_key: string; lane: string; payload: { promptVersion: number } }>(
+    const jobs = await pool.query<{ dedupe_key: string; lane: string; payload: { promptVersion: number; provider: string } }>(
       "select dedupe_key, lane, payload from ai_jobs where kind = 'title_rewrite' order by dedupe_key",
     );
-    assert.deepEqual(jobs.rows.map(({ dedupe_key }) => dedupe_key), [`title_rewrite:${first}:p1`, `title_rewrite:${second}:p1`]);
-    assert.ok(jobs.rows.every(({ lane, payload }) => lane === "batch" && payload.promptVersion === 1));
+    assert.deepEqual(jobs.rows.map(({ dedupe_key }) => dedupe_key).sort(), [
+      rewrite.titleRewriteDedupeKey(first, "AQUISIÇÃO DE PNEUS PARA OS VEÍCULOS DA SECRETARIA DE SAÚDE CONFORME PROCESSO"),
+      rewrite.titleRewriteDedupeKey(second, "Recarga de extintores de incêndio do almoxarifado central"),
+    ].sort());
+    assert.match(jobs.rows[0]?.dedupe_key ?? "", /^title_rewrite:.+:p1:[0-9a-f]{16}$/u);
+    assert.ok(jobs.rows.every(({ lane, payload }) => lane === "batch" && payload.promptVersion === 1 && payload.provider === "ollama"));
 
     const { client } = createFakeOllama();
     assert.equal(await rewrite.executeTitleRewriteJob(first, client), "rewritten");
@@ -283,6 +289,131 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       [first],
     )).rows[0];
     assert.deepEqual(refreshed, { display_title_source: "model", category_source: "teacher" });
+  });
+
+  it("a coleta manda editais novos e com título alterado para a OpenAI, só com a flag e a chave", async () => {
+    const [{ pool }, { upsertPublications }] = await Promise.all([import("@workspace/db"), import("../ingest/upsert-tenders")]);
+    const openAiJobs = async (id: string) => (await pool.query<{ dedupe_key: string }>(
+      "select dedupe_key from ai_jobs where tender_id = $1 and kind = 'title_rewrite' and payload->>'provider' = 'openai'",
+      [id],
+    )).rows.map(({ dedupe_key }) => dedupe_key);
+    const now = new Date("2026-10-02T14:00:00Z");
+
+    await upsertPublications([publication(935001, "Aquisição de pneus para ambulâncias")], now);
+    assert.deepEqual(await openAiJobs(tenderId(935001)), [], "flag desligada");
+
+    process.env.TITLE_TEACHER_OPENAI_ENABLED = "true";
+    delete process.env.OPENAI_API_KEY;
+    await upsertPublications([publication(935002, "Aquisição de pneus para tratores")], now);
+    assert.deepEqual(await openAiJobs(tenderId(935002)), [], "sem chave da OpenAI");
+
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    await upsertPublications([publication(935003, "Aquisição de pneus para caminhões")], now);
+    assert.equal((await openAiJobs(tenderId(935003))).length, 1, "novo");
+    await upsertPublications([publication(935003, "Aquisição de pneus para caminhões")], now);
+    assert.equal((await openAiJobs(tenderId(935003))).length, 1, "mesmo título não reenfileira");
+    // The backlog (already stored, unchanged) never goes to the paid teacher.
+    await upsertPublications([publication(935001, "Aquisição de pneus para ambulâncias")], now);
+    assert.deepEqual(await openAiJobs(tenderId(935001)), []);
+    await upsertPublications([publication(935001, "Aquisição de pneus e câmaras para ambulâncias")], now);
+    assert.equal((await openAiJobs(tenderId(935001))).length, 1, "título oficial alterado");
+
+    process.env.TITLE_OPENAI_DAILY_LIMIT = "2";
+    await upsertPublications([publication(935004, "Aquisição de pneus para motos")], now);
+    assert.deepEqual(await openAiJobs(tenderId(935004)), [], "teto diário da OpenAI");
+    const onDemandUnaffected = await pool.query<{ count: number }>(
+      "select count(*)::int as count from ai_jobs where kind = 'title_rewrite' and payload->>'provider' = 'openai'",
+    );
+    assert.equal(onDemandUnaffected.rows[0]?.count, 2);
+  });
+
+  it("o lote OpenAI faz uma chamada, grava o uso no ledger e no orçamento e substitui título model antigo", async () => {
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    const [{ pool }, rewrite, { openAiTeacher }, { loadAiDailySpend }, { dateInSaoPaulo }] = await Promise.all([
+      import("@workspace/db"),
+      import("./title-rewrite"),
+      import("./teacher"),
+      import("../ai/ai-budget"),
+      import("../lib/sao-paulo-date"),
+    ]);
+    const [fresh, retitled] = await insertTenders([
+      [936001, "Aquisição de medicamentos para o hospital municipal"],
+      [936002, "Recarga de extintores para as escolas"],
+    ], "open");
+    await pool.query(
+      `update tenders set display_title = 'Título antigo do modelo', display_title_source = 'model', display_title_version = 1
+       where id = $1`,
+      [retitled],
+    );
+    let calls = 0;
+    const teacher = openAiTeacher({
+      requestFetch: async (_input, init) => {
+        calls += 1;
+        const body = JSON.parse(String(init?.body)) as { messages: { content: string }[] };
+        const { itens } = JSON.parse(body.messages[1]?.content ?? "{}") as { itens: { id: number; texto: string }[] };
+        return new Response(JSON.stringify({
+          model: "gpt-4o-mini-2024-07-18",
+          choices: [{ message: { content: JSON.stringify({ itens: itens.map(({ id, texto }) => ({
+            id,
+            titulo: texto.split(" ").slice(0, 4).join(" "),
+            categorias: KEYWORDS.filter(({ pattern }) => pattern.test(texto)).map(({ label }) => label),
+          })) }) } }],
+          usage: { prompt_tokens: 1_200, completion_tokens: 80 },
+        }), { status: 200 });
+      },
+    });
+    const before = await loadAiDailySpend(dateInSaoPaulo(new Date()));
+    const outcomes = await rewrite.executeTitleRewriteBatch([fresh, retitled], teacher);
+    assert.deepEqual(outcomes, ["rewritten", "rewritten"]);
+    assert.equal(calls, 1);
+
+    const rows = await pool.query<{ id: string; display_title: string; display_title_source: string; category_source: string }>(
+      "select id, display_title, display_title_source, category_source from tenders where id = any($1::text[]) order by id",
+      [[fresh, retitled]],
+    );
+    assert.deepEqual(rows.rows.map(({ display_title, display_title_source, category_source }) =>
+      [display_title, display_title_source, category_source]), [
+      ["Aquisição de medicamentos para", "model", "teacher"],
+      ["Recarga de extintores para", "model", "teacher"],
+    ]);
+    const usage = await pool.query<{ tender_id: string; input_tokens: number; output_tokens: number; model: string }>(
+      "select tender_id, input_tokens, output_tokens, model from ai_title_usage where tender_id = any($1::text[]) order by tender_id",
+      [[fresh, retitled]],
+    );
+    assert.deepEqual(usage.rows.map(({ input_tokens, output_tokens }) => [input_tokens, output_tokens]), [[600, 40], [600, 40]]);
+    assert.equal(usage.rows[0]?.model, "gpt-4o-mini-2024-07-18");
+    const ledger = await pool.query<{ feature: string; tender_id: string }>(
+      "select feature, tender_id from ai_usage_ledger where feature = 'title' and tender_id = any($1::text[])",
+      [[fresh, retitled]],
+    );
+    assert.equal(ledger.rowCount, 2);
+    const after = await loadAiDailySpend(dateInSaoPaulo(new Date()));
+    const expected = (1_200 * 0.15 + 80 * 0.6) / 1_000_000;
+    assert.ok(Math.abs(after.title - before.title - expected) < 1e-7);
+    assert.ok(Math.abs(after.total - before.total - expected) < 1e-7);
+
+    // The local on-demand teacher never replaces a model title.
+    const { client } = createFakeOllama();
+    assert.equal(await rewrite.executeTitleRewriteJob(retitled, client), "skipped");
+    await pool.query("delete from ai_title_usage where tender_id = any($1::text[])", [[fresh, retitled]]);
+  });
+
+  it("o worker reivindica title_rewrite por provedor", async () => {
+    const [{ pool }, { claimAiJobs, enqueueAiJob }] = await Promise.all([import("@workspace/db"), import("../ai/ai-job-queue")]);
+    const [left, right] = await insertTenders([
+      [937001, "Aquisição de café"],
+      [937002, "Aquisição de açúcar"],
+    ], "open");
+    await enqueueAiJob({ kind: "title_rewrite", dedupeKey: "claim-test:ollama", tenderId: left, payload: { promptVersion: 1 }, lane: "batch" });
+    await enqueueAiJob({ kind: "title_rewrite", dedupeKey: "claim-test:openai", tenderId: right, payload: { promptVersion: 1, provider: "openai" }, lane: "batch" });
+    const openai = await claimAiJobs(["title_rewrite"], 10, "worker-claim-test", 60_000, { titleProvider: "openai" });
+    // Jobs left by the collect test are also openai; none of them may be ollama.
+    assert.ok(openai.every(({ payload }) => payload.provider === "openai"));
+    assert.deepEqual(openai.filter(({ dedupeKey }) => dedupeKey.startsWith("claim-test")).map(({ dedupeKey }) => dedupeKey), ["claim-test:openai"]);
+    const ollama = await claimAiJobs(["title_rewrite"], 10, "worker-claim-test", 60_000, { titleProvider: "ollama" });
+    assert.deepEqual(ollama.filter(({ dedupeKey }) => dedupeKey.startsWith("claim-test")).map(({ dedupeKey }) => dedupeKey), ["claim-test:ollama"]);
+    assert.ok(ollama.every(({ payload }) => payload.provider !== "openai"));
+    await pool.query("delete from ai_jobs where dedupe_key like 'claim-test:%'");
   });
 
   it("com as flags desligadas nada é enfileirado nem classificado", async () => {

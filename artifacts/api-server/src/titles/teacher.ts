@@ -1,5 +1,7 @@
 import { TENDER_CATEGORIES, type TenderCategorySlug } from "../catalog/tender-categories";
 import type { OllamaClient } from "../ai/ollama-client";
+import { openAiConfig } from "../ai/config";
+import { completeJson } from "../ai/openai-client";
 import { comparableWords } from "./text";
 
 /** Bump whenever the prompt text, schema or validation changes the teacher's output. */
@@ -50,18 +52,41 @@ export const TEACHER_RESPONSE_SCHEMA = {
   required: ["itens"],
 } as const;
 
+/** OpenAI strict structured output: every object closed and every property required. */
+export const OPENAI_TEACHER_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    itens: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          id: { type: "integer" },
+          titulo: { type: "string" },
+          categorias: { type: "array", items: { type: "string", enum: LABELS } },
+        },
+        required: ["id", "titulo", "categorias"],
+      },
+    },
+  },
+  required: ["itens"],
+} as const;
+
+const RESPONSE_FORMAT_LINE =
+  'Responda só em JSON no formato {"itens":[{"id":n,"titulo":"...","categorias":["..."]}]}, com um item para cada id recebido.';
+
 const sourceForPrompt = (text: string): string => {
   const collapsed = text.normalize("NFC").replace(/\s+/gu, " ").trim();
   return collapsed.length <= MAX_SOURCE_CHARS ? collapsed : collapsed.slice(0, MAX_SOURCE_CHARS);
 };
 
+const teacherItems = (texts: readonly string[]): string =>
+  JSON.stringify({ itens: texts.map((text, index) => ({ id: index + 1, texto: sourceForPrompt(text) })) });
+
 export const buildTeacherPrompt = (texts: readonly string[]): string =>
-  [
-    TEACHER_INSTRUCTIONS,
-    'Responda só em JSON no formato {"itens":[{"id":n,"titulo":"...","categorias":["..."]}]}, com um item para cada id recebido.',
-    "",
-    JSON.stringify({ itens: texts.map((text, index) => ({ id: index + 1, texto: sourceForPrompt(text) })) }),
-  ].join("\n");
+  [TEACHER_INSTRUCTIONS, RESPONSE_FORMAT_LINE, "", teacherItems(texts)].join("\n");
 
 export type TeacherRejection = "missing" | "empty" | "too_long" | "invented_word";
 
@@ -127,23 +152,85 @@ export const parseTeacherResponse = (texts: readonly string[], value: unknown): 
   return texts.map((text, index) => validateTeacherItem(text, byId.get(index + 1)));
 };
 
-export type TeacherRun = { results: TeacherItemResult[]; model: string; durationMs: number };
+export type TeacherProvider = "ollama" | "openai";
+export type TeacherUsage = { inputTokens: number; outputTokens: number; costUsd: number };
+export type TeacherCall = { value: unknown; model: string; durationMs: number; usage: TeacherUsage | null };
 
-/** Labels the texts in batches of ten, sequentially. A failed call rejects the whole run. */
-export async function runTeacher(texts: readonly string[], client: OllamaClient): Promise<TeacherRun> {
-  const results: TeacherItemResult[] = [];
-  let model = client.config.teacherModel;
-  let durationMs = 0;
-  for (let start = 0; start < texts.length; start += TEACHER_BATCH_SIZE) {
-    const batch = texts.slice(start, start + TEACHER_BATCH_SIZE);
+/** One model call for up to ten texts, with the same prompt meaning on both providers. */
+export type TeacherBackend = {
+  provider: TeacherProvider;
+  model: string;
+  complete(texts: readonly string[]): Promise<TeacherCall>;
+};
+
+export const ollamaTeacher = (client: OllamaClient): TeacherBackend => ({
+  provider: "ollama",
+  model: client.config.teacherModel,
+  async complete(texts) {
     const response = await client.generateJson({
-      prompt: buildTeacherPrompt(batch),
+      prompt: buildTeacherPrompt(texts),
       schema: TEACHER_RESPONSE_SCHEMA,
       temperature: 0.1,
     });
-    model = response.model;
-    durationMs += response.durationMs;
-    results.push(...parseTeacherResponse(batch, response.value));
+    return { ...response, usage: null };
+  },
+});
+
+export const openAiTeacher = (options: { requestFetch?: typeof fetch } = {}): TeacherBackend => ({
+  provider: "openai",
+  model: openAiConfig().model,
+  async complete(texts) {
+    const startedAt = performance.now();
+    const response = await completeJson({
+      name: `title_teacher_v${TITLE_TEACHER_PROMPT_VERSION}`,
+      schema: OPENAI_TEACHER_SCHEMA,
+      system: `${TEACHER_INSTRUCTIONS}\n${RESPONSE_FORMAT_LINE}`,
+      user: teacherItems(texts),
+      requestFetch: options.requestFetch,
+    });
+    return {
+      value: response.value,
+      model: response.model,
+      durationMs: performance.now() - startedAt,
+      usage: { inputTokens: response.inputTokens, outputTokens: response.outputTokens, costUsd: response.costUsd },
+    };
+  },
+});
+
+/** Splits a batch's usage across its items so each tender carries its share. */
+export const splitUsage = (usage: TeacherUsage, items: number): TeacherUsage[] => {
+  if (items < 1) return [];
+  const share = (total: number, index: number) =>
+    Math.floor(total / items) + (index < total % items ? 1 : 0);
+  return Array.from({ length: items }, (_, index) => ({
+    inputTokens: share(usage.inputTokens, index),
+    outputTokens: share(usage.outputTokens, index),
+    costUsd: usage.costUsd / items,
+  }));
+};
+
+export type TeacherRun = {
+  results: TeacherItemResult[];
+  /** Per-item share of the paid usage; null for the local model. */
+  usage: (TeacherUsage | null)[];
+  model: string;
+  durationMs: number;
+};
+
+/** Labels the texts in batches of ten, sequentially. A failed call rejects the whole run. */
+export async function runTeacher(
+  texts: readonly string[],
+  teacher: TeacherBackend | OllamaClient,
+): Promise<TeacherRun> {
+  const backend = "complete" in teacher ? teacher : ollamaTeacher(teacher);
+  const run: TeacherRun = { results: [], usage: [], model: backend.model, durationMs: 0 };
+  for (let start = 0; start < texts.length; start += TEACHER_BATCH_SIZE) {
+    const batch = texts.slice(start, start + TEACHER_BATCH_SIZE);
+    const response = await backend.complete(batch);
+    run.model = response.model;
+    run.durationMs += response.durationMs;
+    run.results.push(...parseTeacherResponse(batch, response.value));
+    run.usage.push(...(response.usage ? splitUsage(response.usage, batch.length) : batch.map(() => null)));
   }
-  return { results, model, durationMs };
+  return run;
 }
