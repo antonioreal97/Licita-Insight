@@ -30,16 +30,53 @@ describe("PNCP consultation endpoints", () => {
     delete process.env.PNCP_REQUEST_DELAY_MS;
   });
 
-  it("reads purchase, items and files from the public consultation API", async () => {
+  it("reads the purchase from the consultation API and items and files from the PNCP API", async () => {
     await fetchCompra("34028316000103", 2026, 87);
     await fetchCompraItens("34028316000103", 2026, 87);
     await fetchCompraArquivos("34028316000103", 2026, 87);
 
     assert.deepEqual(requestedUrls, [
       "https://pncp.gov.br/api/consulta/v1/orgaos/34028316000103/compras/2026/87",
-      "https://pncp.gov.br/api/consulta/v1/orgaos/34028316000103/compras/2026/87/itens?pagina=1&tamanhoPagina=50",
-      "https://pncp.gov.br/api/consulta/v1/orgaos/34028316000103/compras/2026/87/arquivos",
+      "https://pncp.gov.br/api/pncp/v1/orgaos/34028316000103/compras/2026/87/itens?pagina=1&tamanhoPagina=50",
+      "https://pncp.gov.br/api/pncp/v1/orgaos/34028316000103/compras/2026/87/arquivos",
     ]);
+  });
+
+  it("follows item pages until the PNCP API returns a short plain array", async () => {
+    globalThis.fetch = async (input) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      requestedUrls.push(url.toString());
+      const page = Number(url.searchParams.get("pagina"));
+      const size = page === 1 ? 50 : 11;
+      return Response.json(
+        Array.from({ length: size }, (_, index) => ({ numeroItem: (page - 1) * 50 + index + 1 })),
+      );
+    };
+
+    const rows = await fetchCompraItens("45226214000119", 2026, 432);
+
+    assert.equal(rows.length, 61);
+    assert.equal(rows.at(-1)?.numeroItem, 61);
+    assert.equal(requestedUrls.length, 2);
+  });
+
+  it("reads a full last item page as a request for one more page", async () => {
+    globalThis.fetch = async (input) => {
+      const url = new URL(input instanceof Request ? input.url : input.toString());
+      requestedUrls.push(url.toString());
+      const page = Number(url.searchParams.get("pagina"));
+      return Response.json(page === 1 ? Array.from({ length: 50 }, () => ({})) : []);
+    };
+
+    assert.equal((await fetchCompraItens("45226214000119", 2026, 432)).length, 50);
+    assert.equal(requestedUrls.length, 2);
+  });
+
+  it("treats a missing purchase list as empty", async () => {
+    globalThis.fetch = async () => new Response("", { status: 404 });
+
+    assert.deepEqual(await fetchCompraItens("34028316000103", 2026, 87), []);
+    assert.deepEqual(await fetchCompraArquivos("34028316000103", 2026, 87), []);
   });
 
   it("retries a rate-limited publication page", async () => {

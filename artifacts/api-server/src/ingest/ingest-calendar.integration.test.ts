@@ -342,5 +342,64 @@ test(
         assert.equal(calls.length, 0);
       },
     );
+
+    await t.test(
+      "an empty items/files answer never erases stored PNCP details",
+      async () => {
+        await reset();
+        const { enrichTenderById } = await import("./enrich-tender");
+        await upsertPublications(
+          [publication(130)],
+          new Date("2026-01-05T12:00:00Z"),
+        );
+        const { rows } = await pool.query<{ id: string }>(
+          "SELECT id FROM tenders WHERE pncp_control_number = $1",
+          [publication(130).numeroControlePNCP],
+        );
+        const tenderId = rows[0].id;
+        const documentsOf = async () =>
+          (
+            await pool.query<{ documents: { id: string }[] }>(
+              "SELECT documents FROM tenders WHERE id = $1",
+              [tenderId],
+            )
+          ).rows[0].documents;
+        const stored = [
+          {
+            id: "1",
+            name: "Edital",
+            type: "Edital",
+            sizeBytes: null,
+            url: "https://pncp.gov.br/pncp-api/v1/stored/1",
+            publishedAt: null,
+          },
+        ];
+        await pool.query("UPDATE tenders SET documents = $1::jsonb WHERE id = $2", [
+          JSON.stringify(stored),
+          tenderId,
+        ]);
+
+        response = () => Response.json([]);
+        await enrichTenderById(tenderId);
+        assert.deepEqual(await documentsOf(), stored);
+
+        response = (url) =>
+          url.pathname.endsWith("/arquivos")
+            ? Response.json([
+                {
+                  sequencialDocumento: 2,
+                  titulo: "Edital retificado",
+                  tipoDocumentoNome: "Edital",
+                  url: "https://pncp.gov.br/pncp-api/v1/fresh/2",
+                },
+              ])
+            : Response.json([]);
+        await enrichTenderById(tenderId);
+        assert.deepEqual(
+          (await documentsOf()).map(({ id }) => id),
+          ["2"],
+        );
+      },
+    );
   },
 );

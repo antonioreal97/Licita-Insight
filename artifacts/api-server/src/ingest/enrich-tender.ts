@@ -11,6 +11,11 @@ import {
 } from "./pncp-map";
 import { createDocumentAddedNotifications } from "../account/notification-service";
 
+const rawList = (raw: unknown, key: "items" | "arquivos"): unknown => {
+  if (raw === null || typeof raw !== "object" || !(key in raw)) return [];
+  return (raw as Record<string, unknown>)[key];
+};
+
 export async function enrichTenderById(id: string): Promise<void> {
   const [row] = await db
     .select()
@@ -30,8 +35,20 @@ export async function enrichTenderById(id: string): Promise<void> {
     fetchCompraItens(identity.cnpj, identity.ano, identity.sequencial),
     fetchCompraArquivos(identity.cnpj, identity.ano, identity.sequencial),
   ]);
-  const items = mapPncpItems(itemRows);
-  const documents = mapPncpDocuments(fileRows, identity);
+  const fetchedItems = mapPncpItems(itemRows);
+  const fetchedDocuments = mapPncpDocuments(fileRows, identity);
+  // An empty answer is more often an API failure than a purchase losing every
+  // item or file, so it never erases what was already stored.
+  const keepItems = fetchedItems.length === 0 && row.items.length > 0;
+  const keepDocuments = fetchedDocuments.length === 0 && row.documents.length > 0;
+  if (keepItems || keepDocuments) {
+    logger.warn(
+      { tenderId: id, keepItems, keepDocuments },
+      "PNCP returned no items or files; keeping the stored ones",
+    );
+  }
+  const items = keepItems ? row.items : fetchedItems;
+  const documents = keepDocuments ? row.documents : fetchedDocuments;
   const search = buildSearchColumns({
     title: row.title,
     objectSummary: row.objectSummary,
@@ -75,7 +92,11 @@ export async function enrichTenderById(id: string): Promise<void> {
         documents,
         timeline,
         ...search,
-        rawPayload: { publication, items: itemRows, arquivos: fileRows },
+        rawPayload: {
+          publication,
+          items: keepItems ? rawList(raw, "items") : itemRows,
+          arquivos: keepDocuments ? rawList(raw, "arquivos") : fileRows,
+        },
         detailsFetchedAt: detectedAt,
         updatedAt: detectedAt,
       })
