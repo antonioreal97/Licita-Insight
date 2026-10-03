@@ -24,7 +24,7 @@ import {
   generateAskSummary,
   type SummaryAttempt,
 } from "./openai-summary";
-import { aiDailyLimit, aiQuotaResetsAt, lexicalSearchQuery, selectEvidencePassages, type PassageCandidate } from "./policy";
+import { aiDailyLimit, aiQuotaResetsAt, askSearchQueries, mergeAskShortlists, selectEvidencePassages, type PassageCandidate } from "./policy";
 import { ensureTenderIndex, type IndexStatus } from "./tender-index-service";
 
 export { ensureTenderIndex } from "./tender-index-service";
@@ -147,18 +147,20 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
 }
 
 async function shortlist(tenderId: string, version: number, question: string): Promise<PassageCandidate[]> {
-  const searchQuery = lexicalSearchQuery(question);
-  if (!searchQuery) return [];
-  const result = await db.execute<PassageCandidate>(sql`
-    select p.document_id as "documentId", d.title as "documentTitle", d.source_url as "documentUrl", p.page, p.text
-    from tender_ai_passages p
-    join tender_ai_documents d on d.id = p.document_id,
-         websearch_to_tsquery('portuguese', ${searchQuery}) query
-    where p.tender_id = ${tenderId} and p.index_version = ${version} and p.search_vector @@ query
-    order by ts_rank_cd(p.search_vector, query) desc, p.page asc
-    limit ${aiConfig().shortlistSize}
-  `);
-  return result.rows;
+  const limit = aiConfig().shortlistSize;
+  const groups = await Promise.all(askSearchQueries(question).map(async (searchQuery) => {
+    const result = await db.execute<PassageCandidate>(sql`
+      select p.document_id as "documentId", d.title as "documentTitle", d.source_url as "documentUrl", p.page, p.text
+      from tender_ai_passages p
+      join tender_ai_documents d on d.id = p.document_id,
+           websearch_to_tsquery('portuguese', ${searchQuery}) query
+      where p.tender_id = ${tenderId} and p.index_version = ${version} and p.search_vector @@ query
+      order by ts_rank_cd(p.search_vector, query) desc, p.page asc, p.passage_order asc
+      limit ${limit}
+    `);
+    return result.rows;
+  }));
+  return mergeAskShortlists(groups, limit);
 }
 
 export async function askTender(
