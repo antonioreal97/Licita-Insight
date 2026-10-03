@@ -21,11 +21,13 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
 
   const {
     aiAskRequestsTable,
+    aiDailyUsageTable,
     aiSheetDailyUsageTable,
     db,
     pool,
     subscriptionsTable,
     tenderAiDocumentsTable,
+    tenderAiAnswersTable,
     tenderAiIndexesTable,
     tenderAiPassagesTable,
     tenderAiSheetsTable,
@@ -46,6 +48,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     "ai_sheet_daily_usage",
     "ai_title_usage",
     "ai_ask_requests",
+    "tender_ai_answers",
     "tender_ai_sheets",
     "ai_jobs",
   ]) {
@@ -56,7 +59,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
       select created_at as occurred_at, user_id, 'ask'::text as feature,
              tender_id, response_model as model, input_tokens, 0::integer as output_tokens,
              estimated_cost_usd as cost_usd
-      from ai_ask_requests where status in ('answered', 'not_found')
+      from ai_ask_requests where status in ('answered', 'not_found') and cache_hit = false
       union all
       select created_at, user_id, 'ask_summary'::text, tender_id, summary_response_model,
              summary_input_tokens, summary_output_tokens, summary_estimated_cost_usd
@@ -72,6 +75,8 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
 
   const tenderId = `T-${randomUUID()}`;
   const userId = `U-${randomUUID()}`;
+  const secondUserId = `U-${randomUUID()}`;
+  const thirdUserId = `U-${randomUUID()}`;
   const documentId = `D-${randomUUID()}`;
   const documents = [{
     id: "source-1",
@@ -133,7 +138,11 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
 
   try {
     await db.insert(usersTable).values({ id: userId, email: `${userId}@example.test` });
+    await db.insert(usersTable).values({ id: secondUserId, email: `${secondUserId}@example.test` });
+    await db.insert(usersTable).values({ id: thirdUserId, email: `${thirdUserId}@example.test` });
     await db.insert(subscriptionsTable).values({ userId, status: "active", currentPeriodEnd: new Date("2099-01-01") });
+    await db.insert(subscriptionsTable).values({ userId: secondUserId, status: "active", currentPeriodEnd: new Date("2099-01-01") });
+    await db.insert(subscriptionsTable).values({ userId: thirdUserId, status: "active", currentPeriodEnd: new Date("2099-01-01") });
     await db.insert(tendersTable).values({
       id: tenderId,
       pncpControlNumber: tenderId,
@@ -192,13 +201,51 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     assert.deepEqual(cached.summary, first.summary);
     assert.equal(jevCalls, 1);
     assert.equal(askSummaryCalls, 1);
+    const shared = await askTender(secondUserId, tenderId, "  QUAL É O PRAZO DE ENTREGA?  ");
+    assert.equal(shared.status, "answered");
+    assert.deepEqual(shared.summary, first.summary);
+    assert.equal(shared.quota.used, 0);
+    assert.equal(jevCalls, 1);
+    assert.equal(askSummaryCalls, 1);
+    const [sharedHistory] = await db.select().from(aiAskRequestsTable)
+      .where(eq(aiAskRequestsTable.userId, secondUserId));
+    assert.equal(sharedHistory?.cacheHit, true);
+    const [secondUsage] = await db.select().from(aiDailyUsageTable)
+      .where(eq(aiDailyUsageTable.userId, secondUserId));
+    assert.equal(secondUsage, undefined);
+    await db.delete(tenderAiAnswersTable).where(eq(tenderAiAnswersTable.tenderId, tenderId));
+    const seeded = await askTender(thirdUserId, tenderId, "Qual é o prazo de entrega?");
+    assert.equal(seeded.status, "answered");
+    assert.deepEqual(seeded.summary, first.summary);
+    assert.equal(seeded.quota.used, 0);
+    assert.equal(jevCalls, 1);
+    assert.equal(askSummaryCalls, 1);
+
+    const beforeConcurrent = jevCalls;
+    const concurrent = await Promise.all([
+      askTender(userId, tenderId, "Qual é o prazo da entrega?"),
+      askTender(secondUserId, tenderId, "Qual é o prazo da entrega?"),
+    ]);
+    assert.equal(jevCalls, beforeConcurrent + 1);
+    assert.ok(concurrent.every(({ status }) => status === "answered" || status === "processing"));
+    assert.equal((await askTender(thirdUserId, tenderId, "Qual é o prazo da entrega?")).status, "answered");
+    assert.equal(jevCalls, beforeConcurrent + 1);
+    const jevBeforeSummaryChange = jevCalls;
+    process.env.OPENAI_MODEL = "gpt-4o-mini-alt";
+    const resummarizedAsk = await askTender(thirdUserId, tenderId, "Qual é o prazo de entrega?");
+    assert.equal(resummarizedAsk.status, "answered");
+    assert.deepEqual(resummarizedAsk.summary?.citations, [1]);
+    assert.equal(resummarizedAsk.quota.used, 0);
+    assert.equal(jevCalls, jevBeforeSummaryChange);
+    assert.equal(askSummaryCalls, 3);
+    process.env.OPENAI_MODEL = "gpt-4o-mini";
     const [askRow] = await db.select().from(aiAskRequestsTable).where(eq(aiAskRequestsTable.tenderId, tenderId));
     assert.equal(askRow?.summary?.citations[0], 1);
 
     const notFound = await askTender(userId, tenderId, "Existe cronograma de vacinação animal?");
     assert.equal(notFound.status, "not_found");
     assert.equal(notFound.summary, null);
-    assert.equal(askSummaryCalls, 1);
+    assert.equal(askSummaryCalls, 3);
 
     const { SHEET_PROMPT_VERSION } = await import("./tender-sheet-policy");
     const { SHEET_SUMMARY_PROMPT_VERSION } = await import("./openai-summary");
@@ -365,7 +412,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     const ledger = await pool.query<{ feature: string; input_tokens: number; output_tokens: number }>(
       "select feature, input_tokens, output_tokens from ai_usage_ledger order by feature",
     );
-    assert.deepEqual(ledger.rows.map(({ feature }) => feature), ["ask", "ask_summary", "sheet_summary"]);
+    assert.deepEqual(ledger.rows.map(({ feature }) => feature), ["ask", "ask", "ask_summary", "ask_summary", "ask_summary", "sheet_summary"]);
     assert.equal(Number(ledger.rows.find(({ feature }) => feature === "ask_summary")?.output_tokens), 18);
     assert.equal(Number(ledger.rows.find(({ feature }) => feature === "sheet_summary")?.output_tokens), 24);
     const [storedSheet] = await db.select().from(tenderAiSheetsTable)

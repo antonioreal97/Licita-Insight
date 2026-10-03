@@ -63,6 +63,7 @@ export async function purgeExpiredAiDocuments(
       );
       const ids = candidates.rows.map(({ id }) => id);
       if (ids.length === 0) { await client.query("commit"); break; }
+      await client.query("delete from tender_ai_answers where tender_id=any($1::text[])", [ids]);
       const passages = await client.query("delete from tender_ai_passages where tender_id=any($1::text[]) returning id", [ids]);
       const documents = await client.query("delete from tender_ai_documents where tender_id=any($1::text[]) returning id", [ids]);
       await client.query("update tender_ai_indexes set purged_at=$2, updated_at=$2 where tender_id=any($1::text[])", [ids, now]);

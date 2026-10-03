@@ -230,10 +230,42 @@ export const aiAskRequestsTable = pgTable(
       table.summaryRequestedModel,
     ),
     index("ai_ask_requests_user_created_idx").on(table.userId, table.createdAt),
+    index("ai_ask_requests_shared_lookup_idx").on(
+      table.tenderId, table.indexVersion, table.normalizedQuestion,
+      table.requestedModel, table.summaryPromptVersion, table.summaryRequestedModel,
+    ),
     check(
       "ai_ask_requests_status_check",
       sql`${table.status} in ('processing', 'answered', 'not_found', 'failed')`,
     ),
+  ],
+);
+
+/** Public evidence and answer, shared across accounts. Never store a user ID or raw question here. */
+export const tenderAiAnswersTable = pgTable(
+  "tender_ai_answers",
+  {
+    cacheKey: text("cache_key").primaryKey(),
+    evidenceKey: text("evidence_key").notNull(),
+    tenderId: text("tender_id").notNull().references(() => tendersTable.id, { onDelete: "cascade" }),
+    indexVersion: integer("index_version").notNull(),
+    questionHash: text("question_hash").notNull(),
+    requestedModel: text("requested_model").notNull(),
+    summaryRequestedModel: text("summary_requested_model").notNull(),
+    summaryPromptVersion: integer("summary_prompt_version").notNull(),
+    status: text("status").notNull(),
+    passages: jsonb("passages").$type<AiPassageRecord[]>().notNull().default(sql`'[]'::jsonb`),
+    summary: jsonb("summary").$type<AiGeneratedSummary>(),
+    responseModel: text("response_model"),
+    claimToken: text("claim_token"),
+    claimExpiresAt: timestamp("claim_expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tender_ai_answers_tender_idx").on(table.tenderId),
+    index("tender_ai_answers_evidence_idx").on(table.evidenceKey, table.updatedAt),
+    check("tender_ai_answers_status_check", sql`${table.status} in ('processing', 'answered', 'not_found')`),
   ],
 );
 

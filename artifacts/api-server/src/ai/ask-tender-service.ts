@@ -20,6 +20,17 @@ import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { aiConfig, openAiConfig } from "./config";
 import { JevUnavailableError, scoreTenderPassage } from "./jev-client";
 import {
+  claimSharedAnswer,
+  finishSharedAnswer,
+  readSharedAnswer,
+  readSharedEvidence,
+  releaseSharedAnswer,
+  seedSharedAnswer,
+  sharedAnswerIdentity,
+  waitForSharedAnswer,
+  type SharedAnswer,
+} from "./shared-answer-cache";
+import {
   ASK_SUMMARY_PROMPT_VERSION,
   generateAskSummary,
   type SummaryAttempt,
@@ -178,13 +189,13 @@ export async function askTender(
   const config = aiConfig();
   const summaryConfig = openAiConfig();
   const summaryRequestedModel = summaryConfig.apiKey ? summaryConfig.model : "disabled";
-  if (!config.apiKey) throw new AiUnavailableError();
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
   if (indexStatus === "expired") {
     throw new ConflictError("The tender document index has expired", [
       { field: "index", issue: "index_expired" },
     ]);
   }
+  if (!config.apiKey && indexStatus !== "ready") throw new AiUnavailableError();
   if (indexStatus === "processing")
     return {
       status: "processing",
@@ -207,6 +218,16 @@ export async function askTender(
       quota: await quotaFor(userId, now),
     };
   const normalizedQuestion = normalizeQuestion(question);
+  const sharedIdentity = sharedAnswerIdentity({
+    tenderId,
+    indexVersion: index.version,
+    normalizedQuestion,
+    requestedModel: config.model,
+    summaryRequestedModel,
+    threshold: config.threshold,
+    relativeThresholdDelta: config.relativeThresholdDelta,
+    shortlistSize: config.shortlistSize,
+  });
   const [cached] = await db
     .select()
     .from(aiAskRequestsTable)
@@ -222,27 +243,87 @@ export async function askTender(
       ),
     )
     .limit(1);
-  if (cached && (cached.status === "answered" || cached.status === "not_found")) {
-    return {
-      status: cached.status,
-      passages: cached.passages,
-      summary: cached.summary,
-      model: cached.responseModel ?? config.model,
-      quota: await quotaFor(userId, now),
-    };
+  const fromShared = async (answer: SharedAnswer) => {
+    await db.insert(aiAskRequestsTable).values({
+      id: randomUUID(), userId, tenderId, question, normalizedQuestion,
+      indexVersion: index.version, requestedModel: config.model,
+      summaryPromptVersion: ASK_SUMMARY_PROMPT_VERSION, summaryRequestedModel,
+      status: answer.status, passages: answer.passages, summary: answer.summary,
+      responseModel: answer.model, cacheHit: true, updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: [
+        aiAskRequestsTable.userId, aiAskRequestsTable.tenderId,
+        aiAskRequestsTable.normalizedQuestion, aiAskRequestsTable.indexVersion,
+        aiAskRequestsTable.requestedModel, aiAskRequestsTable.summaryPromptVersion,
+        aiAskRequestsTable.summaryRequestedModel,
+      ],
+      set: {
+        question, status: answer.status, passages: answer.passages,
+        summary: answer.summary, responseModel: answer.model, updatedAt: new Date(),
+      },
+    });
+    return { ...answer, quota: await quotaFor(userId, now) };
+  };
+  const shared = await readSharedAnswer(sharedIdentity)
+    ?? (config.threshold === 0.5 && config.relativeThresholdDelta === 0.25 && config.shortlistSize === 10
+      ? await seedSharedAnswer(sharedIdentity, normalizedQuestion)
+      : null);
+  if (shared) return fromShared(shared);
+
+  const claimToken = await claimSharedAnswer(sharedIdentity);
+  if (!claimToken) {
+    const completed = await waitForSharedAnswer(sharedIdentity);
+    if (completed) return fromShared(completed);
+    return { status: "processing", passages: [], summary: null, model: config.model,
+      quota: await quotaFor(userId, now) };
   }
-  const candidates = await shortlist(tenderId, index.version, question);
-  if (candidates.length === 0)
-    return {
-      status: "not_found",
-      passages: [],
-      summary: null,
-      model: config.model,
-      quota: await quotaFor(userId, now),
-    };
-  const quota = await reserveQuota(userId, now);
-  const requestId = cached?.id ?? randomUUID();
-  await db
+  let requestId: string | null = null;
+  try {
+    const previousEvidence = await readSharedEvidence(sharedIdentity);
+    if (previousEvidence) {
+      const summaryAttempt = previousEvidence.status === "answered"
+        ? await safelyGenerateAskSummary(question, previousEvidence.passages)
+        : EMPTY_SUMMARY_ATTEMPT;
+      const answer: SharedAnswer = { ...previousEvidence, summary: summaryAttempt.summary };
+      await db.insert(aiAskRequestsTable).values({
+        id: randomUUID(), userId, tenderId, question, normalizedQuestion,
+        indexVersion: index.version, requestedModel: config.model,
+        summaryPromptVersion: ASK_SUMMARY_PROMPT_VERSION, summaryRequestedModel,
+        status: answer.status, passages: answer.passages, summary: answer.summary,
+        responseModel: answer.model, cacheHit: true,
+        summaryResponseModel: summaryAttempt.model,
+        summaryInputTokens: summaryAttempt.inputTokens,
+        summaryOutputTokens: summaryAttempt.outputTokens,
+        summaryEstimatedCostUsd: summaryAttempt.costUsd.toFixed(8),
+      }).onConflictDoNothing();
+      if (summaryAttempt.inputTokens + summaryAttempt.outputTokens > 0 || summaryAttempt.costUsd > 0) {
+        const day = dateInSaoPaulo(now);
+        await db.insert(aiDailyUsageTable).values({
+          userId, quotaDay: day, used: 0,
+          inputTokens: summaryAttempt.inputTokens + summaryAttempt.outputTokens,
+          estimatedCostUsd: summaryAttempt.costUsd.toFixed(8),
+        }).onConflictDoUpdate({
+          target: [aiDailyUsageTable.userId, aiDailyUsageTable.quotaDay],
+          set: {
+            inputTokens: sql`${aiDailyUsageTable.inputTokens} + ${summaryAttempt.inputTokens + summaryAttempt.outputTokens}`,
+            estimatedCostUsd: sql`${aiDailyUsageTable.estimatedCostUsd} + ${summaryAttempt.costUsd.toFixed(8)}`,
+            updatedAt: new Date(),
+          },
+        });
+      }
+      await finishSharedAnswer(sharedIdentity, claimToken, answer);
+      return { ...answer, quota: await quotaFor(userId, now) };
+    }
+    if (!config.apiKey) throw new AiUnavailableError();
+    const candidates = await shortlist(tenderId, index.version, question);
+    if (candidates.length === 0) {
+      const answer: SharedAnswer = { status: "not_found", passages: [], summary: null, model: config.model };
+      await finishSharedAnswer(sharedIdentity, claimToken, answer);
+      return fromShared(answer);
+    }
+    const quota = await reserveQuota(userId, now);
+    requestId = cached?.id ?? randomUUID();
+    await db
     .insert(aiAskRequestsTable)
     .values({
       id: requestId,
@@ -279,7 +360,6 @@ export async function askTender(
         updatedAt: now,
       },
     });
-  try {
     const scores = await Promise.all(candidates.map(({ text }) => scoreTenderPassage(question, text)));
     const passages = selectEvidencePassages(candidates, scores, config.threshold, config.relativeThresholdDelta);
     const inputTokens = scores.reduce((total, score) => total + score.inputTokens, 0);
@@ -313,6 +393,8 @@ export async function askTender(
         updatedAt: new Date(),
       })
       .where(and(eq(aiDailyUsageTable.userId, userId), eq(aiDailyUsageTable.quotaDay, dateInSaoPaulo(now))));
+    await finishSharedAnswer(sharedIdentity, claimToken, { status, passages,
+      summary: summaryAttempt.summary, model: responseModel });
     return {
       status,
       passages,
@@ -321,7 +403,8 @@ export async function askTender(
       quota,
     };
   } catch (error) {
-    await db.update(aiAskRequestsTable).set({ status: "failed", updatedAt: new Date() }).where(eq(aiAskRequestsTable.id, requestId));
+    await releaseSharedAnswer(sharedIdentity, claimToken);
+    if (requestId) await db.update(aiAskRequestsTable).set({ status: "failed", updatedAt: new Date() }).where(eq(aiAskRequestsTable.id, requestId));
     if (error instanceof JevUnavailableError) throw new AiUnavailableError();
     throw error;
   }
