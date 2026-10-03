@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { aiDailyLimit, aiQuotaResetsAt, completedIndexStatus, lexicalSearchQuery, selectEvidencePassages } from "./policy";
+import { aiDailyLimit, aiQuotaResetsAt, askSearchQueries, completedIndexStatus, mergeAskShortlists, selectEvidencePassages } from "./policy";
 import { scoreCompanyFit, scoreSizeRestriction, scoreTenderPassage } from "./jev-client";
+import { generateAskSummary } from "./openai-summary";
 
 const originalEnv = { ...process.env };
 afterEach(() => {
@@ -47,11 +48,60 @@ test("quota resets at midnight in America/Sao_Paulo", () => {
   assert.equal(aiQuotaResetsAt(new Date("2026-09-26T03:00:00.000Z")), "2026-09-27T03:00:00.000Z");
 });
 
-test("builds a Portuguese OR query for broad shortlist recall", () => {
-  assert.equal(
-    lexicalSearchQuery("É permitida a participação de empresas em consórcio?"),
-    "permitida OR participação OR empresas OR consórcio",
-  );
+test("searches the question and domain synonyms before Jev judges the passages", () => {
+  const queries = askSearchQueries("Há vistoria obrigatória?");
+  assert.equal(queries[0], "vistoria obrigatoria");
+  assert.match(queries[1] ?? "", /visita técnica/u);
+  assert.equal(queries.at(-1), "vistoria OR obrigatoria");
+  assert.deepEqual(askSearchQueries("Qual é o prazo?"), ["prazo"]);
+});
+
+test("interleaves matching routes without repeating the same edital page", () => {
+  const candidate = (page: number, text: string) => ({
+    documentId: "edital",
+    documentTitle: "Edital.pdf",
+    documentUrl: "https://example.test/edital.pdf",
+    page,
+    text,
+  });
+  assert.deepEqual(mergeAskShortlists([
+    [candidate(1, "A"), candidate(1, "B"), candidate(1, "C")],
+    [candidate(1, "A"), candidate(2, "D"), candidate(3, "E")],
+  ], 4).map(({ text }) => text), ["A", "B", "D", "E"]);
+});
+
+test("OpenAI writes a short answer with a real passage citation and a supported schema", async () => {
+  process.env.OPENAI_API_KEY = "test-key";
+  const passage = {
+    documentId: "edital",
+    documentTitle: "Edital.pdf",
+    documentUrl: "https://example.test/edital.pdf",
+    page: 3,
+    text: "A visita técnica é facultativa e pode ser substituída por declaração.",
+    relevance: 0.93,
+  };
+  const requestFetch: typeof fetch = async (_input, init) => {
+    const body = JSON.parse(String(init?.body)) as {
+      messages: Array<{ role: string; content: string }>;
+      response_format: { json_schema: { schema: { properties: { citations: Record<string, unknown> } } } };
+      store: boolean;
+    };
+    assert.equal(body.store, false);
+    assert.equal(body.response_format.json_schema.schema.properties.citations.uniqueItems, undefined);
+    assert.match(body.messages[0]?.content ?? "", /linguagem clara e natural/u);
+    assert.match(body.messages[1]?.content ?? "", /A visita técnica é facultativa/u);
+    return new Response(JSON.stringify({
+      model: "gpt-4o-mini",
+      choices: [{ message: { content: '{"answer":"A visita técnica é facultativa; você pode substituí-la por uma declaração [1].","citations":[1]}' } }],
+      usage: { prompt_tokens: 50, completion_tokens: 20 },
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const result = await generateAskSummary("Preciso fazer vistoria?", [passage], {
+    budgetPaused: async () => false,
+    requestFetch,
+  });
+  assert.equal(result.summary?.citations[0], 1);
+  assert.match(result.summary?.text ?? "", /facultativa/u);
 });
 
 test("Jev client uses explicit key and parses a mocked noul response", async () => {

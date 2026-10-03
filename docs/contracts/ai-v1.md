@@ -1,12 +1,13 @@
 # AI v1 — Perguntar ao edital
 
-O recurso retorna somente trechos extraídos de documentos oficiais. O Jev classifica evidência; ele não gera a resposta exibida.
+O recurso procura trechos em documentos oficiais, usa o Jev para escolher evidências que respondem à pergunta e, quando a OpenAI está configurada, redige uma resposta curta com citações. Os trechos originais continuam disponíveis abaixo da resposta.
 
 ## Variáveis
 
 - `JEV_API_KEY`: chave server-side obrigatória para perguntar.
 - `JEV_MODEL`: versão fixa, padrão `jev-1.13.0`.
 - `JEV_RELEVANCE_THRESHOLD`: limiar inicial, padrão `0.5`.
+- `AI_SHORTLIST_SIZE`: máximo de trechos distintos enviados ao Jev por pergunta, padrão `10`.
 - `AI_DAILY_ASK_LIMIT_TRIAL`: cota diária de teste, padrão `5`.
 - `AI_DAILY_ASK_LIMIT_PAID`: cota diária paga, padrão `30`.
 - `AI_MAX_DOCUMENT_BYTES`: limite por download, padrão `26214400`.
@@ -40,7 +41,7 @@ A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsup
 
 Exige sessão, CSRF e acesso vigente. Corpo: `{ "question": "texto de 3 a 300 caracteres" }`.
 
-Retorna `answered` com até três trechos acima do limiar, `not_found` sem evidência suficiente ou `processing` enquanto o índice é construído. O link sempre aponta para o documento oficial e a página é explícita.
+Retorna `answered` com até três trechos acima do limiar, `not_found` sem evidência suficiente ou `processing` enquanto o índice é construído. O link sempre aponta para o documento oficial e a página é explícita. A busca no índice combina os termos relevantes da pergunta, variações conhecidas de assuntos do edital (como vistoria/visita técnica) e uma busca ampla de apoio. Ela intercala os resultados, limita inicialmente a dois trechos por página e envia no máximo `AI_SHORTLIST_SIZE` candidatos ao Jev, que verifica quais realmente respondem à pergunta.
 
 Quando o status é `answered` e a OpenAI está configurada, a resposta também pode trazer um campo aditivo:
 
@@ -48,7 +49,7 @@ Quando o status é `answered` e a OpenAI está configurada, a resposta também p
 summary: { text: string; citations: number[]; model: string } | null;
 ```
 
-O `gpt-4o-mini` redige em até três frases somente a partir dos trechos `[1..3]` que o Jev já selecionou. Cada afirmação deve citar um desses números; a API descarta texto vazio, texto acima de 600 caracteres, JSON inválido e citação fora da faixa. `not_found` e `processing` não chamam a OpenAI. Chave ausente, disjuntor aberto, timeout ou falha deixam `summary: null` e não transformam a rota em 5xx. A versão do prompt e o modelo de redação fazem parte da chave de cache, e o resumo não consome uma segunda unidade da cota diária do usuário.
+O `gpt-4o-mini` redige de uma a três frases em linguagem natural somente a partir dos trechos `[1..3]` que o Jev já selecionou. Cada afirmação deve citar um desses números; a API descarta texto vazio, texto acima de 600 caracteres, JSON inválido e citação fora da faixa. `not_found` e `processing` não chamam a OpenAI. Chave ausente, disjuntor aberto, timeout ou falha deixam `summary: null` e não transformam a rota em 5xx. A versão `2` do prompt invalida as respostas em cache da versão anterior, e o resumo não consome uma segunda unidade da cota diária do usuário.
 
 Erros específicos: `402 SUBSCRIPTION_REQUIRED`, `429 AI_QUOTA_EXCEEDED` e `503 AI_UNAVAILABLE`.
 
@@ -135,7 +136,7 @@ Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas
 
 A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt da ficha continua `3`; ligar ou trocar o modelo OpenAI invalida somente o resumo e não recalcula os campos. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
 
-O resumo opcional tem versão própria (`SHEET_SUMMARY_PROMPT_VERSION = 1`) e usa somente campos `found` e itens do `qualificationChecklist`, em 2 a 4 frases; as citações numéricas apontam para esses itens na ordem em que aparecem na resposta. Ausência só pode ser descrita como “não encontrado nos documentos lidos”, nunca como inexistência ou dispensa. Uma ficha nova pode gerar o resumo no próprio job `sheet`; uma ficha pronta com modelo ou versão diferente é devolvida imediatamente com `summary: null`, enquanto um job deduplicado `sheet_summary` chama somente a OpenAI e atualiza a mesma linha. Sem chave não há job; falha ou disjuntor aberto deixam o estado atual com resumo nulo, sem 5xx nem repetição do Jev. Tokens e custo aparecem no ledger como `sheet_summary`, sem entrar em `ai_sheet_daily_usage`, que mede apenas o teto e o custo do Jev para gerar fichas.
+O resumo opcional tem versão própria (`SHEET_SUMMARY_PROMPT_VERSION = 2`) e usa somente campos `found` e itens do `qualificationChecklist`, em 2 a 4 frases; as citações numéricas apontam para esses itens na ordem em que aparecem na resposta. A versão `2` substitui o esquema de resposta anterior para que fichas com resumo ausente possam ser tentadas novamente. Ausência só pode ser descrita como “não encontrado nos documentos lidos”, nunca como inexistência ou dispensa. Uma ficha nova pode gerar o resumo no próprio job `sheet`; uma ficha pronta com modelo ou versão diferente é devolvida imediatamente com `summary: null`, enquanto um job deduplicado `sheet_summary` chama somente a OpenAI e atualiza a mesma linha. Sem chave não há job; falha ou disjuntor aberto deixam o estado atual com resumo nulo, sem 5xx nem repetição do Jev. Tokens e custo aparecem no ledger como `sheet_summary`, sem entrar em `ai_sheet_daily_usage`, que mede apenas o teto e o custo do Jev para gerar fichas.
 
 ## Privacidade e retenção
 

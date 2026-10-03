@@ -3,6 +3,8 @@ import type { EntitlementSource } from "../billing/billing-access";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { aiConfig } from "./config";
 import type { JevScore } from "./jev-client";
+import { qualificationSearchQuery } from "./qualification-checklist-policy";
+import { SHEET_FIELDS, sheetSearchQuery } from "./tender-sheet-policy";
 
 export type PassageCandidate = {
   documentId: string;
@@ -46,10 +48,76 @@ export const selectEvidencePassages = (
     .filter((passage, _position, sorted) => passage.relevance >= sorted[0]!.relevance - relativeDelta)
     .slice(0, 3);
 
-export const lexicalSearchQuery = (question: string): string => {
-  const terms = question
-    .normalize("NFKC")
-    .toLocaleLowerCase("pt-BR")
-    .match(/[\p{L}\p{N}]{3,}/gu);
-  return [...new Set(terms ?? [])].join(" OR ");
+const normalizeSearchText = (value: string): string => value
+  .normalize("NFKD")
+  .replace(/\p{M}/gu, "")
+  .toLocaleLowerCase("pt-BR")
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
+  .trim();
+
+const QUESTION_WORDS = new Set([
+  "a", "as", "ao", "aos", "com", "como", "da", "das", "de", "do", "dos",
+  "e", "em", "esta", "estao", "existe", "ha", "na", "nas", "no", "nos",
+  "o", "os", "para", "pode", "podem", "por", "qual", "quais", "quando",
+  "que", "se", "ser", "sera", "sao", "um", "uma", "edital", "licitacao",
+]);
+
+/** Search several indexed routes; Jev still decides which retrieved passage answers the question. */
+export const askSearchQueries = (question: string): string[] => {
+  const normalized = normalizeSearchText(question);
+  const terms = [...new Set(normalized.split(" ").filter((word) => word.length >= 3 && !QUESTION_WORDS.has(word)))].slice(0, 8);
+  if (terms.length === 0) return [];
+
+  const padded = ` ${normalized} `;
+  const matchedFields = SHEET_FIELDS.filter((field) => field.terms.some((term) =>
+    padded.includes(` ${normalizeSearchText(term)} `),
+  ));
+  // "garantia" alone is ambiguous: search both proposal and contract rules.
+  if (padded.includes(" garantia ") && matchedFields.every((field) => field.id !== "bid_guarantee" && field.id !== "contract_guarantee")) {
+    matchedFields.push(...SHEET_FIELDS.filter((field) => field.id === "bid_guarantee" || field.id === "contract_guarantee"));
+  }
+
+  const expanded = matchedFields.slice(0, 2).map((field) => sheetSearchQuery(field.id));
+  if (/\b(habilitacao|certidoes|documentos exigidos)\b/u.test(normalized)) {
+    expanded.push(qualificationSearchQuery());
+  }
+  return [...new Set([
+    terms.slice(0, 5).join(" "),
+    ...expanded,
+    terms.join(" OR "),
+  ].filter(Boolean))];
+};
+
+/** Interleave precise and expanded hits and avoid spending the Jev budget on overlapping chunks. */
+export const mergeAskShortlists = (
+  groups: readonly (readonly PassageCandidate[])[],
+  limit: number,
+): PassageCandidate[] => {
+  const selected: PassageCandidate[] = [];
+  const seen = new Set<string>();
+  const perPage = new Map<string, number>();
+  const take = (candidate: PassageCandidate, maxPerPage: number): void => {
+    const key = `${candidate.documentId}:${candidate.page}:${candidate.text}`;
+    const pageKey = `${candidate.documentId}:${candidate.page}`;
+    if (seen.has(key) || (perPage.get(pageKey) ?? 0) >= maxPerPage) return;
+    seen.add(key);
+    perPage.set(pageKey, (perPage.get(pageKey) ?? 0) + 1);
+    selected.push(candidate);
+  };
+  const depth = Math.max(0, ...groups.map((group) => group.length));
+  for (let rank = 0; rank < depth && selected.length < limit; rank += 1) {
+    for (const group of groups) {
+      const candidate = group[rank];
+      if (candidate && selected.length < limit) take(candidate, 2);
+    }
+  }
+  if (selected.length < limit) {
+    for (const group of groups) {
+      for (const candidate of group) {
+        if (selected.length >= limit) break;
+        take(candidate, Number.MAX_SAFE_INTEGER);
+      }
+    }
+  }
+  return selected;
 };
