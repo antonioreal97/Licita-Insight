@@ -82,6 +82,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "email_delivery_notifications",
     "ai_daily_usage",
     "ai_ask_requests",
+    "tender_ai_answers",
     "tender_ai_indexes",
     "tender_ai_documents",
     "tender_ai_passages",

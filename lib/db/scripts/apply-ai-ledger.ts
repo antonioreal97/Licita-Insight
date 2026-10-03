@@ -12,7 +12,7 @@ try {
              tender_id, response_model as model, input_tokens, 0::integer as output_tokens,
              estimated_cost_usd as cost_usd
       from ai_ask_requests
-      where status in ('answered', 'not_found')
+      where status in ('answered', 'not_found') and cache_hit = false
       union all
       select created_at as occurred_at, user_id, 'ask_summary'::text as feature,
              tender_id, summary_response_model as model, summary_input_tokens as input_tokens,
