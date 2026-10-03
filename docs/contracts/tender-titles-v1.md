@@ -116,7 +116,7 @@ isso rotula uma amostra uma vez e reescreve sob demanda só os títulos que as p
 | `OLLAMA_EMBED_TIMEOUT_MS` | `60000` | timeout de cada lote de embedding |
 | `OLLAMA_KEEP_ALIVE` | `10m` | tempo que o Ollama mantém o modelo carregado |
 | `CATEGORY_STUDENT_K` | `7` | vizinhos considerados |
-| `CATEGORY_STUDENT_MIN_CONFIDENCE` | `0.45` | confiança mínima para gravar categorias |
+| `CATEGORY_STUDENT_MIN_CONFIDENCE` | `0.42` | confiança mínima para gravar categorias |
 | `TITLE_REWRITE_DAILY_LIMIT` | `2000` | jobs `title_rewrite` locais criados por dia (America/Sao_Paulo) |
 | `TITLE_TEACHER_OPENAI_ENABLED` | `false` | editais novos e com título alterado vão para o professor OpenAI; exige `OPENAI_API_KEY` |
 | `TITLE_OPENAI_DAILY_LIMIT` | `5000` | jobs `title_rewrite` OpenAI criados por dia (America/Sao_Paulo) |
@@ -180,6 +180,10 @@ Ctrl-C encerra na hora):
 # under_review, deduplicada pelo texto normalizado, ordem por md5, concorrência 1. Pula o que já
 # foi rotulado.
 pnpm --filter @workspace/api-server run titles:teacher-sample -- --size 3000
+# Rodada complementar por incerteza: reclassifica um pool determinístico, equilibra as classes
+# informadas e envia ao professor os exemplos de menor confiança que ainda não foram rotulados.
+pnpm --filter @workspace/api-server run titles:teacher-sample -- --size 600 \
+  --focus outros,medicamentos-insumos-saude,equipamentos-medicos,servicos-saude,eventos-cultura,educacao-capacitacao
 # Embute os exemplos sem embedding (ou de outro modelo).
 pnpm --filter @workspace/api-server run titles:embed-examples
 # Mede o aluno no holdout e nos 40 do gabarito (os textos do gabarito ficam fora dos vizinhos);

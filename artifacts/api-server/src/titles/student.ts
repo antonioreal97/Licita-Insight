@@ -18,7 +18,7 @@ const positiveInteger = (name: string, fallback: number): number => {
 
 export const studentConfig = () => ({
   k: positiveInteger("CATEGORY_STUDENT_K", 7),
-  minConfidence: probability("CATEGORY_STUDENT_MIN_CONFIDENCE", 0.45),
+  minConfidence: probability("CATEGORY_STUDENT_MIN_CONFIDENCE", 0.42),
 });
 
 /** The second category must reach this share of the winner's weight. */

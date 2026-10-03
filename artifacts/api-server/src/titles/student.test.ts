@@ -1,8 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CategoryStudent, normalizeVector } from "./student";
+import { CategoryStudent, normalizeVector, studentConfig } from "./student";
 
 const example = (textHash: string, embedding: number[], categories: string[]) => ({ textHash, embedding, categories });
+
+test("configuração padrão usa sete vizinhos e limiar calibrado em 0,42", () => {
+  const previousK = process.env.CATEGORY_STUDENT_K;
+  const previousConfidence = process.env.CATEGORY_STUDENT_MIN_CONFIDENCE;
+  try {
+    delete process.env.CATEGORY_STUDENT_K;
+    delete process.env.CATEGORY_STUDENT_MIN_CONFIDENCE;
+    assert.deepEqual(studentConfig(), { k: 7, minConfidence: 0.42 });
+  } finally {
+    if (previousK === undefined) delete process.env.CATEGORY_STUDENT_K;
+    else process.env.CATEGORY_STUDENT_K = previousK;
+    if (previousConfidence === undefined) delete process.env.CATEGORY_STUDENT_MIN_CONFIDENCE;
+    else process.env.CATEGORY_STUDENT_MIN_CONFIDENCE = previousConfidence;
+  }
+});
 
 test("normaliza vetores para norma 1 e recusa vetor nulo", () => {
   const vector = normalizeVector([3, 4]);

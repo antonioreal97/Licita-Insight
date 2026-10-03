@@ -480,4 +480,58 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     const after = await pool.query<{ categorized_at: Date | null }>("select categorized_at from tenders where id = $1", [visible]);
     assert.equal(after.rows[0]?.categorized_at, null);
   });
+
+  it("amostra focada rotula os incertos das classes pedidas e ignora as demais", async () => {
+    const [{ pool }, { runTeacherSample }, { CategoryStudent }] = await Promise.all([
+      import("@workspace/db"),
+      import("./sample"),
+      import("./student"),
+    ]);
+    const [vehicle, medicine, ignored] = await insertTenders([
+      [938001, "Aquisição de pneus para veículos leves"],
+      [938002, "Aquisição de medicamentos para a farmácia básica"],
+      [938003, "Recarga de extintores de incêndio"],
+    ], "titles_focus_test_l");
+    await pool.query(
+      `update tenders set category_source = 'student', categories = case id
+         when $1 then '[]'::jsonb
+         when $2 then '[{"slug":"medicamentos-insumos-saude","label":"Medicamentos e insumos de saúde"}]'::jsonb
+         else '[{"slug":"seguranca-incendio","label":"Segurança, vigilância e prevenção de incêndio"}]'::jsonb
+       end where id = any($3::text[])`,
+      [vehicle, medicine, [vehicle, medicine, ignored]],
+    );
+    const loaded = {
+      student: new CategoryStudent([
+        { textHash: "vehicle", embedding: vectorFor("pneu"), categories: ["veiculos-pecas"] },
+        { textHash: "medicine", embedding: vectorFor("medicamento"), categories: ["medicamentos-insumos-saude"] },
+        { textHash: "security", embedding: vectorFor("extintor"), categories: ["seguranca-incendio"] },
+      ], { k: 1, minConfidence: 0.45 }),
+      latestExampleAt: null,
+    };
+    const { client, calls } = createFakeOllama();
+    const result = await runTeacherSample({
+      size: 10,
+      statuses: ["titles_focus_test_l"],
+      focus: ["veiculos-pecas", "medicamentos-insumos-saude"],
+      loaded,
+      client,
+    });
+    assert.deepEqual([result.planned, result.labeled, result.withCategories], [2, 2, 2]);
+    assert.equal(calls.embed, 1);
+    assert.equal(calls.generate, 1);
+    const resumed = await runTeacherSample({
+      size: 10,
+      statuses: ["titles_focus_test_l"],
+      focus: ["veiculos-pecas", "medicamentos-insumos-saude"],
+      loaded,
+      client,
+    });
+    assert.deepEqual([resumed.planned, resumed.alreadyLabeled, resumed.labeled], [2, 2, 0]);
+    assert.equal(calls.generate, 1);
+    const stored = await pool.query<{ tender_id: string }>(
+      "select tender_id from tender_title_examples where tender_id = any($1::text[]) order by tender_id",
+      [[vehicle, medicine, ignored]],
+    );
+    assert.deepEqual(stored.rows.map(({ tender_id }) => tender_id), [vehicle, medicine].sort());
+  });
 });
