@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { TenderSummary } from "@workspace/api-zod";
 import {
+  createHighlights,
   createValueHistogram,
   modalityLabels,
   normalizePageRelevance,
@@ -13,6 +14,8 @@ import {
 const summaryWithScore = (score: number | null): TenderSummary => ({
   id: `fixture-${String(score)}`,
   title: "TEST DATA",
+  displayTitle: "Test data",
+  displayTitleSource: "rules",
   objectSummary: null,
   organization: { id: "fixture-org", name: "TEST DATA" },
   purchasingUnit: null,
@@ -99,5 +102,25 @@ describe("search response semantics", () => {
     assert.deepEqual(numberRange(nonNegativeValues(values)), { min: 0, max: 150 });
     assert.equal(histogram.reduce((total, bucket) => total + bucket.count, 0), 3);
     assert.equal(histogram[0]?.from, 0);
+  });
+
+  it("offers a title highlight from the standardized display title", () => {
+    const summary = summaryWithScore(null);
+    const highlights = createHighlights({
+      ...summary,
+      title: "Objeto oficial sem a expressão consultada",
+      displayTitle: "Aquisição de veículos leves",
+      description: null,
+      processNumber: null,
+      items: [],
+      documents: [],
+      timeline: [],
+      createdAt: new Date("2026-09-22T12:00:00Z"),
+    }, "veículos");
+
+    assert.deepEqual(highlights, [{
+      field: "title",
+      fragments: ["Aquisição de <mark>veículos</mark> leves"],
+    }]);
   });
 });

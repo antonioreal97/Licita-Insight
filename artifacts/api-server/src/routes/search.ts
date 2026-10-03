@@ -9,6 +9,7 @@ import { logger } from "../lib/logger";
 import { parseSearchQuery, parseSuggestionsQuery } from "../lib/query-parser";
 import { getSearchBackend } from "../services/search-backend";
 import { publicHttpCache } from "../middlewares/request-protection";
+import { scheduleTitleRewrites } from "../titles/title-rewrite";
 
 const router: IRouter = Router();
 
@@ -49,7 +50,13 @@ router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
   try {
     const criteria = parseSearchQuery(req.query);
     const backend = await getSearchBackend();
-    res.json(SearchTendersResponse.parse(await backend.search(criteria)));
+    const result = await backend.search(criteria);
+    res.json(SearchTendersResponse.parse(result));
+    if (criteria.page === 1) {
+      scheduleTitleRewrites(
+        result.data.filter((tender) => tender.displayTitleSource === "rules").map((tender) => tender.id),
+      );
+    }
   } catch (error) {
     next(exposeSearchError(error));
   }
@@ -64,6 +71,7 @@ router.get("/v1/tenders/:id", publicHttpCache, async (req, res, next) => {
       throw new NotFoundError(`Tender ${tenderId} was not found`);
     }
     res.json(GetTenderByIdResponse.parse(tender));
+    if (tender.displayTitleSource === "rules") scheduleTitleRewrites([tender.id]);
   } catch (error) {
     next(exposeSearchError(error));
   }

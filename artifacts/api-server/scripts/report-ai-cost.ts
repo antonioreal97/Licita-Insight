@@ -110,7 +110,7 @@ try {
   const report = {
     period: { days: options.days, userId: userId ?? null, generatedAt: new Date().toISOString() },
     total, byFeature,
-    platform: ["sheet", "sheet_summary"].reduce((sum, feature) => ({
+    platform: ["sheet", "sheet_summary", "title"].reduce((sum, feature) => ({
       calls: sum.calls + (byFeature[feature]?.calls ?? 0),
       tokens: sum.tokens + (byFeature[feature]?.tokens ?? 0),
       costUsd: sum.costUsd + (byFeature[feature]?.costUsd ?? 0),

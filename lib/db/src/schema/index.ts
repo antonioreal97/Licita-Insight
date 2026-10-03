@@ -5,3 +5,4 @@ export * from "./company-fit";
 export * from "./opportunities";
 export * from "./operations";
 export * from "./tenders";
+export * from "./title-examples";

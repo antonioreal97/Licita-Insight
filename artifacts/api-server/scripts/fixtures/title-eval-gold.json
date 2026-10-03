@@ -1,0 +1,422 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-02",
+  "note": "40 editais abertos do PNCP sorteados por md5(id||'eval'); categorias aceitas rotuladas à mão antes de rodar qualquer modelo. Mede professor e aluno.",
+  "taxonomy": [
+    {
+      "slug": "medicamentos-insumos-saude",
+      "label": "Medicamentos e insumos de saúde"
+    },
+    {
+      "slug": "equipamentos-medicos",
+      "label": "Equipamentos médicos e hospitalares"
+    },
+    {
+      "slug": "servicos-saude",
+      "label": "Serviços de saúde"
+    },
+    {
+      "slug": "obras-engenharia",
+      "label": "Obras e engenharia"
+    },
+    {
+      "slug": "manutencao-predial",
+      "label": "Manutenção predial e instalações"
+    },
+    {
+      "slug": "ti-telecom",
+      "label": "Tecnologia da informação e telecomunicações"
+    },
+    {
+      "slug": "alimentacao",
+      "label": "Alimentação"
+    },
+    {
+      "slug": "limpeza-higiene",
+      "label": "Limpeza, higiene e dedetização"
+    },
+    {
+      "slug": "veiculos-pecas",
+      "label": "Veículos, peças e manutenção"
+    },
+    {
+      "slug": "combustiveis-gas",
+      "label": "Combustíveis e gás"
+    },
+    {
+      "slug": "mobiliario-eletro",
+      "label": "Mobiliário, eletrodomésticos e climatização"
+    },
+    {
+      "slug": "material-escritorio",
+      "label": "Material de escritório e expediente"
+    },
+    {
+      "slug": "grafica-brindes",
+      "label": "Gráfica, brindes e comunicação visual"
+    },
+    {
+      "slug": "eventos-cultura",
+      "label": "Eventos, shows e cultura"
+    },
+    {
+      "slug": "esporte-lazer",
+      "label": "Esporte e lazer"
+    },
+    {
+      "slug": "educacao-capacitacao",
+      "label": "Educação, cursos e capacitação"
+    },
+    {
+      "slug": "seguranca-incendio",
+      "label": "Segurança, vigilância e prevenção de incêndio"
+    },
+    {
+      "slug": "transporte-locacao-veiculos",
+      "label": "Transporte e locação de veículos"
+    },
+    {
+      "slug": "consultoria-tecnica",
+      "label": "Consultoria e serviços técnicos"
+    },
+    {
+      "slug": "mao-de-obra",
+      "label": "Mão de obra e serviços terceirizados"
+    },
+    {
+      "slug": "assistencia-social",
+      "label": "Assistência social"
+    },
+    {
+      "slug": "publicidade-comunicacao",
+      "label": "Publicidade e comunicação"
+    },
+    {
+      "slug": "uniformes-textil",
+      "label": "Uniformes, tecidos e confecção"
+    },
+    {
+      "slug": "agro-animais-ambiente",
+      "label": "Agropecuária, animais e meio ambiente"
+    },
+    {
+      "slug": "saneamento-agua",
+      "label": "Saneamento e água"
+    },
+    {
+      "slug": "energia-iluminacao",
+      "label": "Energia e iluminação"
+    },
+    {
+      "slug": "locacao-bens-imoveis",
+      "label": "Locação de bens e imóveis"
+    },
+    {
+      "slug": "seguros-financeiros",
+      "label": "Seguros e serviços financeiros"
+    },
+    {
+      "slug": "outros",
+      "label": "Outros"
+    }
+  ],
+  "items": [
+    {
+      "id": 1,
+      "text": "Contratação de Assistentes Sociais: CAMILA RIBEIRO DE OLIVEIRA",
+      "acceptedCategories": [
+        "mao-de-obra",
+        "assistencia-social"
+      ]
+    },
+    {
+      "id": 2,
+      "text": "SOLICITO A AQUISIÇÃO DE 2 (DOIS) CARREGADORES DO TIPO TURBOPOWER 125W DUO CHARGER PARA OS APARELHOS CELULARES FUNCIONAIS DA GCM MODELO MOTO G PARA ATENDIMENTO DAS VIATURAS OPERACIONAIS DA GUARDA CIVIL MUNICIPAL. OFÍCIO Nº 259/2026 - SGCMAG",
+      "acceptedCategories": [
+        "ti-telecom"
+      ]
+    },
+    {
+      "id": 3,
+      "text": "Serviço de dedetização e limpeza de caixa d´água para liberação do alvará municipal",
+      "acceptedCategories": [
+        "limpeza-higiene",
+        "saneamento-agua"
+      ]
+    },
+    {
+      "id": 4,
+      "text": "PAGAMENTO DE FRANQUIA DE SEGURO, REFERENTE À SUBSTITUIÇÃO DO PARA-BRISA DIANTEIRO DO VEÍCULO VW/NOVA SAVEIRO RB MBVD , PLACA QJC8804 , PERTENCENTE À SECRETARIA MUNICIPAL DE DESENVOLVIMENTO RURAL DE CANOINHAS.",
+      "acceptedCategories": [
+        "seguros-financeiros",
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 5,
+      "text": "AQUISIÇÃO DE PEÇAS E SERVIÇO DE MÃO DE OBRA PARA A 3ª REVISÃO DO VEÍCULO FORD RANGER XLS, PLACA TQV3J69, PERTENCENTE A FROTA DA SECRETARIA DA SAÚDE, COM RECURSOS PROVENIENTES DA EMENDA PARLAMENTAR Nº 28630008, DO DEPUTADO FEDERAL GIOVANI CHERINI, CONTA REDUZIDA 8850.",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 6,
+      "text": "Justificativa de uso:Seleção de projetos de desporto de rendimento para concessão de patrocínios para eventos esportivos a serem realizados no município, consoante os termos deste Edital e seus anexos, regendo-se pela Lei Municipal nº 8.264, de 19 de setembro de 2018, que dispõe sobre a concessão de patrocínio pela Administração Direta e Indireta do Município de Carazinho e pela Lei Complementar n",
+      "acceptedCategories": [
+        "esporte-lazer",
+        "eventos-cultura"
+      ]
+    },
+    {
+      "id": 7,
+      "text": "CONTRATAÇÃO DE PESSOAS JURIDICA PARA AQUISIÇÃO EMERGENCIAL DE 01 ( UMA ) CAIXA DE MANCHA COMPLETA, COMPATÍVEL COM O VEICULO FIAT DUCATO PLACA RBW-3E95 PERTENCENTE À SECRETARIA MUNICIPAL DE SAÚDE.",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 8,
+      "text": "CONTRATAÇÃO DIRETA, POR DISPENSA DE LICITAÇÃO, PESSOA JURÍDICA DE DIREITO PRIVADO RB CENTRO DE REABILITACAO LTDA - EPP, INSCRITA NO CNPJ: 32.117.080/0001-56, PARA CONTRATAÇÃO DE SERVIÇO DE INTERNAÇÃO COMPULSÓRIA ESPECÍFICA EM CLÍNICA COM ESTRUTURA HOSPITALAR PARA ATENDER ÀS NECESSIDADES DA PREFEITURA DA ESTÂNCIA TURÍSTICA DE OLÍMPIA/SP",
+      "acceptedCategories": [
+        "servicos-saude"
+      ]
+    },
+    {
+      "id": 9,
+      "text": "DISPENSA DE LICITAÇÃO PARA ADEQUAÇÃO E HOMOLOGAÇÃO DA PISTA DE ATLETISMO NO ESTÁDIO MUNICIPAL WILMAR ORTIGARI, PARA JOGOS ESCOLARES DE SANTA CATARINA-JESC 2026, ETAPA ESTADUAL. NA FORMA DA LEI 14.133 AART.75, INCISO IX. CONFORME DOCU,MENTAÇÃO E ANEXO 1",
+      "acceptedCategories": [
+        "obras-engenharia",
+        "esporte-lazer"
+      ]
+    },
+    {
+      "id": 10,
+      "text": "DESPESA COM CONTRATAÇÃO DE EMPRESA ESPECIALIZADA EM SERVIÇO DE ACOLHIMENTO INSTITUCIONAL (FRACASSADO NO PREGÃO 62/2025)",
+      "acceptedCategories": [
+        "assistencia-social"
+      ]
+    },
+    {
+      "id": 11,
+      "text": "CONTRATAÇÃO DE EMPRESA ESPECIALIZADA EM FORNECIMENTO DE KITS DE LEMBRANCINHAS, DESTINADOS À DISTRIBUIÇÃO EM EVENTOS COMEMORATIVOS, INSTITUCIONAIS E SOCIOEDUCATIVOS PROMOVIDOS PELA SECRETARIA MUNICIPAL DE ASSISTÊNCIA SOCIAL E DESENVOLVIMENTO HUMANO DO MUNICÍPIO DE SÃO LUIZ DO NORTE – GO, COM O OBJETIVO DE APOIAR E VALORIZAR AS AÇÕES DESENVOLVIDAS JUNTO AOS USUÁRIOS DOS PROGRAMAS, PROJETOS E SERVIÇO",
+      "acceptedCategories": [
+        "grafica-brindes",
+        "eventos-cultura"
+      ]
+    },
+    {
+      "id": 12,
+      "text": "MANUTENCAO PARA O VEICULO COROLLA CROSS FAF 3G22 COM FORNECIMENTO DE MAO DE OBRA E MATERIAL",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 13,
+      "text": "Instalação / Manutenção - Elevadores, Escadas Rolantes, Mon-ta - Cargas / Plataforma / Escadas",
+      "acceptedCategories": [
+        "manutencao-predial"
+      ]
+    },
+    {
+      "id": 14,
+      "text": "Contratação de duas Inscrições para participação do Conselheiro Fiscal e do Diretor Administrativo do IPMU no Seminário Previdenciário promovido pela APEPREM",
+      "acceptedCategories": [
+        "educacao-capacitacao"
+      ]
+    },
+    {
+      "id": 15,
+      "text": "Compra de Câmeras de vídeo monitoramento",
+      "acceptedCategories": [
+        "seguranca-incendio",
+        "ti-telecom"
+      ]
+    },
+    {
+      "id": 16,
+      "text": "[LICITANET] - CONTRATAÇÃO DE EMPRESA PARA SERVIÇOS DE COFFE BREAK (LANCHES PRONTOS) PARA SEREM UTILIZADOS NOS EVENTOS OFICIAIS EM ATENDIMENTO DAS NECESSIDADES DA CÂMARA MUNICIPAL DE DOM ELISEU/PA.",
+      "acceptedCategories": [
+        "alimentacao"
+      ]
+    },
+    {
+      "id": 17,
+      "text": "Contratação de empresa especializada para execução de serviços de adequação e manutenção de área externa, compreendendo preparação e regularização do terreno, execução de piso cimentado e/ou assentamento de revestimento.",
+      "acceptedCategories": [
+        "obras-engenharia",
+        "manutencao-predial"
+      ]
+    },
+    {
+      "id": 18,
+      "text": "Aquisição de bandeiras de mesa do Ministério Público do Estado de Alagoas (MPAL) e da República Federativa do Brasil.",
+      "acceptedCategories": [
+        "grafica-brindes"
+      ]
+    },
+    {
+      "id": 19,
+      "text": "Contratação de empresa especializada para realizar a inscrição de empregados da Embrapa Agricultura Digital no Evento 9º GeoPantanal.",
+      "acceptedCategories": [
+        "educacao-capacitacao",
+        "eventos-cultura"
+      ]
+    },
+    {
+      "id": 20,
+      "text": "SERVICOS DE MAO DE OBRA ESPECIALIZADA",
+      "acceptedCategories": [
+        "mao-de-obra"
+      ]
+    },
+    {
+      "id": 21,
+      "text": "Aquisição de água mineral sem gás para o consumo da superintendencia e para pacientes em precaução de contato e aerossois para o período de 12 meses na modalidade Dispensa de Licitação",
+      "acceptedCategories": [
+        "alimentacao"
+      ]
+    },
+    {
+      "id": 22,
+      "text": "Aquisição de aparelhos de ar condicionado",
+      "acceptedCategories": [
+        "mobiliario-eletro"
+      ]
+    },
+    {
+      "id": 23,
+      "text": "Contratação de empresa especializada para fornecimento de peças e mão de obra para manutenção do caminhão prancha placas IJM3I01, da Secretaria de Obras e Urbanismo, conforme laudo do Engenheiro Mecânico",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 24,
+      "text": "AQUISIÇÃO DE VÁLVULAS DE AGULHA, CONFORME SEC 15111/2026",
+      "acceptedCategories": [
+        "saneamento-agua",
+        "obras-engenharia",
+        "manutencao-predial",
+        "outros"
+      ]
+    },
+    {
+      "id": 25,
+      "text": "Contratação de empresa especializada para prestação de serviços de implementação, manutenção contínua, suporte técnico e operacional, atualização de versões, treinamento, consultoria, desenvolvimento evolutivo, integrações e customizações do Sistema Integrado de Gestão Administrativa – SIGA, incluindo sustentação dos módulos de Patrimônio Mobiliário, Patrimônio Imobiliário e Almoxarifado, com disp",
+      "acceptedCategories": [
+        "ti-telecom"
+      ]
+    },
+    {
+      "id": 26,
+      "text": "Contratação de empresa para prestação de Contratação de empresa para prestação de serviços de manutenção e fornecimento de peças para os elevadores do prédio da Secretaria Municipal de Educação, Esporte e Lazer de Ituiutaba/MG.",
+      "acceptedCategories": [
+        "manutencao-predial"
+      ]
+    },
+    {
+      "id": 27,
+      "text": "[Portal de Compras Públicas] - Contratação de empresa para prestação de serviços de borracharia e lubrificação destinados à manutenção da frota de veículos e máquinas do Município de Marcação/PB",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 28,
+      "text": "ADESÃO A ATA DE REGISTRO DE PREÇOS ORIUNDA DO PROCESSO ADMINISTRATIVO LICITATÓRIO ELETRÔNICO “e-PAL” Nº 000108/2025 - e PREGÃO, NA FORMA ELETRÔNICA Nº 0072/2025 - CINCATARINA REGISTRO DE PREÇOS ATA DE REGISTRO DE PREÇOS N° ARP26CIN000738, ARP26CIN001536 E ARP26CIN001485.",
+      "acceptedCategories": [
+        "outros"
+      ]
+    },
+    {
+      "id": 29,
+      "text": "Celebração de “Contrato de Programa”, na forma de gestão associada, a ser celebrado com o “CISAMSF”, pautando na transferência de recursos financeiros, destinado ao custeio de despesas com Consultas médicas especializadas em diversas áreas clínicas e cirúrgicas, conforme demanda regulada pela Secretaria Municipal de Saúde.",
+      "acceptedCategories": [
+        "servicos-saude",
+        "outros"
+      ]
+    },
+    {
+      "id": 30,
+      "text": "CONTRATAÇÃO DE EMPRESA PARA FORNECIMENTO DE CARGA E RECARGA DE EXTINTORES DE INCÊNDIO.",
+      "acceptedCategories": [
+        "seguranca-incendio"
+      ]
+    },
+    {
+      "id": 31,
+      "text": "SERVIÇO DE REPARO EM VEÍCULO DO TIPO ÔNIBUS M.BENZ/CAIO LO 916.ORE DE PLACA CUH6268",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 32,
+      "text": "CONTRATAÇÃO DA EMPRESA CREDENCIADA EMPRESARIAL MEDICINA DO TRABALHO LTDA PARA PRESTAR SERVIÇOS DE SAÚDE OCUPACIONAL, PARA REALIZAÇÃO DE EXAMES ADMISSIONAIS, DEMISSIONAIS, PERIÓDICOS, DE RETORNO AO TRABALHO, MUDANÇA DE FUNÇÃO E PERÍCIAS MÉDICAS, DESTINADOS AOS SERVIDORES DO MUNICÍPIO DE RIO NEGRINHO/SC, CONFORME ESPECIFICAÇÕES E EXIGÊNCIAS DO EDITAL DE CREDENCIAMENTO Nº 055/2026 DA SECRETARIA DE AD",
+      "acceptedCategories": [
+        "servicos-saude"
+      ]
+    },
+    {
+      "id": 33,
+      "text": "Contratação da empresa ANNA CAROLINA FARIA LIRIO LYRIO CULTURAL representada por sua titular Anna Carolina Faria Lírio, para prestação de serviços especializados de parecerista cultural, destinados à análise técnica e de mérito dos projetos inscritos no Edital de Chamamento Público nº 10/2026 - Programa FEPAC 2026",
+      "acceptedCategories": [
+        "eventos-cultura",
+        "consultoria-tecnica"
+      ]
+    },
+    {
+      "id": 34,
+      "text": "Contratação de Clínica Veterinária para realizar serviço de Castração, Microchipagem e Cadastro no Sinpatinhas para cães e gatos machos e fêmeas.",
+      "acceptedCategories": [
+        "agro-animais-ambiente",
+        "servicos-saude"
+      ]
+    },
+    {
+      "id": 35,
+      "text": "Prestação de serviço mecânico no veiculo placa: PWB3025",
+      "acceptedCategories": [
+        "veiculos-pecas"
+      ]
+    },
+    {
+      "id": 36,
+      "text": "Recarga de extintores de incêndio",
+      "acceptedCategories": [
+        "seguranca-incendio"
+      ]
+    },
+    {
+      "id": 37,
+      "text": "ADESÃO À ATA DE REGISTRO DE PREÇOS Nº 134/2025, ORIUNDA DO PREGÃO ELETRÔNICO 044/2025, TENDO OCMO OBJETO A CONTRATAÇÃAO DE EMPRESA ESPECIALIZADA PARA LOCAÇÃO DE BRINQUEDOS E EQUIPAMENTOS RECREATIVOS, COM OS SERVIÇOS NECESSÁRIOS À ENTREGA, MONTAGEM, INSTALAÇÃO, OPERAÇÃO, DESMONTAGEM E RETIRADA, PARA ATENDIMENTO À PROGRAMAÇÃO DO DIA DAS CRIANÇAS, EM 12 DE OUTUBRO DE 2026, NO ESTÁDIO MUNICIPAL AGLAIR",
+      "acceptedCategories": [
+        "locacao-bens-imoveis",
+        "eventos-cultura",
+        "esporte-lazer"
+      ]
+    },
+    {
+      "id": 38,
+      "text": "[Portal de Compras Públicas] - Registro de Preços para eventual e futura aquisição de vasilhames e componentes de instalação de gás liquefeito de petróleo – GLP",
+      "acceptedCategories": [
+        "combustiveis-gas"
+      ]
+    },
+    {
+      "id": 39,
+      "text": "Credenciamento de Microempreendedores Individuais (MEI), residentes em Pontal do Paraná, para prestação de serviços de corte de tecido sob medida, serviços de serigrafia e serviços de costura de uniforme escolar da rede municipal de ensino de Pontal do Paraná para o ano letivo de 2026 da Secretaria Municipal de Educação – SMED.",
+      "acceptedCategories": [
+        "uniformes-textil"
+      ]
+    },
+    {
+      "id": 40,
+      "text": "[Portal de Compras Públicas] - Material de informática destinados a atender às necessidades administrativas e operacionais da Prefeitura Municipal de Dom Pedrito/RS",
+      "acceptedCategories": [
+        "ti-telecom"
+      ]
+    }
+  ]
+}

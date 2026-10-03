@@ -3,7 +3,7 @@ import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { jevScheduler } from "./jev-scheduler";
 
 export type AiBudgetLevel = "disabled" | "ok" | "warn" | "paused";
-export type AiDailySpend = { ask: number; fit: number; sheet: number; total: number };
+export type AiDailySpend = { ask: number; fit: number; sheet: number; title: number; total: number };
 export type AiBudgetState = AiDailySpend & {
   day: string;
   budgetUsd: number;
@@ -62,20 +62,23 @@ export class AiBudgetGuard {
 
 export async function loadAiDailySpend(day: string): Promise<AiDailySpend> {
   const { pool } = await import("@workspace/db");
-  const result = await pool.query<{ ask: string; fit: string; sheet: string; sheet_summary: string }>(
+  const result = await pool.query<{ ask: string; fit: string; sheet: string; sheet_summary: string; title: string }>(
     `select
        coalesce((select sum(estimated_cost_usd) from ai_daily_usage where quota_day = $1), 0)::text as ask,
        coalesce((select sum(estimated_cost_usd) from ai_fit_daily_usage where quota_day = $1), 0)::text as fit,
        coalesce((select sum(estimated_cost_usd) from ai_sheet_daily_usage where quota_day = $1), 0)::text as sheet,
        coalesce((select sum(summary_estimated_cost_usd) from tender_ai_sheets
-                 where (summary_generated_at at time zone 'America/Sao_Paulo')::date = $1::date), 0)::text as sheet_summary`,
+                 where (summary_generated_at at time zone 'America/Sao_Paulo')::date = $1::date), 0)::text as sheet_summary,
+       coalesce((select sum(estimated_cost_usd) from ai_title_usage
+                 where (created_at at time zone 'America/Sao_Paulo')::date = $1::date), 0)::text as title`,
     [day],
   );
   const row = result.rows[0]!;
   const ask = Number(row.ask);
   const fit = Number(row.fit);
   const sheet = Number(row.sheet) + Number(row.sheet_summary);
-  return { ask, fit, sheet, total: ask + fit + sheet };
+  const title = Number(row.title);
+  return { ask, fit, sheet, title, total: ask + fit + sheet + title };
 }
 
 export const aiBudgetGuard = new AiBudgetGuard(loadAiDailySpend);

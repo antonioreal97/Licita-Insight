@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { AiBudgetGuard, type AiDailySpend } from "./ai-budget";
 
-const spend = (total: number): AiDailySpend => ({ ask: total, fit: 0, sheet: 0, total });
+const spend = (total: number): AiDailySpend => ({ ask: total, fit: 0, sheet: 0, title: 0, total });
 
 test("budget guard caches for 30 seconds, warns, pauses and resets on the Sao Paulo day", async () => {
   let now = new Date("2026-09-26T12:00:00-03:00");

@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
   date,
   index,
   integer,
@@ -7,6 +9,7 @@ import {
   numeric,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -54,6 +57,11 @@ export const tendersTable = pgTable(
     id: text("id").primaryKey(),
     pncpControlNumber: text("pncp_control_number").notNull(),
     title: text("title").notNull(),
+    displayTitle: text("display_title"),
+    displayTitleSource: text("display_title_source").$type<"rules" | "model">(),
+    displayTitleVersion: integer("display_title_version"),
+    displayTitleNorm: text("display_title_norm").notNull().default(""),
+    displayTitleNeedsModel: boolean("display_title_needs_model").notNull().default(false),
     objectSummary: text("object_summary"),
     description: text("description"),
     organizationId: text("organization_id").notNull(),
@@ -76,6 +84,9 @@ export const tendersTable = pgTable(
     sourceName: text("source_name").notNull(),
     sourceUrl: text("source_url"),
     categories: jsonArray("categories").$type<TenderCategory[]>(),
+    categorySource: text("category_source").$type<"rules" | "student" | "teacher">(),
+    categoryConfidence: real("category_confidence"),
+    categorizedAt: timestamp("categorized_at", { withTimezone: true }),
     items: jsonArray("items").$type<TenderItemRecord[]>(),
     documents: jsonArray("documents").$type<TenderDocumentRecord[]>(),
     timeline: jsonArray("timeline").$type<TenderTimelineRecord[]>(),
@@ -110,6 +121,17 @@ export const tendersTable = pgTable(
     index("tenders_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),
+    ),
+    index("tenders_display_title_needs_model_idx")
+      .on(table.status, table.id)
+      .where(sql`${table.displayTitleNeedsModel} and ${table.displayTitleSource} = 'rules'`),
+    check(
+      "tenders_display_title_source_check",
+      sql`${table.displayTitleSource} is null or ${table.displayTitleSource} in ('rules', 'model')`,
+    ),
+    check(
+      "tenders_category_source_check",
+      sql`${table.categorySource} is null or ${table.categorySource} in ('rules', 'student', 'teacher')`,
     ),
   ],
 );

@@ -114,6 +114,8 @@ export const SearchTendersResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
   "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
   "objectSummary": zod.string().nullable(),
   "organization": zod.object({
   "id": zod.string(),
@@ -242,6 +244,8 @@ export const getTenderByIdResponseOneRelevanceScoreMax = 1;
 export const GetTenderByIdResponse = zod.object({
   "id": zod.string(),
   "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
   "objectSummary": zod.string().nullable(),
   "organization": zod.object({
   "id": zod.string(),
@@ -1147,6 +1151,8 @@ export const ListSavedTendersResponse = zod.object({
   "tender": zod.object({
   "id": zod.string(),
   "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
   "objectSummary": zod.string().nullable(),
   "organization": zod.object({
   "id": zod.string(),
@@ -1272,6 +1278,8 @@ export const GetSavedTenderResponse = zod.object({
   "tender": zod.object({
   "id": zod.string(),
   "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
   "objectSummary": zod.string().nullable(),
   "organization": zod.object({
   "id": zod.string(),
@@ -1381,6 +1389,8 @@ export const PutSavedTenderResponse = zod.object({
   "tender": zod.object({
   "id": zod.string(),
   "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
   "objectSummary": zod.string().nullable(),
   "organization": zod.object({
   "id": zod.string(),

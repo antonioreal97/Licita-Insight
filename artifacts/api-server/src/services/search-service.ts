@@ -42,7 +42,7 @@ export const modalityLabels: Record<Modality, string> = {
 };
 
 const tenderSearchFields = (tender: TenderDetail) => ({
-  title: normalizeText(tender.title),
+  title: normalizeText(`${tender.displayTitle} ${tender.title}`),
   objectSummary: normalizeText(tender.objectSummary ?? ""),
   items: normalizeText(tender.items.map((item) => item.description).join(" ")),
   organization: normalizeText(tender.organization.name),
@@ -111,7 +111,10 @@ export const createHighlights = (
   if (!query) return [];
 
   const candidates = [
-    { field: "title" as const, value: tender.title },
+    { field: "title" as const, value: tender.displayTitle },
+    ...(tender.displayTitle === tender.title
+      ? []
+      : [{ field: "title" as const, value: tender.title }]),
     { field: "objectSummary" as const, value: tender.objectSummary },
     {
       field: "items" as const,

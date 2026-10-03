@@ -3,11 +3,16 @@ import type {
   TenderStatus,
 } from "@workspace/api-zod";
 import type {
+  TenderCategory,
   TenderDocumentRecord,
   TenderItemRecord,
   TenderTimelineRecord,
 } from "@workspace/db/schema";
 import { normalizeText } from "../domain/normalize";
+import {
+  DISPLAY_TITLE_RULES_VERSION,
+  normalizeTenderTitle,
+} from "./title-normalizer";
 
 const MODALITIES: Record<number, Modality> = {
   1: "leilao",
@@ -40,6 +45,11 @@ export type PublicationDraft = {
   id: string;
   pncpControlNumber: string;
   title: string;
+  displayTitle: string;
+  displayTitleSource: "rules";
+  displayTitleVersion: number;
+  displayTitleNorm: string;
+  displayTitleNeedsModel: boolean;
   objectSummary: string | null;
   description: string | null;
   organizationId: string;
@@ -61,7 +71,7 @@ export type PublicationDraft = {
   sourceId: string;
   sourceName: string;
   sourceUrl: string | null;
-  categories: [];
+  categories: TenderCategory[];
   searchText: string;
   titleNorm: string;
   objectNorm: string;
@@ -207,6 +217,7 @@ export const mapPncpStatus = (
 
 export const buildSearchColumns = (input: {
   title: string;
+  displayTitle?: string | null;
   objectSummary: string | null;
   itemDescriptions: string[];
   organizationName: string;
@@ -215,8 +226,10 @@ export const buildSearchColumns = (input: {
   state: string | null;
   modalityLabel: string;
   itemsNorm?: string;
+  categories?: readonly TenderCategory[];
 }) => {
   const titleNorm = normalizeText(input.title);
+  const displayTitleNorm = normalizeText(input.displayTitle ?? "");
   const objectNorm = normalizeText(input.objectSummary ?? "");
   const itemsNorm =
     input.itemsNorm ?? normalizeText(input.itemDescriptions.join(" "));
@@ -233,9 +246,18 @@ export const buildSearchColumns = (input: {
     organizationNorm,
     otherNorm,
     cityNorm: input.city ? normalizeText(input.city) : null,
-    searchText: [titleNorm, objectNorm, itemsNorm, organizationNorm, otherNorm]
+    searchText: [
+      displayTitleNorm,
+      titleNorm,
+      objectNorm,
+      itemsNorm,
+      organizationNorm,
+      otherNorm,
+      normalizeText((input.categories ?? []).map(({ label }) => label).join(" ")),
+    ]
       .filter(Boolean)
       .join(" "),
+    displayTitleNorm,
   };
 };
 
@@ -263,6 +285,7 @@ export const mapPublication = (
   }
 
   const title = asString(record.objetoCompra) ?? "Objeto não informado pelo PNCP";
+  const normalizedTitle = normalizeTenderTitle(title);
   const complementary = asString(record.informacaoComplementar);
   const modality = MODALITIES[Number(record.modalidadeId)] ?? "other";
   const modalityLabel = asString(record.modalidadeNome) ?? "Modalidade não informada";
@@ -282,6 +305,7 @@ export const mapPublication = (
   const objectSummary = summarizeOfficialObject(title);
   const search = buildSearchColumns({
     title,
+    displayTitle: normalizedTitle.title,
     objectSummary,
     itemDescriptions: [],
     organizationName,
@@ -290,12 +314,17 @@ export const mapPublication = (
     state,
     modalityLabel,
     itemsNorm,
+    categories: [],
   });
 
   return {
     id: tenderIdFromControlNumber(controlNumber),
     pncpControlNumber: controlNumber,
     title,
+    displayTitle: normalizedTitle.title,
+    displayTitleSource: "rules",
+    displayTitleVersion: DISPLAY_TITLE_RULES_VERSION,
+    displayTitleNeedsModel: normalizedTitle.needsModel,
     objectSummary,
     description: complementary && complementary !== title ? complementary : title,
     organizationId: `pncp-${cnpj}`,

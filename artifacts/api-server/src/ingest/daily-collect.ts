@@ -162,3 +162,36 @@ export function startDailyCultureCollect(): () => void {
     if (timer) clearTimeout(timer);
   };
 }
+
+/** Classifies with the category student whatever the post-collect hook left pending, one hour after the PNCP collect. */
+export function startDailyCategoryClassify(): () => void {
+  if (process.env.CATEGORY_STUDENT_ENABLED !== "true") return () => undefined;
+  if (!process.env.DATABASE_URL) {
+    logger.error("DATABASE_URL is not set; daily category classification will not start");
+    return () => undefined;
+  }
+
+  const hour = (dailyHour() + 1) % 24;
+  const run = async (reason: string) => {
+    const { classifyPendingInBackground } = await import("../titles/classify");
+    await classifyPendingInBackground(reason);
+  };
+
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const arm = () => {
+    if (stopped) return;
+    const delay = msUntilHour(hour);
+    logger.info({ hour, delayMs: delay }, "Next category classification scheduled");
+    timer = setTimeout(() => {
+      void run("schedule").finally(arm);
+    }, delay);
+    timer.unref();
+  };
+
+  arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}

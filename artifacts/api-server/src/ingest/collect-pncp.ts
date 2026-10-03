@@ -526,6 +526,8 @@ async function execute(
       })
       .where(eq(ingestRunsTable.id, runId));
     logger.info({ runId, ...counters }, "PNCP ingest finished");
+    const { classifyPendingInBackground } = await import("../titles/classify");
+    await classifyPendingInBackground("pncp_collect");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ err: error, runId }, "PNCP ingest failed");

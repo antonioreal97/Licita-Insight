@@ -8,7 +8,7 @@ import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
-import { startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
+import { startDailyCategoryClassify, startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 import {
@@ -56,6 +56,7 @@ const startSchedulers = (): Array<() => void> => [
   startDocumentRetryJob(),
   startDailyPncpCollect(),
   startDailyCultureCollect(),
+  startDailyCategoryClassify(),
 ];
 
 const start = async (): Promise<void> => {

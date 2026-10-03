@@ -870,9 +870,23 @@ export interface Relevance {
   highlights: Highlight[];
 }
 
+/**
+ * @nullable
+ */
+export type TenderSummaryDisplayTitleSource = typeof TenderSummaryDisplayTitleSource[keyof typeof TenderSummaryDisplayTitleSource] | null;
+
+
+export const TenderSummaryDisplayTitleSource = {
+  rules: 'rules',
+  model: 'model',
+} as const;
+
 export interface TenderSummary {
   id: string;
   title: string;
+  displayTitle: string;
+  /** @nullable */
+  displayTitleSource: TenderSummaryDisplayTitleSource;
   /** @nullable */
   objectSummary: string | null;
   organization: Organization;
