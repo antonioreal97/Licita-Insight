@@ -19,4 +19,9 @@ export type TenderDetail = TenderSummary & ({
   documents: TenderDocument[];
   timeline: TenderTimelineEntry[];
   createdAt: Date;
+  /**
+     * Null while PNCP items and documents have not been fetched yet.
+     * @nullable
+     */
+  detailsFetchedAt: Date | null;
 });

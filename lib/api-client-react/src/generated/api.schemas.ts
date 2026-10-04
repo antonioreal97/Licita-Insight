@@ -968,6 +968,11 @@ export type TenderDetail = TenderSummary & ({
   documents: TenderDocument[];
   timeline: TenderTimelineEntry[];
   createdAt: string;
+  /**
+     * Null while PNCP items and documents have not been fetched yet.
+     * @nullable
+     */
+  detailsFetchedAt: string | null;
 });
 
 export interface Pagination {

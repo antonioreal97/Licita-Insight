@@ -343,6 +343,20 @@ test(
       },
     );
 
+    await t.test("first detail read returns stored facts without waiting for PNCP", async () => {
+      await reset();
+      await upsertPublications([publication(129)], new Date("2026-01-05T12:00:00Z"));
+      const { rows } = await pool.query<{ id: string }>(
+        "SELECT id FROM tenders WHERE pncp_control_number = $1",
+        [publication(129).numeroControlePNCP],
+      );
+      const { PostgresTenderRepository } = await import("../repositories/postgres-tender-repository");
+      const detail = await new PostgresTenderRepository().findById(rows[0].id);
+      assert.equal(detail?.id, rows[0].id);
+      assert.equal(detail?.detailsFetchedAt, null);
+      assert.equal(calls.length, 0);
+    });
+
     await t.test(
       "an empty items/files answer never erases stored PNCP details",
       async () => {

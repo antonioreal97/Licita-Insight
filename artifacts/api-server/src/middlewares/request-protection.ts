@@ -328,7 +328,9 @@ export const publicHttpCache: RequestHandler = (req, res, next) => {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       res.setHeader(
         "Cache-Control",
-        hasSessionCookie ? "private, no-cache" : "public, max-age=30, stale-while-revalidate=120",
+        res.locals.publicCachePolicy === "no-store"
+          ? "no-store"
+          : hasSessionCookie ? "private, no-cache" : "public, max-age=30, stale-while-revalidate=120",
       );
       const etag = `W/"${createHash("sha1").update(etagPayload(body)).digest("base64url")}"`;
       res.setHeader("ETag", etag);

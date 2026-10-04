@@ -10,6 +10,7 @@ import { parseSearchQuery, parseSuggestionsQuery } from "../lib/query-parser";
 import { getSearchBackend } from "../services/search-backend";
 import { publicHttpCache } from "../middlewares/request-protection";
 import { scheduleTitleRewrites } from "../titles/title-rewrite";
+import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
 
 const router: IRouter = Router();
 
@@ -70,7 +71,10 @@ router.get("/v1/tenders/:id", publicHttpCache, async (req, res, next) => {
     if (!tender) {
       throw new NotFoundError(`Tender ${tenderId} was not found`);
     }
+    const detailsPending = tender.source.id === "pncp" && tender.detailsFetchedAt === null;
+    if (detailsPending) res.locals.publicCachePolicy = "no-store";
     res.json(GetTenderByIdResponse.parse(tender));
+    if (detailsPending) scheduleTenderDetailEnrichment(tender.id);
     if (tender.displayTitleSource === "rules") scheduleTitleRewrites([tender.id]);
   } catch (error) {
     next(exposeSearchError(error));

@@ -367,7 +367,7 @@ export default function TenderDetailPage() {
         </div>
 
         <aside className="min-w-0 space-y-6">
-          <DocumentsPanel documents={tender.documents} />
+          <DocumentsPanel documents={tender.documents} pending={tender.source.id === 'pncp' && tender.detailsFetchedAt === null} />
         </aside>
       </div>
 
@@ -429,6 +429,7 @@ function DateValue({ value, withTime = false }: { value: string | null; withTime
 
 function ItemsPanel({ tender }: { tender: TenderDetail }) {
   const { items } = tender;
+  const pending = tender.source.id === 'pncp' && tender.detailsFetchedAt === null;
   const { total, missing } = sumItems(items);
   const estimate = tender.estimatedValue;
   const differsFromEstimate = estimate !== null && total !== null && estimate > 0 && Math.abs(total - estimate) / estimate > 0.01;
@@ -444,7 +445,9 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
   return (
     <Panel title="Itens da contratação" aside={count}>
       {items.length === 0 ? (
-        <p className="rounded-lg bg-muted px-4 py-3 type-meta text-muted-foreground">A fonte não detalhou itens para esta licitação.</p>
+        <p className="rounded-lg bg-muted px-4 py-3 type-meta text-muted-foreground" role={pending ? 'status' : undefined}>
+          {pending ? 'Itens ainda não disponíveis; consultando o PNCP em segundo plano.' : 'A fonte não detalhou itens para esta licitação.'}
+        </p>
       ) : (
         <>
           {/* Mobile: stacked list so unit and total values are never behind a horizontal scroll. */}
@@ -544,12 +547,14 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
 
 const docIcon = (doc: TenderDocument): LucideIcon => (/\.(xlsx?|csv|ods)$/i.test(doc.name) || /planilha/i.test(doc.type) ? FileSpreadsheet : FileText);
 
-function DocumentsPanel({ documents }: { documents: TenderDocument[] }) {
+function DocumentsPanel({ documents, pending }: { documents: TenderDocument[]; pending: boolean }) {
   const count = `${documents.length} ${documents.length === 1 ? 'arquivo' : 'arquivos'}`;
   return (
     <Panel title="Documentos" aside={count}>
       {documents.length === 0 ? (
-        <p className="rounded-lg bg-muted px-3 py-2 type-meta text-muted-foreground">Nenhum documento publicado pela fonte.</p>
+        <p className="rounded-lg bg-muted px-3 py-2 type-meta text-muted-foreground" role={pending ? 'status' : undefined}>
+          {pending ? 'Documentos ainda não disponíveis; consultando o PNCP em segundo plano.' : 'Nenhum documento publicado pela fonte.'}
+        </p>
       ) : (
         <ul className="-mx-2 divide-y divide-border-subtle">
           {documents.map((doc) => {

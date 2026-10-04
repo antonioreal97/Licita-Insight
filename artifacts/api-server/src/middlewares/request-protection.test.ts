@@ -288,9 +288,14 @@ test("application timeout uses the error envelope and releases inflight capacity
 test("public cache emits weak ETag/304 and session requests are private", async () => {
   const app = express();
   app.use(cookieParser());
+  app.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
   app.get("/public", publicHttpCache, (_req, res) =>
     res.json({ value: "x".repeat(1200) }),
   );
+  app.get("/pending", publicHttpCache, (_req, res) => {
+    res.locals.publicCachePolicy = "no-store";
+    res.json({ detailsFetchedAt: null });
+  });
   const { server, baseUrl } = await listen(app);
   try {
     const first = await fetch(`${baseUrl}/public`);
@@ -313,6 +318,7 @@ test("public cache emits weak ETag/304 and session requests are private", async 
       "private, no-cache",
     );
     assert.match(privateResponse.headers.get("vary") ?? "", /Cookie/);
+    assert.equal((await fetch(`${baseUrl}/pending`)).headers.get("cache-control"), "no-store");
   } finally {
     server.close();
   }
