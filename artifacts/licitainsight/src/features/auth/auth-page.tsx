@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Redirect, useSearch } from 'wouter';
 import { CircleAlert, LockKeyhole } from 'lucide-react';
+import { BrandIcon } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { signInWithGoogle, useSession } from './hooks/use-session';
@@ -80,9 +81,9 @@ export default function AuthPage() {
     <div className="grid min-h-[100dvh] bg-background text-foreground lg:grid-cols-[.9fr_1.1fr]">
       <div className="hidden bg-sidebar p-10 text-sidebar-strong-foreground lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
+          <BrandIcon className="size-9" />
           <span className="font-semibold">
-            Licit<span className="text-sidebar-primary">AI</span>
+            Abriu <span className="text-sidebar-primary">lá</span>
           </span>
         </Link>
         <div>
@@ -97,9 +98,9 @@ export default function AuthPage() {
       <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[400px]">
           <Link href="/" className="mb-12 flex items-center gap-2.5 lg:hidden">
-            <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
+            <BrandIcon className="size-9" />
             <span className="font-semibold">
-              Licit<span className="text-primary">AI</span>
+              Abriu <span className="text-primary">lá</span>
             </span>
           </Link>
           <div className="mb-8">

@@ -135,6 +135,6 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
 - **Theme toggle:** fixed label "Tema escuro" with `aria-pressed`. `index.html` applies `dark` from `licita-theme` before first paint,
   on every route (public pages included).
 - **Notifications bell:** `aria-disabled` + tooltip/toast "Notificações em breve" (same pattern as `SaveSearchButton`); no unread dot.
-- **Routes:** `App.tsx` maps static routes to `document.title` ("Explorar editais · Licita Insight"…). Pages with dynamic titles (tender
+- **Routes:** `App.tsx` maps static routes to `document.title` ("Explorar editais · Abriu lá"…). Pages with dynamic titles (tender
   detail, 404) set their own. On in-app route changes (pathname, not query) focus moves to `#conteudo`; landing, auth and 404 also render
   `<main id="conteudo" tabIndex={-1}>`.

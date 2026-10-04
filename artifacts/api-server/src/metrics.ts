@@ -89,7 +89,7 @@ const dynamicMetrics = async (): Promise<void> => {
 
 export async function metricsText(): Promise<string> {
   await dynamicMetrics();
-  const lines = ["# HELP licitai_build_info LicitAI process information", "# TYPE licitai_build_info gauge", `licitai_build_info${labels({ role: process.env.APP_ROLE?.trim() || "all" })} 1`];
+  const lines = ["# HELP licitai_build_info Abriu lá process information", "# TYPE licitai_build_info gauge", `licitai_build_info${labels({ role: process.env.APP_ROLE?.trim() || "all" })} 1`];
   for (const [metric, value] of counters) lines.push(`${metric} ${value}`);
   for (const [metric, value] of gauges) lines.push(`${metric} ${Number.isFinite(value) ? value : 0}`);
   for (const [metric, values] of histograms) {

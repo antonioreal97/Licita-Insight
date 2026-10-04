@@ -61,7 +61,7 @@ export function nextStep({ status, proposalDeadline, openingAt, monitored, stage
       monitored ? 'O resultado sai no portal oficial. Avisamos aqui se o status mudar.' : 'O resultado sai no portal oficial. Monitore para ser avisado se o status mudar.',
     ]);
   }
-  const details = ['O envio é feito no sistema indicado no edital, não no LicitAI.'];
+  const details = ['O envio é feito no sistema indicado no edital, não pela Abriu lá.'];
   if (stage === 'analyzing') details.push('Decida antes disso.');
   return step(8, `Envie a proposta até ${formatDateTime(proposalDeadline)}.`, details, { withDeadline: true });
 }

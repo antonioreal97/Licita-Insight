@@ -2,7 +2,7 @@ import { BillingUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { timeoutSignal } from "../lib/http-timeout";
 
-const USER_AGENT = "LicitaInsight/1.0";
+const USER_AGENT = "AbriuLa/1.0";
 
 export type AsaasPaymentLink = {
   id: string;
@@ -80,7 +80,7 @@ export async function createRecurringPaymentLink(input: {
   const link = await asaas<AsaasPaymentLink>("/paymentLinks", {
     method: "POST",
     body: {
-      name: "Licita Insight",
+      name: "Abriu lá",
       description: "Assinatura mensal para salvar, monitorar e receber alertas de editais.",
       billingType: "UNDEFINED",
       chargeType: "RECURRENT",

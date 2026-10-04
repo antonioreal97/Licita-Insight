@@ -30,7 +30,7 @@ Preencha `~/.licitai-secrets/beta.env` (a lista completa está no `.example`):
 - `POSTGRES_PASSWORD` e o **mesmo** valor dentro de `DATABASE_URL`.
 - `PUBLIC_APP_ORIGIN=https://<host-do-beta>` — exatamente o endereço público do passo 3, sem barra no fim.
   O login e a proteção contra CSRF dependem dele.
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JEV_API_KEY`, `RESEND_API_KEY`, `MAIL_FROM`.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JEV_API_KEY`, `OPENAI_API_KEY`, `RESEND_API_KEY`, `MAIL_FROM`.
 - `PNCP_LOOKBACK_DAYS` — janela da primeira coleta (seção 6).
 - `ASAAS_*` fica **ausente** no beta: o checkout responde indisponível e o webhook não é usado; o acesso dos
   convidados vem do convite (seção 5).
@@ -63,7 +63,7 @@ Preencha `~/.licitai-secrets/beta.env` (a lista completa está no `.example`):
 - Tela de consentimento em **Testing** e cada convidado em **Test users** (até 100). Fora dessa lista o
   Google não deixa entrar.
 - Resend → Domains → adicione o domínio e publique os registros DNS na Cloudflare. Use em `MAIL_FROM` um
-  remetente desse domínio (ex. `LicitAI <alertas@<dominio>>`). Com `onboarding@resend.dev` o Resend só
+  remetente desse domínio (ex. `Abriu lá <alertas@<dominio>>`). Com `onboarding@resend.dev` o Resend só
   entrega para o e-mail da própria conta.
 
 ## 5. Subir, convidar e ir ao ar

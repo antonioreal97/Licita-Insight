@@ -1123,7 +1123,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     });
     const response = await request("/v1/me/export", {}, authenticatedCookie);
     assert.equal(response.status, 200);
-    assert.match(response.headers.get("content-disposition") ?? "", /^attachment; filename="licitai-dados-\d{4}-\d{2}-\d{2}\.json"$/);
+    assert.match(response.headers.get("content-disposition") ?? "", /^attachment; filename="abriu-la-dados-\d{4}-\d{2}-\d{2}\.json"$/);
     assert.equal(response.headers.get("cache-control"), "no-store");
 
     const body = (await response.json()) as {

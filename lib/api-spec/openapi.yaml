@@ -3,7 +3,7 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 1.3.0
-  description: Public Licita Insight API
+  description: API pública da Abriu lá
 servers:
   - url: /api
     description: Base API path
@@ -423,7 +423,7 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-              description: Attachment filename in the form licitai-dados-YYYY-MM-DD.json
+              description: Attachment filename in the form abriu-la-dados-YYYY-MM-DD.json
           content:
             application/json:
               schema:

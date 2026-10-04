@@ -14,6 +14,7 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
+import { BrandIcon } from '@/components/brand-icon';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
@@ -123,7 +124,7 @@ function HeroRadar() {
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <img src="/LicitAI_logo.png" alt="" width={24} height={24} className="h-6 w-6" />
+            <BrandIcon className="size-6" />
             Seu radar
           </div>
           <span className="type-label text-muted-foreground">dados do PNCP, ao vivo</span>
@@ -250,7 +251,7 @@ function ServicesSection() {
   return (
     <section id="servicos" aria-labelledby="servicos-titulo" className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div className="max-w-2xl">
-        <div className={eyebrow}>O que o LicitAI faz</div>
+        <div className={eyebrow}>O que você faz com Abriu lá</div>
         <h2 id="servicos-titulo" className={sectionTitle}>
           Do edital publicado à decisão de participar.
         </h2>
@@ -280,8 +281,8 @@ function EvidenceSection() {
               A IA escolhe o trecho. Quem lê a regra é você.
             </h2>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-sidebar-muted-foreground">
-              O LicitAI não escreve resumos por conta própria. A inteligência artificial procura, nos documentos oficiais, o trecho que responde, e mostra a
-              página. Se o edital não diz, o LicitAI também não diz.
+              A Abriu lá não escreve resumos por conta própria. A inteligência artificial procura, nos documentos oficiais, o trecho que responde, e mostra a
+              página. Se o edital não diz, a Abriu lá também não diz.
             </p>
             <ul className="mt-8 grid gap-3 text-sm text-sidebar-foreground">
               {[
@@ -347,7 +348,7 @@ function ExtrasSection() {
   return (
     <section id="instrumento" aria-labelledby="instrumento-titulo" className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
       <h2 id="instrumento-titulo" className={cn(sectionTitle, 'max-w-lg')}>
-        Também no LicitAI
+        Também na Abriu lá
       </h2>
       <ul className="mt-8 grid gap-3 md:grid-cols-3">
         {items.map(({ icon: Icon, title, text }) => (
@@ -388,7 +389,7 @@ function PlanSection() {
             Um plano. Acesso completo.
           </h2>
           <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
-            O teste começa quando você entra com o Google pela primeira vez e libera tudo o que o LicitAI faz. Depois, a assinatura é mensal e pode ser
+            O teste começa quando você entra com o Google pela primeira vez e libera tudo o que a Abriu lá oferece. Depois, a assinatura é mensal e pode ser
             cancelada em Configurações.
           </p>
         </div>
@@ -484,9 +485,9 @@ export default function LandingPage() {
       <header className="sticky top-0 z-sticky border-b border-transparent bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
           <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
-            <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
+            <BrandIcon className="size-9" />
             <span className="font-semibold tracking-heading">
-              Licit<span className="text-primary">AI</span>
+              Abriu <span className="text-primary">lá</span>
             </span>
           </Link>
           <nav aria-label="Seções" className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
@@ -539,7 +540,7 @@ export default function LandingPage() {
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 LicitAI · publicações do PNCP e do Mapas Culturais</span>
+          <span>© 2026 Abriu lá · publicações do PNCP e do Mapas Culturais</span>
           <span>Feito para equipes que leem antes de agir.</span>
         </div>
       </footer>

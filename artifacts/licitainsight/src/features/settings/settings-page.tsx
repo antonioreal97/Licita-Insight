@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageTitle title="Configurações" description="Sua conta e como o LicitAI avisa você." />
+      <PageTitle title="Configurações" description="Sua conta e como a Abriu lá avisa você." />
       <p
         role="note"
         data-testid="text-settings-readonly"

@@ -1,4 +1,4 @@
-# LicitAI
+# Abriu lá
 
 Plataforma para pesquisar, avaliar e acompanhar licitações públicas brasileiras. Fluxo central: **pesquisar → filtrar → avaliar → salvar → monitorar**.
 

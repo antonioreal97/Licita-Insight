@@ -33,7 +33,7 @@ try {
     .orderBy(desc(aiAskRequestsTable.updatedAt))
     .limit(1);
   if (!cached?.passages.length) {
-    throw new Error("No cached answered passages found; ask this exact question in the LicitAI UI first");
+    throw new Error("No cached answered passages found; ask this exact question in the Abriu lá UI first");
   }
   const { generateAskSummary } = await import("../src/ai/openai-summary");
   const result = await generateAskSummary(question, cached.passages, {

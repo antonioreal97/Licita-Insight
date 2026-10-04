@@ -4,7 +4,7 @@ import { ArrowLeft, Compass } from 'lucide-react';
 
 export default function NotFound() {
   useEffect(() => {
-    document.title = 'Página não encontrada · LicitAI';
+    document.title = 'Página não encontrada · Abriu lá';
   }, []);
   return (
     <main id="conteudo" tabIndex={-1} className="flex min-h-[100dvh] w-full items-center justify-center bg-background px-4 text-foreground outline-none">

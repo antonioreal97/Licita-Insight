@@ -252,7 +252,7 @@ const deadlinesSection = (
         `<li style="margin-bottom:20px"><strong>${escapeHtml(truncate(deadline.tenderTitle, 120))}</strong><br>Órgão: ${escapeHtml(deadline.tenderOrganizationName)}<br>Sua etapa: ${escapeHtml(stageLabels[deadline.stage])}<br>${escapeHtml(deadlineDescription(deadline, now))}<br><a href="${escapeHtml(tenderLink(deadline.tenderId, origin))}">Ver edital</a></li>`,
     )
     .join("");
-  const html = `<h3 style="font-size:17px">Seus prazos</h3><p style="font-size:13px;color:#596273">Até o fim do 3º dia a partir de hoje, no horário de Brasília. Prazos pessoais são os que você informou no LicitAI.</p><ul style="padding-left:20px">${items}</ul>${more ? `<p><a href="${escapeHtml(savedUrl)}">${escapeHtml(more)}</a></p>` : ""}`;
+  const html = `<h3 style="font-size:17px">Seus prazos</h3><p style="font-size:13px;color:#596273">Até o fim do 3º dia a partir de hoje, no horário de Brasília. Prazos pessoais são os que você informou na Abriu lá.</p><ul style="padding-left:20px">${items}</ul>${more ? `<p><a href="${escapeHtml(savedUrl)}">${escapeHtml(more)}</a></p>` : ""}`;
   return { text, html };
 };
 
@@ -271,7 +271,7 @@ export const renderNotificationEmail = (input: {
   const heading =
     input.mode === "digest"
       ? "Seu resumo diário de oportunidades"
-      : "Alerta importante da LicitAI";
+      : "Alerta importante da Abriu lá";
   const deadlines =
     input.mode === "digest"
       ? deadlinesSection(input.deadlines ?? [], input.now ?? new Date(), input.origin)
@@ -282,8 +282,8 @@ export const renderNotificationEmail = (input: {
   const why =
     input.mode === "digest"
       ? deadlines
-        ? "Você recebe este resumo porque ele está ligado nas suas preferências do LicitAI. Os prazos vêm dos editais que você salvou nas etapas Analisando ou Preparando documentos; a etapa é sua, não o status oficial do edital."
-        : "Você recebe este resumo porque ele está ligado nas suas preferências do LicitAI."
+        ? "Você recebe este resumo porque ele está ligado nas suas preferências da Abriu lá. Os prazos vêm dos editais que você salvou nas etapas Analisando ou Preparando documentos; a etapa é sua, não o status oficial do edital."
+        : "Você recebe este resumo porque ele está ligado nas suas preferências da Abriu lá."
       : "Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados.";
   const itemsText = input.notifications
     .map((notification) => itemText(notification, input.origin))
@@ -294,12 +294,12 @@ export const renderNotificationEmail = (input: {
   const updates = quantity(input.notifications.length, "atualização", "atualizações");
   const subject =
     input.mode === "immediate"
-      ? "LicitAI: alerta importante em suas oportunidades"
+      ? "Abriu lá: alerta importante em suas oportunidades"
       : deadlineCount === 0
-        ? `LicitAI: ${updates} no seu resumo`
+        ? `Abriu lá: ${updates} no seu resumo`
         : input.notifications.length === 0
-          ? `LicitAI: ${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`
-          : `LicitAI: ${quantity(deadlineCount, "prazo", "prazos")} e ${updates} no seu resumo`;
+          ? `Abriu lá: ${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`
+          : `Abriu lá: ${quantity(deadlineCount, "prazo", "prazos")} e ${updates} no seu resumo`;
   const sectionsText = [
     ...(deadlines ? [deadlines.text] : []),
     ...(input.notifications.length > 0
@@ -318,7 +318,7 @@ export const renderNotificationEmail = (input: {
   return {
     subject,
     text: [
-      "LicitAI",
+      "Abriu lá",
       heading,
       "",
       sectionsText,
@@ -327,7 +327,7 @@ export const renderNotificationEmail = (input: {
       `Preferências: ${settingsUrl}`,
       `Descadastrar: ${unsubscribePageUrl}`,
     ].join("\n"),
-    html: `<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.5"><main style="max-width:640px;margin:auto"><h1 style="font-size:24px">LicitAI</h1><h2 style="font-size:20px">${escapeHtml(heading)}</h2>${sectionsHtml}<hr><p style="font-size:13px;color:#596273">${escapeHtml(why)}<br><a href="${escapeHtml(settingsUrl)}">Gerenciar preferências</a> · <a href="${escapeHtml(unsubscribePageUrl)}">Descadastrar de e-mails</a></p></main></body></html>`,
+    html: `<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.5"><main style="max-width:640px;margin:auto"><h1 style="font-size:24px">Abriu lá</h1><h2 style="font-size:20px">${escapeHtml(heading)}</h2>${sectionsHtml}<hr><p style="font-size:13px;color:#596273">${escapeHtml(why)}<br><a href="${escapeHtml(settingsUrl)}">Gerenciar preferências</a> · <a href="${escapeHtml(unsubscribePageUrl)}">Descadastrar de e-mails</a></p></main></body></html>`,
     headers: {
       "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
