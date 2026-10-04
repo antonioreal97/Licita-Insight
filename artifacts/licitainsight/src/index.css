@@ -20,6 +20,8 @@
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-foreground-subtle: hsl(var(--foreground-subtle));
+  --color-hero-lead: hsl(var(--hero-lead));
+  --color-hero-highlight: hsl(var(--hero-highlight));
 
   --color-surface: hsl(var(--surface));
   --color-surface-sunken: hsl(var(--surface-sunken));
@@ -196,6 +198,8 @@
   --foreground: 195 49% 18%;
   --muted-foreground: 184 15% 37%;
   --foreground-subtle: 180 11% 48%; /* icons, disabled, decoration only */
+  --hero-lead: 183 9% 48%; /* legible grey-green for large display text */
+  --hero-highlight: 196 100% 30%; /* vivid blue on warm paper */
 
   /* Borders */
   --border-subtle: 120 18% 92%;
@@ -371,6 +375,8 @@
   --foreground: 137 23% 94%;
   --muted-foreground: 178 22% 76%;
   --foreground-subtle: 180 19% 64%; /* icons, disabled, decoration only */
+  --hero-lead: 181 18% 69%;
+  --hero-highlight: 180 88.52% 58.82%;
 
   /* Borders */
   --border-subtle: 195 43% 25%;

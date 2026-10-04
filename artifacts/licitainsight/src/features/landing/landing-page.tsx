@@ -513,8 +513,9 @@ export default function LandingPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Inteligência para compras públicas
             </div>
-            <h1 className="max-w-2xl text-[48px] font-semibold leading-[0.98] tracking-[-0.065em] sm:text-[72px]">
-              Encontre o edital certo. <span className="text-primary">Antes do prazo.</span>
+            <h1 className="max-w-2xl text-[42px] font-semibold leading-[1.03] tracking-[-0.055em] sm:text-[52px] xl:text-[56px]">
+              <span className="block text-hero-lead">Encontre o edital</span>{' '}
+              <span className="block text-hero-highlight">antes do prazo</span>
             </h1>
             <p className="mt-7 max-w-lg text-[17px] leading-8 text-muted-foreground">
               Busca em todo o PNCP, aderência ao perfil da sua empresa, ficha do edital com a página de cada regra e alertas quando algo muda.

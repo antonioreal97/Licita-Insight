@@ -31,6 +31,8 @@ The card photo supplied for the 2026 identity refresh has textured paper and une
 
 Body text measures 11.2:1 on the light canvas and 12.5:1 on the dark canvas. Secondary text measures at least 4.8:1 on the muted fill in both themes.
 
+The landing headline uses `--hero-lead` for its first line and `--hero-highlight` for “antes do prazo”. The first line reads as a medium grey (`183 9% 48%` light, `181 18% 69%` dark); the second uses a clearer blue (`196 100% 30%` light) and the action cyan (`180 88.52% 58.82%` dark). Contrast on the canvas is at least 3.59:1 for the large lead text and 5.07:1 for the highlight.
+
 ## Borders and focus
 
 | Token | Light | Dark | Use |

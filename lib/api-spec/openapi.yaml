@@ -2175,8 +2175,12 @@ components:
             createdAt:
               type: string
               format: date-time
+            detailsFetchedAt:
+              type: [string, "null"]
+              format: date-time
+              description: Null while PNCP items and documents have not been fetched yet.
           required:
-            [description, processNumber, items, documents, timeline, createdAt]
+            [description, processNumber, items, documents, timeline, createdAt, detailsFetchedAt]
     Pagination:
       type: object
       properties:

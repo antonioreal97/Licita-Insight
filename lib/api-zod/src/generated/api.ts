@@ -308,7 +308,8 @@ export const GetTenderByIdResponse = zod.object({
   "type": zod.enum(['published', 'amended', 'deadline_changed', 'status_changed', 'document_added']),
   "description": zod.string()
 })),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "detailsFetchedAt": zod.coerce.date().nullable().describe('Null while PNCP items and documents have not been fetched yet.')
 }))
 
 

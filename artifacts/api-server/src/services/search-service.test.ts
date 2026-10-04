@@ -116,6 +116,7 @@ describe("search response semantics", () => {
       documents: [],
       timeline: [],
       createdAt: new Date("2026-09-22T12:00:00Z"),
+      detailsFetchedAt: new Date("2026-09-22T12:00:00Z"),
     }, "veículos");
 
     assert.deepEqual(highlights, [{

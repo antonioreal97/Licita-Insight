@@ -146,7 +146,7 @@ type TenderSummary = {
 
 ## 2. `GET /api/v1/tenders/{id}`
 
-**Propósito:** detalhe completo de uma licitação.
+**Propósito:** mostrar imediatamente os dados já armazenados; itens e documentos do PNCP são enriquecidos em segundo plano.
 
 Resposta 200: `TenderDetail = TenderSummary & { … }`
 
@@ -158,8 +158,14 @@ Resposta 200: `TenderDetail = TenderSummary & { … }`
   documents: { id: string; name: string; type: string; sizeBytes: number | null; url: string; publishedAt: string | null }[];
   timeline: { at: string; type: 'published' | 'amended' | 'deadline_changed' | 'status_changed' | 'document_added'; description: string }[];
   createdAt: string;
+  detailsFetchedAt: string | null;
 }
 ```
+
+Em editais PNCP, `detailsFetchedAt: null` significa que `items` e `documents` ainda não foram
+consultados; arrays vazios nesse estado **não** significam que a fonte não publicou nada. O GET agenda
+essa consulta fora do tempo de resposta, sem duplicar trabalhos em andamento. O cliente pode consultar
+novamente até `detailsFetchedAt` deixar de ser `null`. Respostas pendentes têm `Cache-Control: no-store`.
 
 Erros: 404 `NOT_FOUND`.
 

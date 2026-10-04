@@ -117,6 +117,8 @@ export type TenderDetail = TenderSummary & {
   documents: TenderDocument[];
   timeline: TimelineEvent[];
   createdAt: string;
+  /** Null until PNCP items and documents have been fetched. */
+  detailsFetchedAt: string | null;
 };
 
 export type Pagination = {

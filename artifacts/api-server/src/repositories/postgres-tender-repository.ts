@@ -21,12 +21,10 @@ import { db, tendersTable } from "@workspace/db";
 import type { TenderDocumentRecord, TenderItemRecord, TenderTimelineRecord } from "@workspace/db/schema";
 import type { FacetGroup, SearchCriteria } from "../domain/search";
 import { normalizeText, queryTokens } from "../domain/normalize";
-import { enrichTenderById } from "../ingest/enrich-tender";
 import {
   pncpTenderNumberShort,
   summarizeOfficialObject,
 } from "../ingest/pncp-map";
-import { logger } from "../lib/logger";
 import {
   onOrAfterSaoPauloDate,
   onOrBeforeSaoPauloDate,
@@ -299,6 +297,7 @@ export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
       description: entry.description,
     })),
     createdAt: row.createdAt,
+    detailsFetchedAt: row.detailsFetchedAt,
   };
 };
 
@@ -349,17 +348,8 @@ export class PostgresTenderRepository {
   }
 
   async findById(id: string): Promise<TenderDetail | undefined> {
-    let row = await this.load(id);
+    const row = await this.load(id);
     if (!row) return undefined;
-
-    if (row.sourceId === "pncp" && row.detailsFetchedAt === null) {
-      try {
-        await enrichTenderById(row.id);
-        row = (await this.load(id)) ?? row;
-      } catch (error) {
-        logger.error({ err: error, tenderId: id }, "PNCP detail enrichment failed");
-      }
-    }
 
     const detail = tenderRowToDetail(row);
     return {
