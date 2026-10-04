@@ -32,6 +32,8 @@ const intent: Swatch[] = [
   { name: 'Primary', token: '--primary', className: 'bg-primary', ink: 'text-primary-foreground' },
   { name: 'Primary hover', token: '--primary-hover', className: 'bg-primary-hover', ink: 'text-primary-foreground' },
   { name: 'Primary subtle', token: '--primary-subtle', className: 'bg-primary-subtle', ink: 'text-primary-subtle-foreground' },
+  { name: 'Action #39F3F3', token: '--action', className: 'bg-action', ink: 'text-action-foreground' },
+  { name: 'Action hover', token: '--action-hover', className: 'bg-action-hover', ink: 'text-action-foreground' },
   { name: 'Inverse', token: '--inverse', className: 'bg-inverse', ink: 'text-inverse-foreground' },
   { name: 'Accent', token: '--accent', className: 'bg-accent', ink: 'text-accent-foreground' },
   { name: 'Destructive', token: '--destructive', className: 'bg-destructive', ink: 'text-destructive-foreground' },
@@ -39,7 +41,7 @@ const intent: Swatch[] = [
 ];
 
 const statuses: { status: TenderStatus; token: string; className: string; light: string; dark: string }[] = [
-  { status: 'open', token: '--status-open', className: 'bg-status-open text-status-open-foreground', light: '5.8', dark: '7.9' },
+  { status: 'open', token: '--status-open', className: 'bg-status-open text-status-open-foreground', light: '6.4', dark: '6.2' },
   {
     status: 'under_review',
     token: '--status-under-review',
@@ -47,9 +49,9 @@ const statuses: { status: TenderStatus; token: string; className: string; light:
     light: '6.6',
     dark: '8.1',
   },
-  { status: 'closed', token: '--status-closed', className: 'bg-status-closed text-status-closed-foreground', light: '6.4', dark: '6.8' },
+  { status: 'closed', token: '--status-closed', className: 'bg-status-closed text-status-closed-foreground', light: '4.9', dark: '5.6' },
   { status: 'suspended', token: '--status-suspended', className: 'bg-status-suspended text-status-suspended-foreground', light: '6.2', dark: '6.9' },
-  { status: 'cancelled', token: '--status-cancelled', className: 'bg-status-cancelled text-status-cancelled-foreground', light: '5.4', dark: '5.4' },
+  { status: 'cancelled', token: '--status-cancelled', className: 'bg-status-cancelled text-status-cancelled-foreground', light: '5.1', dark: '8.1' },
 ];
 
 const typeRoles: { role: string; spec: string; className: string; sample: string }[] = [

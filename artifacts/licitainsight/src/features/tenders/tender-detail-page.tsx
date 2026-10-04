@@ -75,8 +75,8 @@ const LONG_TITLE = 140;
 
 /** Primary-button look for the external source link (the product Button has no `asChild`; see design-system/components.md). */
 const sourceLinkClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary font-semibold text-primary-foreground shadow-xs ' +
-  'transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active ' +
+  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-action font-semibold text-action-foreground shadow-xs ' +
+  'transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Case/space/trailing-ellipsis-insensitive form used to tell whether one text is just a cut of another. */

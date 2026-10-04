@@ -23,9 +23,9 @@ import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 
 const navLink = 'font-semibold text-primary hover:underline';
-const primaryCta = 'rounded-lg bg-inverse px-4 py-2.5 font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover';
+const primaryCta = 'rounded-lg bg-action px-4 py-2.5 font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover';
 const heroCta =
-  'inline-flex items-center gap-2 rounded-lg bg-inverse px-5 py-3 text-sm font-semibold text-inverse-foreground shadow-xs transition-colors duration-fast hover:bg-inverse-hover focus-visible:focus-ring';
+  'inline-flex items-center gap-2 rounded-lg bg-action px-5 py-3 text-sm font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover focus-visible:focus-ring';
 const secondaryCta =
   'inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-5 py-3 text-sm font-semibold text-foreground shadow-2xs transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring';
 const eyebrow = 'type-eyebrow font-bold text-primary';
@@ -471,7 +471,7 @@ function FinalCta() {
           </h2>
           <p className="mt-3 max-w-lg text-sm leading-6 text-sidebar-muted-foreground">Entre com o Google e veja o que combina com vocês ainda hoje.</p>
         </div>
-        <StartCta testId="link-final-start" className="bg-sidebar-strong-foreground text-sidebar hover:bg-sidebar-foreground" />
+        <StartCta testId="link-final-start" />
       </div>
     </section>
   );

@@ -227,7 +227,7 @@ export default function DashboardPage() {
           <Link
             href="/search"
             data-testid="link-dashboard-search"
-            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg bg-primary px-3.5 type-ui font-semibold text-primary-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active focus-visible:focus-ring sm:self-auto"
+            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring sm:self-auto"
           >
             <Search size={15} strokeWidth={1.75} />
             Explorar editais

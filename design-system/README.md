@@ -1,4 +1,4 @@
-# Licita Insight — Design System
+# LicitAI — Design System
 
 A precision instrument for reading public procurement, not a government portal and not a SaaS template.
 Tokens live in `artifacts/licitainsight/src/index.css`. The living reference renders at `/design-system` in the app
@@ -12,15 +12,15 @@ Tokens live in `artifacts/licitainsight/src/index.css`. The living reference ren
 
 ## Identity (keep it)
 
-- **Instrument navy** sidebar, the same in both themes. It anchors the product.
-- **Signal blue** (`--primary`) is the one interactive color. Green is used only for the tender status "Aberto".
+- **Petroleum blue** anchors the sidebar and dark panels in both themes.
+- **Teal** (`--primary`) marks links and selection. Action buttons use `#39F3F3` (`--action`), and sage fills accents and quiet surfaces.
 - **DM Sans** for reading, **Space Mono** for data: IDs, money, dates, percentages, labels.
 - Light and dark themes are equals. `.dark` on `<html>` flips every token. Nothing is hard-coded to one theme.
 
 ## Principles
 
 1. **Typography does the work.** Build hierarchy with size, weight and whitespace before reaching for color, borders or cards.
-2. **One signal per view.** One primary button per area. Blue means "you can act here". Amber means "look at this". Nothing else competes.
+2. **One signal per view.** One primary button per area. Bright cyan marks the main action; deep teal marks links. Amber means "look at this".
 3. **Data is mono and aligned.** Values use `type-data` (tabular numbers) so columns line up and scanning is fast.
 4. **Surfaces are flat.** A 1px border separates things. A shadow means something sits _on top_ (popover, dialog, sheet), never decoration.
 5. **Every state is designed.** Default, hover, focus-visible, active, disabled, loading, empty, error. If a state is missing, the component is not done.
@@ -62,7 +62,7 @@ Run through this before you open a PR that touches UI.
 - Surfaces: `bg-surface`, `bg-surface-sunken`, `bg-surface-raised` (existing `bg-card`, `bg-background`, `bg-muted` still work)
 - Text: `text-foreground`, `text-muted-foreground`, `text-foreground-subtle` (icons and disabled only)
 - Borders: `border-border-subtle`, `border-border`, `border-border-strong`
-- Intent: `bg-primary-hover`, `bg-primary-active`, `bg-primary-subtle` + `text-primary-subtle-foreground`, `bg-inverse` + `text-inverse-foreground`, `bg-destructive-subtle` + `text-destructive-subtle-foreground` + `border-destructive-subtle-border`
+- Intent: `bg-action text-action-foreground` for action buttons; `text-primary` for links; `bg-primary-subtle text-primary-subtle-foreground` for selection; `bg-destructive-subtle text-destructive-subtle-foreground` for errors.
 - Status: `bg-status-{open|under-review|closed|suspended|cancelled}` + `text-status-{…}-foreground`
 - Sidebar text: `text-sidebar-strong-foreground`, `text-sidebar-foreground`, `text-sidebar-muted-foreground`, `text-sidebar-subtle-foreground`
 - Type roles: `type-display`, `type-display-sm`, `type-title`, `type-section`, `type-body`, `type-ui`, `type-meta`, `type-label`, `type-eyebrow`, `type-data`

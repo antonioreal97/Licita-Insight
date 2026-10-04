@@ -68,10 +68,37 @@ Preencha `~/.licitai-secrets/beta.env` (a lista completa está no `.example`):
 
 ## 5. Subir, convidar e ir ao ar
 
+O beta começa com **somente dados públicos e análises compartilhadas** do desenvolvimento. Gere um
+arquivo novo no dia da carga (o dump integral não é apropriado para o beta):
+
 ```sh
-docker compose -f deploy/beta-local/docker-compose.yml up -d --build        # db, migrate e app
-docker compose -f deploy/beta-local/docker-compose.yml ps                    # migrate "exited (0)"; app "Up"
+mkdir -p .local/backups/postgres
+deploy/beta-local/export-shared.sh .local/backups/postgres/licitai-beta-shared-AAAAMMDD.dump
 ```
+
+O export inclui `tenders` (metadados, classificação e títulos), `cultural_opportunities`, `ingest_days`
+e os índices, documentos, trechos, fichas, respostas compartilhadas e exemplos de títulos. Ele **não**
+inclui contas, sessões, assinaturas, salvos, perguntas individuais, perfis de empresa, notificações ou
+uso/custos de IA. Guarde o hash SHA-256 exibido e confira a contagem num ensaio/restauração do snapshot
+antes de convidar alguém. O arquivo fica em `.local/`, ignorado pelo Git.
+
+Suba **só o banco e as migrações** primeiro; não inicie o app/coletor até a importação terminar:
+
+```sh
+docker compose -f deploy/beta-local/docker-compose.yml up -d --build db migrate
+docker compose -f deploy/beta-local/docker-compose.yml ps                    # migrate "exited (0)"
+deploy/beta-local/import-shared.sh .local/backups/postgres/licitai-beta-shared-AAAAMMDD.dump --yes
+docker compose -f deploy/beta-local/docker-compose.yml up -d --build app
+docker compose -f deploy/beta-local/docker-compose.yml ps                    # migrate "exited (0)"; app "Up"
+deploy/beta-local/check-preinvite.sh                                        # dados pessoais = 0; prazos = OK
+```
+
+`import-shared.sh` exige banco vazio já migrado (incluindo `0024`), restaura apenas as nove tabelas
+permitidas na ordem das chaves estrangeiras, atualiza os prazos vencidos e falha se qualquer tabela não
+compartilhada tiver registros. `check-preinvite.sh` repete a verificação no beta real e exige que a rotina
+horária de prazos já tenha rodado com sucesso. **Não use `restore.sh` para essa carga**: ele restaura contas e dados
+pessoais também. Se a importação falhar no meio, não a rode novamente sobre o banco parcialmente cheio;
+recrie apenas o volume beta descartável antes de receber usuários, refaça as migrações e repita.
 
 Libere cada convidado (e-mail do Google dele; guardado em minúsculas; vale até a data):
 
@@ -104,9 +131,9 @@ docker compose -f deploy/beta-local/docker-compose.yml --profile tunnel up -d cl
 ## 6. Coleta de editais
 
 A coleta diária do PNCP e das chamadas culturais roda sozinha no app: ao subir e todo dia às 06:00
-(`America/Sao_Paulo`). Na primeira vez o banco está vazio e a coleta busca `PNCP_LOOKBACK_DAYS` dias do
-Brasil inteiro (padrão do código: 30). Depois disso, o calendário `ingest_days` pula os dias já fechados, e
-cada dia novo custa só a coleta daquele dia.
+(`America/Sao_Paulo`). Após a importação, o banco já tem os editais e o calendário do desenvolvimento.
+O calendário `ingest_days` pula os dias já fechados, e cada dia novo custa só a coleta daquele dia. Uma
+rotina horária também muda editais `open` para `under_review` quando o prazo de proposta passa.
 
 Medido em 28 set 2026 neste Mac (Apple Silicon, imagem amd64 emulada), num banco vazio: **um dia útil do
 Brasil inteiro (25/09/2026) = 5.264 editais, 115 páginas, ~11 min, +28 MB** (≈ 5,3 KB por edital com
@@ -118,8 +145,9 @@ Brasil inteiro (25/09/2026) = 5.264 editais, 115 páginas, ~11 min, +28 MB** (�
 | **14 (recomendado)** | **~53 mil** | **~2h30** | **~290 MB** |
 | 30 (padrão do código) | ~115 mil | ~5h30 | ~600 MB |
 
-Recomendado: **14**, porque o prazo de proposta costuma cair 8–15 dias depois da publicação, então 7 dias
-deixam de fora editais ainda abertos. Suba o beta à noite; a busca já funciona enquanto a carga avança.
+Para uma instalação sem importação, recomenda-se **14** dias, porque o prazo de proposta costuma cair
+8–15 dias depois da publicação. Com a importação, mantenha `PNCP_LOOKBACK_DAYS=14` para completar dias
+ausentes. Suba o beta à noite; a busca já funciona enquanto a coleta avança.
 Depois disso, cada dia novo custa ~11 min e ~28 MB (≈ 0,6 GB/mês; `tenders` não expira por decisão do
 owner). Para acompanhar:
 

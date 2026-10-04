@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Licita Insight design tokens.
+ * LicitAI design tokens.
  * Documentation: /design-system/tokens.md (repo root). Living reference: /design-system route.
  *
  * Layers:
@@ -48,6 +48,10 @@
   --color-primary-active: hsl(var(--primary-active));
   --color-primary-subtle: hsl(var(--primary-subtle));
   --color-primary-subtle-foreground: hsl(var(--primary-subtle-foreground));
+  --color-action: hsl(var(--action));
+  --color-action-hover: hsl(var(--action-hover));
+  --color-action-active: hsl(var(--action-active));
+  --color-action-foreground: hsl(var(--action-foreground));
 
   --color-inverse: hsl(var(--inverse));
   --color-inverse-foreground: hsl(var(--inverse-foreground));
@@ -96,7 +100,7 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  /* ── Sidebar (always dark navy, both themes) ─────────────────── */
+  /* ── Sidebar (deep petroleum blue in both themes) ─────────────── */
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-muted-foreground: hsl(var(--sidebar-muted-foreground));
@@ -177,50 +181,55 @@
   --elevate-2: rgba(0, 0, 0, 0.08);
 
   /* Surfaces */
-  --background: 210 24% 97%;
-  --surface: 0 0% 100%;
-  --surface-sunken: 210 22% 95%;
-  --surface-raised: 0 0% 100%;
+  --background: 70 23% 95%;
+  --surface: 48 100% 99%;
+  --surface-sunken: 120 18% 92%;
+  --surface-raised: 48 100% 99%;
   --card: var(--surface);
-  --card-foreground: 215 32% 14%;
-  --card-border: 214 20% 88%;
+  --card-foreground: 195 49% 18%;
+  --card-border: 152 18% 86%;
   --popover: var(--surface-raised);
-  --popover-foreground: 215 32% 14%;
-  --popover-border: 214 20% 88%;
+  --popover-foreground: 195 49% 18%;
+  --popover-border: 152 18% 86%;
 
   /* Text levels */
-  --foreground: 215 32% 14%; /* 15.0:1 on background */
-  --muted-foreground: 215 14% 42%; /* 5.2:1 on background · 4.8:1 on muted */
-  --foreground-subtle: 215 12% 56%; /* 3.4:1 — icons, disabled, decorative only */
+  --foreground: 195 49% 18%;
+  --muted-foreground: 184 15% 37%;
+  --foreground-subtle: 180 11% 48%; /* icons, disabled, decoration only */
 
   /* Borders */
-  --border-subtle: 214 20% 92%;
-  --border: 214 20% 88%;
-  --border-strong: 214 16% 72%;
-  --input: 214 18% 80%;
-  --ring: 210 78% 43%; /* 4.9:1 on background */
+  --border-subtle: 120 18% 92%;
+  --border: 152 18% 86%;
+  --border-strong: 174 16% 64%;
+  --input: 165 16% 71%;
+  --ring: 189 57% 31%;
 
   /* Scrim behind modals, sheets and the mobile nav. Always dark, so use it with alpha: bg-scrim/50 */
-  --scrim: 216 30% 8%;
+  --scrim: 198 57% 8%;
 
-  /* Primary — signal blue */
-  --primary: 210 78% 43%;
-  --primary-foreground: 0 0% 100%; /* 5.2:1 */
-  --primary-hover: 210 80% 38%;
-  --primary-active: 210 82% 34%;
-  --primary-subtle: 210 80% 95%;
-  --primary-subtle-foreground: 210 80% 34%; /* 6.5:1 */
+  /* Primary — accessible deep teal from the card reference */
+  --primary: 189 57% 31%;
+  --primary-foreground: 48 100% 99%;
+  --primary-hover: 192 60% 25%;
+  --primary-active: 191 65% 20%;
+  --primary-subtle: 164 27% 89%;
+  --primary-subtle-foreground: 189 63% 25%;
+  /* Exact #39F3F3 requested for action buttons; links keep the deeper --primary. */
+  --action: 180 88.52% 58.82%;
+  --action-hover: 180 71% 51%;
+  --action-active: 181 79% 44%;
+  --action-foreground: 193 60% 18%;
 
-  /* Inverse — navy emphasis (Button variant "dark") */
-  --inverse: 216 30% 14%;
-  --inverse-foreground: 214 26% 96%; /* 14.7:1 */
-  --inverse-hover: 216 26% 20%;
+  /* Inverse — petroleum blue emphasis (Button variant "dark") */
+  --inverse: 194 49% 21%;
+  --inverse-foreground: 70 23% 95%;
+  --inverse-hover: 194 42% 27%;
 
-  --secondary: 210 20% 93%;
-  --secondary-foreground: 215 32% 20%;
-  --muted: 210 20% 93%;
-  --accent: 40 92% 57%;
-  --accent-foreground: 215 32% 14%; /* 8.7:1 */
+  --secondary: 120 23% 91%;
+  --secondary-foreground: 186 37% 22%;
+  --muted: 120 23% 91%;
+  --accent: 131 23% 77%;
+  --accent-foreground: 189 47% 18%;
 
   --destructive: 4 72% 48%;
   --destructive-foreground: 0 0% 100%; /* 5.0:1 */
@@ -233,37 +242,37 @@
   --warning-subtle-foreground: 30 88% 27%;
 
   /* Tender status */
-  --status-open: 152 46% 92%;
-  --status-open-foreground: 158 72% 24%; /* 5.8:1 */
+  --status-open: 131 23% 89%;
+  --status-open-foreground: 164 54% 23%;
   --status-under-review: 42 92% 90%;
   --status-under-review-foreground: 30 88% 27%; /* 6.6:1 */
-  --status-closed: 214 20% 92%;
-  --status-closed-foreground: 215 18% 34%; /* 6.4:1 */
+  --status-closed: 120 18% 92%;
+  --status-closed-foreground: 184 15% 37%;
   --status-suspended: 6 82% 94%;
   --status-suspended-foreground: 4 64% 38%; /* 6.2:1 */
-  --status-cancelled: 214 18% 95%;
-  --status-cancelled-foreground: 215 12% 40%; /* 5.4:1 */
+  --status-cancelled: 70 16% 94%;
+  --status-cancelled-foreground: 184 15% 37%;
 
-  --chart-1: 210 78% 43%;
-  --chart-2: 40 92% 57%;
-  --chart-3: 211 72% 48%;
-  --chart-4: 4 74% 55%;
-  --chart-5: 270 45% 57%;
+  --chart-1: 189 57% 31%;
+  --chart-2: 131 23% 57%;
+  --chart-3: 197 52% 20%;
+  --chart-4: 178 40% 55%;
+  --chart-5: 165 16% 44%;
 
-  /* Sidebar — same navy in both themes */
-  --sidebar: 216 30% 12%;
-  --sidebar-foreground: 214 26% 86%; /* 12.1:1 */
-  --sidebar-muted-foreground: 215 16% 66%; /* 6.9:1 — replaces text-slate-400 */
-  --sidebar-subtle-foreground: 215 14% 55%; /* 4.8:1 — eyebrows, meta; replaces text-slate-500 */
-  --sidebar-strong-foreground: 0 0% 100%; /* replaces text-white / text-slate-100 */
-  --sidebar-border: 215 23% 21%;
-  --sidebar-primary: 210 82% 64%; /* 4.97:1 as active-nav text on its own 15% tint over --sidebar; 6.4:1 on --sidebar */
-  --sidebar-primary-foreground: 216 30% 12%;
-  --sidebar-accent: 215 24% 19%;
-  --sidebar-accent-foreground: 214 26% 94%;
-  --sidebar-ring: 210 80% 58%;
+  /* Sidebar — the dark card color from the reference */
+  --sidebar: 197 52% 20%;
+  --sidebar-foreground: 156 21% 91%;
+  --sidebar-muted-foreground: 174 17% 79%;
+  --sidebar-subtle-foreground: 182 18% 69%;
+  --sidebar-strong-foreground: 48 100% 99%;
+  --sidebar-border: 192 37% 29%;
+  --sidebar-primary: 178 40% 76%;
+  --sidebar-primary-foreground: 197 52% 20%;
+  --sidebar-accent: 192 43% 25%;
+  --sidebar-accent-foreground: 156 21% 91%;
+  --sidebar-ring: 178 40% 76%;
 
-  --shadow-color: 215 32% 14%;
+  --shadow-color: 197 52% 20%;
 
   --app-font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
@@ -347,50 +356,54 @@
   --elevate-2: rgba(255, 255, 255, 0.09);
 
   /* Surfaces */
-  --background: 216 30% 10%;
-  --surface: 216 27% 14%;
-  --surface-sunken: 216 30% 12%;
-  --surface-raised: 216 25% 17%;
+  --background: 198 57% 15%;
+  --surface: 195 48% 20%;
+  --surface-sunken: 195 52% 16%;
+  --surface-raised: 192 43% 24%;
   --card: var(--surface);
-  --card-foreground: 214 26% 92%;
-  --card-border: 215 23% 22%;
+  --card-foreground: 137 23% 94%;
+  --card-border: 188 33% 30%;
   --popover: var(--surface-raised);
-  --popover-foreground: 214 26% 92%;
-  --popover-border: 215 23% 24%;
+  --popover-foreground: 137 23% 94%;
+  --popover-border: 188 33% 30%;
 
   /* Text levels */
-  --foreground: 214 26% 92%; /* 14.7:1 on background */
-  --muted-foreground: 215 15% 64%; /* 6.8:1 on background · 5.2:1 on muted */
-  --foreground-subtle: 215 12% 52%; /* 4.1:1 on card — icons, disabled, decorative only */
+  --foreground: 137 23% 94%;
+  --muted-foreground: 178 22% 76%;
+  --foreground-subtle: 180 19% 64%; /* icons, disabled, decoration only */
 
   /* Borders */
-  --border-subtle: 215 23% 18%;
-  --border: 215 23% 22%;
-  --border-strong: 215 20% 32%;
+  --border-subtle: 195 43% 25%;
+  --border: 188 33% 30%;
+  --border-strong: 183 25% 43%;
   /* Border around inputs: more contrast than --border on a --card background */
-  --input: 215 23% 29%;
-  --ring: 210 82% 66%; /* 7.1:1 on background */
+  --input: 183 25% 43%;
+  --ring: 181 41% 69%;
 
-  --scrim: 216 50% 3%;
+  --scrim: 198 57% 6%;
 
   /* Primary */
-  --primary: 210 82% 66%;
-  --primary-foreground: 216 34% 8%; /* 7.4:1 */
-  --primary-hover: 210 84% 72%;
-  --primary-active: 210 80% 60%;
-  --primary-subtle: 212 45% 18%;
-  --primary-subtle-foreground: 210 82% 72%; /* 6.7:1 */
+  --primary: 181 41% 69%;
+  --primary-foreground: 194 56% 16%;
+  --primary-hover: 178 46% 77%;
+  --primary-active: 181 36% 60%;
+  --primary-subtle: 188 39% 26%;
+  --primary-subtle-foreground: 178 46% 77%;
+  --action: 180 88.52% 58.82%;
+  --action-hover: 180 100% 71%;
+  --action-active: 180 71% 51%;
+  --action-foreground: 193 60% 18%;
 
   /* Inverse — flips to a light surface so "dark" buttons keep maximum emphasis */
-  --inverse: 214 26% 92%;
-  --inverse-foreground: 216 30% 10%; /* 14.7:1 */
-  --inverse-hover: 214 26% 84%;
+  --inverse: 137 23% 94%;
+  --inverse-foreground: 198 57% 15%;
+  --inverse-hover: 155 23% 86%;
 
-  --secondary: 215 24% 19%;
-  --secondary-foreground: 214 26% 92%;
-  --muted: 215 24% 19%;
-  --accent: 40 92% 57%;
-  --accent-foreground: 215 32% 14%;
+  --secondary: 192 43% 24%;
+  --secondary-foreground: 137 23% 94%;
+  --muted: 192 43% 24%;
+  --accent: 131 23% 77%;
+  --accent-foreground: 189 47% 18%;
 
   --destructive: 4 80% 66%;
   --destructive-foreground: 216 34% 8%; /* 6.2:1 */
@@ -402,36 +415,36 @@
   --warning-subtle-foreground: 42 88% 66%;
 
   /* Tender status */
-  --status-open: 158 38% 15%;
-  --status-open-foreground: 152 52% 68%; /* 7.9:1 */
+  --status-open: 131 23% 23%;
+  --status-open-foreground: 131 34% 75%;
   --status-under-review: 36 46% 16%;
   --status-under-review-foreground: 40 88% 66%; /* 8.1:1 */
-  --status-closed: 215 22% 20%;
-  --status-closed-foreground: 214 18% 74%; /* 6.8:1 */
+  --status-closed: 192 43% 24%;
+  --status-closed-foreground: 178 22% 76%;
   --status-suspended: 4 42% 18%;
   --status-suspended-foreground: 6 86% 76%; /* 6.9:1 */
-  --status-cancelled: 215 22% 16%;
-  --status-cancelled-foreground: 215 12% 62%; /* 5.4:1 */
+  --status-cancelled: 195 52% 16%;
+  --status-cancelled-foreground: 178 22% 76%;
 
-  --chart-1: 210 82% 66%;
-  --chart-2: 40 92% 57%;
-  --chart-3: 211 72% 60%;
-  --chart-4: 4 74% 58%;
-  --chart-5: 270 45% 65%;
+  --chart-1: 181 41% 69%;
+  --chart-2: 131 23% 77%;
+  --chart-3: 178 46% 77%;
+  --chart-4: 197 35% 54%;
+  --chart-5: 165 16% 64%;
 
-  --sidebar: 216 34% 8%;
-  --sidebar-foreground: 214 26% 86%;
-  --sidebar-muted-foreground: 215 16% 66%;
-  --sidebar-subtle-foreground: 215 14% 55%;
-  --sidebar-strong-foreground: 0 0% 100%;
-  --sidebar-border: 215 23% 17%;
-  --sidebar-primary: 210 82% 66%;
-  --sidebar-primary-foreground: 216 34% 8%;
-  --sidebar-accent: 215 24% 16%;
-  --sidebar-accent-foreground: 214 26% 94%;
-  --sidebar-ring: 210 82% 66%;
+  --sidebar: 198 57% 12%;
+  --sidebar-foreground: 156 21% 91%;
+  --sidebar-muted-foreground: 174 17% 79%;
+  --sidebar-subtle-foreground: 182 18% 69%;
+  --sidebar-strong-foreground: 48 100% 99%;
+  --sidebar-border: 192 37% 23%;
+  --sidebar-primary: 181 41% 69%;
+  --sidebar-primary-foreground: 198 57% 12%;
+  --sidebar-accent: 192 43% 20%;
+  --sidebar-accent-foreground: 156 21% 91%;
+  --sidebar-ring: 181 41% 69%;
 
-  --shadow-color: 216 50% 2%;
+  --shadow-color: 198 57% 6%;
 }
 
 @layer base {
@@ -446,6 +459,11 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Keep the established LI artwork while bringing its blue tile into the teal palette. */
+  img[src='/LicitAI_logo.png'] {
+    filter: hue-rotate(-28deg) saturate(0.7);
   }
 
   ::selection {

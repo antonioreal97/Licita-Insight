@@ -10,8 +10,8 @@ import { useOpportunityAccess } from '../hooks/use-opportunities';
 
 /** A link styled as the primary `Button` (the product Button has no `asChild`). */
 export const linkButtonClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground shadow-xs ' +
-  'transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active ' +
+  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-action px-4 py-2 font-semibold text-action-foreground shadow-xs ' +
+  'transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Why the user can't see cultural calls. No preview of real or invented calls: the panel only explains and offers the next step. */
