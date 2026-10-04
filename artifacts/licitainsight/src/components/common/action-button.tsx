@@ -27,7 +27,7 @@ const base =
   '[&_svg]:pointer-events-none [&_svg]:shrink-0';
 
 const variants: Record<ActionButtonVariant, string> = {
-  primary: 'bg-primary text-primary-foreground shadow-xs enabled:hover:bg-primary-hover enabled:active:bg-primary-active',
+  primary: 'bg-action text-action-foreground shadow-xs enabled:hover:bg-action-hover enabled:active:bg-action-active',
   dark: 'bg-inverse text-inverse-foreground shadow-xs enabled:hover:bg-inverse-hover',
   outline:
     'border border-border bg-surface text-foreground shadow-2xs enabled:hover:border-border-strong enabled:hover:bg-surface-sunken aria-pressed:border-primary/40 aria-pressed:bg-primary-subtle aria-pressed:text-primary-subtle-foreground',

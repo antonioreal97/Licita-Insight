@@ -16,7 +16,7 @@ import { searchParamsFromUrl } from '@/services/search-service';
 import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
 
 const primaryLinkClass =
-  'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-primary px-3.5 type-ui font-semibold text-primary-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active focus-visible:focus-ring';
+  'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring';
 
 function errorDescription(error: unknown) {
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas.';

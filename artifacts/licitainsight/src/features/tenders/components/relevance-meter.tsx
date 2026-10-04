@@ -13,7 +13,7 @@ type Props = {
 
 /**
  * Match strength as a 5-step bar plus a percentage — the number is always visible, never color-only.
- * Neutral by default (blue means "you can act here"); only a ≥ 90% match gets the primary tint as a "best match" cue.
+ * Neutral by default (teal means "you can act here"); only a ≥ 90% match gets the primary tint as a "best match" cue.
  */
 export function RelevanceMeter({ score, varies, className }: Props) {
   if (!varies || score === null || Number.isNaN(score)) return null;

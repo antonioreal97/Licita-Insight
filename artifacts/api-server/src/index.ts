@@ -9,6 +9,7 @@ import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { startDailyCategoryClassify, startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
+import { startTenderDeadlineReconciliation } from "./ingest/reconcile-tender-deadlines";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 import {
@@ -55,6 +56,7 @@ const startSchedulers = (): Array<() => void> => [
   startAiRetentionScheduler(),
   startDocumentRetryJob(),
   startDailyPncpCollect(),
+  startTenderDeadlineReconciliation(),
   startDailyCultureCollect(),
   startDailyCategoryClassify(),
 ];

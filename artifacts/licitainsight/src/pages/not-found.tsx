@@ -19,7 +19,7 @@ export default function NotFound() {
           <Link
             href="/dashboard"
             data-testid="link-not-found-home"
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 type-ui font-semibold text-primary-foreground shadow-xs transition-colors duration-fast hover:bg-primary-hover"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             Voltar ao início

@@ -25,9 +25,9 @@ The button sets no default `type`, same as before. Pass `type="submit"` or `type
 
 | Variant       | Use                                                                       | Rest                                                    | Hover                                       | Active                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------- | --------------------------------------- |
-| `primary`     | The single main action of an area                                         | `bg-primary`, `shadow-xs`                               | `bg-primary-hover`                          | `bg-primary-active`, scale .98          |
+| `primary`     | The single main action of an area                                         | `bg-action text-action-foreground`, `shadow-xs`          | `bg-action-hover`                           | `bg-action-active`, scale .98           |
 | `outline`     | Secondary actions, toolbars                                               | `bg-surface`, `border-border`, `shadow-2xs`             | `bg-surface-sunken`, `border-border-strong` | scale .98                               |
-| `dark`        | High-emphasis neutral: "Instrument navy" in light, flips to light in dark | `bg-inverse`                                            | `bg-inverse-hover`                          | scale .98                               |
+| `dark`        | High-emphasis neutral: petroleum blue in light, flips to light in dark | `bg-inverse`                                            | `bg-inverse-hover`                          | scale .98                               |
 | `ghost`       | Tertiary, inline, icon-adjacent                                           | transparent, `text-muted-foreground`                    | `bg-muted`, `text-foreground`               | scale .98                               |
 | `destructive` | Irreversible or destructive actions (delete, revoke)                      | `bg-destructive`, `text-destructive-foreground`, `shadow-xs` | `bg-destructive/90`                         | `bg-destructive`, scale .98             |
 
@@ -95,7 +95,7 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
 
 | Component              | Default                  | Hover                          | Focus-visible                  | Active                    | Disabled                           | Loading                          |
 | ---------------------- | ------------------------ | ------------------------------ | ------------------------------ | ------------------------- | ---------------------------------- | -------------------------------- |
-| Button primary         | primary fill             | primary-hover                  | ring 2px +2                    | primary-active, scale .98 | 50% opacity, not-allowed, no hover | spinner, label hidden, aria-busy |
+| Button primary         | action fill              | action-hover                   | ring 2px +2                    | action-active, scale .98  | 50% opacity, not-allowed, no hover | spinner, label hidden, aria-busy |
 | Button outline         | surface + border         | surface-sunken + border-strong | ring                           | scale .98                 | 50%                                | spinner                          |
 | Button dark            | inverse                  | inverse-hover                  | ring                           | scale .98                 | 50%                                | spinner                          |
 | Button ghost           | transparent, muted text  | muted fill, foreground text    | ring                           | scale .98                 | 50%                                | spinner                          |
@@ -121,7 +121,7 @@ Skeletons must mirror the final layout, so nothing jumps when data arrives. Show
   targets `<main id="conteudo" tabIndex={-1}>`. Nav links set `aria-current="page"` and use `focus-visible:outline-sidebar-ring`.
 - **Avatar**: header avatar is `bg-primary-subtle text-primary-subtle-foreground`; sidebar avatar is `bg-sidebar-accent text-sidebar-strong-foreground`.
 - **Selected chip** (saved tenders "Todos"): `bg-inverse text-inverse-foreground`, count in `text-inverse-foreground/70`.
-- **Marketing** (landing/auth): the navy panels and brand tile use `bg-sidebar` + `text-sidebar-*` (same in both themes);
+- **Marketing** (landing/auth): petroleum blue panels use `bg-sidebar` + `text-sidebar-*` in both themes;
   high-emphasis CTAs are `bg-inverse` like `Button variant="dark"`. Hero display sizes (48/72px) stay arbitrary on purpose.
 
 ## App shell navigation (cycle 1 QA)
