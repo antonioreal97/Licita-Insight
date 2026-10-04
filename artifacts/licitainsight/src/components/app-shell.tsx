@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { User } from '@/api';
+import { BrandIcon } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -94,11 +95,11 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
-        <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
+        <BrandIcon className="size-9" />
         {!collapsed && (
           <div className="min-w-0">
             <div className="font-semibold tracking-heading text-sidebar-strong-foreground">
-              Licit<span className="text-sidebar-primary">AI</span>
+              Abriu <span className="text-sidebar-primary">lá</span>
             </div>
           </div>
         )}
@@ -252,8 +253,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Menu size={20} strokeWidth={1.75} />
                 </button>
               </SheetTrigger>
-              <Link href="/dashboard" aria-label="LicitAI — Visão geral" className="lg:hidden">
-                <img src="/LicitAI_logo.png" alt="" width={28} height={28} className="size-7" />
+              <Link href="/dashboard" aria-label="Abriu lá — Visão geral" className="lg:hidden">
+                <BrandIcon className="size-7" />
               </Link>
               <button
                 aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}

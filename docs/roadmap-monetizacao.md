@@ -1,4 +1,4 @@
-# Roadmap de monetização — LicitAI
+# Roadmap de monetização — Abriu lá
 
 Origem: documento de análise competitiva (ConLicitação, Effecti, Siga Pregão) × escopo do Licita-Insight.
 Este roadmap traduz aquela análise em épicos executáveis, corrigidos contra o **código que existe hoje** (23 set 2026).

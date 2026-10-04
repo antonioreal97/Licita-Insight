@@ -1,6 +1,6 @@
 # Motion
 
-Motion in Licita Insight confirms that something happened. It never performs. Users run dozens of searches per session, so the
+Motion in Abriu lá confirms that something happened. It never performs. Users run dozens of searches per session, so the
 interface has to feel instant. Every animation must pass one test: would the UI feel _worse_ without it? If not, remove it.
 
 ## Tokens

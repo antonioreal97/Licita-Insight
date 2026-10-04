@@ -33,9 +33,9 @@ function OpportunityDetail() {
   const opportunity = query.data;
 
   useEffect(() => {
-    if (opportunity) document.title = `${opportunity.title} · LicitAI`;
+    if (opportunity) document.title = `${opportunity.title} · Abriu lá`;
     else if (query.isError && isApiError(query.error) && query.error.code === 'NOT_FOUND') {
-      document.title = 'Chamada não encontrada · LicitAI';
+      document.title = 'Chamada não encontrada · Abriu lá';
     }
   }, [opportunity, query.isError, query.error]);
 

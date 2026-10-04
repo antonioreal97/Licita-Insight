@@ -78,7 +78,7 @@ async function pncpGet(url: string): Promise<unknown> {
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "LicitaInsight/0.1 (coleta de dados abertos do PNCP)",
+          "User-Agent": "AbriuLa/0.1 (coleta de dados abertos do PNCP)",
         },
         signal: timeoutSignal("PNCP_HTTP_TIMEOUT_MS", 60_000),
       });

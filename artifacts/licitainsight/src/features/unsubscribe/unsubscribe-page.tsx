@@ -1,13 +1,14 @@
 import { CircleAlert, CircleCheck, RefreshCw } from 'lucide-react';
 import { Link, useSearch } from 'wouter';
 import { isApiError, type EmailPreferences, type UnsubscribeScope } from '@/api';
+import { BrandIcon } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { useUnsubscribe } from '@/features/settings/hooks/use-notification-preferences';
 
 const PREFERENCES_HREF = '/settings#notificacoes';
 
 const scopeCopy: Record<UnsubscribeScope, string> = {
-  all: 'Você deixará de receber todos os e-mails de alerta do LicitAI: o resumo diário e os avisos imediatos.',
+  all: 'Você deixará de receber todos os e-mails de alerta da Abriu lá: o resumo diário e os avisos imediatos.',
   digest: 'Você deixará de receber o resumo diário por e-mail.',
   immediate: 'Você deixará de receber os avisos imediatos de mudanças críticas (prazo alterado, edital suspenso ou revogado).',
 };
@@ -16,7 +17,7 @@ const parseScope = (value: string | null): UnsubscribeScope => (value === 'diges
 
 function resultCopy(email: EmailPreferences) {
   const digest = email.digest === 'daily';
-  if (!digest && !email.immediateCritical) return 'Você não receberá mais e-mails de alerta do LicitAI.';
+  if (!digest && !email.immediateCritical) return 'Você não receberá mais e-mails de alerta da Abriu lá.';
   if (digest) return 'Você não receberá mais os avisos imediatos. O resumo diário das 07:00 continua ligado.';
   return 'Você não receberá mais o resumo diário. Os avisos imediatos de mudanças críticas continuam ligados.';
 }
@@ -36,9 +37,9 @@ export default function UnsubscribePage() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <main id="conteudo" tabIndex={-1} data-testid="page-unsubscribe" className="mx-auto w-full max-w-[480px] px-4 py-12 outline-none sm:py-20">
         <Link href="/" className="mb-12 flex items-center gap-2.5">
-          <img src="/LicitAI_logo.png" alt="" width={36} height={36} className="h-9 w-9" />
+          <BrandIcon className="size-9" />
           <span className="font-semibold">
-            Licit<span className="text-primary">AI</span>
+            Abriu <span className="text-primary">lá</span>
           </span>
         </Link>
         <div className="mb-3 type-eyebrow font-bold text-primary">e-mails</div>
@@ -60,7 +61,7 @@ export default function UnsubscribePage() {
             <div>
               <p className="type-ui font-semibold">Este link de descadastro não é válido.</p>
               <p className="mt-0.5 type-meta">
-                Ele pode ter sido copiado pela metade. Use o link completo de um e-mail do LicitAI ou desligue os e-mails nas suas preferências.
+                Ele pode ter sido copiado pela metade. Use o link completo de um e-mail da Abriu lá ou desligue os e-mails nas suas preferências.
               </p>
             </div>
           </div>

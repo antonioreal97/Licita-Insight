@@ -208,7 +208,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   ]);
 
   const owner = byRecipient.get("deadline-owner@example.test")!;
-  assert.equal(owner.subject, "LicitAI: 4 prazos e 1 atualização no seu resumo");
+  assert.equal(owner.subject, "Abriu lá: 4 prazos e 1 atualização no seu resumo");
   // A tender with both deadlines in the window is one entry, the closest deadline first.
   assert.equal(owner.text.match(/Sua etapa:/g)?.length, 3);
   assert.match(
@@ -232,7 +232,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   assert.match(owner.headers["List-Unsubscribe"] ?? "", /\/api\/v1\/email\/unsubscribe\?token=/);
 
   const beta = byRecipient.get("deadline-beta@example.test")!;
-  assert.equal(beta.subject, "LicitAI: 1 prazo nos próximos dias");
+  assert.equal(beta.subject, "Abriu lá: 1 prazo nos próximos dias");
   assert.match(beta.text, /Sua etapa: Analisando/);
   assert.doesNotMatch(beta.text, /Novidades/);
 

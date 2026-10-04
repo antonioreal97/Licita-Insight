@@ -50,19 +50,19 @@ queryClient.setQueryDefaults(queryKeys.session, { retry: retryTransient });
 
 // Static routes only. Pages with dynamic titles (tender detail, 404) set document.title themselves, so this never touches them.
 const routeTitles: Record<string, string> = {
-  '/': 'LicitAI · Editais públicos do PNCP',
-  '/login': 'Entrar · LicitAI',
-  '/register': 'Criar conta · LicitAI',
-  '/forgot-password': 'Recuperar acesso · LicitAI',
-  '/descadastro': 'Descadastro de e-mails · LicitAI',
-  '/dashboard': 'Visão geral · LicitAI',
-  '/search': 'Explorar editais · LicitAI',
-  '/oportunidades': 'Chamadas culturais · LicitAI',
-  '/saved-searches': 'Buscas salvas · LicitAI',
-  '/saved-tenders': 'Editais salvos · LicitAI',
-  '/monitoring': 'Monitoramento · LicitAI',
-  '/settings': 'Configurações · LicitAI',
-  '/design-system': 'Design system · LicitAI',
+  '/': 'Abriu lá · Editais públicos do PNCP',
+  '/login': 'Entrar · Abriu lá',
+  '/register': 'Criar conta · Abriu lá',
+  '/forgot-password': 'Recuperar acesso · Abriu lá',
+  '/descadastro': 'Descadastro de e-mails · Abriu lá',
+  '/dashboard': 'Visão geral · Abriu lá',
+  '/search': 'Explorar editais · Abriu lá',
+  '/oportunidades': 'Chamadas culturais · Abriu lá',
+  '/saved-searches': 'Buscas salvas · Abriu lá',
+  '/saved-tenders': 'Editais salvos · Abriu lá',
+  '/monitoring': 'Monitoramento · Abriu lá',
+  '/settings': 'Configurações · Abriu lá',
+  '/design-system': 'Design system · Abriu lá',
 };
 
 function useRouteAnnouncement() {

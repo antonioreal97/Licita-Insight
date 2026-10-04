@@ -1,4 +1,4 @@
-# Licita Insight — Frontend architecture
+# Abriu lá — Frontend architecture
 
 ## Layering (mandatory)
 

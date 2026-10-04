@@ -4,7 +4,7 @@ O lançamento inicial é o beta fechado no Mac do owner via Cloudflare Tunnel. S
 
 # Deploy de produção no Fly.io
 
-Este runbook prepara o lançamento enxuto do LicitAI em `gru`: um app monolítico
+Este runbook prepara o lançamento enxuto da Abriu lá em `gru`: um app monolítico
 `APP_ROLE=all` e um PostgreSQL 16 próprio, privado, em outro app. O nome `licitai`
 em `fly.toml` e `licitai-db` em `deploy/fly-db/fly.toml` são placeholders; o owner
 deve confirmar os nomes e a origem pública antes de executar os comandos.
@@ -59,7 +59,7 @@ fly checks list --app licitai-db
 ```
 
 O arquivo local (`~/.licitai-secrets/postgres.env`, fora do repositório) deve ter modo `0600`, não usar `export` e nunca ser versionado. O
-TOML não declara `services.ports`, portanto não há listener público; o app LicitAI
+TOML não declara `services.ports`, portanto não há listener público; o app Abriu lá
 conecta diretamente a `licitai-db.internal:5432` pela rede 6PN. Não crie IPv4/IPv6
 público para o banco.
 
@@ -116,7 +116,7 @@ redirecionamento não expande seu conteúdo. Não use
 | `STATIC_DIR` | `/app/artifacts/licitainsight/dist/public`, no processo `app` |
 | `ASAAS_API_BASE_URL` | sandbox `https://api-sandbox.asaas.com/v3` ou produção `https://api.asaas.com/v3` |
 | `BILLING_MONTHLY_BRL` | `49.90` |
-| `MAIL_FROM` | remetente no domínio verificado, ex. `LicitAI <alertas@dominio>` |
+| `MAIL_FROM` | remetente no domínio verificado, ex. `Abriu lá <alertas@dominio>` |
 | `MAIL_REPLY_TO` | endereço de suporte |
 | `PNCP_DAILY_COLLECT` | `true` |
 | `CULTURE_DAILY_COLLECT` | `true` |
@@ -131,7 +131,7 @@ fly secrets set --app licitai \
   GOOGLE_CLIENT_ID=<client-id> \
   ASAAS_API_BASE_URL=https://api.asaas.com/v3 \
   BILLING_MONTHLY_BRL=49.90 \
-  MAIL_FROM='LicitAI <alertas@dominio>' \
+  MAIL_FROM='Abriu lá <alertas@dominio>' \
   MAIL_REPLY_TO=suporte@dominio \
   PNCP_DAILY_COLLECT=true \
   CULTURE_DAILY_COLLECT=true \
@@ -239,8 +239,8 @@ os agendadores residem nela.
 curl -fsS https://<origem-final>/api/healthz
 curl -fsS https://<origem-final>/api/readyz
 curl -fsS https://<origem-final>/api/v1/billing/plan
-curl -fsS https://<origem-final>/ | grep '<title>LicitAI</title>'
-curl -fsS https://<origem-final>/tenders/teste | grep '<title>LicitAI</title>'
+curl -fsS https://<origem-final>/ | grep '<title>Abriu lá</title>'
+curl -fsS https://<origem-final>/tenders/teste | grep '<title>Abriu lá</title>'
 curl -sS -o /dev/null -w '%{http_code}\n' https://<origem-final>/api/x
 ```
 

@@ -99,14 +99,14 @@ test('regra 8: prazo futuro com recebimento aberto ou sem data de início', () =
     const step = nextStep({ ...open, openingAt }, now);
     assert.equal(step.rule, 8);
     assert.equal(step.title, 'Envie a proposta até 03 de out de 2026, 10:00.');
-    assert.deepEqual(step.details, ['O envio é feito no sistema indicado no edital, não no LicitAI.']);
+    assert.deepEqual(step.details, ['O envio é feito no sistema indicado no edital, não pela Abriu lá.']);
     assert.equal(step.withDeadline, true);
   }
 });
 
 test('regra 8: "Analisando" pede decisão antes do prazo', () => {
   assert.deepEqual(nextStep({ ...open, stage: 'analyzing', stageAt: markedAt }, now).details, [
-    'O envio é feito no sistema indicado no edital, não no LicitAI.',
+    'O envio é feito no sistema indicado no edital, não pela Abriu lá.',
     'Decida antes disso.',
   ]);
 });

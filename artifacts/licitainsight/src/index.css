@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * LicitAI design tokens.
+ * Abriu lá design tokens.
  * Documentation: /design-system/tokens.md (repo root). Living reference: /design-system route.
  *
  * Layers:
@@ -465,11 +465,6 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-  }
-
-  /* Keep the established LI artwork while bringing its blue tile into the teal palette. */
-  img[src='/LicitAI_logo.png'] {
-    filter: hue-rotate(-28deg) saturate(0.7);
   }
 
   ::selection {
