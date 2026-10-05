@@ -3,15 +3,18 @@ import { Link } from 'wouter';
 import {
   ArrowRight,
   Bell,
+  Building2,
   Check,
   ClipboardList,
   Clapperboard,
   FileSearch,
+  Landmark,
   Mail,
   Quote,
   Search,
   ShieldCheck,
   Target,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandIcon } from '@/components/brand-icon';
@@ -327,6 +330,87 @@ function EvidenceSection() {
   );
 }
 
+function TransparencySection() {
+  const rows = [
+    { label: 'Empresa vencedora', value: 'nome publicado pela fonte oficial' },
+    { label: 'Valor homologado', value: 'proposta vencedora, quando disponível' },
+    { label: 'Órgão comprador', value: 'quem contratou e em qual modalidade' },
+  ];
+  const points = [
+    'Histórico para entender quem ganhou contratos parecidos',
+    'Empresa, CNPJ, órgão e valor aparecem só quando a fonte publica',
+    'Link de volta para o resultado oficial, sem dado solto do contexto',
+  ];
+  return (
+    <section id="transparencia" aria-labelledby="transparencia-titulo" className="border-b border-border bg-surface py-24">
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[.95fr_1.05fr] lg:items-center">
+        <div>
+          <div className={eyebrow}>Transparência</div>
+          <h2 id="transparencia-titulo" className={cn(sectionTitle, 'max-w-xl')}>
+            Veja quais empresas venceram os editais.
+          </h2>
+          <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
+            Depois da disputa, a Abriu lá também quer mostrar o caminho do dinheiro público: quem venceu, por quanto, em qual órgão e com qual edital de
+            origem. Resultado publicado vira histórico para consulta, comparação e prospecção.
+          </p>
+          <ul className="mt-8 grid gap-3 text-sm">
+            {points.map((point) => (
+              <li key={point} className="flex gap-2.5">
+                <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-primary" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="relative">
+          <div aria-hidden className="absolute -inset-3 rounded-[28px] bg-primary-subtle/60" />
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-lg">
+            <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <Trophy size={16} aria-hidden className="text-primary" />
+                Empresas vencedoras
+              </div>
+              <span className="type-label text-muted-foreground">resultado oficial</span>
+            </div>
+            <div className="grid gap-4 p-5 sm:p-6">
+              <div className="rounded-xl border border-border bg-surface p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="type-label text-muted-foreground">Contrato identificado</p>
+                    <h3 className="mt-2 max-w-md text-base font-semibold leading-6">Serviços compatíveis com o edital pesquisado</h3>
+                  </div>
+                  <span className="rounded-full bg-status-open px-2.5 py-1 text-3xs font-bold text-status-open-foreground">homologado</span>
+                </div>
+                <dl className="mt-5 grid gap-3">
+                  {rows.map((row) => (
+                    <div key={row.label} className="grid gap-1 border-t border-border-subtle pt-3 sm:grid-cols-[11rem_1fr] sm:gap-4">
+                      <dt className="type-label text-muted-foreground">{row.label}</dt>
+                      <dd className="text-sm font-semibold text-foreground">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <Building2 size={17} aria-hidden className="text-primary" />
+                  <p className="mt-3 text-sm font-semibold">Mapa de fornecedores</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Veja quem aparece com frequência por cidade, órgão ou categoria.</p>
+                </div>
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <Landmark size={17} aria-hidden className="text-primary" />
+                  <p className="mt-3 text-sm font-semibold">Rastro do edital</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Do aviso de contratação ao resultado, sempre com referência à fonte.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ExtrasSection() {
   const items: { icon: LucideIcon; title: string; text: ReactNode }[] = [
     {
@@ -497,6 +581,9 @@ export default function LandingPage() {
             <a href="#ia" className="transition-colors duration-fast hover:text-foreground">
               IA com fonte
             </a>
+            <a href="#transparencia" className="transition-colors duration-fast hover:text-foreground">
+              Transparência
+            </a>
             <a href="#plano" className="transition-colors duration-fast hover:text-foreground">
               Plano
             </a>
@@ -533,6 +620,7 @@ export default function LandingPage() {
         </section>
         <ServicesSection />
         <EvidenceSection />
+        <TransparencySection />
         <ExtrasSection />
         <PlanSection />
         <FaqSection />

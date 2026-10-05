@@ -326,8 +326,9 @@ export default function TenderDetailPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
+          <TimelinePanel events={tender.timeline} />
+          <ItemsPanel tender={tender} />
           <DecisionPanel tender={tender} />
-          <ParticipationPanel tenderId={tender.id} />
           <NextStepsPanel tender={tender} monitored={monitored} />
           <Panel title="Objeto">
             {summary && <p className="break-words type-body text-foreground/90">{withEllipsis(summary)}</p>}
@@ -362,12 +363,11 @@ export default function TenderDetailPage() {
 
           <TenderSheetPanel tenderId={tender.id} />
           <AskTenderPanel tenderId={tender.id} />
-          <ItemsPanel tender={tender} />
-          <TimelinePanel events={tender.timeline} />
         </div>
 
         <aside className="min-w-0 space-y-6">
           <DocumentsPanel documents={tender.documents} pending={tender.source.id === 'pncp' && tender.detailsFetchedAt === null} />
+          <ParticipationPanel tenderId={tender.id} />
         </aside>
       </div>
 
