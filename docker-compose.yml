@@ -48,7 +48,7 @@ services:
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
       PUBLIC_APP_ORIGIN: http://localhost:24252
       PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
-      TRANSPARENCY_DAILY_COLLECT: ${TRANSPARENCY_DAILY_COLLECT:-false}
+      TRANSPARENCY_DAILY_COLLECT: ${TRANSPARENCY_DAILY_COLLECT:-true}
       NODE_ENV: development
       METRICS_PORT: ${API_METRICS_PORT:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
