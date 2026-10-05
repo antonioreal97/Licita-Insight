@@ -174,6 +174,78 @@ export async function fetchPublicationPage(input: {
   }
 }
 
+export async function fetchContractsByPublicationPage(input: {
+  from: string;
+  to: string;
+  page: number;
+  pageSize: number;
+  cnpjOrgao?: string;
+  unidadeAdministrativa?: string;
+  usuarioId?: string;
+}): Promise<PncpPublicationPage> {
+  const query = new URLSearchParams({
+    dataInicial: input.from,
+    dataFinal: input.to,
+    pagina: String(input.page),
+    tamanhoPagina: String(input.pageSize),
+  });
+  if (input.cnpjOrgao) query.set("cnpjOrgao", input.cnpjOrgao);
+  if (input.unidadeAdministrativa) {
+    query.set("codigoUnidadeAdministrativa", input.unidadeAdministrativa);
+  }
+  if (input.usuarioId) query.set("usuarioId", input.usuarioId);
+  const url = `${PNCP_CONSULTA}/contratos?${query}`;
+  try {
+    return asPage(await pncpGet(url), url);
+  } catch (error) {
+    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+      return {
+        data: [],
+        totalPaginas: 0,
+        numeroPagina: input.page,
+        totalRegistros: 0,
+      };
+    }
+    throw error;
+  }
+}
+
+export async function fetchContractsByUpdatePage(input: {
+  from: string;
+  to: string;
+  page: number;
+  pageSize: number;
+  cnpjOrgao?: string;
+  unidadeAdministrativa?: string;
+  usuarioId?: string;
+}): Promise<PncpPublicationPage> {
+  const query = new URLSearchParams({
+    dataInicial: input.from,
+    dataFinal: input.to,
+    pagina: String(input.page),
+    tamanhoPagina: String(input.pageSize),
+  });
+  if (input.cnpjOrgao) query.set("cnpjOrgao", input.cnpjOrgao);
+  if (input.unidadeAdministrativa) {
+    query.set("codigoUnidadeAdministrativa", input.unidadeAdministrativa);
+  }
+  if (input.usuarioId) query.set("usuarioId", input.usuarioId);
+  const url = `${PNCP_CONSULTA}/contratos/atualizacao?${query}`;
+  try {
+    return asPage(await pncpGet(url), url);
+  } catch (error) {
+    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+      return {
+        data: [],
+        totalPaginas: 0,
+        numeroPagina: input.page,
+        totalRegistros: 0,
+      };
+    }
+    throw error;
+  }
+}
+
 export type PncpList = {
   rows: Record<string, unknown>[];
   totalPages: number;
@@ -261,6 +333,44 @@ export async function fetchCompraArquivos(
 ): Promise<Record<string, unknown>[]> {
   const list = await fetchList(
     `${PNCP_API}/orgaos/${cnpj}/compras/${ano}/${sequencial}/arquivos`,
+  );
+  return list.rows;
+}
+
+export async function fetchContractsByPurchase(input: {
+  cnpj: string;
+  purchaseYear: number;
+  purchaseSequence: number;
+  page: number;
+  pageSize: number;
+}): Promise<PncpList> {
+  return await fetchList(
+    `${PNCP_API}/orgaos/${input.cnpj}/contratos/contratacao/${input.purchaseYear}/${input.purchaseSequence}?pagina=${input.page}&tamanhoPagina=${input.pageSize}`,
+  );
+}
+
+export async function fetchContract(
+  cnpj: string,
+  year: number,
+  sequencial: number,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const body = await pncpGet(`${PNCP_API}/orgaos/${cnpj}/contratos/${year}/${sequencial}`);
+    return body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  } catch (error) {
+    if (error instanceof PncpNotFoundError) return null;
+    throw error;
+  }
+}
+
+export async function fetchItemResults(input: {
+  cnpj: string;
+  purchaseYear: number;
+  purchaseSequence: number;
+  itemNumber: number;
+}): Promise<Record<string, unknown>[]> {
+  const list = await fetchList(
+    `${PNCP_API}/orgaos/${input.cnpj}/compras/${input.purchaseYear}/${input.purchaseSequence}/itens/${input.itemNumber}/resultados`,
   );
   return list.rows;
 }

@@ -6,3 +6,4 @@ export * from "./opportunities";
 export * from "./operations";
 export * from "./tenders";
 export * from "./title-examples";
+export * from "./transparency";

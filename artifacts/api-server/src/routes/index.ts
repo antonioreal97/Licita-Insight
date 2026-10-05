@@ -7,6 +7,7 @@ import healthRouter from "./health";
 import ingestRouter from "./ingest";
 import opportunitiesRouter from "./opportunities";
 import searchRouter from "./search";
+import transparencyRouter from "./transparency";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,7 @@ router.use(billingRouter);
 router.use(aiRouter);
 router.use(accountRouter);
 router.use(searchRouter);
+router.use(transparencyRouter);
 router.use(opportunitiesRouter);
 router.use(ingestRouter);
 

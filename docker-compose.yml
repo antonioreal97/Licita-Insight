@@ -48,6 +48,7 @@ services:
       DATABASE_URL: postgres://licita:licita@postgres:5432/licita
       PUBLIC_APP_ORIGIN: http://localhost:24252
       PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
+      TRANSPARENCY_DAILY_COLLECT: ${TRANSPARENCY_DAILY_COLLECT:-false}
       NODE_ENV: development
       METRICS_PORT: ${API_METRICS_PORT:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
@@ -136,6 +137,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+
+  collect-transparency:
+    <<: *app
+    profiles: ["collect"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://licita:licita@postgres:5432/licita
+      TRANSPARENCY_DAILY_COLLECT: "false"
+    command: pnpm --filter @workspace/api-server run collect:transparency
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
     restart: "no"
 
 volumes:
