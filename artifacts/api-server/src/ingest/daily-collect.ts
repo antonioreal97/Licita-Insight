@@ -163,6 +163,38 @@ export function startDailyCultureCollect(): () => void {
   };
 }
 
+export function startDailyTransparencyCollect(): () => void {
+  if (process.env.TRANSPARENCY_DAILY_COLLECT !== "true") {
+    logger.info("Daily transparency collect is disabled");
+    return () => undefined;
+  }
+  if (!process.env.DATABASE_URL) {
+    logger.error("DATABASE_URL is not set; daily transparency collect will not start");
+    return () => undefined;
+  }
+  const hour = (dailyHour() + 1) % 24;
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const run = async () => {
+    try {
+      const { collectTransparency, transparencyOptionsFromEnv } = await import("./collect-transparency");
+      const options = await transparencyOptionsFromEnv();
+      if (!options) return;
+      await tryRunSingletonJob("pncp_transparency_collect", () => collectTransparency(options));
+    } catch (error) {
+      logger.error({ err: error }, "Daily transparency collection failed");
+    }
+  };
+  const arm = () => {
+    if (stopped) return;
+    timer = setTimeout(() => { void run().finally(arm); }, msUntilHour(hour));
+    timer.unref();
+  };
+  void run();
+  arm();
+  return () => { stopped = true; if (timer) clearTimeout(timer); };
+}
+
 /** Classifies with the category student whatever the post-collect hook left pending, one hour after the PNCP collect. */
 export function startDailyCategoryClassify(): () => void {
   if (process.env.CATEGORY_STUDENT_ENABLED !== "true") return () => undefined;

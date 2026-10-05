@@ -18,6 +18,8 @@ tags:
     description: Evidence-only tender document questions
   - name: opportunities
     description: Cultural funding opportunity operations
+  - name: transparency
+    description: Official PNCP contract and item result history
 paths:
   /healthz:
     get:
@@ -119,6 +121,59 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /v1/transparency/contracts:
+    get:
+      operationId: searchTransparencyContracts
+      tags: [transparency]
+      summary: Search PNCP contracts in collected publication and update windows
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 160 } }
+        - { name: state, in: query, schema: { type: string, minLength: 2, maxLength: 2 } }
+        - { name: publishedFrom, in: query, schema: { type: string, format: date } }
+        - { name: publishedTo, in: query, schema: { type: string, format: date } }
+        - { name: valueMin, in: query, schema: { type: number, minimum: 0 } }
+        - { name: valueMax, in: query, schema: { type: number, minimum: 0 } }
+        - { name: sort, in: query, schema: { type: string, enum: [published_desc, published_asc, value_desc, value_asc], default: published_desc } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
+      responses:
+        "200":
+          description: Published contracts with source and coverage metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransparencyContractsResponse" }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "503": { $ref: "#/components/responses/SearchUnavailable" }
+  /v1/tenders/{id}/transparency/contracts:
+    get:
+      operationId: getTenderTransparencyContracts
+      tags: [transparency]
+      summary: Get PNCP contracts linked to a tender
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, minLength: 1 } }
+      responses:
+        "200":
+          description: Contracts linked by PNCP purchase control number
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransparencyTenderContractsResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/SearchUnavailable" }
+  /v1/tenders/{id}/transparency/results:
+    get:
+      operationId: getTenderTransparencyResults
+      tags: [transparency]
+      summary: Get PNCP item results linked to a tender
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, minLength: 1 } }
+      responses:
+        "200":
+          description: Item results including cancelled history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransparencyTenderResultsResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/ask-status:
     get:
       operationId: getTenderAskStatus
@@ -2181,6 +2236,119 @@ components:
               description: Null while PNCP items and documents have not been fetched yet.
           required:
             [description, processNumber, items, documents, timeline, createdAt, detailsFetchedAt]
+    TransparencySupplier:
+      type: [object, "null"]
+      description: Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.
+      properties:
+        type: { type: [string, "null"] }
+        name: { type: [string, "null"] }
+        identifier: { type: [string, "null"] }
+      required: [type, name, identifier]
+    TransparencyProvenance:
+      type: object
+      properties:
+        source: { type: string, const: PNCP }
+        fetchedAt: { type: string, format: date-time }
+      required: [source, fetchedAt]
+    TransparencyMeta:
+      type: object
+      properties:
+        coverage: { type: string }
+        indexUpdatedAt: { type: [string, "null"], format: date-time }
+        valueSemantics:
+          type: object
+          properties:
+            contractValues: { type: string }
+            resultValues: { type: string }
+            paymentValues: { type: string }
+          required: [contractValues, resultValues, paymentValues]
+      required: [coverage, valueSemantics]
+    TransparencyContract:
+      type: object
+      properties:
+        id: { type: string }
+        pncpControlNumber: { type: string }
+        purchasePncpControlNumber: { type: string }
+        tenderId: { type: [string, "null"] }
+        contractNumber: { type: [string, "null"] }
+        organizationName: { type: string }
+        location:
+          type: object
+          properties:
+            state: { type: [string, "null"] }
+            city: { type: [string, "null"] }
+          required: [state, city]
+        supplier: { $ref: "#/components/schemas/TransparencySupplier" }
+        object: { type: [string, "null"] }
+        values:
+          type: object
+          properties:
+            initial: { type: [number, "null"] }
+            global: { type: [number, "null"] }
+            accumulated: { type: [number, "null"] }
+            installment: { type: [number, "null"] }
+          required: [initial, global, accumulated, installment]
+        dates:
+          type: object
+          properties:
+            signature: { type: [string, "null"], format: date }
+            validFrom: { type: [string, "null"], format: date }
+            validTo: { type: [string, "null"], format: date }
+            publishedAt: { type: [string, "null"], format: date-time }
+            updatedAt: { type: [string, "null"], format: date-time }
+          required: [signature, validFrom, validTo, publishedAt, updatedAt]
+        officialUrl: { type: [string, "null"], format: uri }
+        provenance: { $ref: "#/components/schemas/TransparencyProvenance" }
+      required: [id, pncpControlNumber, purchasePncpControlNumber, tenderId, contractNumber, organizationName, location, supplier, object, values, dates, officialUrl, provenance]
+    TransparencyResult:
+      type: object
+      properties:
+        id: { type: string }
+        purchasePncpControlNumber: { type: string }
+        tenderId: { type: [string, "null"] }
+        itemNumber: { type: integer }
+        resultSequence: { type: integer }
+        status:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            active: { type: boolean }
+            cancelledAt: { type: [string, "null"], format: date-time }
+            cancelReason: { type: [string, "null"] }
+          required: [id, name, active, cancelledAt, cancelReason]
+        supplier: { $ref: "#/components/schemas/TransparencySupplier" }
+        values:
+          type: object
+          properties:
+            quantityHomologated: { type: [number, "null"] }
+            unitValueHomologated: { type: [number, "null"] }
+            totalValueHomologated: { type: [number, "null"] }
+            discountPercent: { type: [number, "null"] }
+          required: [quantityHomologated, unitValueHomologated, totalValueHomologated, discountPercent]
+        resultDate: { type: [string, "null"], format: date }
+        officialUrl: { type: [string, "null"], format: uri }
+        provenance: { $ref: "#/components/schemas/TransparencyProvenance" }
+      required: [id, purchasePncpControlNumber, tenderId, itemNumber, resultSequence, status, supplier, values, resultDate, officialUrl, provenance]
+    TransparencyContractsResponse:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/TransparencyContract" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+        meta: { $ref: "#/components/schemas/TransparencyMeta" }
+      required: [data, pagination, meta]
+    TransparencyTenderContractsResponse:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/TransparencyContract" } }
+        meta: { $ref: "#/components/schemas/TransparencyMeta" }
+      required: [data, meta]
+    TransparencyTenderResultsResponse:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/TransparencyResult" } }
+        meta: { $ref: "#/components/schemas/TransparencyMeta" }
+      required: [data, meta]
     Pagination:
       type: object
       properties:

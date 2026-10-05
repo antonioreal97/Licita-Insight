@@ -8,7 +8,8 @@ import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
-import { startDailyCategoryClassify, startDailyCultureCollect, startDailyPncpCollect } from "./ingest/daily-collect";
+import { abandonStaleTransparencyRuns } from "./ingest/collect-transparency";
+import { startDailyCategoryClassify, startDailyCultureCollect, startDailyPncpCollect, startDailyTransparencyCollect } from "./ingest/daily-collect";
 import { startTenderDeadlineReconciliation } from "./ingest/reconcile-tender-deadlines";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
@@ -56,6 +57,7 @@ const startSchedulers = (): Array<() => void> => [
   startAiRetentionScheduler(),
   startDocumentRetryJob(),
   startDailyPncpCollect(),
+  startDailyTransparencyCollect(),
   startTenderDeadlineReconciliation(),
   startDailyCultureCollect(),
   startDailyCategoryClassify(),
@@ -83,6 +85,7 @@ const start = async (): Promise<void> => {
       await tryRunSingletonJob("ingest_reconciliation", async () => {
         await abandonStalePncpRuns();
         await abandonStaleCultureRuns();
+        await abandonStaleTransparencyRuns();
       });
     } catch (error) {
       logger.error({ err: error }, "Failed to reconcile stale ingest runs");

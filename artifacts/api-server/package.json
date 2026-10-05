@@ -10,6 +10,7 @@
     "start": "node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "start:worker": "export APP_ROLE=worker && node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
     "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
+    "collect:transparency": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-transparency.ts",
     "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
     "calibrate:company-fit": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-company-fit.ts",

@@ -361,6 +361,9 @@ function TransparencySection() {
               </li>
             ))}
           </ul>
+          <Link href="/transparencia" className={cn(secondaryCta, 'mt-7')} data-testid="link-transparency-browse">
+            Consultar contratos publicados <ArrowRight size={16} aria-hidden />
+          </Link>
         </div>
 
         <div className="relative">

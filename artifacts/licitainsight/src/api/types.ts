@@ -152,6 +152,114 @@ export type SearchSuggestion = {
 
 export type SuggestionsResponse = { suggestions: SearchSuggestion[] };
 
+// Transparency API v1. Source: PNCP data normalized by the backend.
+
+export type TransparencySupplier = {
+  type: 'CNPJ' | 'CPF' | 'PE' | string | null;
+  name: string | null;
+  identifier: string | null;
+};
+
+export type TransparencyProvenance = {
+  source: 'PNCP' | string;
+  fetchedAt: string | null;
+};
+
+export type TransparencyValueSemantics = {
+  contractValues?: string;
+  resultValues?: string;
+  paymentValues?: string;
+  [key: string]: string | undefined;
+};
+
+export type TransparencyMeta = {
+  coverage?: string;
+  indexUpdatedAt?: string | null;
+  valueSemantics?: TransparencyValueSemantics;
+};
+
+export type TransparencyContract = {
+  id: string;
+  pncpControlNumber: string | null;
+  purchasePncpControlNumber: string | null;
+  tenderId: string | null;
+  contractNumber: string | null;
+  organizationName: string | null;
+  location: { state: string | null; city: string | null };
+  supplier: TransparencySupplier | null;
+  object: string | null;
+  values: {
+    initial: number | null;
+    global: number | null;
+    accumulated: number | null;
+    installment: number | null;
+  };
+  dates: {
+    signature: string | null;
+    validFrom: string | null;
+    validTo: string | null;
+    publishedAt: string | null;
+    updatedAt: string | null;
+  };
+  officialUrl: string | null;
+  provenance: TransparencyProvenance;
+};
+
+export type TransparencyResult = {
+  id: string;
+  purchasePncpControlNumber: string | null;
+  tenderId: string | null;
+  itemNumber: number | string | null;
+  resultSequence: number | string | null;
+  status: {
+    id: string | number | null;
+    name: string | null;
+    active: boolean | null;
+    cancelledAt: string | null;
+    cancelReason: string | null;
+  };
+  supplier: TransparencySupplier | null;
+  values: {
+    quantityHomologated: number | null;
+    unitValueHomologated: number | null;
+    totalValueHomologated: number | null;
+    discountPercent: number | null;
+  };
+  resultDate: string | null;
+  officialUrl: string | null;
+  provenance: TransparencyProvenance;
+};
+
+export type TransparencyContractSort = 'published_desc' | 'published_asc' | 'value_desc' | 'value_asc';
+
+export type TransparencyContractSearchParams = {
+  q?: string;
+  state?: string;
+  publishedFrom?: string;
+  publishedTo?: string;
+  valueMin?: number;
+  valueMax?: number;
+  page?: number;
+  pageSize?: number;
+  sort?: TransparencyContractSort;
+};
+
+export type TransparencyContractsResponse = {
+  data: TransparencyContract[];
+  pagination: Pagination;
+  meta: TransparencyMeta;
+};
+
+export type TransparencyTenderContractsResponse = {
+  data: TransparencyContract[];
+  meta: TransparencyMeta;
+};
+
+export type TransparencyTenderResultsResponse = {
+  data: TransparencyResult[];
+  meta: TransparencyMeta;
+};
+
 export type ApiErrorCode =
   | 'INVALID_PARAMETER'
   | 'NOT_FOUND'

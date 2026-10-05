@@ -1,4 +1,4 @@
-import type { NotificationsParams, OpportunitySearchParams, SavedTendersParams, TenderSearchParams } from '@/api';
+import type { NotificationsParams, OpportunitySearchParams, SavedTendersParams, TenderSearchParams, TransparencyContractSearchParams } from '@/api';
 
 export const queryKeys = {
   tenders: {
@@ -7,6 +7,12 @@ export const queryKeys = {
     detail: (id: string) => ['tenders', 'detail', id] as const,
   },
   suggestions: (q: string) => ['suggestions', q] as const,
+  transparency: {
+    all: ['transparency'] as const,
+    contracts: (params: TransparencyContractSearchParams) => ['transparency', 'contracts', params] as const,
+    tenderContracts: (tenderId: string) => ['transparency', 'tenders', tenderId, 'contracts'] as const,
+    tenderResults: (tenderId: string) => ['transparency', 'tenders', tenderId, 'results'] as const,
+  },
   opportunities: {
     all: ['opportunities'] as const,
     search: (params: OpportunitySearchParams) => ['opportunities', 'search', params] as const,

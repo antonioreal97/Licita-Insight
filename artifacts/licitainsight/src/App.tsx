@@ -21,6 +21,7 @@ import OpportunityDetailPage from '@/features/opportunities/opportunity-detail-p
 import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
+import TransparencyPage from '@/features/transparency/transparency-page';
 import UnsubscribePage from '@/features/unsubscribe/unsubscribe-page';
 import { CookieNotice } from '@/features/privacy/cookie-notice';
 import { queryKeys } from '@/services/query-keys';
@@ -58,6 +59,7 @@ const routeTitles: Record<string, string> = {
   '/dashboard': 'Visão geral · Abriu lá',
   '/search': 'Explorar editais · Abriu lá',
   '/oportunidades': 'Chamadas culturais · Abriu lá',
+  '/transparencia': 'Transparência · Abriu lá',
   '/saved-searches': 'Buscas salvas · Abriu lá',
   '/saved-tenders': 'Editais salvos · Abriu lá',
   '/monitoring': 'Monitoramento · Abriu lá',
@@ -116,6 +118,13 @@ function Router() {
           {() => (
             <AppShell>
               <OpportunitiesPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/transparencia">
+          {() => (
+            <AppShell>
+              <TransparencyPage />
             </AppShell>
           )}
         </Route>
