@@ -72,7 +72,9 @@ export default function TransparencyPage() {
     queryFn: ({ signal }) => transparencyService.searchContracts(params, signal),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+    refetchInterval: (query) => query.state.data && !query.state.data.meta.indexUpdatedAt ? 30_000 : false,
   });
+  const awaitingFirstCollection = contracts.data?.pagination.total === 0 && !contracts.data.meta.indexUpdatedAt;
   const onSearch = (event: FormEvent) => { event.preventDefault(); update({ q: draft.trim() || undefined }); };
 
   return (
@@ -112,9 +114,9 @@ export default function TransparencyPage() {
                 <ul className="mt-4 overflow-hidden rounded-md border border-border bg-card">{contracts.data.data.map((contract) => <ContractRow key={contract.id} contract={contract} />)}</ul>
               ) : (
                 <div className="mt-4 border-y border-border py-12 text-center">
-                  <p className="font-semibold">Nenhum contrato na cobertura consultada</p>
-                  <p className="mt-1 text-sm text-muted-foreground">A fonte pode não ter publicado dados para esses filtros, ou o período ainda não ter sido coletado.</p>
-                  <button type="button" onClick={() => { setDraft(''); navigate('/transparencia'); }} className="mt-4 text-sm font-semibold text-primary hover:underline">Limpar filtros</button>
+                  <p className="font-semibold">{awaitingFirstCollection ? 'Primeira coleta ainda não concluída' : 'Nenhum contrato na cobertura consultada'}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{awaitingFirstCollection ? 'Os contratos aparecerão aqui assim que a base receber os primeiros registros.' : 'A fonte pode não ter publicado dados para esses filtros, ou o período ainda não ter sido coletado.'}</p>
+                  {!awaitingFirstCollection && <button type="button" onClick={() => { setDraft(''); navigate('/transparencia'); }} className="mt-4 text-sm font-semibold text-primary hover:underline">Limpar filtros</button>}
                 </div>
               )}
               <SearchPagination pagination={contracts.data.pagination} page={params.page ?? 1} onPageChange={(page) => update({ page })} noun={['contrato', 'contratos']} />

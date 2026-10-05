@@ -27,6 +27,6 @@ O coletor lê por dia os feeds oficiais de contratos publicados e atualizados e 
 - Manual no host: `pnpm --filter @workspace/api-server run collect:transparency`.
 - Manual no Compose: `docker compose --profile collect run --rm collect-transparency`.
 - Backfill: definir `TRANSPARENCY_FROM` e `TRANSPARENCY_TO` (`YYYY-MM-DD`, até 31 dias) e executar o comando manual. `TRANSPARENCY_PAGE_SIZE` aceita 10 a 500, padrão 500. `TRANSPARENCY_RESULTS_LIMIT` limita as compras verificadas por execução (0 a 1000, padrão 200); as demais seguem pendentes no banco.
-- Agenda: `TRANSPARENCY_DAILY_COLLECT=true` habilita a rotina às 07:00 em `America/Sao_Paulo`, após a coleta PNCP principal. No Compose local, o padrão é `false`.
+- Agenda: no Compose, `TRANSPARENCY_DAILY_COLLECT` vem habilitado e inicia ao subir a API; depois roda às 07:00 em `America/Sao_Paulo`, após a coleta PNCP principal. Definir `false` desliga. No host, definir `true` para habilitar.
 
 O coletor não consulta pagamentos; empenho e instrumento de cobrança também não comprovam liquidação ou pagamento efetivo.
