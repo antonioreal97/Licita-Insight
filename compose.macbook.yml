@@ -1,0 +1,85 @@
+name: licita-macbook
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: licita
+      POSTGRES_PASSWORD: ${MAC_DB_PASSWORD:?Defina MAC_DB_PASSWORD no .env}
+      POSTGRES_DB: licita
+    volumes:
+      - licita_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U licita -d licita"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-setup:
+    profiles: [setup]
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms: [linux/amd64]
+    environment:
+      DATABASE_URL: postgres://licita:${MAC_DB_PASSWORD:?Defina MAC_DB_PASSWORD no .env}@postgres:5432/licita
+    command: >-
+      sh -c "pnpm --filter @workspace/db run prepare-extensions &&
+      pnpm --filter @workspace/db run push-force"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      platforms: [linux/amd64]
+    restart: unless-stopped
+    init: true
+    env_file: ${MACBOOK_ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      APP_ROLE: all
+      PORT: "3001"
+      STATIC_DIR: /app/artifacts/licitainsight/dist/public
+      DATABASE_URL: postgres://licita:${MAC_DB_PASSWORD:?Defina MAC_DB_PASSWORD no .env}@postgres:5432/licita
+      PUBLIC_APP_ORIGIN: http://localhost:24252
+      SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET no .env}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Defina OPENAI_API_KEY no .env}
+      TITLE_TEACHER_ENABLED: "false"
+      CATEGORY_STUDENT_ENABLED: "false"
+      TITLE_TEACHER_OPENAI_ENABLED: "true"
+      TITLE_OPENAI_DAILY_LIMIT: ${TITLE_OPENAI_DAILY_LIMIT:-500}
+      AI_DAILY_BUDGET_USD: ${AI_DAILY_BUDGET_USD:-10}
+      PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
+      TRANSPARENCY_DAILY_COLLECT: ${TRANSPARENCY_DAILY_COLLECT:-false}
+      CULTURE_DAILY_COLLECT: ${CULTURE_DAILY_COLLECT:-false}
+      AUTH_DEV_LOGIN: "false"
+      BILLING_DEV_ENTITLED: "false"
+      TZ: America/Sao_Paulo
+    ports:
+      - "127.0.0.1:${MACBOOK_BIND_PORT:-24252}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 90s
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+volumes:
+  licita_pg:
