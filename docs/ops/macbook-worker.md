@@ -2,7 +2,7 @@
 
 Esta instalacao usa `compose.macbook.yml`: PostgreSQL 16 persistente, API, frontend
 compilado e agendadores no mesmo container. Nao usa Ollama, Vite de desenvolvimento
-nem hospedagem publica. A interface escuta apenas em `localhost:24252`; o PostgreSQL
+nem hospedagem publica por padrao. A interface escuta apenas em `localhost:24252`; o PostgreSQL
 nao publica porta. A imagem `linux/amd64` funciona em Macs Intel e, com emulacao
 Docker, em Apple Silicon. Deixe o Mac ligado, sem suspensao automatica, e configure
 o Docker Desktop para iniciar no login.
@@ -103,6 +103,58 @@ OpenAI; `TITLE_TEACHER_ENABLED` e `CATEGORY_STUDENT_ENABLED` ficam desligados.
 O webhook Asaas nao consegue alcancar um Mac exposto somente em localhost. A busca
 e a consulta publica funcionam, mas assinatura/checkout automatizado precisam de
 um endpoint publico ou outra integracao antes do uso comercial.
+
+## Acesso remoto por ngrok
+
+O tunnel e opcional e so deve ser ativado depois do restore, com a aplicacao
+saudavel. Ele torna o app acessivel pela internet; as rotas privadas continuam
+exigindo login/assinatura, mas busca e outras rotas publicas ficam publicas.
+O PostgreSQL e a API na porta 3001 nao sao publicados separadamente.
+
+Se o ngrok ja foi instalado no MacBook e encaminha para `localhost:24252`, nao
+inicie um segundo agente. No `.env` local, defina a URL HTTPS atual sem barra
+final e habilite a confianca em um proxy:
+
+```dotenv
+PUBLIC_APP_ORIGIN=https://exemplo.ngrok-free.app
+TRUST_PROXY=1
+```
+
+Recrie o app para aplicar as variaveis: `docker compose -f compose.macbook.yml
+up -d --force-recreate app`. Verifique a URL externa com
+`curl -fsS https://exemplo.ngrok-free.app/api/readyz`. O login e as escritas
+devem ser feitos pela URL HTTPS, nao por `localhost`. Se o ngrok atribuir outra
+URL em um restart, atualize `PUBLIC_APP_ORIGIN` e recrie o app novamente.
+
+No cliente OAuth do Google, adicione
+`https://exemplo.ngrok-free.app/api/v1/auth/google/callback` como URI de
+redirecionamento autorizada. Se usar o Asaas, configure o webhook para
+`https://exemplo.ngrok-free.app/api/v1/billing/asaas/webhook` e mantenha
+`ASAAS_WEBHOOK_TOKEN` configurado. Uma URL variavel exige atualizar essas
+integracoes a cada troca.
+
+Para operar o agente ngrok pelo Docker em vez do host, pare primeiro o agente
+atual e obtenha no painel ngrok o authtoken e uma URL HTTPS estavel atribuida a
+sua conta. Preencha `NGROK_PUBLIC_URL` e `NGROK_AUTHTOKEN` no `.env` local, sem
+enviar o token pelo chat ou versionar o arquivo. Entao use:
+
+```sh
+docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml up -d --build
+docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml ps
+```
+
+Esse modo ajusta `PUBLIC_APP_ORIGIN` e `TRUST_PROXY` da API automaticamente.
+Para voltar a usar somente localhost, pare o tunnel, remova ou comente as linhas
+`PUBLIC_APP_ORIGIN` e `TRUST_PROXY` do `.env`, e recrie o app com o Compose basico:
+
+```sh
+docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml stop ngrok
+docker compose -f compose.macbook.yml up -d --force-recreate app
+```
+
+O plano gratuito do ngrok tem limites de trafego e uma pagina intermediaria para
+acessos via navegador; valide a experiencia e os webhooks antes de depender dele
+em uso comercial continuo.
 
 ## Operacao
 

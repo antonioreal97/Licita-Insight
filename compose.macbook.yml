@@ -48,7 +48,8 @@ services:
       PORT: "3001"
       STATIC_DIR: /app/artifacts/licitainsight/dist/public
       DATABASE_URL: postgres://licita:${MAC_DB_PASSWORD:?Defina MAC_DB_PASSWORD no .env}@postgres:5432/licita
-      PUBLIC_APP_ORIGIN: http://localhost:24252
+      PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-http://localhost:24252}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
       SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET no .env}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Defina OPENAI_API_KEY no .env}
       TITLE_TEACHER_ENABLED: "false"
@@ -74,7 +75,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3001/api/readyz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s

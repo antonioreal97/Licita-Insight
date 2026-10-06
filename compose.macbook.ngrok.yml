@@ -1,0 +1,19 @@
+services:
+  app:
+    environment:
+      PUBLIC_APP_ORIGIN: ${NGROK_PUBLIC_URL:?Defina NGROK_PUBLIC_URL no .env}
+      TRUST_PROXY: "1"
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Defina NGROK_AUTHTOKEN no .env}
+    command:
+      - http
+      - app:3001
+      - --url
+      - ${NGROK_PUBLIC_URL:?Defina NGROK_PUBLIC_URL no .env}
+    depends_on:
+      app:
+        condition: service_healthy
