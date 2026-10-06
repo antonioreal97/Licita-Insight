@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { db, ingestRunsTable, pncpContractsTable, pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { isUniqueViolation } from "../lib/pg-error";
 import { addDays, eachDay, saoPauloToday } from "./ingest-calendar";
 import {
   fetchCompraItens,
@@ -13,8 +14,15 @@ import { parseControlNumber } from "./pncp-map";
 import { upsertPncpContracts, upsertPncpItemResults } from "./upsert-transparency";
 
 const SOURCE = "pncp-transparency";
-const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
+export const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
 const MAX_WINDOW_DAYS = 31;
+
+export class TransparencyIngestInProgressError extends Error {
+  constructor() {
+    super("A transparency ingest is already running");
+    this.name = "TransparencyIngestInProgressError";
+  }
+}
 
 export type TransparencyCollectOptions = {
   from: string;
@@ -89,15 +97,20 @@ export async function collectTransparency(options: TransparencyCollectOptions): 
   await abandonStaleTransparencyRuns();
   const runId = crypto.randomUUID();
   const startedAt = new Date();
-  await db.insert(ingestRunsTable).values({
-    id: runId,
-    source: SOURCE,
-    status: "running",
-    windowFrom: dateFor(options.from),
-    windowTo: dateFor(options.to),
-    startedAt,
-    heartbeatAt: startedAt,
-  });
+  try {
+    await db.insert(ingestRunsTable).values({
+      id: runId,
+      source: SOURCE,
+      status: "running",
+      windowFrom: dateFor(options.from),
+      windowTo: dateFor(options.to),
+      startedAt,
+      heartbeatAt: startedAt,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new TransparencyIngestInProgressError();
+    throw error;
+  }
 
   let pagesRead = 0;
   let contracts = 0;

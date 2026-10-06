@@ -1,6 +1,7 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { db, ingestRunsTable, pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { isUniqueViolation } from "../lib/pg-error";
 import {
   CULTURAL_INSTALLATIONS,
   mapasInstallations,
@@ -10,7 +11,7 @@ import { fetchAudiovisualOpportunities } from "./mapas-client";
 import { refreshOpportunityStatuses, upsertOpportunities } from "./upsert-opportunities";
 
 const SOURCE = "mapas-culturais";
-const STALE_AFTER_MS = 30 * 60 * 1000;
+export const STALE_AFTER_MS = 30 * 60 * 1000;
 const DEFAULT_LOOKBACK_DAYS = 30;
 
 export class CultureIngestInProgressError extends Error {
@@ -220,9 +221,7 @@ export async function startCultureIngest(
       heartbeatAt: now,
     });
   } catch (error) {
-    const code =
-      typeof error === "object" && error && "code" in error ? String(error.code) : "";
-    if (code === "23505") throw new CultureIngestInProgressError();
+    if (isUniqueViolation(error)) throw new CultureIngestInProgressError();
     throw error;
   }
 

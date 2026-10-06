@@ -11,26 +11,14 @@ import { getSearchBackend } from "../services/search-backend";
 import { publicHttpCache } from "../middlewares/request-protection";
 import { scheduleTitleRewrites } from "../titles/title-rewrite";
 import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
+import { pgErrorCode } from "../lib/pg-error";
 
 const router: IRouter = Router();
-
-const errorCode = (error: unknown): string | undefined => {
-  if (!error || typeof error !== "object") return undefined;
-  if ("code" in error && typeof error.code === "string") return error.code;
-  if ("cause" in error) return errorCode(error.cause);
-  if ("errors" in error && Array.isArray(error.errors)) {
-    for (const nested of error.errors) {
-      const code = errorCode(nested);
-      if (code) return code;
-    }
-  }
-  return undefined;
-};
 
 const exposeSearchError = (error: unknown): unknown => {
   if (error instanceof ApiError) return error;
   logger.error({ err: error }, "Search failed");
-  const code = errorCode(error);
+  const code = pgErrorCode(error);
   if (
     code === "ECONNREFUSED" ||
     code === "ENOTFOUND" ||
