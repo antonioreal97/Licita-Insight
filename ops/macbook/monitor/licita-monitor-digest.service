@@ -1,0 +1,7 @@
+[Unit]
+Description=Relatório diário do Abriu la na issue de monitoramento (sem LLM)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/licita-monitor/licita_monitor.py digest
+TimeoutStartSec=300

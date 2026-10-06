@@ -1,0 +1,10 @@
+[Unit]
+Description=Verifica commits novos em ops/macbook-worker a cada 10 minutos (Abriu la)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

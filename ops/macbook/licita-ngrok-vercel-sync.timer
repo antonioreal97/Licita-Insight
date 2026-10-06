@@ -1,0 +1,10 @@
+[Unit]
+Description=Verifica a URL do ngrok a cada minuto (Abriu la)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

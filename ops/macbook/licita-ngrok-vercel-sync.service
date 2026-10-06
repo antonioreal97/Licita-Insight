@@ -1,0 +1,8 @@
+[Unit]
+Description=Sincroniza a URL do ngrok com a Vercel (Abriu la)
+After=network-online.target ngrok-licita.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/licita-ngrok-vercel-sync

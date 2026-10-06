@@ -169,3 +169,43 @@ docker compose -f compose.macbook.yml stop
 que Docker Desktop inicie no login. `docker compose down` sem `-v` preserva o banco;
 **nunca use `down -v` no MacBook com dados**. Mantenha backups periodicos com
 `pg_dump -Fc` em destino privado fora do clone e teste uma restauracao isolada.
+
+## Frontend na Vercel e sincronização ngrok -> Vercel
+
+O frontend público fica no projeto Vercel `abriu-la` (https://abriu-la.vercel.app). Um Routing Middleware
+encaminha `/api/*` para `API_UPSTREAM_ORIGIN` (a URL do ngrok) com `ngrok-skip-browser-warning`; API, banco e
+coletas continuam neste servidor, com `PUBLIC_APP_ORIGIN=https://abriu-la.vercel.app` e `TRUST_PROXY=2` no
+`.env`. A URL de callback cadastrada no Google é `https://abriu-la.vercel.app/api/v1/auth/google/callback`.
+
+Enquanto o ngrok usar URL aleatória, `ops/macbook/ngrok-vercel-sync.sh` mantém a Vercel atualizada: a cada
+minuto compara a URL do túnel com a última publicada e, quando muda, atualiza `API_UPSTREAM_ORIGIN`, refaz o
+deploy de produção e confere `https://abriu-la.vercel.app/api/readyz`. Instalação (systemd de usuário):
+
+```sh
+install -m 755 ops/macbook/ngrok-vercel-sync.sh ~/.local/bin/licita-ngrok-vercel-sync
+cp ops/macbook/licita-ngrok-vercel-sync.{service,timer} ~/.config/systemd/user/
+install -d -m 700 ~/.config/licita
+install -m 600 /dev/null ~/.config/licita/vercel-token   # cole o token da Vercel aqui
+systemctl --user daemon-reload
+systemctl --user enable --now licita-ngrok-vercel-sync.timer
+```
+
+O token é um Vercel Access Token com escopo no time do projeto; ele fica só neste arquivo. Teste sem alterar
+nada com `FORCE=1 DRY_RUN=1 ~/.local/bin/licita-ngrok-vercel-sync` e acompanhe com
+`journalctl --user -u licita-ngrok-vercel-sync.service -f`. Durante a troca, `/api` na Vercel fica indisponível
+por cerca de 1 a 2 minutos (detecção + deploy). Com um domínio ngrok fixo, a sincronização deixa de ser necessária.
+
+## Monitor do servidor (Albert-CLAUDE)
+
+`ops/macbook/monitor/` instala em `~/licita-monitor/` um monitor sem LLM e o runbook do agente:
+
+- `licita-monitor-check.timer` (5 min): coleta usuários, consumo HTTP/OpenAI, jobs de IA, coletas, containers,
+  disco/memória, ngrok e `readyz` local/público. Anomalia **nova** (deduplicada por 6 h, no máximo 6 acionamentos
+  por dia) vira `~/licita-monitor/alerts/<data>.json` e um prompt curto no terminal do Albert-CLAUDE (Claude Code
+  no Orca do servidor, via `~/.config/orca/linux-orca-cli-shim/orca terminal send`). Ele segue `ALBERT.md`
+  (somente leitura) e comenta a causa provável e a ação sugerida na issue #29.
+- `licita-monitor-digest.timer` (08:00): relatório diário sem LLM na issue #29.
+- Configuração em `~/licita-monitor/config.env` (`MONITOR_ISSUE`, `ALBERT_TERMINAL`, limites). Teste com
+  `python3 ~/licita-monitor/licita_monitor.py status`.
+
+No Linux, `/usr/bin/orca` é o leitor de tela do GNOME; nunca o execute.

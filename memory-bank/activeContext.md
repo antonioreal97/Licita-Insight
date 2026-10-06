@@ -4,6 +4,43 @@ Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.m
 
 ## Foco agora
 
+Servidor 24h + frontend na Vercel (05–06 out 2026, branch `ops/macbook-worker`; issue #28 acompanha o passo a passo).
+Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira sessões abertas do Codex",
+"Verificar busca de contratos", "Report task outcome" no servidor):
+- PRs #26 (transparência PNCP: contratos + resultados por item, `/transparencia`, vínculo no edital) e #27
+  (coleta de transparência ligada por padrão no Compose) mergeados em 05/10.
+- Servidor = MacBook Intel com Ubuntu 24.04, `ssh licita-worker` (chave `~/.ssh/licita_worker_ed25519`, senha
+  ainda ativa como contingência; owner deve trocá-la). Clone em `/home/kruid/Documentos/LICITA/Licita-Insight`.
+  Roda `compose.macbook.yml` (projeto `licita-macbook`): build de produção, `restart: unless-stopped`, app só em
+  `127.0.0.1:24252`, Postgres sem porta (o Postgres nativo do Ubuntu ocupa 5432). Base restaurada do dump
+  (145.917 editais / 52.564 contratos / 3 usuários); stack de dev `licita-insight` parada e preservada para rollback.
+  `.env` 0600 com OpenAI, Google OAuth, Asaas **sandbox** (R$ 49,90) e as 3 coletas `true`; e-mail desligado.
+  Backups em `~/backups/licita/` (dump pré-troca, `.env` de dev, `.env` pré-Vercel, patch do `docker-compose.yml`).
+- Túnel: `ngrok-licita.service` (systemd de usuário, `Restart=always`, linger) → `localhost:24252`. Plano free:
+  URL aleatória que muda a cada reconexão (caiu 3× em 06/10 por Wi-Fi/DNS); domínio fixo ainda não reservado.
+- Frontend público: projeto Vercel `abriu-la` (time `antonios-projects-a309777c`) → https://abriu-la.vercel.app.
+  Pacote fora do repo em `~/abriu-la-vercel` (Mac local): `public/` (build Vite com `VITE_API_BASE_URL=/api`),
+  `middleware.js` (reescreve `/api/*` para `API_UPSTREAM_ORIGIN` com `ngrok-skip-browser-warning`, sem o qual o
+  ngrok free devolve a página de aviso até para JSON) e `vercel.json` (fallback SPA). Env vars na Vercel: só
+  `API_UPSTREAM_ORIGIN` e `VITE_API_BASE_URL`; nenhum segredo sai do servidor. Servidor com
+  `PUBLIC_APP_ORIGIN=https://abriu-la.vercel.app` e `TRUST_PROXY=2` — login pela URL direta do ngrok não funciona.
+- Pendências: owner cadastrar `https://abriu-la.vercel.app/api/v1/auth/google/callback` no OAuth do Google (sem
+  isso, `redirect_uri_mismatch`); fixar domínio ngrok ou sincronizar a URL na Vercel; desativar suspensão pela
+  tampa; `pg_dump` diário; SEC-01 (`/api/v1/ingest/*` sem auth) agora exposto na internet; header
+  `ngrok-agent-ips` expõe o IP público do servidor.
+- Lições: um Codex no servidor trocou `PUBLIC_APP_ORIGIN` para `localhost` tentando "corrigir" o login (a causa
+  real era o callback não cadastrado no Google) — não mexer nessa variável sem combinar. Dispatch Orca remoto
+  (`--on kruid-dev`) perdeu o vínculo com o processo e recusou `ask`/`worker_done`; preferir SSH ou o terminal
+  fixo do servidor. Regra do owner: manter poucos terminais fixos (Orchestrator local + "Albert Cloud" no
+  servidor) e não abrir novos workers à toa.
+- Monitor: `~/licita-monitor` no servidor (código em `ops/macbook/monitor/`). Timer de 5 min sem LLM detecta
+  anomalias e aciona o Albert-CLAUDE (Claude Code fixo no Orca do kruid-dev, handle em `config.env`), que
+  investiga só em leitura e comenta na issue #29; digest diário 08:00 sem LLM na mesma issue. Primeiro alerta
+  (06/10 17:52): coletas `pncp`/`pncp-transparency` órfãs em `running` após recriar o app bloqueiam o próximo
+  início (`ingest_runs_one_running`); correção de código sugerida: no boot, marcar `running` anteriores como `failed`.
+- Mac local: Docker da stack antiga parado (6 containers); túnel SSH `127.0.0.1:24252 → licita-worker` ativo
+  (processo desanexado) para testar o app do servidor por `localhost`.
+
 Ciclo 14 (02 out 2026, branch `antonioreal97/cycle14` a partir do `main` com o PR #16 mergeado; sem deploy).
 Decisão do owner: o Jev continua escolhendo os trechos e decidindo se há evidência; o `gpt-4o-mini` só **redige**
 a partir deles. A chave da OpenAI é do owner e ainda não existe; sem ela tudo funciona como antes. Run do Orca

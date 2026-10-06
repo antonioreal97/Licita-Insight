@@ -106,6 +106,15 @@ Deriva de [activeContext](activeContext.md).
 - Custos `ask_summary` e `sheet_summary` no ledger e no disjuntor. Contratos: `ai-v1.md`, `ai-cost-v1.md`,
   `ai-queue-v1.md`.
 
+## O que já funciona — servidor 24h e frontend na Vercel (05–06 out 2026)
+
+- Transparência PNCP (PRs #26/#27): contratos/empenhos e resultados por item em `/transparencia` e no detalhe do
+  edital; coleta agendada ligada por padrão.
+- Servidor Ubuntu (`ssh licita-worker`) com `compose.macbook.yml` em produção, restart automático, base restaurada
+  e as três coletas ativas; túnel `ngrok-licita.service`.
+- Frontend em https://abriu-la.vercel.app com `/api/*` encaminhado ao servidor por middleware (ver activeContext).
+- Falta: callback do Google cadastrado, domínio ngrok fixo/sincronização, tampa sem suspensão, backup diário.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).

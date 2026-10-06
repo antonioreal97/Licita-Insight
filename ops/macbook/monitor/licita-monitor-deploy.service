@@ -1,0 +1,7 @@
+[Unit]
+Description=Heartbeat de deploy do Abriu la: commits novos em ops/macbook-worker acionam o Albert-CLAUDE
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/licita-monitor/licita_monitor.py deploy
+TimeoutStartSec=300

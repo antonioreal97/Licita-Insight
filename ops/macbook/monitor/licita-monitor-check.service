@@ -1,0 +1,7 @@
+[Unit]
+Description=Monitor do Abriu la: coleta e detecção de anomalias (sem LLM)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/licita-monitor/licita_monitor.py check
+TimeoutStartSec=300
