@@ -49,7 +49,7 @@ services:
       STATIC_DIR: /app/artifacts/licitainsight/dist/public
       DATABASE_URL: postgres://licita:${MAC_DB_PASSWORD:?Defina MAC_DB_PASSWORD no .env}@postgres:5432/licita
       PUBLIC_APP_ORIGIN: ${PUBLIC_APP_ORIGIN:-http://localhost:24252}
-      TRUST_PROXY: ${TRUST_PROXY:-false}
+      TRUST_PROXY: "1"
       SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET no .env}
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Defina OPENAI_API_KEY no .env}
       TITLE_TEACHER_ENABLED: "false"
@@ -63,8 +63,8 @@ services:
       AUTH_DEV_LOGIN: "false"
       BILLING_DEV_ENTITLED: "false"
       TZ: America/Sao_Paulo
-    ports:
-      - "127.0.0.1:${MACBOOK_BIND_PORT:-24252}:3001"
+    expose:
+      - "3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,6 +81,31 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      ORIGIN_SHARED_SECRET: ${ORIGIN_SHARED_SECRET:-}
+      ORIGIN_MODE: ${ORIGIN_MODE:-log}
+    volumes:
+      - ./ops/macbook/nginx/templates:/etc/nginx/templates:ro
+    ports:
+      - "127.0.0.1:${MACBOOK_BIND_PORT:-24252}:8080"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:8080/api/healthz >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   licita_pg:
