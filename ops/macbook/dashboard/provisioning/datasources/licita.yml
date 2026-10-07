@@ -1,0 +1,21 @@
+# PostgreSQL of the licita-macbook stack, through the read-only role (SELECT only, read-only transactions).
+# Credentials come from ~/licita-monitor/dashboard.env (env_file in compose.yml), never from git.
+apiVersion: 1
+datasources:
+  - name: Licita (somente leitura)
+    uid: licita-pg
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: $LICITA_READONLY_USER
+    isDefault: true
+    editable: false
+    jsonData:
+      database: licita
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+      maxOpenConns: 3
+      maxIdleConns: 1
+    secureJsonData:
+      password: $LICITA_READONLY_PASSWORD

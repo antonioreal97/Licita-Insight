@@ -1,0 +1,1090 @@
+{
+  "uid": "abriu-la-admin",
+  "title": "Abriu lá — Admin",
+  "tags": [
+    "abriu-la"
+  ],
+  "timezone": "America/Sao_Paulo",
+  "editable": false,
+  "graphTooltip": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true
+  },
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Usuários",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Usuários cadastrados",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Usuários\" from users"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Ativos (último acesso)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select\n  count(distinct user_id) filter (where last_seen_at > now() - interval '24 hours') as \"24 h\",\n  count(distinct user_id) filter (where last_seen_at > now() - interval '7 days') as \"7 dias\",\n  count(distinct user_id) filter (where last_seen_at > now() - interval '30 days') as \"30 dias\"\nfrom sessions"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Em trial agora",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Em trial\"\nfrom users u left join subscriptions s on s.user_id = u.id\nwhere u.trial_ends_at > now()\n  and not coalesce(s.status = 'active' or (s.status = 'canceled' and s.current_period_end > now()), false)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Novos usuários por dia (30 dias)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time, count(u.id) as \"Novos usuários\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join users u on date_trunc('day', u.created_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Receita",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Pagantes (Asaas active)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Pagantes\" from subscriptions s where s.status = 'active'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "MRR estimado (R$)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) * 49.90 as \"MRR (R$)\" from subscriptions s where s.status = 'active'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Conversão trial → pagante",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select coalesce(round(100.0 * count(*) filter (where s.status = 'active') / nullif(count(*), 0), 1), 0) as \"Conversão (%)\"\nfrom users u left join subscriptions s on s.user_id = u.id\nwhere u.trial_ends_at is not null"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Assinaturas por status",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select coalesce(s.status, 'sem assinatura') as \"Status\",\n       count(*) as \"Usuários\",\n       count(*) filter (where s.status = 'canceled' and s.current_period_end > now()) as \"Pago até o fim do período\"\nfrom users u left join subscriptions s on s.user_id = u.id\ngroup by 1 order by 2 desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Engajamento",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Buscas salvas",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Buscas salvas\", count(*) filter (where alerts_enabled) as \"Com alerta\"\nfrom saved_searches where deleted_at is null"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Editais salvos",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Editais salvos\", count(*) filter (where monitored) as \"Monitorados\",\n       count(distinct user_id) as \"Usuários\"\nfrom saved_tenders"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Notificações",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Total\", count(*) filter (where created_at > now() - interval '7 days') as \"7 dias\",\n       count(*) filter (where read_at is null) as \"Não lidas\"\nfrom notifications"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "IA",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Custo OpenAI no mês (US$)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select coalesce(sum(cost_usd), 0) as \"OpenAI (mês)\"\nfrom ai_usage_ledger\nwhere feature in ('title', 'ask_summary', 'sheet_summary')\n  and occurred_at >= date_trunc('month', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Custo Jev no mês (US$)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 37,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select coalesce(sum(cost_usd), 0) as \"Jev (mês)\"\nfrom ai_usage_ledger\nwhere feature in ('ask', 'sheet', 'fit')\n  and occurred_at >= date_trunc('month', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Custo OpenAI por dia (US$, 30 dias)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'title'), 0) as \"Títulos\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'ask_summary'), 0) as \"Resumo de perguntas\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'sheet_summary'), 0) as \"Resumo de fichas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join ai_usage_ledger l\n  on l.feature in ('title', 'ask_summary', 'sheet_summary')\n and date_trunc('day', l.occurred_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Perguntas e fichas por dia (30 dias)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = false and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas novas\",\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = true and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas em cache\",\n       (select count(*) from tender_ai_sheets t\n         where t.generated_at is not null and date_trunc('day', t.generated_at at time zone 'America/Sao_Paulo') = d.day) as \"Fichas geradas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\norder by d.day"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Cota de processos por usuário e dia (30 dias)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select q.quota_day as \"Dia\", coalesce(u.name, '') as \"Nome\", u.email as \"E-mail\",\n       count(*) as \"Processos consultados\", 5 as \"Limite\"\nfrom ai_daily_tenders q join users u on u.id = q.user_id\nwhere q.quota_day >= (now() at time zone 'America/Sao_Paulo')::date - 29\ngroup by q.quota_day, u.name, u.email\norder by q.quota_day desc, 4 desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Coletas e base",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Editais na base",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Editais\" from tenders"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Contratos PNCP na base",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 65,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select count(*) as \"Contratos\" from pncp_contracts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "Última execução por fonte",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select distinct on (source) source as \"Fonte\", status as \"Status\", started_at as \"Início\",\n       finished_at as \"Fim\", heartbeat_at as \"Último sinal\", upserted as \"Gravados\",\n       left(coalesce(error, ''), 160) as \"Erro\"\nfrom ingest_runs order by source, started_at desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Editais novos por dia (30 dias)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 79,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "with since as (select date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days' as day),\ncreated as (\n  select date_trunc('day', created_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where created_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1),\npublished as (\n  select date_trunc('day', published_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where published_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1)\nselect (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(c.n, 0) as \"Entraram na base\", coalesce(p.n, 0) as \"Publicados no PNCP\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join created c on c.day = d.day\nleft join published p on p.day = d.day\norder by d.day"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
+    },
+    {
+      "id": 26,
+      "type": "row",
+      "title": "Usuários recentes (dados pessoais, uso interno)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 27,
+      "type": "table",
+      "title": "Usuários recentes",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 89,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select u.name as \"Nome\", u.email as \"E-mail\", u.created_at as \"Criado em\",\n       (select max(se.last_seen_at) from sessions se where se.user_id = u.id) as \"Último acesso\",\n       u.trial_ends_at as \"Trial até\",\n       coalesce(s.status, 'sem assinatura') as \"Assinatura\",\n       case\n         when s.status = 'active' then 'Pagante'\n         when s.status = 'canceled' and s.current_period_end > now() then 'Pago até o fim do período'\n         when u.trial_ends_at > now() then 'Em trial'\n         else 'Sem acesso'\n       end as \"Situação\"\nfrom users u left join subscriptions s on s.user_id = u.id\norder by u.created_at desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ]
+}

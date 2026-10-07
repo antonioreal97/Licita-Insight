@@ -1,0 +1,52 @@
+# Admin dashboard (Grafana OSS) for the Abriu lá server. Separate from compose.macbook.yml: it only joins the
+# licita-macbook network to reach postgres:5432 with the read-only role. See README.md.
+name: licita-dashboard
+
+services:
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    restart: unless-stopped
+    mem_limit: 256m
+    # Admin password and read-only DB credentials (0600, outside git).
+    env_file: ${HOME}/licita-monitor/dashboard.env
+    environment:
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_BASIC_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SNAPSHOTS_EXTERNAL_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/abriu-la-admin.json
+      GF_DATE_FORMATS_DEFAULT_TIMEZONE: America/Sao_Paulo
+      GF_LOG_LEVEL: warn
+    # Loopback and Tailscale only; never 0.0.0.0 (the LAN at 192.168.1.13 must not reach it).
+    ports:
+      - "127.0.0.1:8787:3000"
+      - "100.76.192.116:8787:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - licita
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  licita:
+    name: licita-macbook_default
+    external: true
+
+volumes:
+  grafana_data:
