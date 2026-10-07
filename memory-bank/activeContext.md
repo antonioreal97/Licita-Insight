@@ -38,6 +38,19 @@ Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira s
   investiga só em leitura e comenta na issue #29; digest diário 08:00 sem LLM na mesma issue. Primeiro alerta
   (06/10 17:52): coletas `pncp`/`pncp-transparency` órfãs em `running` após recriar o app bloqueiam o próximo
   início (`ingest_runs_one_running`); correção de código sugerida: no boot, marcar `running` anteriores como `failed`.
+- Acesso remoto (06/10 noite): Tailscale no servidor (`kruid-dev`, `100.76.192.116`) e no Mac (`100.80.111.80`), mesma
+  conta. Alias `licita-worker` → IP Tailscale com `HostKeyAlias 192.168.1.13`. O servidor anuncia a rota
+  `192.168.1.13/32` (aprovada no console), então o ambiente Orca `kruid-dev` (`ws://192.168.1.13:6768`) funciona de
+  qualquer rede sem repareamento. Orca SSH Host `licita-worker` também aponta para o IP Tailscale. Recomendado:
+  reserva de DHCP para `192.168.1.13` no roteador. Sem suspensão: GNOME `sleep-inactive-*=nothing`, logind
+  `HandleLidSwitch*=ignore` (`/etc/systemd/logind.conf.d/50-abriu-la-no-suspend.conf`) e sleep/suspend/hibernate
+  mascarados (owner rodou o script em 06/10 21:53); falta o teste prático com a tampa fechada.
+- **Código não commitado em produção (06/10 20:11):** a pedido do owner, o Albert-CLAUDE implementou no clone do
+  servidor a cota de IA de 5 processos/dia por usuário (`ai/tender-quota.ts`, tabela `ai_daily_tenders`, migração
+  `0026_ai_daily_tenders.sql`, `JEV_API_KEY` no `.env`, cliente gerado do OpenAPI, painéis de ficha/pergunta) e uma
+  correção de documentos; rebuild às 20:07, app no ar às 20:11. A tabela foi criada fora do histórico Drizzle
+  (`__drizzle_migrations` segue com 24). Virou o PR #31, mergeado no `main` com o #30 em 06/10 e trazido para
+  `ops/macbook-worker`; o servidor ainda roda a imagem de 20:07 (com #31, sem #30) até o próximo deploy.
 - Mac local: Docker da stack antiga parado (6 containers); túnel SSH `127.0.0.1:24252 → licita-worker` ativo
   (processo desanexado) para testar o app do servidor por `localhost`.
 
