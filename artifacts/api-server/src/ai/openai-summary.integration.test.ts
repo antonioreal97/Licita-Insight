@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { eq } from "drizzle-orm";
 import type { TenderSheetField } from "@workspace/db";
@@ -54,6 +55,10 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
   ]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
+  // Newer than the shared test database's public schema: create it from its migration, in this schema.
+  await pool.query(
+    readFileSync(new URL("../../../../lib/db/migrations/0026_ai_daily_tenders.sql", import.meta.url), "utf8"),
+  );
   await pool.query(`
     create view ai_usage_ledger as
       select created_at as occurred_at, user_id, 'ask'::text as feature,
@@ -199,12 +204,14 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     const cached = await askTender(userId, tenderId, "Qual é o prazo de entrega?");
     assert.equal(first.status, "answered");
     assert.deepEqual(cached.summary, first.summary);
+    assert.deepEqual([first.quota.used, cached.quota.used], [1, 1]);
     assert.equal(jevCalls, 1);
     assert.equal(askSummaryCalls, 1);
     const shared = await askTender(secondUserId, tenderId, "  QUAL É O PRAZO DE ENTREGA?  ");
     assert.equal(shared.status, "answered");
     assert.deepEqual(shared.summary, first.summary);
-    assert.equal(shared.quota.used, 0);
+    // A cached answer still consults the process: it spends 1 of the second user's daily processes.
+    assert.deepEqual([shared.quota.used, shared.quota.counted], [1, true]);
     assert.equal(jevCalls, 1);
     assert.equal(askSummaryCalls, 1);
     const [sharedHistory] = await db.select().from(aiAskRequestsTable)
@@ -217,7 +224,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     const seeded = await askTender(thirdUserId, tenderId, "Qual é o prazo de entrega?");
     assert.equal(seeded.status, "answered");
     assert.deepEqual(seeded.summary, first.summary);
-    assert.equal(seeded.quota.used, 0);
+    assert.equal(seeded.quota.used, 1);
     assert.equal(jevCalls, 1);
     assert.equal(askSummaryCalls, 1);
 
@@ -235,7 +242,7 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     const resummarizedAsk = await askTender(thirdUserId, tenderId, "Qual é o prazo de entrega?");
     assert.equal(resummarizedAsk.status, "answered");
     assert.deepEqual(resummarizedAsk.summary?.citations, [1]);
-    assert.equal(resummarizedAsk.quota.used, 0);
+    assert.equal(resummarizedAsk.quota.used, 1);
     assert.equal(jevCalls, jevBeforeSummaryChange);
     assert.equal(askSummaryCalls, 3);
     process.env.OPENAI_MODEL = "gpt-4o-mini";

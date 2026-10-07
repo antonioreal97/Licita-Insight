@@ -9,6 +9,7 @@ import { ChecklistControl, ChecklistSummary } from '@/features/participation/com
 import { ProvenanceLabel } from '@/features/participation/components/provenance-label';
 import { cn } from '@/lib/utils';
 import { useTenderSheet } from '../hooks/use-tender-sheet';
+import { tendersExhaustedMessage } from '../lib/ai-quota';
 import { sheetExcerpt } from '../lib/sheet-excerpt';
 import { FIELDS, QUALIFICATION_LABELS, QUALIFICATION_ORDER } from '../lib/sheet-labels';
 import { SourceLink } from './source-link';
@@ -310,6 +311,13 @@ export function TenderSheetPanel({ tenderId }: { tenderId: string }) {
     body = null;
   } else if (session.status !== 'authenticated' || billing.isPending || (entitled && sheet.isPending)) {
     body = <div aria-busy="true" aria-label="Carregando" className="h-24 animate-pulse rounded-lg bg-muted" />;
+  } else if (isApiError(sheet.error) && sheet.error.code === 'AI_QUOTA_EXCEEDED' && sheet.error.detail('daily_tenders')) {
+    body = (
+      <p className={noteBox} data-testid="text-sheet-quota">
+        <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+        {tendersExhaustedMessage(undefined)}
+      </p>
+    );
   } else if (billing.isError || sheet.isError) {
     const error = billing.error ?? sheet.error;
     body = (

@@ -232,6 +232,43 @@ test(
         new Set(currentPassages.map(({ documentId }) => documentId)).size,
         2,
       );
+
+      // PNCP files arrive with the detail enrichment, which the detail page starts in parallel with ask-status and
+      // the sheet: before it ran, an empty list is "not fetched yet" and must not be stored as no_documents.
+      const pendingId = `codex-pending-${randomUUID()}`;
+      await db.insert(tendersTable).values({
+        id: pendingId,
+        pncpControlNumber: pendingId,
+        title: "Edital com detalhes pendentes",
+        organizationId: "test-org",
+        organizationName: "Órgão de teste",
+        modality: "test",
+        modalityLabel: "Teste",
+        status: "open",
+        estimatedValueStatus: "unknown",
+        sourceId: "pncp",
+        sourceName: "PNCP",
+        categories: [],
+        items: [],
+        documents: [],
+        timeline: [],
+        searchText: "",
+        titleNorm: "",
+        objectNorm: "",
+        itemsNorm: "",
+        organizationNorm: "",
+        otherNorm: "",
+        rawPayload: {},
+        fetchedAt: new Date(),
+      });
+      assert.equal(await ensureTenderIndex(pendingId, false), "not_started");
+      assert.equal(await ensureTenderIndex(pendingId, true), "processing");
+      const pendingIndex = await db.select().from(tenderAiIndexesTable)
+        .where(eq(tenderAiIndexesTable.tenderId, pendingId));
+      assert.equal(pendingIndex.length, 0);
+      await db.update(tendersTable).set({ detailsFetchedAt: new Date() }).where(eq(tendersTable.id, pendingId));
+      assert.equal(await ensureTenderIndex(pendingId, true), "no_documents");
+      await db.delete(tendersTable).where(eq(tendersTable.id, pendingId));
     } finally {
       globalThis.fetch = originalFetch;
       await db.delete(tendersTable).where(eq(tendersTable.id, tenderId));

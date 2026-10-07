@@ -176,6 +176,25 @@ export const aiDailyUsageTable = pgTable(
   ],
 );
 
+/** Processes (tenders with readable documents) each user consulted with AI on a São Paulo day: the daily cap counts these. */
+export const aiDailyTendersTable = pgTable(
+  "ai_daily_tenders",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    quotaDay: date("quota_day", { mode: "string" }).notNull(),
+    tenderId: text("tender_id")
+      .notNull()
+      .references(() => tendersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.quotaDay, table.tenderId] }),
+    index("ai_daily_tenders_day_idx").on(table.quotaDay),
+  ],
+);
+
 export const aiAskRequestsTable = pgTable(
   "ai_ask_requests",
   {

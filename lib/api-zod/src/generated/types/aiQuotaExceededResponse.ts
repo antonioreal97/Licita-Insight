@@ -8,6 +8,6 @@
 import type { ErrorResponse } from './errorResponse';
 
 /**
- * Daily AI question quota exhausted
+ * Daily AI quota exhausted: details[0].issue is daily_tenders (processes) or daily_questions (safety cap on new questions)
  */
 export type AiQuotaExceededResponse = ErrorResponse;

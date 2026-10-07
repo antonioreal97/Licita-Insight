@@ -314,6 +314,207 @@ export const GetTenderByIdResponse = zod.object({
 
 
 /**
+ * @summary Search PNCP contracts in collected publication and update windows
+ */
+export const searchTransparencyContractsQueryQMax = 160;
+
+export const searchTransparencyContractsQueryStateMin = 2;
+export const searchTransparencyContractsQueryStateMax = 2;
+
+export const searchTransparencyContractsQueryValueMinMin = 0;
+
+export const searchTransparencyContractsQueryValueMaxMin = 0;
+
+export const searchTransparencyContractsQuerySortDefault = `published_desc`;
+export const searchTransparencyContractsQueryPageDefault = 1;
+
+export const searchTransparencyContractsQueryPageSizeDefault = 12;
+export const searchTransparencyContractsQueryPageSizeMax = 50;
+
+
+
+export const SearchTransparencyContractsQueryParams = zod.object({
+  "q": zod.coerce.string().max(searchTransparencyContractsQueryQMax).optional(),
+  "state": zod.coerce.string().min(searchTransparencyContractsQueryStateMin).max(searchTransparencyContractsQueryStateMax).optional(),
+  "publishedFrom": zod.date().optional(),
+  "publishedTo": zod.date().optional(),
+  "valueMin": zod.coerce.number().min(searchTransparencyContractsQueryValueMinMin).optional(),
+  "valueMax": zod.coerce.number().min(searchTransparencyContractsQueryValueMaxMin).optional(),
+  "sort": zod.enum(['published_desc', 'published_asc', 'value_desc', 'value_asc']).default(searchTransparencyContractsQuerySortDefault),
+  "page": zod.coerce.number().int().min(1).default(searchTransparencyContractsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(searchTransparencyContractsQueryPageSizeMax).default(searchTransparencyContractsQueryPageSizeDefault)
+})
+
+export const SearchTransparencyContractsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "pncpControlNumber": zod.string(),
+  "purchasePncpControlNumber": zod.string(),
+  "tenderId": zod.string().nullable(),
+  "contractNumber": zod.string().nullable(),
+  "organizationName": zod.string(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable()
+}),
+  "supplier": zod.object({
+  "type": zod.string().nullable(),
+  "name": zod.string().nullable(),
+  "identifier": zod.string().nullable()
+}).nullable().describe('Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.'),
+  "object": zod.string().nullable(),
+  "values": zod.object({
+  "initial": zod.number().nullable(),
+  "global": zod.number().nullable(),
+  "accumulated": zod.number().nullable(),
+  "installment": zod.number().nullable()
+}),
+  "dates": zod.object({
+  "signature": zod.coerce.date().nullable(),
+  "validFrom": zod.coerce.date().nullable(),
+  "validTo": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+}),
+  "officialUrl": zod.string().url().nullable(),
+  "provenance": zod.object({
+  "source": zod.literal("PNCP"),
+  "fetchedAt": zod.coerce.date()
+})
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+}),
+  "meta": zod.object({
+  "coverage": zod.string(),
+  "indexUpdatedAt": zod.coerce.date().nullish(),
+  "valueSemantics": zod.object({
+  "contractValues": zod.string(),
+  "resultValues": zod.string(),
+  "paymentValues": zod.string()
+})
+})
+})
+
+
+/**
+ * @summary Get PNCP contracts linked to a tender
+ */
+
+
+
+export const GetTenderTransparencyContractsParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const GetTenderTransparencyContractsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "pncpControlNumber": zod.string(),
+  "purchasePncpControlNumber": zod.string(),
+  "tenderId": zod.string().nullable(),
+  "contractNumber": zod.string().nullable(),
+  "organizationName": zod.string(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable()
+}),
+  "supplier": zod.object({
+  "type": zod.string().nullable(),
+  "name": zod.string().nullable(),
+  "identifier": zod.string().nullable()
+}).nullable().describe('Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.'),
+  "object": zod.string().nullable(),
+  "values": zod.object({
+  "initial": zod.number().nullable(),
+  "global": zod.number().nullable(),
+  "accumulated": zod.number().nullable(),
+  "installment": zod.number().nullable()
+}),
+  "dates": zod.object({
+  "signature": zod.coerce.date().nullable(),
+  "validFrom": zod.coerce.date().nullable(),
+  "validTo": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+}),
+  "officialUrl": zod.string().url().nullable(),
+  "provenance": zod.object({
+  "source": zod.literal("PNCP"),
+  "fetchedAt": zod.coerce.date()
+})
+})),
+  "meta": zod.object({
+  "coverage": zod.string(),
+  "indexUpdatedAt": zod.coerce.date().nullish(),
+  "valueSemantics": zod.object({
+  "contractValues": zod.string(),
+  "resultValues": zod.string(),
+  "paymentValues": zod.string()
+})
+})
+})
+
+
+/**
+ * @summary Get PNCP item results linked to a tender
+ */
+
+
+
+export const GetTenderTransparencyResultsParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+export const GetTenderTransparencyResultsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "purchasePncpControlNumber": zod.string(),
+  "tenderId": zod.string().nullable(),
+  "itemNumber": zod.number().int(),
+  "resultSequence": zod.number().int(),
+  "status": zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "active": zod.boolean(),
+  "cancelledAt": zod.coerce.date().nullable(),
+  "cancelReason": zod.string().nullable()
+}),
+  "supplier": zod.object({
+  "type": zod.string().nullable(),
+  "name": zod.string().nullable(),
+  "identifier": zod.string().nullable()
+}).nullable().describe('Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.'),
+  "values": zod.object({
+  "quantityHomologated": zod.number().nullable(),
+  "unitValueHomologated": zod.number().nullable(),
+  "totalValueHomologated": zod.number().nullable(),
+  "discountPercent": zod.number().nullable()
+}),
+  "resultDate": zod.coerce.date().nullable(),
+  "officialUrl": zod.string().url().nullable(),
+  "provenance": zod.object({
+  "source": zod.literal("PNCP"),
+  "fetchedAt": zod.coerce.date()
+})
+})),
+  "meta": zod.object({
+  "coverage": zod.string(),
+  "indexUpdatedAt": zod.coerce.date().nullish(),
+  "valueSemantics": zod.object({
+  "contractValues": zod.string(),
+  "resultValues": zod.string(),
+  "paymentValues": zod.string()
+})
+})
+})
+
+
+/**
  * @summary Get or start the document index used for tender questions
  */
 
@@ -341,10 +542,11 @@ export const GetTenderAskStatusResponse = zod.object({
 })),
   "unreadDocuments": zod.number().int().min(getTenderAskStatusResponseUnreadDocumentsMin),
   "quota": zod.object({
-  "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin),
-  "limit": zod.number().int().min(1),
-  "resetsAt": zod.coerce.date()
-})
+  "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin).describe('Processes consulted today'),
+  "limit": zod.number().int().min(1).describe('Processes allowed per day'),
+  "resetsAt": zod.coerce.date(),
+  "counted": zod.boolean().describe('This tender is already among today\'s processes')
+}).describe('Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.')
 })
 
 
@@ -390,10 +592,11 @@ export const AskTenderResponse = zod.object({
 })).max(askTenderResponsePassagesMax),
   "model": zod.string(),
   "quota": zod.object({
-  "used": zod.number().int().min(askTenderResponseQuotaUsedMin),
-  "limit": zod.number().int().min(1),
-  "resetsAt": zod.coerce.date()
-})
+  "used": zod.number().int().min(askTenderResponseQuotaUsedMin).describe('Processes consulted today'),
+  "limit": zod.number().int().min(1).describe('Processes allowed per day'),
+  "resetsAt": zod.coerce.date(),
+  "counted": zod.boolean().describe('This tender is already among today\'s processes')
+}).describe('Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.')
 })
 
 
