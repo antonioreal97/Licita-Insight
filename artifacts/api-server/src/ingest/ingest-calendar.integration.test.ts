@@ -343,19 +343,115 @@ test(
       },
     );
 
-    await t.test("first detail read returns stored facts without waiting for PNCP", async () => {
-      await reset();
-      await upsertPublications([publication(129)], new Date("2026-01-05T12:00:00Z"));
-      const { rows } = await pool.query<{ id: string }>(
-        "SELECT id FROM tenders WHERE pncp_control_number = $1",
-        [publication(129).numeroControlePNCP],
-      );
-      const { PostgresTenderRepository } = await import("../repositories/postgres-tender-repository");
-      const detail = await new PostgresTenderRepository().findById(rows[0].id);
-      assert.equal(detail?.id, rows[0].id);
-      assert.equal(detail?.detailsFetchedAt, null);
-      assert.equal(calls.length, 0);
-    });
+    await t.test(
+      "HTTP 410 during refresh marks the PNCP compra as source removed without changing tender status",
+      async () => {
+        await reset();
+        response = () => Response.json({ data: [], totalPaginas: 0 });
+        await run();
+        await upsertPublications(
+          [publication(140)],
+          new Date("2026-01-01T12:00:00Z"),
+        );
+        calls.length = 0;
+        response = () => new Response("removed", { status: 410 });
+
+        const removed = await run({ refreshLimit: 1 });
+        assert.equal(removed.run?.status, "succeeded");
+        assert.equal(removed.run.refreshed, 0);
+        assert.equal(removed.run.refreshErrors, 0);
+        assert.equal(calls.length, 1);
+
+        const stored = (
+          await pool.query<{
+            status: string;
+            raw_payload: {
+              pncpRefresh?: {
+                sourceRemoved?: boolean;
+                sourceRemovedAt?: string;
+                sourceRemovedStatus?: number;
+              };
+            };
+          }>(
+            "SELECT status, raw_payload FROM tenders WHERE pncp_control_number = $1",
+            [publication(140).numeroControlePNCP],
+          )
+        ).rows[0];
+        assert.equal(stored.status, "open");
+        assert.equal(stored.raw_payload.pncpRefresh?.sourceRemoved, true);
+        assert.equal(stored.raw_payload.pncpRefresh?.sourceRemovedStatus, 410);
+        assert.match(
+          stored.raw_payload.pncpRefresh?.sourceRemovedAt ?? "",
+          /^20/,
+        );
+
+        calls.length = 0;
+        response = () => {
+          throw new Error("marked tender should not be refreshed again");
+        };
+        const skipped = await run({ refreshLimit: 1 });
+        assert.equal(skipped.run?.refreshed, 0);
+        assert.equal(skipped.run?.refreshErrors, 0);
+        assert.equal(calls.length, 0);
+      },
+    );
+
+    await t.test(
+      "non-410 refresh failures still count as refresh errors and are not marked",
+      async () => {
+        await reset();
+        response = () => Response.json({ data: [], totalPaginas: 0 });
+        await run();
+        await upsertPublications(
+          [publication(141)],
+          new Date("2026-01-01T12:00:00Z"),
+        );
+        calls.length = 0;
+        response = () => new Response("bad request", { status: 400 });
+
+        const failedRefresh = await run({ refreshLimit: 1 });
+        assert.equal(failedRefresh.run?.status, "succeeded");
+        assert.equal(failedRefresh.run.refreshed, 0);
+        assert.equal(failedRefresh.run.refreshErrors, 1);
+        assert.equal(calls.length, 1);
+
+        const stored = (
+          await pool.query<{
+            status: string;
+            source_removed: string | null;
+          }>(
+            `SELECT status, raw_payload->'pncpRefresh'->>'sourceRemoved' AS source_removed
+             FROM tenders WHERE pncp_control_number = $1`,
+            [publication(141).numeroControlePNCP],
+          )
+        ).rows[0];
+        assert.equal(stored.status, "open");
+        assert.equal(stored.source_removed, null);
+      },
+    );
+
+    await t.test(
+      "first detail read returns stored facts without waiting for PNCP",
+      async () => {
+        await reset();
+        await upsertPublications(
+          [publication(129)],
+          new Date("2026-01-05T12:00:00Z"),
+        );
+        const { rows } = await pool.query<{ id: string }>(
+          "SELECT id FROM tenders WHERE pncp_control_number = $1",
+          [publication(129).numeroControlePNCP],
+        );
+        const { PostgresTenderRepository } =
+          await import("../repositories/postgres-tender-repository");
+        const detail = await new PostgresTenderRepository().findById(
+          rows[0].id,
+        );
+        assert.equal(detail?.id, rows[0].id);
+        assert.equal(detail?.detailsFetchedAt, null);
+        assert.equal(calls.length, 0);
+      },
+    );
 
     await t.test(
       "an empty items/files answer never erases stored PNCP details",
@@ -388,10 +484,10 @@ test(
             publishedAt: null,
           },
         ];
-        await pool.query("UPDATE tenders SET documents = $1::jsonb WHERE id = $2", [
-          JSON.stringify(stored),
-          tenderId,
-        ]);
+        await pool.query(
+          "UPDATE tenders SET documents = $1::jsonb WHERE id = $2",
+          [JSON.stringify(stored), tenderId],
+        );
 
         response = () => Response.json([]);
         await enrichTenderById(tenderId);
