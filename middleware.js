@@ -3,6 +3,15 @@
 export const config = { matcher: '/api/:path*' };
 
 const DROP = /^(host|connection|x-vercel-|x-middleware-)/;
+const ORIGIN_HEADER = 'x-abriu-origin';
+const CLIENT_IP_HEADER = 'x-abriu-client-ip';
+
+const originSharedSecret = () => {
+  const secret = process.env.ORIGIN_SHARED_SECRET;
+  return secret && secret.length >= 32 ? secret : null;
+};
+
+const firstForwardedIp = (value) => value?.split(',')[0]?.trim() || null;
 
 export default function middleware(request) {
   const upstream = process.env.API_UPSTREAM_ORIGIN;
@@ -16,10 +25,19 @@ export default function middleware(request) {
   const target = new URL(url.pathname + url.search, upstream);
 
   const forwarded = new Headers();
+  const secret = originSharedSecret();
   for (const [name, value] of request.headers) {
-    if (!DROP.test(name)) forwarded.set(name, value);
+    const lowerName = name.toLowerCase();
+    if (DROP.test(lowerName)) continue;
+    if (secret && (lowerName === ORIGIN_HEADER || lowerName === CLIENT_IP_HEADER)) continue;
+    forwarded.set(name, value);
   }
   forwarded.set('ngrok-skip-browser-warning', '1');
+  if (secret) {
+    forwarded.set(ORIGIN_HEADER, secret);
+    const clientIp = firstForwardedIp(request.headers.get('x-forwarded-for'));
+    if (clientIp) forwarded.set(CLIENT_IP_HEADER, clientIp);
+  }
 
   const headers = new Headers({ 'x-middleware-rewrite': target.toString() });
   const names = [];
