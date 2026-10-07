@@ -1,0 +1,13 @@
+[Unit]
+Description=Publica o Grafana do Abriu la depois que o Tailscale estiver pronto
+
+[Service]
+WorkingDirectory=%h/Documentos/LICITA/Licita-Insight
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for i in $(seq 1 300); do if [ "$(tailscale ip -4 2>/dev/null)" = "100.76.192.116" ]; then exec docker compose -f ops/macbook/dashboard/compose.yml up -d; fi; sleep 1; done; echo "Tailscale nao retornou 100.76.192.116 em 5 minutos" >&2; exit 1'
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

@@ -36,6 +36,7 @@ def load_config():
         "APP_CONTAINER": "licita-macbook-app-1",
         "PG_CONTAINER": "licita-macbook-postgres-1",
         "PUBLIC_URL": "https://abriu-la.vercel.app",
+        "EDGE_URL": "",
         "GITHUB_REPO": "antonioreal97/Licita-Insight",
         "MONITOR_ISSUE": "",
         "ORCA_CLI": str(HOME / ".config/orca/linux-orca-cli-shim/orca"),
@@ -178,8 +179,12 @@ def collect():
     except (ValueError, StopIteration, KeyError):
         net["ngrok_url"] = None
     net["public_readyz"] = http_ok(CFG["PUBLIC_URL"] + "/api/readyz")
-    p = run(["systemctl", "--user", "show", "licita-ngrok-vercel-sync.service", "-p", "Result", "--value"])
-    net["vercel_sync_result"] = p.stdout.strip()
+    if CFG["EDGE_URL"]:
+        net["edge_readyz"] = http_ok(CFG["EDGE_URL"].rstrip("/") + "/api/readyz")
+        net["vercel_sync_result"] = ""
+    else:
+        p = run(["systemctl", "--user", "show", "licita-ngrok-vercel-sync.service", "-p", "Result", "--value"])
+        net["vercel_sync_result"] = p.stdout.strip()
     m["net"] = net
     return m
 
@@ -201,11 +206,14 @@ def anomalies(m, prev):
             add(f"restart:{name}:{c['restarts']}", "alta", f"{name} reiniciou ({before} → {c['restarts']})")
     if not m["net"]["local_readyz"][0]:
         add("readyz:local", "critica", f"/api/readyz local falhou ({m['net']['local_readyz'][1]})")
-    if not m["net"]["ngrok_url"]:
+    if CFG["EDGE_URL"]:
+        if not m["net"]["edge_readyz"][0]:
+            add("edge:down", "critica", f"{CFG['EDGE_URL']}/api/readyz falhou ({m['net']['edge_readyz'][1]})")
+    elif not m["net"]["ngrok_url"]:
         add("ngrok:down", "critica", "ngrok sem túnel https ativo")
     if not m["net"]["public_readyz"][0]:
         add("readyz:public", "critica", f"{CFG['PUBLIC_URL']}/api/readyz falhou ({m['net']['public_readyz'][1]})")
-    if m["net"]["vercel_sync_result"] not in ("success", ""):
+    if not CFG["EDGE_URL"] and m["net"]["vercel_sync_result"] not in ("success", ""):
         add(f"vercel-sync:{m['net']['vercel_sync_result']}", "alta", f"sincronização ngrok→Vercel com resultado {m['net']['vercel_sync_result']}")
     if m["infra"]["disk_used_pct"] >= 85:
         add("disk:85", "alta", f"disco em {m['infra']['disk_used_pct']}%")
@@ -522,7 +530,8 @@ def render_digest(m):
         "",
         "**Infra**",
         f"- App {app['status']}/{app['health']} (reinícios {app['restarts']}); disco {inf['disk_used_pct']}%; memória livre {inf['mem_available_mb']} MB; swap {inf['swap_used_mb']} MB; load {inf['load_1m']:.2f}",
-        f"- readyz local {'ok' if net['local_readyz'][0] else 'FALHOU'}, público {'ok' if net['public_readyz'][0] else 'FALHOU'}; ngrok {net['ngrok_url'] or 'SEM TÚNEL'}",
+        f"- readyz local {'ok' if net['local_readyz'][0] else 'FALHOU'}, público {'ok' if net['public_readyz'][0] else 'FALHOU'}; "
+        + (f"borda {CFG['EDGE_URL']} {'ok' if net['edge_readyz'][0] else 'FALHOU'}" if CFG["EDGE_URL"] else f"ngrok {net['ngrok_url'] or 'SEM TÚNEL'}"),
     ]
     active = anomalies(m, {})
     lines += ["", "**Anomalias ativas**"] + ([f"- [{a['severity']}] {a['text']}" for a in active] or ["- nenhuma"])

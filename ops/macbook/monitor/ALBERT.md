@@ -13,7 +13,7 @@ nova (`check`, a cada 5 min) e `[deploy]` quando há commits novos em `origin/op
    - `docker compose -f compose.macbook.yml ps` e `docker logs --since 30m licita-macbook-app-1 2>&1 | tail -n 80`
      (no clone `~/Documentos/LICITA/Licita-Insight`)
    - `docker exec licita-macbook-postgres-1 psql -U licita -d licita -Atc "<consulta>"`
-   - `systemctl --user status ngrok-licita.service licita-ngrok-vercel-sync.service`, `journalctl --user -u <unit> -n 50`
+   - `systemctl --user status ngrok-licita.service licita-ngrok-vercel-sync.service licita-proxy-tailscale.service licita-dashboard-tailscale.service`, `journalctl --user -u <unit> -n 50`; com `EDGE_URL` em `~/licita-monitor/config.env`, confira a borda em vez do ngrok
    - `df -h /`, `free -m`, `uptime`
 3. Publique o relatório como comentário na issue de monitoramento:
    `gh issue comment <MONITOR_ISSUE de ~/licita-monitor/config.env> --repo antonioreal97/Licita-Insight --body-file <arquivo>`
@@ -50,8 +50,9 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
      `install -m 644 ops/macbook/monitor/ALBERT.md ~/licita-monitor/`,
      `install -m 755 ops/macbook/ngrok-vercel-sync.sh ~/.local/bin/licita-ngrok-vercel-sync`,
      `cp ops/macbook/*.service ops/macbook/*.timer ops/macbook/monitor/*.service ops/macbook/monitor/*.timer ~/.config/systemd/user/`,
-     `systemctl --user daemon-reload` e `systemctl --user enable --now` para cada `*.timer` copiado. Se o
-     `ALBERT.md` mudou, releia-o antes de continuar.
+     `systemctl --user daemon-reload` e `systemctl --user enable --now` para cada `*.timer` copiado. Em `~/licita-monitor/config.env`, `EDGE_URL=` fica vazio por padrão. Para monitorar a borda Oracle, defina `EDGE_URL=https://137-131-233-192.sslip.io`; nesse modo, `edge:down` verifica `/api/readyz` e o resultado do sincronizador ngrok->Vercel é ignorado.
+   - Se o deploy incluir `licita-proxy-tailscale.service` e `licita-dashboard-tailscale.service`, habilite ambos com `systemctl --user enable --now licita-proxy-tailscale.service licita-dashboard-tailscale.service`; eles esperam até cinco minutos por `tailscale ip -4` igual a `100.76.192.116` antes de publicar o proxy/Grafana. O usuário precisa de linger habilitado.
+     Se `ALBERT.md` mudou, releia-o antes de continuar.
    - `docs`: só o `pull`.
 4. Se a verificação falhar após o build, **não tente consertar**: reporte com a saída e sugira `git reset --hard
    <head anterior>` + novo build ao Orchestrator.
@@ -106,7 +107,17 @@ issue, e não inicie outras tarefas: o Albert-CLAUDE valida depois.
 
 - App: `compose.macbook.yml` (projeto `licita-macbook`), `127.0.0.1:24252`, coletas PNCP/transparência/cultura.
 - Público: https://abriu-la.vercel.app (Vercel) → `/api/*` via ngrok (`ngrok-licita.service`, URL free que muda;
-  `licita-ngrok-vercel-sync.timer` atualiza a Vercel).
+  `licita-ngrok-vercel-sync.timer` atualiza a Vercel) ou, com `EDGE_URL`, pela borda Oracle. O padrão de `EDGE_URL` e vazio.
 - Relatório diário (sem LLM) às 08:00 pelo `licita-monitor-digest.timer`, na mesma issue.
 - Heartbeat de deploy: `licita-monitor-deploy.timer` (10 min).
 - Memória do projeto: `memory-bank/activeContext.md` no clone.
+
+## Deploy com borda Oracle
+
+Quando `MACBOOK_TAILSCALE_IP` estiver configurado no `.env` do servidor, todos os
+comandos Compose de deploy/recriacao devem usar
+`docker compose -f compose.macbook.yml -f compose.macbook.tailscale.yml ...`.
+Isso inclui o `up -d --build` de `app_build` acima. Nao execute somente o arquivo
+base: isso retira a publicacao do proxy no Tailscale e derruba a borda Oracle.
+Preserve o segredo de origem e `PUBLIC_APP_ORIGIN` da Vercel. Apos a virada, nao
+reative ngrok nem o sincronizador automaticamente. Runbook: `docs/ops/oracle-edge.md`.

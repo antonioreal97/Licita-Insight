@@ -1,0 +1,8 @@
+[Unit]
+Description=Renova HTTPS da borda Abriu la
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/abriu-edge/ops/oracle-edge/renew.sh
