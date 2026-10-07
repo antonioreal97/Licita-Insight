@@ -1,11 +1,35 @@
 # MacBook 24 horas (stack local)
 
 Esta instalacao usa `compose.macbook.yml`: PostgreSQL 16 persistente, API, frontend
-compilado e agendadores no mesmo container. Nao usa Ollama, Vite de desenvolvimento
-nem hospedagem publica por padrao. A interface escuta apenas em `localhost:24252`; o PostgreSQL
-nao publica porta. A imagem `linux/amd64` funciona em Macs Intel e, com emulacao
-Docker, em Apple Silicon. Deixe o Mac ligado, sem suspensao automatica, e configure
-o Docker Desktop para iniciar no login.
+compilado e agendadores no mesmo container, com um Nginx local na frente. Nao usa
+Ollama, Vite de desenvolvimento nem hospedagem publica por padrao. A interface
+escuta apenas no proxy em `localhost:24252`; o container `app` fica somente na
+rede interna do Compose e o PostgreSQL nao publica porta. A imagem `linux/amd64`
+funciona em Macs Intel e, com emulacao Docker, em Apple Silicon. Deixe o Mac
+ligado, sem suspensao automatica, e configure o Docker Desktop para iniciar no login.
+
+## Arquitetura do proxy
+
+O caminho publico esperado e: navegador -> Vercel -> ngrok no servidor -> Nginx
+local -> `app:3001`. A Vercel reescreve `/api/*` para o upstream e, quando
+`ORIGIN_SHARED_SECRET` estiver configurado nela, envia `x-abriu-origin` e
+`x-abriu-client-ip`. O Nginx registra se a origem e valida, sobrescreve
+`X-Forwarded-For` com um unico IP confiavel e repassa `X-Forwarded-Proto: https`
+para a API. A API usa `TRUST_PROXY=1`, confiando apenas no Nginx.
+
+O proxy tem dois modos:
+
+- `ORIGIN_MODE=log`: tudo passa, mas o access log JSON mostra `origin_valid`
+  como `sim` ou `nao`.
+- `ORIGIN_MODE=enforce`: requisicoes sem `x-abriu-origin` valido recebem `403`.
+
+`GET /api/healthz` e `GET /api/readyz` sempre passam sem header para monitores e
+sincronizacao do ngrok. `/api/v1/ingest/` e `/metrics` retornam `404` no proxy
+como defesa em profundidade; as rotas de ingestao tambem devem ser protegidas na
+API por token proprio. O proxy aplica limite por IP em `/api/` e um limite mais
+restrito em `/api/v1/auth/`, responde `429` em excesso, limita corpo a 2 MiB e
+usa timeouts de proxy de 180 s para cobrir o timeout longo da aplicacao
+(`LONG_REQUEST_TIMEOUT_MS`, 120 s por padrao).
 
 ## 1. Preparar o clone
 
@@ -25,6 +49,9 @@ existente em `OPENAI_API_KEY`, sem envia-la pelo chat ou coloca-la no Git. Confi
 o mesmo cliente OAuth do Google e confirme que ele aceita a URI de redirecionamento
 `http://localhost:24252/api/v1/auth/google/callback`. `SESSION_SECRET` precisa ser
 estavel para manter sessoes entre restarts. O `.env` ja e ignorado pelo Git.
+Deixe `ORIGIN_MODE=log` no primeiro deploy. Gere `ORIGIN_SHARED_SECRET` com
+`openssl rand -hex 32`, mas so troque para `enforce` depois que o mesmo valor
+estiver configurado na Vercel e o access log confirmar `origin_valid:"sim"`.
 
 Deixe as tres flags `*_DAILY_COLLECT=false` ate terminar a restauracao. Nao rode
 `docker compose up` com o compose de desenvolvimento neste clone: ele cria outra
@@ -104,6 +131,58 @@ O webhook Asaas nao consegue alcancar um Mac exposto somente em localhost. A bus
 e a consulta publica funcionam, mas assinatura/checkout automatizado precisam de
 um endpoint publico ou outra integracao antes do uso comercial.
 
+## Ativar protecao de origem em 3 passos
+
+1. Suba ou atualize a stack em modo de observacao:
+
+```sh
+ORIGIN_MODE=log
+docker compose -f compose.macbook.yml up -d --build
+docker compose -f compose.macbook.yml logs -f proxy
+```
+
+Nesse modo, acessos diretos e acessos pela Vercel continuam passando. Use os
+logs para confirmar quais chamadas chegam com `origin_valid:"nao"`.
+
+2. Defina o segredo compartilhado no servidor e na Vercel. No servidor, gere um
+valor hexadecimal e salve no `.env`:
+
+```sh
+openssl rand -hex 32
+# .env
+ORIGIN_SHARED_SECRET=<valor-gerado>
+ORIGIN_MODE=log
+```
+
+Configure o mesmo valor em `ORIGIN_SHARED_SECRET` no projeto Vercel e faca
+redeploy de producao. Depois, acesse `https://abriu-la.vercel.app/api/readyz` e
+outras rotas de API pela Vercel; o log do proxy deve mostrar `origin_valid:"sim"`.
+
+3. Quando a Vercel estiver enviando o header, aplique enforcement e recrie o
+proxy:
+
+```sh
+# .env
+ORIGIN_MODE=enforce
+docker compose -f compose.macbook.yml up -d --force-recreate proxy
+curl -i http://localhost:24252/api/v1/tenders/search
+curl -fsS http://localhost:24252/api/readyz
+```
+
+A primeira chamada direta deve retornar `403`; `readyz` continua `200` sem header.
+Pela Vercel, as rotas publicas da API devem seguir respondendo normalmente.
+
+Para reverter rapidamente, volte `ORIGIN_MODE=log` no `.env` e recrie somente o
+proxy:
+
+```sh
+docker compose -f compose.macbook.yml up -d --force-recreate proxy
+```
+
+Se o problema for o proxy em si, pare a stack e publique temporariamente o `app`
+como era antes apenas durante a contingencia, com acesso restrito ao host. Nao
+mantenha o app e o proxy publicando a mesma porta ao mesmo tempo.
+
 ## Acesso remoto por ngrok
 
 O tunnel e opcional e so deve ser ativado depois do restore, com a aplicacao
@@ -113,15 +192,14 @@ O PostgreSQL e a API na porta 3001 nao sao publicados separadamente.
 
 Se o ngrok ja foi instalado no MacBook e encaminha para `localhost:24252`, nao
 inicie um segundo agente. No `.env` local, defina a URL HTTPS atual sem barra
-final e habilite a confianca em um proxy:
+final:
 
 ```dotenv
 PUBLIC_APP_ORIGIN=https://exemplo.ngrok-free.app
-TRUST_PROXY=1
 ```
 
-Recrie o app para aplicar as variaveis: `docker compose -f compose.macbook.yml
-up -d --force-recreate app`. Verifique a URL externa com
+Recrie o app para aplicar a origem publica: `docker compose -f compose.macbook.yml
+up -d --force-recreate app proxy`. Verifique a URL externa com
 `curl -fsS https://exemplo.ngrok-free.app/api/readyz`. O login e as escritas
 devem ser feitos pela URL HTTPS, nao por `localhost`. Se o ngrok atribuir outra
 URL em um restart, atualize `PUBLIC_APP_ORIGIN` e recrie o app novamente.
@@ -143,13 +221,13 @@ docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml up -d --build
 docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml ps
 ```
 
-Esse modo ajusta `PUBLIC_APP_ORIGIN` e `TRUST_PROXY` da API automaticamente.
+Esse modo ajusta `PUBLIC_APP_ORIGIN` automaticamente.
 Para voltar a usar somente localhost, pare o tunnel, remova ou comente as linhas
-`PUBLIC_APP_ORIGIN` e `TRUST_PROXY` do `.env`, e recrie o app com o Compose basico:
+`PUBLIC_APP_ORIGIN` do `.env`, e recrie o app com o Compose basico:
 
 ```sh
 docker compose -f compose.macbook.yml -f compose.macbook.ngrok.yml stop ngrok
-docker compose -f compose.macbook.yml up -d --force-recreate app
+docker compose -f compose.macbook.yml up -d --force-recreate app proxy
 ```
 
 O plano gratuito do ngrok tem limites de trafego e uma pagina intermediaria para
@@ -173,9 +251,11 @@ que Docker Desktop inicie no login. `docker compose down` sem `-v` preserva o ba
 ## Frontend na Vercel e sincronização ngrok -> Vercel
 
 O frontend público fica no projeto Vercel `abriu-la` (https://abriu-la.vercel.app). Um Routing Middleware
-encaminha `/api/*` para `API_UPSTREAM_ORIGIN` (a URL do ngrok) com `ngrok-skip-browser-warning`; API, banco e
-coletas continuam neste servidor, com `PUBLIC_APP_ORIGIN=https://abriu-la.vercel.app` e `TRUST_PROXY=2` no
-`.env`. A URL de callback cadastrada no Google é `https://abriu-la.vercel.app/api/v1/auth/google/callback`.
+encaminha `/api/*` para `API_UPSTREAM_ORIGIN` (a URL do ngrok) com `ngrok-skip-browser-warning` e, apos a
+ativacao do segredo, `x-abriu-origin`; API, banco e coletas continuam neste servidor, com
+`PUBLIC_APP_ORIGIN=https://abriu-la.vercel.app` no `.env`. `TRUST_PROXY=1` fica fixo no Compose para confiar
+somente no Nginx local. A URL de callback cadastrada no Google é
+`https://abriu-la.vercel.app/api/v1/auth/google/callback`.
 
 Enquanto o ngrok usar URL aleatória, `ops/macbook/ngrok-vercel-sync.sh` mantém a Vercel atualizada: a cada
 minuto compara a URL do túnel com a última publicada e, quando muda, atualiza `API_UPSTREAM_ORIGIN`, refaz o
