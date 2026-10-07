@@ -1,0 +1,8 @@
+# Combine com compose.macbook.yml. Preserva a publicacao em loopback.
+services:
+  proxy:
+    environment:
+      ORIGIN_MODE: enforce
+      ORIGIN_SHARED_SECRET: ${ORIGIN_SHARED_SECRET:?Defina o mesmo segredo na Vercel e na borda}
+    ports:
+      - "${MACBOOK_TAILSCALE_IP:?Defina o IPv4 Tailscale do servidor}:${MACBOOK_BIND_PORT:-24252}:8080"

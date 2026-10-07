@@ -314,3 +314,9 @@ O histórico do Drizzle (`drizzle.__drizzle_migrations`) foi reconciliado em 06/
 cada `.sql` e `created_at` = `when` do `_journal.json`), então `migrate` não tenta recriar tabelas existentes.
 
 No Linux, `/usr/bin/orca` é o leitor de tela do GNOME; nunca o execute.
+
+## Borda Oracle com HTTPS
+
+Para substituir o ngrok por uma VM Oracle via Tailscale, siga
+[o runbook da borda](oracle-edge.md). O override `compose.macbook.tailscale.yml`
+acrescenta o bind no IP privado mantendo o loopback e exige o segredo de origem.

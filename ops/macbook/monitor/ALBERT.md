@@ -110,3 +110,13 @@ issue, e não inicie outras tarefas: o Albert-CLAUDE valida depois.
 - Relatório diário (sem LLM) às 08:00 pelo `licita-monitor-digest.timer`, na mesma issue.
 - Heartbeat de deploy: `licita-monitor-deploy.timer` (10 min).
 - Memória do projeto: `memory-bank/activeContext.md` no clone.
+
+## Deploy com borda Oracle
+
+Quando `MACBOOK_TAILSCALE_IP` estiver configurado no `.env` do servidor, todos os
+comandos Compose de deploy/recriacao devem usar
+`docker compose -f compose.macbook.yml -f compose.macbook.tailscale.yml ...`.
+Isso inclui o `up -d --build` de `app_build` acima. Nao execute somente o arquivo
+base: isso retira a publicacao do proxy no Tailscale e derruba a borda Oracle.
+Preserve o segredo de origem e `PUBLIC_APP_ORIGIN` da Vercel. Apos a virada, nao
+reative ngrok nem o sincronizador automaticamente. Runbook: `docs/ops/oracle-edge.md`.

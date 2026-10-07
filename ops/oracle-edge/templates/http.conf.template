@@ -1,0 +1,11 @@
+server {
+  listen 80;
+  server_name ${EDGE_HOST};
+  location ^~ /.well-known/acme-challenge/ {
+    root /var/www/acme;
+    default_type text/plain;
+  }
+  location / {
+    return 308 https://${EDGE_HOST}$request_uri;
+  }
+}

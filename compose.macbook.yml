@@ -89,8 +89,12 @@ services:
     environment:
       ORIGIN_SHARED_SECRET: ${ORIGIN_SHARED_SECRET:-}
       ORIGIN_MODE: ${ORIGIN_MODE:-log}
+      NGINX_UPSTREAM: app:3001
+      NGINX_LISTEN: "8080"
+      NGINX_ENVSUBST_FILTER: "^(ORIGIN_SHARED_SECRET|ORIGIN_MODE|NGINX_UPSTREAM|NGINX_LISTEN)$"
     volumes:
       - ./ops/macbook/nginx/templates:/etc/nginx/templates:ro
+      - ./ops/macbook/nginx/server.conf:/etc/nginx/abriu-server.conf:ro
     ports:
       - "127.0.0.1:${MACBOOK_BIND_PORT:-24252}:8080"
     depends_on:

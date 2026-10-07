@@ -49,12 +49,13 @@ gzip_types
   text/xml;
 
 upstream abriu_app {
-  server app:3001;
+  server ${NGINX_UPSTREAM};
   keepalive 16;
 }
 
 server {
-  listen 8080;
+  listen ${NGINX_LISTEN};
+  include /etc/nginx/abriu-server.conf;
   client_max_body_size 2m;
 
   proxy_http_version 1.1;
