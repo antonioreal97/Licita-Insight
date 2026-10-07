@@ -66,6 +66,14 @@ encerrados permanecem no banco.
 Coletar apenas DF/modalidade 6 não significa que o Brasil inteiro foi coberto.
 Uma partição `complete` de hoje também não é uma partição `sealed`.
 
+As rotas HTTP de ingestão são operacionais e ficam desligadas por padrão. Para
+habilitar `GET`/`POST /api/v1/ingest/pncp`, defina `INGEST_API_TOKEN` com pelo
+menos 32 caracteres e envie `Authorization: Bearer <token>`. Sem segredo válido
+no ambiente, a API responde `404 NOT_FOUND`; com segredo configurado e token
+ausente ou incorreto, responde `401 UNAUTHENTICATED`. O agendamento diário e o
+comando CLI `collect:pncp` não usam essas rotas e continuam funcionando sem o
+token HTTP.
+
 ## Schema e verificação
 
 Com `DATABASE_URL` disponível no ambiente, aplicar:
