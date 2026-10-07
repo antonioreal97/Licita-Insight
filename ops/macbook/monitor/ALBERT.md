@@ -41,9 +41,10 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
    em `memory-bank/`, fique com a versão do commit (`git checkout HEAD -- memory-bank && git stash drop`) e cite no
    relatório; em `docker-compose.yml` (stack de dev, não usada), mantenha a do stash.
 3. Conforme `kinds`:
-   - `app_build`: `docker compose -f compose.macbook.yml up -d --build app` (nunca `down`, `-v`, `db-setup` ou
-     `migrate`). Espere `healthy` (até 5 min) e confira `curl -fsS localhost:24252/api/readyz` e
-     `curl -fsS https://abriu-la.vercel.app/api/readyz`. Coletas em andamento são interrompidas; o app as retoma
+   - `app_build`: `docker compose -f compose.macbook.yml up -d --build` (todos os serviços do compose, para incluir
+     serviços novos como o proxy; o Compose só recria o que mudou e o `db-setup` fica fora por estar no profile
+     `setup`; nunca `down`, `-v`, `db-setup` ou `migrate`). Espere `healthy` em todos os serviços (até 5 min) e
+     confira `curl -fsS localhost:24252/api/readyz` e `curl -fsS https://abriu-la.vercel.app/api/readyz`. Coletas em andamento são interrompidas; o app as retoma
      sozinho após a janela de heartbeat (PNCP ~11 min, transparência ~2 h).
    - `monitor_ops`: reinstale com `install -m 755 ops/macbook/monitor/licita_monitor.py ~/licita-monitor/`,
      `install -m 644 ops/macbook/monitor/ALBERT.md ~/licita-monitor/`,
