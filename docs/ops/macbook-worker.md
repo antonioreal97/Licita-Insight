@@ -195,6 +195,23 @@ nada com `FORCE=1 DRY_RUN=1 ~/.local/bin/licita-ngrok-vercel-sync` e acompanhe c
 `journalctl --user -u licita-ngrok-vercel-sync.service -f`. Durante a troca, `/api` na Vercel fica indisponível
 por cerca de 1 a 2 minutos (detecção + deploy). Com um domínio ngrok fixo, a sincronização deixa de ser necessária.
 
+### Publicar o frontend deste checkout
+
+No Mac com a CLI da Vercel autenticada e o vínculo do projeto em
+`~/abriu-la-vercel/.vercel/project.json`, execute na raiz do repositório:
+
+```sh
+ops/vercel/deploy.sh
+```
+
+O script instala as dependências pelo lockfile, compila a UI com `/api` na mesma
+origem e publica somente `dist/public` e os arquivos em `ops/vercel/` no projeto
+`abriu-la`. Ao terminar, compara o bundle do HTML público com o build local e
+verifica `/api/readyz` e `/transparencia`. A variável `API_UPSTREAM_ORIGIN`
+continua sob responsabilidade da sincronização no servidor; este deploy não a altera.
+Se o túnel mudar e o serviço do servidor fizer outro deploy a partir de um pacote
+antigo, será necessário atualizar aquele pacote para evitar a volta da UI antiga.
+
 ## Monitor do servidor (Albert-CLAUDE)
 
 `ops/macbook/monitor/` instala em `~/licita-monitor/` um monitor sem LLM e o runbook do agente:
