@@ -1,6 +1,7 @@
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import {
   aiAskRequestsTable,
+  aiDailyTendersTable,
   aiDailyUsageTable,
   aiFitDailyUsageTable,
   companyProfilesTable,
@@ -238,6 +239,7 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx
         .delete(aiDailyUsageTable)
         .where(eq(aiDailyUsageTable.userId, userId));
+      await tx.delete(aiDailyTendersTable).where(eq(aiDailyTendersTable.userId, userId));
       await tx.delete(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId));
       await tx.delete(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId));
       await tx.delete(companyProfilesTable).where(eq(companyProfilesTable.userId, userId));

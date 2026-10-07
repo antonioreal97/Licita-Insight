@@ -6,10 +6,21 @@
  * OpenAPI spec version: 1.3.0
  */
 
+/**
+ * Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.
+ */
 export interface AiQuota {
-  /** @minimum 0 */
+  /**
+     * Processes consulted today
+     * @minimum 0
+     */
   used: number;
-  /** @minimum 1 */
+  /**
+     * Processes allowed per day
+     * @minimum 1
+     */
   limit: number;
   resetsAt: Date;
+  /** This tender is already among today's processes */
+  counted: boolean;
 }

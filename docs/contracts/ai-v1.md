@@ -8,8 +8,9 @@ O recurso procura trechos em documentos oficiais, usa o Jev para escolher evidê
 - `JEV_MODEL`: versão fixa, padrão `jev-1.13.0`.
 - `JEV_RELEVANCE_THRESHOLD`: limiar inicial, padrão `0.5`.
 - `AI_SHORTLIST_SIZE`: máximo de trechos distintos enviados ao Jev por pergunta, padrão `10`.
-- `AI_DAILY_ASK_LIMIT_TRIAL`: cota diária de teste, padrão `5`.
-- `AI_DAILY_ASK_LIMIT_PAID`: cota diária paga, padrão `30`.
+- `AI_DAILY_TENDER_LIMIT`: cota diária por usuário, em processos, padrão `5` (teste e pago). Veja "Cota diária".
+- `AI_DAILY_ASK_LIMIT_TRIAL`: teto de segurança de perguntas novas por dia no teste, padrão `30`.
+- `AI_DAILY_ASK_LIMIT_PAID`: teto de segurança de perguntas novas por dia no pago, padrão `30`.
 - `AI_MAX_DOCUMENT_BYTES`: limite por download, padrão `26214400`.
 - `AI_MAX_PDF_PAGES`: limite por PDF, padrão `300`.
 - `AI_DOCUMENT_TIMEOUT_MS`: tempo total do download de cada documento, incluindo o corpo, padrão `300000`. Em 02/10/2026 o PNCP entregou arquivos a 50–70 KB/s, e um ZIP de 6 MB levou 91 s; 5 minutos cobrem cerca de 15 MB nessa velocidade (o teto de `AI_MAX_DOCUMENT_BYTES` é 25 MB), e um estouro de tempo segue o retry transitório. O download roda no job de índice, que renova a visibilidade enquanto baixa os documentos em série.
@@ -28,6 +29,12 @@ O recurso procura trechos em documentos oficiais, usa o Jev para escolher evidê
 - `OPENAI_OUTPUT_USD_PER_MTOK`: custo por milhão de tokens de saída, padrão `0.60`.
 
 Os preços padrão do `gpt-4o-mini` foram conferidos em 02/10/2026 na [documentação oficial do modelo](https://developers.openai.com/api/docs/models/gpt-4o-mini): US$ 0,15 por 1 milhão de tokens de entrada e US$ 0,60 por 1 milhão de tokens de saída. As variáveis de preço permitem atualizar o cálculo sem alterar código.
+
+## Cota diária
+
+A cota conta processos, não perguntas. Um processo (edital) entra na cota do usuário na primeira vez do dia (fuso de São Paulo) em que ele pergunta ao edital ou abre a ficha, e só se o índice estiver `ready`, isto é, com pelo menos um documento legível. Processos `no_documents`, `failed`, `unsupported` ou ainda em `processing` não contam. Depois disso, novas perguntas e a ficha desse processo não gastam mais nada no mesmo dia, inclusive respostas em cache. A tabela `ai_daily_tenders` guarda `(user_id, quota_day, tender_id)`.
+
+`quota` em `ask-status` e em `ask` traz `used` (processos consultados hoje), `limit`, `resetsAt` e `counted` (o processo atual já está na conta). Com a cota esgotada, abrir um processo novo com documentos responde `429 AI_QUOTA_EXCEEDED` com `details[0].issue = "daily_tenders"`, tanto em `ask` quanto em `sheet`. O teto de perguntas novas (`AI_DAILY_ASK_LIMIT_*`) continua como proteção de custo e responde com `issue = "daily_questions"`.
 
 ## Rotas
 

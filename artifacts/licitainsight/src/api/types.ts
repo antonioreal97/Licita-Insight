@@ -476,8 +476,12 @@ export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'fai
 
 export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ready' | 'failed' | 'unsupported' };
 
-/** Per user and day in São Paulo; `resetsAt` is the next local midnight. */
-export type AiQuota = { used: number; limit: number; resetsAt: string };
+/**
+ * Per user and day in São Paulo, counted in processes: a tender with readable documents spends 1 the first time
+ * the user asks about it or opens its sheet that day. `counted`: this tender already spent it, so it is free now.
+ * `resetsAt` is the next local midnight.
+ */
+export type AiQuota = { used: number; limit: number; resetsAt: string; counted: boolean };
 
 /** `GET /api/v1/tenders/:id/ask-status` (session). Signed-in users with access start the indexing by calling it. */
 /** `unreadDocuments`: documents that failed or could not be read. The index is `ready` with a partial reading, so answers may be incomplete. */

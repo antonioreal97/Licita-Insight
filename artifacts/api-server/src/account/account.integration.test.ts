@@ -98,6 +98,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   await pool.query(
     readFileSync(new URL("../../../../lib/db/migrations/0018_beta_access.sql", import.meta.url), "utf8"),
   );
+  await pool.query(
+    readFileSync(new URL("../../../../lib/db/migrations/0026_ai_daily_tenders.sql", import.meta.url), "utf8"),
+  );
   const participationColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'saved_tenders' and column_name = 'stage'", [schema]);
   if (participationColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0019_participation.sql', import.meta.url), 'utf8'),
@@ -552,6 +555,8 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   await t.test("enforces ask-tender authentication, entitlement, validation, and availability", async () => {
     assert.equal((await request(`/v1/tenders/${tenderId}/ask-status`)).status, 401);
     assert.equal((await request(`/v1/tenders/${tenderId}/sheet`)).status, 401);
+    // Details already fetched from PNCP and still no files: a real "no documents" tender, not a pending one.
+    await db.update(tendersTable).set({ detailsFetchedAt: new Date() }).where(eq(tendersTable.id, tenderId));
     const status = await request(`/v1/tenders/${tenderId}/ask-status`, {}, authenticatedCookie);
     assert.equal(status.status, 200);
     assert.equal(((await status.json()) as { index: string }).index, "no_documents");
@@ -1247,6 +1252,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       "subscriptions",
       "email_deliveries",
       "ai_daily_usage",
+      "ai_daily_tenders",
       "ai_ask_requests",
     ]) {
       const result = await pool.query(`SELECT count(*) AS count FROM ${table} WHERE ${table === "users" ? "id" : "user_id"} = $1`, [user.id]);

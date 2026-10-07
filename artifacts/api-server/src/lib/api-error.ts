@@ -77,8 +77,8 @@ export class BillingUnavailableError extends ApiError {
 }
 
 export class AiQuotaExceededError extends ApiError {
-  constructor(message = "The daily AI question limit has been reached") {
-    super(429, "AI_QUOTA_EXCEEDED", message);
+  constructor(message = "The daily AI question limit has been reached", details?: ApiErrorDetail[]) {
+    super(429, "AI_QUOTA_EXCEEDED", message, details);
   }
 }
 

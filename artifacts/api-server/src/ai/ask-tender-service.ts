@@ -35,12 +35,12 @@ import {
   generateAskSummary,
   type SummaryAttempt,
 } from "./openai-summary";
-import { aiDailyLimit, aiQuotaResetsAt, askSearchQueries, mergeAskShortlists, selectEvidencePassages, type PassageCandidate } from "./policy";
+import { aiDailyLimit, askSearchQueries, mergeAskShortlists, selectEvidencePassages, type PassageCandidate } from "./policy";
 import { ensureTenderIndex, type IndexStatus } from "./tender-index-service";
+import { reserveTenderConsultation, tenderQuotaFor, type Quota } from "./tender-quota";
 
 export { ensureTenderIndex } from "./tender-index-service";
-
-export type Quota = { used: number; limit: number; resetsAt: string };
+export type { Quota } from "./tender-quota";
 export type AskStatus = {
   index: IndexStatus;
   documents: Array<{
@@ -93,46 +93,29 @@ export async function hasAiAccess(userId: string, now = new Date()): Promise<boo
   return (await accessSource(userId, now)) !== null;
 }
 
-async function quotaFor(userId: string, now: Date): Promise<Quota> {
-  const day = dateInSaoPaulo(now);
-  const [usage, source] = await Promise.all([
-    db
-      .select({ used: aiDailyUsageTable.used })
-      .from(aiDailyUsageTable)
-      .where(and(eq(aiDailyUsageTable.userId, userId), eq(aiDailyUsageTable.quotaDay, day)))
-      .limit(1),
-    accessSource(userId, now),
-  ]);
-  return {
-    used: usage[0]?.used ?? 0,
-    limit: aiDailyLimit(source),
-    resetsAt: aiQuotaResetsAt(now),
-  };
-}
-
-async function reserveQuota(userId: string, now: Date): Promise<Quota> {
+/** Safety cap on new questions (Jev + OpenAI calls); the user-facing quota counts processes (`tender-quota.ts`). */
+async function reserveQuestion(userId: string, now: Date): Promise<void> {
   const day = dateInSaoPaulo(now);
   const source = await accessSource(userId, now);
   const limit = aiDailyLimit(source);
-  const used = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`ai:${userId}:${day}`}))`);
     const [current] = await tx
       .select({ used: aiDailyUsageTable.used })
       .from(aiDailyUsageTable)
       .where(and(eq(aiDailyUsageTable.userId, userId), eq(aiDailyUsageTable.quotaDay, day)))
       .limit(1);
-    if ((current?.used ?? 0) >= limit) throw new AiQuotaExceededError();
-    const [updated] = await tx
+    if ((current?.used ?? 0) >= limit) {
+      throw new AiQuotaExceededError(undefined, [{ field: "quota", issue: "daily_questions" }]);
+    }
+    await tx
       .insert(aiDailyUsageTable)
       .values({ userId, quotaDay: day, used: 1 })
       .onConflictDoUpdate({
         target: [aiDailyUsageTable.userId, aiDailyUsageTable.quotaDay],
         set: { used: sql`${aiDailyUsageTable.used} + 1`, updatedAt: now },
-      })
-      .returning({ used: aiDailyUsageTable.used });
-    return updated!.used;
+      });
   });
-  return { used, limit, resetsAt: aiQuotaResetsAt(now) };
 }
 
 export async function getAskStatus(userId: string, tenderId: string, trigger: boolean, now = new Date()): Promise<AskStatus> {
@@ -153,7 +136,7 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
     index,
     documents,
     unreadDocuments,
-    quota: await quotaFor(userId, now),
+    quota: await tenderQuotaFor(userId, tenderId, now),
   };
 }
 
@@ -202,7 +185,7 @@ export async function askTender(
       passages: [],
       summary: null,
       model: config.model,
-      quota: await quotaFor(userId, now),
+      quota: await tenderQuotaFor(userId, tenderId, now),
     };
   const [index] = await db
     .select({ version: tenderAiIndexesTable.version })
@@ -215,8 +198,10 @@ export async function askTender(
       passages: [],
       summary: null,
       model: config.model,
-      quota: await quotaFor(userId, now),
+      quota: await tenderQuotaFor(userId, tenderId, now),
     };
+  // The process has readable documents: from here on it counts (once a day) against the user's quota.
+  const tenderQuota = await reserveTenderConsultation(userId, tenderId, now);
   const normalizedQuestion = normalizeQuestion(question);
   const sharedIdentity = sharedAnswerIdentity({
     tenderId,
@@ -262,7 +247,7 @@ export async function askTender(
         summary: answer.summary, responseModel: answer.model, updatedAt: new Date(),
       },
     });
-    return { ...answer, quota: await quotaFor(userId, now) };
+    return { ...answer, quota: tenderQuota };
   };
   const shared = await readSharedAnswer(sharedIdentity)
     ?? (config.threshold === 0.5 && config.relativeThresholdDelta === 0.25 && config.shortlistSize === 10
@@ -275,7 +260,7 @@ export async function askTender(
     const completed = await waitForSharedAnswer(sharedIdentity);
     if (completed) return fromShared(completed);
     return { status: "processing", passages: [], summary: null, model: config.model,
-      quota: await quotaFor(userId, now) };
+      quota: tenderQuota };
   }
   let requestId: string | null = null;
   try {
@@ -312,7 +297,7 @@ export async function askTender(
         });
       }
       await finishSharedAnswer(sharedIdentity, claimToken, answer);
-      return { ...answer, quota: await quotaFor(userId, now) };
+      return { ...answer, quota: tenderQuota };
     }
     if (!config.apiKey) throw new AiUnavailableError();
     const candidates = await shortlist(tenderId, index.version, question);
@@ -321,7 +306,7 @@ export async function askTender(
       await finishSharedAnswer(sharedIdentity, claimToken, answer);
       return fromShared(answer);
     }
-    const quota = await reserveQuota(userId, now);
+    await reserveQuestion(userId, now);
     requestId = cached?.id ?? randomUUID();
     await db
     .insert(aiAskRequestsTable)
@@ -400,7 +385,7 @@ export async function askTender(
       passages,
       summary: summaryAttempt.summary,
       model: responseModel,
-      quota,
+      quota: tenderQuota,
     };
   } catch (error) {
     await releaseSharedAnswer(sharedIdentity, claimToken);

@@ -28,7 +28,10 @@ export const aiConfig = () => ({
   timeoutMs: positiveInteger("JEV_TIMEOUT_MS", 15_000),
   threshold: probability("JEV_RELEVANCE_THRESHOLD", 0.5),
   relativeThresholdDelta: probability("JEV_RELATIVE_RELEVANCE_DELTA", 0.25),
-  trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 5),
+  /** Processes with readable documents a user may consult with AI per São Paulo day (trial and paid). */
+  tenderDailyLimit: positiveInteger("AI_DAILY_TENDER_LIMIT", 5),
+  /** Safety cap on new (uncached) questions per day, on top of the process cap. */
+  trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 30),
   paidDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_PAID", 30),
   fitDailyLimit: positiveInteger("AI_DAILY_FIT_LIMIT", 1_000),
   sheetDailyLimit: positiveInteger("AI_DAILY_SHEET_LIMIT", 500),
