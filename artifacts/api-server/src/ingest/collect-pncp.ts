@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import {
   db,
   ingestDaysTable,
@@ -34,6 +34,7 @@ const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 export const STALE_AFTER_MS = 10 * 60 * 1000;
 const MAX_WINDOW_DAYS = 366;
+const PNCP_SOURCE_REMOVED_MARK = { pncpRefresh: { sourceRemoved: true } };
 
 export class IngestInProgressError extends Error {
   constructor() {
@@ -60,6 +61,21 @@ type RunCounters = {
 };
 
 const compactDay = (isoDate: string): string => isoDate.replaceAll("-", "");
+const pncpSourceRemovedMarker = () =>
+  sql`${tendersTable.rawPayload}->'pncpRefresh'->>'sourceRemoved' is distinct from 'true'`;
+
+const markPncpSourceRemovedPayload = (removedAt: Date) =>
+  sql`jsonb_set(
+    ${tendersTable.rawPayload},
+    '{pncpRefresh}',
+    coalesce(${tendersTable.rawPayload}->'pncpRefresh', '{}'::jsonb) ||
+      ${JSON.stringify({
+        ...PNCP_SOURCE_REMOVED_MARK.pncpRefresh,
+        sourceRemovedAt: removedAt.toISOString(),
+        sourceRemovedStatus: 410,
+      })}::jsonb,
+    true
+  )`;
 
 const nonNegativeInt = (
   value: string | undefined,
@@ -423,6 +439,7 @@ async function refreshOpenTenders(
         eq(tendersTable.sourceId, SOURCE),
         inArray(tendersTable.status, ["open", "under_review", "suspended"]),
         lt(tendersTable.fetchedAt, startedAt),
+        pncpSourceRemovedMarker(),
       ),
     )
     .orderBy(asc(tendersTable.fetchedAt))
@@ -471,8 +488,7 @@ async function refreshOpenTenders(
         await db
           .update(tendersTable)
           .set({
-            status: "cancelled",
-            fetchedAt: now,
+            rawPayload: markPncpSourceRemovedPayload(now),
             updatedAt: now,
           })
           .where(eq(tendersTable.id, row.id));
