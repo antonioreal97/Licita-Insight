@@ -28,6 +28,7 @@ import {
   summarizeCoverage,
   type IngestDay,
 } from "./ingest-calendar";
+import { classifyPncpRefreshFailure } from "./pncp-refresh-failure";
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -465,6 +466,22 @@ async function refreshOpenTenders(
       await enrichTenderById(row.id);
       counters.refreshed += 1;
     } catch (error) {
+      if (classifyPncpRefreshFailure(error) === "source_removed") {
+        const now = new Date();
+        await db
+          .update(tendersTable)
+          .set({
+            status: "cancelled",
+            fetchedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(tendersTable.id, row.id));
+        logger.warn(
+          { err: error, tenderId: row.id },
+          "PNCP compra was removed during refresh",
+        );
+        continue;
+      }
       counters.refreshErrors += 1;
       logger.error({ err: error, tenderId: row.id }, "PNCP refresh failed");
     }
