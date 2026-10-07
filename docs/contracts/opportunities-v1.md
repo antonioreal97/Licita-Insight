@@ -16,7 +16,8 @@ A coleta já restringe a lista a audiovisual. `program` só distingue o fundo qu
 
 As duas rotas de leitura exigem sessão e acesso vigente (teste, assinatura ou bypass de
 desenvolvimento). Sem sessão respondem `401 UNAUTHENTICATED`; sessão sem acesso responde
-`402 SUBSCRIPTION_REQUIRED`. A coleta e as rotas internas de ingestão permanecem inalteradas.
+`402 SUBSCRIPTION_REQUIRED`. A coleta agendada e o comando CLI permanecem inalterados; as
+rotas HTTP operacionais de ingestão exigem token próprio.
 
 ## `GET /api/v1/opportunities`
 
@@ -77,9 +78,17 @@ type OpportunitySummary = {
 
 ## `POST /api/v1/ingest/opportunities`
 
+Rota operacional protegida por `Authorization: Bearer <INGEST_API_TOKEN>`.
+`INGEST_API_TOKEN` precisa ter pelo menos 32 caracteres; sem segredo válido no
+ambiente, a rota responde `404 NOT_FOUND`. Com segredo configurado e token
+ausente ou incorreto, responde `401 UNAUTHENTICATED`.
+
 202 `{ runId, status: "running" }`. 409 `INGEST_IN_PROGRESS` se já houver coleta desta fonte.
 
 ## `GET /api/v1/ingest/opportunities`
+
+Mesma proteção de token de `POST /api/v1/ingest/opportunities`; a coleta
+agendada e o comando CLI `collect:opportunities` não passam por HTTP.
 
 ```ts
 {

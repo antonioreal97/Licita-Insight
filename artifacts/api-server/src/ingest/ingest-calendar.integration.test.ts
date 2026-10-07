@@ -23,6 +23,7 @@ test(
     process.env.PNCP_LOOKBACK_DAYS = "2";
     process.env.PNCP_MODALITIES = "6";
     process.env.PNCP_UF = "DF";
+    process.env.INGEST_API_TOKEN = "0123456789abcdef0123456789abcdef";
     delete process.env.PNCP_FROM;
     delete process.env.PNCP_TO;
 
@@ -194,6 +195,11 @@ test(
           assert.ok(address && typeof address !== "string");
           const result = await originalFetch(
             `http://127.0.0.1:${address.port}/api/v1/ingest/pncp`,
+            {
+              headers: {
+                authorization: `Bearer ${process.env.INGEST_API_TOKEN}`,
+              },
+            },
           );
           assert.equal(result.status, 200);
           const body = (await result.json()) as {
