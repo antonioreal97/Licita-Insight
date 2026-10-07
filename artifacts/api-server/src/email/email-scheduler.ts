@@ -9,6 +9,7 @@ import {
   runDailyEmailDigest,
   runImmediateEmailAlerts,
 } from "./email-service";
+import { resolveNotificationJobSchedule } from "./email-scheduler-plan";
 
 const TIME_ZONE = "America/Sao_Paulo";
 
@@ -31,7 +32,10 @@ const protectedJob = (operation: string, job: () => Promise<void>) => {
   let running = false;
   return async () => {
     if (running) {
-      logger.warn({ operation }, "Notification job skipped because the previous run is active");
+      logger.warn(
+        { operation },
+        "Notification job skipped because the previous run is active",
+      );
       return;
     }
     running = true;
@@ -50,22 +54,21 @@ export const runSavedSearchEvaluationJob = async (
 ): Promise<void> => evaluateSavedSearchNotifications(now);
 
 export function startEmailNotificationJobs(): () => void {
-  if (process.env.EMAIL_JOBS_ENABLED === "false") {
-    logger.info("Email notification jobs are disabled");
+  const schedule = resolveNotificationJobSchedule();
+  if (!schedule.databaseAvailable) {
+    logger.error("DATABASE_URL is not set; notification jobs will not start");
     return () => undefined;
   }
-  if (!process.env.DATABASE_URL) {
-    logger.error("DATABASE_URL is not set; email notification jobs will not start");
-    return () => undefined;
+  if (!schedule.emailDeliveryEnabled) {
+    logger.info(
+      "Email delivery jobs are disabled; in-app notification jobs remain enabled",
+    );
   }
 
   const digestHour = integerEnv("EMAIL_DIGEST_HOUR", 7, 0, 23);
-  const immediateWindowMinutes = integerEnv(
-    "EMAIL_IMMEDIATE_WINDOW_MINUTES",
-    10,
-    1,
-    60,
-  );
+  const immediateWindowMinutes = schedule.immediateEmail
+    ? integerEnv("EMAIL_IMMEDIATE_WINDOW_MINUTES", 10, 1, 60)
+    : 10;
   const savedSearchIntervalMinutes = integerEnv(
     "SAVED_SEARCH_JOB_INTERVAL_MINUTES",
     15,
@@ -90,28 +93,50 @@ export function startEmailNotificationJobs(): () => void {
       startedAt,
     );
   });
+  const runProfileAlerts = async (operation: string, startedAt: number) => {
+    await evaluateProfileAlertNotifications();
+    logger.info(
+      { operation, durationMs: Date.now() - startedAt },
+      "Profile alert notification job completed",
+    );
+  };
   const runSavedSearches = protectedJob("saved_search_evaluation", async () => {
     const startedAt = Date.now();
     await runSavedSearchEvaluationJob();
     logger.info(
-      { operation: "saved_search_evaluation", durationMs: Date.now() - startedAt },
+      {
+        operation: "saved_search_evaluation",
+        durationMs: Date.now() - startedAt,
+      },
       "Saved search notification job completed",
     );
   });
-  const runDigest = protectedJob("email_digest", async () => {
-    const startedAt = Date.now();
-    await evaluateProfileAlertNotifications();
-    const result = await runDailyEmailDigest();
-    logEmailJobResult("email_digest", result, startedAt);
-  });
+  const runDaily = protectedJob(
+    schedule.emailDigest ? "email_digest" : "profile_alert_evaluation",
+    async () => {
+      const startedAt = Date.now();
+      await runProfileAlerts(
+        schedule.emailDigest ? "email_digest" : "profile_alert_evaluation",
+        startedAt,
+      );
+      if (!schedule.emailDigest) return;
+      const result = await runDailyEmailDigest();
+      logEmailJobResult("email_digest", result, startedAt);
+    },
+  );
 
-  const immediateTimer = setInterval(() => void runImmediate(), 60_000);
-  immediateTimer.unref();
+  const timers: NodeJS.Timeout[] = [];
+  if (schedule.immediateEmail) {
+    const immediateTimer = setInterval(() => void runImmediate(), 60_000);
+    immediateTimer.unref();
+    timers.push(immediateTimer);
+  }
   const savedSearchTimer = setInterval(
     () => void runSavedSearches(),
     savedSearchIntervalMinutes * 60_000,
   );
   savedSearchTimer.unref();
+  timers.push(savedSearchTimer);
 
   let digestTimer: NodeJS.Timeout | undefined;
   let stopped = false;
@@ -120,21 +145,22 @@ export function startEmailNotificationJobs(): () => void {
     const delay = millisecondsUntilSaoPauloHour(digestHour);
     logger.info(
       { hour: digestHour, timeZone: TIME_ZONE, delayMs: delay },
-      "Next email digest scheduled",
+      schedule.emailDigest
+        ? "Next email digest scheduled"
+        : "Next profile alert evaluation scheduled",
     );
     digestTimer = setTimeout(() => {
-      void runDigest().finally(armDigest);
+      void runDaily().finally(armDigest);
     }, delay);
     digestTimer.unref();
   };
 
-  void runImmediate();
+  if (schedule.immediateEmail) void runImmediate();
   void runSavedSearches();
   armDigest();
   return () => {
     stopped = true;
-    clearInterval(immediateTimer);
-    clearInterval(savedSearchTimer);
+    for (const timer of timers) clearInterval(timer);
     if (digestTimer) clearTimeout(digestTimer);
   };
 }

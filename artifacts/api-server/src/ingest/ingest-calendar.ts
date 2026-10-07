@@ -41,6 +41,20 @@ export function planDay(
   const partitions = rows.filter(
     (row) => row.day === day && row.modality === modality,
   );
+  const pendingScopes = partitions
+    .filter((row) => row.status === "pending")
+    .map((row) => row.uf);
+  if (pendingScopes.length > 0) {
+    if (options.uf) {
+      return pendingScopes.includes("all") || pendingScopes.includes(options.uf)
+        ? [options.uf]
+        : [];
+    }
+    if (pendingScopes.includes("all")) return ["all"];
+    if (partitions.some((row) => row.uf === "all" && isSealed(row, today))) {
+      return [...new Set(pendingScopes)].filter((uf) => uf !== "all");
+    }
+  }
   if (partitions.some((row) => row.uf === "all" && isSealed(row, today)))
     return [];
   const sealedUfs = new Set(

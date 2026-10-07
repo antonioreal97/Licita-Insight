@@ -97,8 +97,9 @@ preferências, snapshots e a fila auditável de entregas de e-mail.
   `EMAIL_IMMEDIATE_WINDOW_MINUTES` para ajustar a janela.
 - A avaliação de buscas salvas roda no boot e a cada 15 minutos; use
   `SAVED_SEARCH_JOB_INTERVAL_MINUTES` para alterar o intervalo.
-- `EMAIL_JOBS_ENABLED=false` desliga os jobs de e-mail e de buscas salvas. A geração de notificações
-  de edital durante upserts e o scheduler separado de `trial_ending` continuam ativos.
+- `EMAIL_JOBS_ENABLED=false` desliga só envio imediato, digest e retries de e-mail. A avaliação de
+  buscas salvas e os alertas de perfil continuam ativos quando há `DATABASE_URL`, gerando
+  notificações no app.
 - Sem `RESEND_API_KEY` ou `MAIL_FROM`, as entregas são persistidas como `skipped` e a API segue no
   ar. `MAIL_REPLY_TO` é opcional.
 - `EMAIL_UNSUBSCRIBE_SECRET` aceita um segredo dedicado de no mínimo 32 caracteres. Mantenha-o
