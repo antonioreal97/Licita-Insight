@@ -73,6 +73,28 @@ describe("PNCP coverage calendar", () => {
     );
   });
 
+  it("retries pending UF partitions even when national coverage is already sealed", () => {
+    const rows = [
+      row({ uf: "all" }),
+      row({
+        uf: "DF",
+        status: "pending",
+        startedAt: new Date("2026-09-23T10:00:00Z"),
+        completedAt: null,
+      }),
+      row({
+        uf: "RJ",
+        status: "pending",
+        startedAt: new Date("2026-09-23T10:00:00Z"),
+        completedAt: null,
+      }),
+    ];
+
+    assert.deepEqual(planDay(rows, day, 6, today), ["DF", "RJ"]);
+    assert.deepEqual(planDay(rows, day, 6, today, { uf: "DF" }), ["DF"]);
+    assert.deepEqual(planDay(rows, day, 6, today, { uf: "SP" }), []);
+  });
+
   it("revisits every UF collected before midnight, even if all were complete", () => {
     const rows = PNCP_UFS.map((uf) =>
       row({ uf, startedAt: new Date("2026-09-21T20:00:00Z") }),

@@ -27,6 +27,9 @@ A tentativa é marcada `pending` antes da primeira página e só fica `complete`
 após todas as páginas e gravações terminarem. Uma falha mantém a partição
 pendente, com seus contadores parciais; a próxima execução reinicia na página 1.
 O upsert por número de controle evita duplicar os editais.
+Partições `pending` explícitas dentro da janela configurada são retomadas mesmo
+quando existe uma partição nacional `all` já selada para o mesmo dia/modalidade;
+isso cobre tentativas antigas interrompidas depois de uma divisão por UF.
 
 Se a consulta nacional expirar, o coletor reparte o dia/modalidade por UF.
 Cada UF tem sua própria conclusão. A próxima execução pede apenas as UFs que
