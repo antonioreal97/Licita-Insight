@@ -523,12 +523,23 @@ export interface TenderAskDocument {
   status: TenderAskDocumentStatus;
 }
 
+/**
+ * Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.
+ */
 export interface AiQuota {
-  /** @minimum 0 */
+  /**
+     * Processes consulted today
+     * @minimum 0
+     */
   used: number;
-  /** @minimum 1 */
+  /**
+     * Processes allowed per day
+     * @minimum 1
+     */
   limit: number;
   resetsAt: string;
+  /** This tender is already among today's processes */
+  counted: boolean;
 }
 
 export interface TenderAskStatus {
@@ -975,12 +986,148 @@ export type TenderDetail = TenderSummary & ({
   detailsFetchedAt: string | null;
 });
 
+/**
+ * Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.
+ * @nullable
+ */
+export type TransparencySupplier = {
+  /** @nullable */
+  type: string | null;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  identifier: string | null;
+} | null;
+
+export interface TransparencyProvenance {
+  source: 'PNCP';
+  fetchedAt: string;
+}
+
+export type TransparencyMetaValueSemantics = {
+  contractValues: string;
+  resultValues: string;
+  paymentValues: string;
+};
+
+export interface TransparencyMeta {
+  coverage: string;
+  /** @nullable */
+  indexUpdatedAt?: string | null;
+  valueSemantics: TransparencyMetaValueSemantics;
+}
+
+export type TransparencyContractLocation = {
+  /** @nullable */
+  state: string | null;
+  /** @nullable */
+  city: string | null;
+};
+
+export type TransparencyContractValues = {
+  /** @nullable */
+  initial: number | null;
+  /** @nullable */
+  global: number | null;
+  /** @nullable */
+  accumulated: number | null;
+  /** @nullable */
+  installment: number | null;
+};
+
+export type TransparencyContractDates = {
+  /** @nullable */
+  signature: string | null;
+  /** @nullable */
+  validFrom: string | null;
+  /** @nullable */
+  validTo: string | null;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  updatedAt: string | null;
+};
+
+export interface TransparencyContract {
+  id: string;
+  pncpControlNumber: string;
+  purchasePncpControlNumber: string;
+  /** @nullable */
+  tenderId: string | null;
+  /** @nullable */
+  contractNumber: string | null;
+  organizationName: string;
+  location: TransparencyContractLocation;
+  supplier: TransparencySupplier | null;
+  /** @nullable */
+  object: string | null;
+  values: TransparencyContractValues;
+  dates: TransparencyContractDates;
+  /** @nullable */
+  officialUrl: string | null;
+  provenance: TransparencyProvenance;
+}
+
+export type TransparencyResultStatus = {
+  id: number;
+  name: string;
+  active: boolean;
+  /** @nullable */
+  cancelledAt: string | null;
+  /** @nullable */
+  cancelReason: string | null;
+};
+
+export type TransparencyResultValues = {
+  /** @nullable */
+  quantityHomologated: number | null;
+  /** @nullable */
+  unitValueHomologated: number | null;
+  /** @nullable */
+  totalValueHomologated: number | null;
+  /** @nullable */
+  discountPercent: number | null;
+};
+
+export interface TransparencyResult {
+  id: string;
+  purchasePncpControlNumber: string;
+  /** @nullable */
+  tenderId: string | null;
+  itemNumber: number;
+  resultSequence: number;
+  status: TransparencyResultStatus;
+  supplier: TransparencySupplier | null;
+  values: TransparencyResultValues;
+  /** @nullable */
+  resultDate: string | null;
+  /** @nullable */
+  officialUrl: string | null;
+  provenance: TransparencyProvenance;
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
   totalIsEstimate: boolean;
+}
+
+export interface TransparencyContractsResponse {
+  data: TransparencyContract[];
+  pagination: Pagination;
+  meta: TransparencyMeta;
+}
+
+export interface TransparencyTenderContractsResponse {
+  data: TransparencyContract[];
+  meta: TransparencyMeta;
+}
+
+export interface TransparencyTenderResultsResponse {
+  data: TransparencyResult[];
+  meta: TransparencyMeta;
 }
 
 export type ParticipationChecklistPatchKey = typeof ParticipationChecklistPatchKey[keyof typeof ParticipationChecklistPatchKey];
@@ -1469,7 +1616,7 @@ export type BillingUnavailableResponse = ErrorResponse;
 export type SubscriptionRequiredResponse = ErrorResponse;
 
 /**
- * Daily AI question quota exhausted
+ * Daily AI quota exhausted: details[0].issue is daily_tenders (processes) or daily_questions (safety cap on new questions)
  */
 export type AiQuotaExceededResponse = ErrorResponse;
 
@@ -1606,6 +1753,48 @@ page?: PageParameter;
 pageSize?: PageSizeParameter;
 facets?: FacetsParameter;
 };
+
+export type SearchTransparencyContractsParams = {
+/**
+ * @maxLength 160
+ */
+q?: string;
+/**
+ * @minLength 2
+ * @maxLength 2
+ */
+state?: string;
+publishedFrom?: string;
+publishedTo?: string;
+/**
+ * @minimum 0
+ */
+valueMin?: number;
+/**
+ * @minimum 0
+ */
+valueMax?: number;
+sort?: SearchTransparencyContractsSort;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+pageSize?: number;
+};
+
+export type SearchTransparencyContractsSort = typeof SearchTransparencyContractsSort[keyof typeof SearchTransparencyContractsSort];
+
+
+export const SearchTransparencyContractsSort = {
+  published_desc: 'published_desc',
+  published_asc: 'published_asc',
+  value_desc: 'value_desc',
+  value_asc: 'value_asc',
+} as const;
 
 export type GetTenderFitsParams = {
 /**

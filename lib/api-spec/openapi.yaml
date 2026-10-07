@@ -1288,7 +1288,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     AiQuotaExceeded:
-      description: Daily AI question quota exhausted
+      description: "Daily AI quota exhausted: details[0].issue is daily_tenders (processes) or daily_questions (safety cap on new questions)"
       content:
         application/json:
           schema:
@@ -1708,11 +1708,13 @@ components:
       required: [id, title, pages, status]
     AiQuota:
       type: object
+      description: Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.
       properties:
-        used: { type: integer, minimum: 0 }
-        limit: { type: integer, minimum: 1 }
+        used: { type: integer, minimum: 0, description: Processes consulted today }
+        limit: { type: integer, minimum: 1, description: Processes allowed per day }
         resetsAt: { type: string, format: date-time }
-      required: [used, limit, resetsAt]
+        counted: { type: boolean, description: This tender is already among today's processes, so consulting it again spends nothing }
+      required: [used, limit, resetsAt, counted]
     TenderAskStatus:
       type: object
       properties:

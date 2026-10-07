@@ -10,10 +10,11 @@ import { IncludedInAccessHint } from '@/features/opportunities/components/access
 import { ASK_MAX_LENGTH, ASK_MIN_LENGTH } from '@/services/ai-service';
 import { cn } from '@/lib/utils';
 import { useAskStatus, useAskTender } from '../hooks/use-ask-tender';
+import { processes, QUOTA_RESET, tendersExhaustedMessage } from '../lib/ai-quota';
 import { markQuestionTerms, questionStems } from '../lib/question-terms';
 import { AutomaticSummary } from './automatic-summary';
 
-/** Fill the field, never submit: each question spends quota (5 a day on the trial). */
+/** Fill the field, never submit: the first question spends 1 of the day's processes. */
 const SUGGESTIONS = [
   'Pode participar em consórcio?',
   'Exige visita técnica?',
@@ -36,16 +37,19 @@ const linkClass = 'font-semibold text-primary underline-offset-4 hover:underline
 
 const withRef = (message: string, error: unknown) => (isApiError(error) && error.requestId ? `${message} (ref. ${error.requestId})` : message);
 
-function quotaLabel({ used, limit }: TenderAskStatus['quota']) {
+/** The quota counts processes, not questions: one already counted today is free to ask about again. */
+function quotaLabel({ used, limit, counted }: TenderAskStatus['quota']) {
   const left = Math.max(0, limit - used);
-  return `${left} de ${limit} ${limit === 1 ? 'pergunta' : 'perguntas'} hoje`;
+  return counted
+    ? `Este processo já entrou na sua cota de hoje: pergunte sem gastar mais. Restam ${processes(left)} de ${limit}.`
+    : `A primeira pergunta usa 1 dos ${processes(left)} que restam hoje (de ${limit}).`;
 }
 
 function askErrorMessage(error: unknown, limit: number | undefined) {
   if (!isApiError(error)) return 'Não foi possível consultar o edital. Tente de novo.';
   switch (error.code) {
     case 'AI_QUOTA_EXCEEDED':
-      return `Você usou ${limit ? `as ${limit} perguntas` : 'todas as perguntas'} de hoje. A cota renova à meia-noite (horário de Brasília).`;
+      return error.detail('daily_questions') ? `Você chegou ao limite de perguntas novas de hoje. ${QUOTA_RESET}` : tendersExhaustedMessage(limit);
     case 'AI_UNAVAILABLE':
       return 'A consulta ao edital está indisponível agora. Os documentos continuam na lista ao lado.';
     case 'SUBSCRIPTION_REQUIRED':
@@ -196,7 +200,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
   const inputRef = useRef<HTMLInputElement>(null);
   const hintId = useId();
 
-  const exhausted = status.quota.used >= status.quota.limit;
+  const exhausted = !status.quota.counted && status.quota.used >= status.quota.limit;
   const question = draft.trim();
   const tooShort = question.length < ASK_MIN_LENGTH;
   const pending = history.some((entry) => entry.state === 'pending');
@@ -242,9 +246,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
         </Button>
       </form>
       <p id={hintId} className="mt-2 type-meta text-muted-foreground" data-testid="text-ask-quota">
-        {exhausted
-          ? 'Você usou todas as perguntas de hoje. A cota renova à meia-noite (horário de Brasília).'
-          : `${quotaLabel(status.quota)}. Repetir uma pergunta já feita não gasta cota.`}
+        {exhausted ? tendersExhaustedMessage(status.quota.limit) : quotaLabel(status.quota)}
       </p>
 
       {status.unreadDocuments > 0 && (

@@ -26,6 +26,7 @@ import {
 import { completedIndexStatus } from "./policy";
 import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
+import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
 
 export type IndexStatus =
   | "not_started"
@@ -531,12 +532,23 @@ export async function ensureTenderIndex(
   options: { userId?: string; lane?: "interactive" | "batch" } = {},
 ): Promise<IndexStatus> {
   const [tender] = await db
-    .select({ documents: tendersTable.documents })
+    .select({
+      documents: tendersTable.documents,
+      sourceId: tendersTable.sourceId,
+      detailsFetchedAt: tendersTable.detailsFetchedAt,
+    })
     .from(tendersTable)
     .where(eq(tendersTable.id, tenderId))
     .limit(1);
   if (!tender) throw new NotFoundError("Tender was not found");
   const documents = tender.documents;
+  // A PNCP tender only gets its files once the detail enrichment runs (opening the detail page schedules it, in
+  // parallel with this call). Until then an empty list means "not fetched yet", not "no documents": indexing it
+  // would store no_documents for a tender that has files a moment later.
+  if (documents.length === 0 && tender.sourceId === "pncp" && tender.detailsFetchedAt === null) {
+    if (trigger) scheduleTenderDetailEnrichment(tenderId);
+    return trigger ? "processing" : "not_started";
+  }
   const currentFingerprint = fingerprint(documents);
   const [existing] = await db
     .select()

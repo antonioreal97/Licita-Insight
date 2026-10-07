@@ -17,6 +17,7 @@ import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { ensureTenderIndex } from "./ask-tender-service";
 import { aiConfig, openAiConfig } from "./config";
+import { reserveTenderConsultation } from "./tender-quota";
 import {
   classifyQualificationCandidate,
   classifySheetField,
@@ -594,7 +595,10 @@ export async function getTenderSheet(
     const [cachedSheet] = await db.select().from(tenderAiSheetsTable)
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
       .limit(1);
-    if (cachedSheet) return readySheetResponse(cachedSheet, summaryConfig);
+    if (cachedSheet) {
+      if (userId) await reserveTenderConsultation(userId, tenderId, now);
+      return readySheetResponse(cachedSheet, summaryConfig);
+    }
   }
   if (indexStatus !== "ready")
     return EMPTY_RESPONSE(indexStatus, unreadDocuments);
@@ -606,6 +610,8 @@ export async function getTenderSheet(
     .where(eq(tenderAiIndexesTable.tenderId, tenderId))
     .limit(1);
   if (!index) return EMPTY_RESPONSE("not_started", unreadDocuments);
+  // The process has readable documents: opening its sheet counts (once a day) against the user's quota.
+  if (userId) await reserveTenderConsultation(userId, tenderId, now);
   const cacheKey = sheetCacheKey(tenderId, index.version, config.model);
   const cacheWhere = and(
     eq(tenderAiSheetsTable.tenderId, tenderId),

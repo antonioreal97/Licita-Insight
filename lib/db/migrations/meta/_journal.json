@@ -183,6 +183,13 @@
       "when": 1791140400000,
       "tag": "0025_transparency",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791331200000,
+      "tag": "0026_ai_daily_tenders",
+      "breakpoints": true
     }
   ]
 }

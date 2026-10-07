@@ -67,6 +67,7 @@ import type {
   SearchOpportunitiesParams,
   SearchResponse,
   SearchTendersParams,
+  SearchTransparencyContractsParams,
   SearchUnavailableResponse,
   StartGoogleAuthParams,
   SubscriptionRequiredResponse,
@@ -75,6 +76,9 @@ import type {
   TenderDetail,
   TenderFitsResponse,
   TenderSheet,
+  TransparencyContractsResponse,
+  TransparencyTenderContractsResponse,
+  TransparencyTenderResultsResponse,
   UnauthenticatedResponse,
   UnreadNotificationCount,
   UpdateNotificationPreferencesRequest,
@@ -419,6 +423,244 @@ export function useGetTenderById<TData = Awaited<ReturnType<typeof getTenderById
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTenderByIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchTransparencyContractsUrl = (params?: SearchTransparencyContractsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/transparency/contracts?${stringifiedParams}` : `/api/v1/transparency/contracts`
+}
+
+/**
+ * @summary Search PNCP contracts in collected publication and update windows
+ */
+export const searchTransparencyContracts = async (params?: SearchTransparencyContractsParams, options?: Parameters<typeof customFetch>[1]): Promise<TransparencyContractsResponse> => {
+
+  return customFetch<TransparencyContractsResponse>(getSearchTransparencyContractsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchTransparencyContractsQueryKey = (params?: SearchTransparencyContractsParams,) => {
+    return [
+    `/api/v1/transparency/contracts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchTransparencyContractsQueryOptions = <TData = Awaited<ReturnType<typeof searchTransparencyContracts>>, TError = ErrorType<InvalidParameterResponse | SearchUnavailableResponse>>(params?: SearchTransparencyContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchTransparencyContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchTransparencyContractsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchTransparencyContracts>>> = ({ signal }) => searchTransparencyContracts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchTransparencyContracts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchTransparencyContractsQueryResult = NonNullable<Awaited<ReturnType<typeof searchTransparencyContracts>>>
+export type SearchTransparencyContractsQueryError = ErrorType<InvalidParameterResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Search PNCP contracts in collected publication and update windows
+ */
+
+export function useSearchTransparencyContracts<TData = Awaited<ReturnType<typeof searchTransparencyContracts>>, TError = ErrorType<InvalidParameterResponse | SearchUnavailableResponse>>(
+ params?: SearchTransparencyContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchTransparencyContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchTransparencyContractsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderTransparencyContractsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/transparency/contracts`
+}
+
+/**
+ * @summary Get PNCP contracts linked to a tender
+ */
+export const getTenderTransparencyContracts = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TransparencyTenderContractsResponse> => {
+
+  return customFetch<TransparencyTenderContractsResponse>(getGetTenderTransparencyContractsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderTransparencyContractsQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/transparency/contracts`
+    ] as const;
+    }
+
+
+export const getGetTenderTransparencyContractsQueryOptions = <TData = Awaited<ReturnType<typeof getTenderTransparencyContracts>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderTransparencyContractsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderTransparencyContracts>>> = ({ signal }) => getTenderTransparencyContracts(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyContracts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderTransparencyContractsQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderTransparencyContracts>>>
+export type GetTenderTransparencyContractsQueryError = ErrorType<NotFoundResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Get PNCP contracts linked to a tender
+ */
+
+export function useGetTenderTransparencyContracts<TData = Awaited<ReturnType<typeof getTenderTransparencyContracts>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderTransparencyContractsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderTransparencyResultsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/transparency/results`
+}
+
+/**
+ * @summary Get PNCP item results linked to a tender
+ */
+export const getTenderTransparencyResults = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TransparencyTenderResultsResponse> => {
+
+  return customFetch<TransparencyTenderResultsResponse>(getGetTenderTransparencyResultsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderTransparencyResultsQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/transparency/results`
+    ] as const;
+    }
+
+
+export const getGetTenderTransparencyResultsQueryOptions = <TData = Awaited<ReturnType<typeof getTenderTransparencyResults>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderTransparencyResultsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderTransparencyResults>>> = ({ signal }) => getTenderTransparencyResults(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyResults>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderTransparencyResultsQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderTransparencyResults>>>
+export type GetTenderTransparencyResultsQueryError = ErrorType<NotFoundResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Get PNCP item results linked to a tender
+ */
+
+export function useGetTenderTransparencyResults<TData = Awaited<ReturnType<typeof getTenderTransparencyResults>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderTransparencyResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderTransparencyResultsQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
