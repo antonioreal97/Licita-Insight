@@ -5,6 +5,8 @@
           com um prompt curto apontando para o arquivo do alerta.
   deploy  (timer, 10 min): git fetch da branch ops/macbook-worker; havendo commits novos, aciona o Albert-CLAUDE
           para puxar e aplicar (seção "Atualização da branch" do ALBERT.md).
+  delegate envia uma tarefa ao Albert-CLAUDE ou, se ele estiver sem cota do Claude, ao Codex do servidor
+          (codex exec numa unit systemd, sem terminal) via handoff; o check devolve ao Albert para validar.
   digest  (timer, diário): publica o relatório diário na issue de monitoramento, sem LLM.
   status  imprime as métricas atuais em JSON.
 
@@ -14,6 +16,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -250,20 +253,136 @@ def albert_terminal():
     return pick
 
 
-def wake_albert(alert_path, alerts):
-    handle = albert_terminal()
+# Repasse ao Codex quando o Albert-CLAUDE fica sem cota do Claude (janela de 5 h).
+# Handoff: ~/licita-monitor/handoff/<data>.md com a tarefa, o que já foi feito e "## O que falta". O Codex trabalha
+# só no "O que falta", escreve "## Resultado do Codex" e o monitor devolve ao Albert-CLAUDE para validar.
+HANDOFF = BASE / "handoff"
+LIMIT_FLAG = STATE / "albert-limited.json"
+LIMIT_PATTERNS = re.compile(
+    r"usage limit|session limit|5-hour limit|weekly limit|limit reached|limit will reset|"
+    r"resets? (at|in) \d|approaching .{0,40}limit|limite de uso",
+    re.IGNORECASE,
+)
+
+
+def send_to_albert(handle, prompt):
+    p = run([CFG["ORCA_CLI"], "terminal", "send", "--terminal", handle, "--text", prompt, "--enter", "--json"], timeout=60)
+    return p.returncode == 0, (p.stdout + p.stderr)[-300:]
+
+
+def albert_limited(handle):
+    """True enquanto o Albert-CLAUDE estiver sem cota: sinal gravado por ele ou aviso de limite na tela."""
+    now = dt.datetime.now().timestamp()
+    if LIMIT_FLAG.exists():
+        try:
+            if json.loads(LIMIT_FLAG.read_text()).get("until", 0) > now:
+                return True
+        except ValueError:
+            pass
     if not handle:
-        return False, "terminal do Albert-CLAUDE não encontrado"
+        return False
+    p = run([CFG["ORCA_CLI"], "terminal", "read", "--terminal", handle, "--screen", "--json"], timeout=30)
+    try:
+        tail = "\n".join(json.loads(p.stdout)["result"]["terminal"]["tail"][-40:])
+    except (ValueError, KeyError):
+        return False
+    match = LIMIT_PATTERNS.search(tail)
+    if match:
+        LIMIT_FLAG.write_text(json.dumps({"until": now + 3600, "reason": f"tela: {match.group(0)}"}))
+        return True
+    return False
+
+
+def codex_running():
+    p = run(["systemctl", "--user", "list-units", "licita-codex-*", "--state=active", "--no-legend"])
+    return bool(p.stdout.strip())
+
+
+def new_handoff(task):
+    """Handoff para uma tarefa que o Albert-CLAUDE nem começou: o que falta é a tarefa inteira."""
+    HANDOFF.mkdir(parents=True, exist_ok=True)
+    path = HANDOFF / f"{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}.md"
+    path.write_text(f"# Handoff do monitor\n\n## Tarefa\n{task}\n\n## O que já foi feito\nNada (o Albert-CLAUDE "
+                    f"estava sem cota quando a tarefa chegou).\n\n## O que falta\nA tarefa inteira acima.\n")
+    return path
+
+
+def run_codex(handoff):
+    """Executa o Codex sem terminal (unit systemd transitória) só no "O que falta" do handoff."""
+    stamp = handoff.stem
+    out, log = REPORTS / f"codex-{stamp}.md", REPORTS / f"codex-{stamp}.log"
+    prompt = (
+        "Você é o Codex do servidor do Abriu lá e está substituindo o Albert-CLAUDE, que ficou sem cota de uso do "
+        f"Claude. Contexto: leia ~/licita-monitor/ALBERT.md (runbook e limites, valem para você), {handoff} e "
+        f"memory-bank/activeContext.md no clone {CFG['REPO_DIR']}. Trabalhe SOMENTE no que está em '## O que falta' "
+        "do handoff; não refaça o que já foi feito nem comece tarefas novas. Ao terminar, acrescente ao handoff a "
+        "seção '## Resultado do Codex' (o que fez, comandos e verificações, o que não conseguiu) e comente um resumo "
+        "na issue de monitoramento com o título começando por 'via Codex — aguardando validação do Albert-CLAUDE'. "
+        "Commits seguem as regras do runbook (sem trailers de coautoria e sem citar agentes)."
+    )
+    script = (f'codex exec --dangerously-bypass-approvals-and-sandbox -C "{CFG["REPO_DIR"]}" '
+              f'-o "{out}" "$(cat "{handoff}.prompt")" > "{log}" 2>&1')
+    Path(f"{handoff}.prompt").write_text(prompt)
+    p = run(["systemd-run", "--user", f"--unit=licita-codex-{stamp}", "--collect", "bash", "-lc", script], timeout=30)
+    if p.returncode != 0:
+        return False, (p.stdout + p.stderr)[-300:]
+    Path(f"{handoff}.codex").write_text(json.dumps({"unit": f"licita-codex-{stamp}", "started": stamp}))
+    return True, f"Codex iniciado (licita-codex-{stamp}); handoff {handoff}"
+
+
+def delegate(task, handoff=None):
+    """Envia ao Albert-CLAUDE; sem cota, repassa ao Codex com handoff (ou enfileira se o Codex estiver ocupado)."""
+    handle = albert_terminal()
+    if not albert_limited(handle):
+        if not handle:
+            return False, "terminal do Albert-CLAUDE não encontrado"
+        ok, info = send_to_albert(handle, task)
+        return ok, "[via Albert-CLAUDE] " + info
+    handoff = Path(handoff) if handoff else new_handoff(task)
+    if codex_running():
+        Path(f"{handoff}.queued").touch()
+        return True, f"[fila] Codex ocupado; handoff {handoff} enfileirado"
+    ok, info = run_codex(handoff)
+    return ok, "[via Codex] " + info
+
+
+def handoffs_tick():
+    """Despacha handoffs enfileirados e devolve ao Albert-CLAUDE os concluídos pelo Codex quando a cota voltar."""
+    if not HANDOFF.exists():
+        return
+    busy = codex_running()
+    for queued in sorted(HANDOFF.glob("*.md.queued")):
+        if busy:
+            break
+        handoff = Path(str(queued)[: -len(".queued")])
+        queued.unlink()
+        busy = run_codex(handoff)[0]
+    pending = [Path(str(c)[: -len(".codex")]) for c in sorted(HANDOFF.glob("*.md.codex"))]
+    if busy or not pending:
+        return
+    handle = albert_terminal()
+    if not handle or albert_limited(handle):
+        return
+    for handoff in pending:
+        prompt = (f"[validação] O Codex trabalhou no handoff {handoff} enquanto você estava sem cota. Valide o "
+                  "'## Resultado do Codex' contra o '## O que falta' (confira os comandos e o estado real), corrija só "
+                  "o que estiver dentro do escopo do handoff, comente a validação na issue de monitoramento e mova o "
+                  f"handoff para {HANDOFF / 'done'}/.")
+        if send_to_albert(handle, prompt)[0]:
+            Path(f"{handoff}.codex").rename(f"{handoff}.validating")
+
+
+def wake_albert(alert_path, alerts):
     resumo = "; ".join(a["text"] for a in alerts)[:300]
     prompt = (f"[monitor] Anomalia no servidor: {resumo}. Siga ~/licita-monitor/ALBERT.md "
               f"para o alerta {alert_path} e publique o relatório.")
-    p = run([CFG["ORCA_CLI"], "terminal", "send", "--terminal", handle, "--text", prompt, "--enter", "--json"], timeout=60)
-    return p.returncode == 0, (p.stdout + p.stderr)[-300:]
+    return delegate(prompt)
 
 
 def cmd_check():
     for d in (STATE, ALERTS, REPORTS):
         d.mkdir(parents=True, exist_ok=True)
+    handoffs_tick()
     prev_path = STATE / "last-metrics.json"
     prev = json.loads(prev_path.read_text()) if prev_path.exists() else {}
     m = collect()
@@ -300,7 +419,7 @@ def cmd_check():
     if ok:
         wakes[today] = wakes.get(today, 0) + 1
         wakes_path.write_text(json.dumps({today: wakes[today]}))
-    print(("Albert acionado" if ok else f"falha ao acionar o Albert: {info}") + f" para {alert_path}")
+    print((info if ok else f"falha ao acionar o agente: {info}") + f" para {alert_path}")
 
 
 # ---------------------------------------------------------------- heartbeat de deploy
@@ -362,18 +481,14 @@ def cmd_deploy():
         "commits": commits, "files": files, "kinds": classify(files), "local_changes": dirty,
     }, indent=1, ensure_ascii=False))
 
-    handle = albert_terminal()
-    if not handle:
-        print(f"terminal do Albert-CLAUDE não encontrado; deploy pendente em {path}")
-        sys.exit(1)
     prompt = (f"[deploy] {len(commits)} commit(s) novo(s) em origin/{BRANCH} ({remote[:7]}). "
               f"Siga a seção 'Atualização da branch' de ~/licita-monitor/ALBERT.md com {path}.")
-    p = run([CFG["ORCA_CLI"], "terminal", "send", "--terminal", handle, "--text", prompt, "--enter", "--json"], timeout=60)
-    if p.returncode != 0:
-        print(f"falha ao acionar o Albert-CLAUDE: {(p.stdout + p.stderr)[-200:]}")
+    ok, info = delegate(prompt)
+    if not ok:
+        print(f"falha ao acionar o agente: {info}; deploy pendente em {path}")
         sys.exit(1)
     notified_path.write_text(json.dumps({"sha": remote, "at": now}))
-    print(f"Albert-CLAUDE acionado para {len(commits)} commit(s) ({remote[:7]}) em {path}")
+    print(f"{info} — {len(commits)} commit(s) ({remote[:7]}) em {path}")
 
 
 # ---------------------------------------------------------------- relatório diário
@@ -437,7 +552,20 @@ if __name__ == "__main__":
         cmd_digest()
     elif action == "deploy":
         cmd_deploy()
+    elif action == "delegate":
+        # delegate --handoff <arquivo.md>  (repasse do Albert-CLAUDE no meio de uma tarefa)
+        # delegate "<tarefa>"             (tarefa nova: Albert-CLAUDE, ou Codex se ele estiver sem cota)
+        args = sys.argv[2:]
+        if args[:1] == ["--handoff"] and len(args) == 2:
+            text = Path(args[1]).read_text()
+            ok, info = delegate(text, handoff=args[1])
+        elif args:
+            ok, info = delegate(" ".join(args))
+        else:
+            sys.exit(f"uso: {sys.argv[0]} delegate \"<tarefa>\" | delegate --handoff <arquivo.md>")
+        print(info)
+        sys.exit(0 if ok else 1)
     elif action == "status":
         print(json.dumps(collect(), default=str, indent=1, ensure_ascii=False))
     else:
-        sys.exit(f"uso: {sys.argv[0]} check|deploy|digest|status")
+        sys.exit(f"uso: {sys.argv[0]} check|deploy|delegate|digest|status")

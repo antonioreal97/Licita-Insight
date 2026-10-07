@@ -63,6 +63,34 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
    **Pendências:** <o que precisa do Orchestrator, ou "nenhuma">
    ```
 
+## Limite de uso do Claude e repasse ao Codex
+
+Sua cota do Claude reseta a cada 5 h. Se o Claude Code avisar que o limite está perto (ex.: "approaching usage
+limit", "resets at …") ou você perceber que não vai terminar a tarefa atual:
+
+1. Grave o handoff em `~/licita-monitor/handoff/<AAAAMMDD-HHMMSS>.md` com as seções `## Tarefa` (o pedido original,
+   literal), `## O que já foi feito` (comandos e resultados), `## O que falta` (passos concretos, só o que resta) e
+   `## Como verificar`. Inclua caminhos, hashes e o estado do servidor necessários para continuar sem você.
+2. Grave `~/licita-monitor/state/albert-limited.json` com `{"until": <epoch do reset>, "reason": "..."}`.
+3. Rode `python3 ~/licita-monitor/licita_monitor.py delegate --handoff <arquivo.md>` e encerre o turno.
+
+O monitor também repassa sozinho, com handoff próprio, os alertas e deploys que chegarem enquanto você estiver sem
+cota. O Codex trabalha **só** no "O que falta", acrescenta `## Resultado do Codex` ao handoff e comenta na issue
+"via Codex — aguardando validação do Albert-CLAUDE".
+
+## Validação de repasse (`[validação] ...`)
+
+Quando a cota voltar, o monitor envia `[validação]` com o handoff. Confira o "Resultado do Codex" contra o "O que
+falta" olhando o estado real (comandos, logs, banco, git), corrija só o que estiver no escopo do handoff, comente a
+validação na issue de monitoramento (ok / ajustado / reprovado) e mova o handoff e os arquivos `.prompt`/`.validating`
+para `~/licita-monitor/handoff/done/`.
+
+## Se você é o Codex
+
+Você foi acionado por `licita_monitor.py` porque o Albert-CLAUDE ficou sem cota. Este runbook vale integralmente para
+você (mesmos limites). Faça apenas o "O que falta" do handoff indicado, registre o resultado no próprio handoff e na
+issue, e não inicie outras tarefas: o Albert-CLAUDE valida depois.
+
 ## Limites
 
 - Fora da seção "Atualização da branch", **não altere nada** sem pedido explícito do Orchestrator ou do owner:

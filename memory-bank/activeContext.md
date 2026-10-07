@@ -51,6 +51,16 @@ Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira s
   correção de documentos; rebuild às 20:07, app no ar às 20:11. A tabela foi criada fora do histórico Drizzle
   (`__drizzle_migrations` segue com 24). Virou o PR #31, mergeado no `main` com o #30 em 06/10 e trazido para
   `ops/macbook-worker`; o servidor ainda roda a imagem de 20:07 (com #31, sem #30) até o próximo deploy.
+- Frontend publicado pela Vercel via GitHub (PR #32, 06/10): merge em `main` → produção; `vercel.json` e
+  `middleware.js` na raiz (sem mudar configurações do projeto); `ops/vercel/deploy.sh` é plano B; a Vercel usa pnpm 10
+  pelo lockfile (não fixar `packageManager` na raiz: o pnpm local/Docker é 11.5.0).
+- Painel de admin: Grafana em `ops/macbook/dashboard/` (compose `licita-dashboard`, 256 MB), só em
+  `127.0.0.1:8787` e `100.76.192.116:8787`; login `admin`, senhas em `~/licita-monitor/dashboard.env` (0600);
+  datasource com papel `licita_readonly` (sem escrita, 5 conexões). Se o Tailscale subir depois do Docker no boot,
+  o container não publica a porta — subir de novo o compose.
+- Repasse ao Codex: sem cota do Claude, o Albert-CLAUDE grava handoff em `~/licita-monitor/handoff/` e chama
+  `licita_monitor.py delegate --handoff`; o monitor roda `codex exec` numa unit `licita-codex-*` só no "O que
+  falta" e, quando a cota volta, manda `[validação]` ao Albert-CLAUDE.
 - Mac local: Docker da stack antiga parado (6 containers); túnel SSH `127.0.0.1:24252 → licita-worker` ativo
   (processo desanexado) para testar o app do servidor por `localhost`.
 
