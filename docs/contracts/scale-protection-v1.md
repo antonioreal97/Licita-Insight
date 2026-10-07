@@ -16,7 +16,7 @@ Cada requisição `/api` cai em exatamente um perfil de janela fixa, na ordem da
 |---|---|---:|---|
 | — (isento) | `GET /api/healthz`, `GET /api/readyz`, `POST /api/v1/billing/asaas/webhook`, caminhos fora de `/api` (app estático) | sem janela | — |
 | `auth` | `GET /v1/auth/google/start`, `GET /v1/auth/google/callback`, `POST /v1/auth/dev-login` | 20/min | IP |
-| `ingest` | `/v1/ingest/*` (continuam sem autenticação nesta etapa e não são confiáveis) | 3/min | IP |
+| `ingest` | `/v1/ingest/*` (rotas operacionais protegidas por `Authorization: Bearer <INGEST_API_TOKEN>`) | 3/min | IP |
 | `ai` | `POST /v1/tenders/{id}/ask`, `GET /v1/tenders/{id}/ask-status`, `GET /v1/tenders/{id}/sheet`, `GET /v1/me/fit` | 60/min | usuário |
 | `billing` | `POST /v1/me/billing/checkout`, `POST /v1/me/billing/cancel` | 5/min | usuário |
 | `privacy` | `GET /v1/me/export`, `DELETE /v1/me` (um bucket para os dois) | 5/hora | usuário |
@@ -33,6 +33,7 @@ Notas sobre os padrões:
 - Concorrência em andamento: 10 por IP anônimo, 20 por usuário autenticado e 200 global, em todas as rotas exceto healthz/readyz. Excesso por cliente recebe `429 RATE_LIMITED`; excesso global recebe `503 SERVICE_OVERLOADED`. Não há fila. O webhook Asaas continua sujeito a esses limites globais, de corpo e de timeout.
 - Timeout da aplicação: 30 s geral e 120 s para ingestão/exportação. Responde `503 REQUEST_TIMEOUT` no envelope existente e libera a vaga.
 - Corpo: 256 KiB por padrão; excesso responde `413 PAYLOAD_TOO_LARGE` no envelope existente.
+- Ingestão HTTP: sem `INGEST_API_TOKEN` válido no ambiente (mínimo 32 caracteres), `/v1/ingest/*` responde `404 NOT_FOUND`. Com segredo configurado e token ausente/incorreto, responde `401 UNAUTHENTICATED`. Coletas agendadas e comandos CLI não dependem desse token.
 
 ### Respostas e métricas
 

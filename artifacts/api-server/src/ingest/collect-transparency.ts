@@ -8,6 +8,7 @@ import {
   fetchContractsByPublicationPage,
   fetchContractsByUpdatePage,
   fetchItemResults,
+  isRecoverablePncpFailure,
 } from "./pncp-client";
 import { mapPncpContract, PncpTransparencyRecordError } from "./pncp-transparency-map";
 import { parseControlNumber } from "./pncp-map";
@@ -16,6 +17,7 @@ import { upsertPncpContracts, upsertPncpItemResults } from "./upsert-transparenc
 const SOURCE = "pncp-transparency";
 export const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
 const MAX_WINDOW_DAYS = 31;
+export const MAX_CONSECUTIVE_RECOVERABLE_RESULT_FAILURES = 10;
 
 export class TransparencyIngestInProgressError extends Error {
   constructor() {
@@ -52,6 +54,106 @@ export function validateTransparencyCollectOptions(options: TransparencyCollectO
 
 const compact = (day: string) => day.replaceAll("-", "");
 const dateFor = (day: string) => new Date(`${day}T12:00:00Z`);
+
+type ResultPurchaseCandidate = {
+  purchaseControl: string;
+};
+
+type ResultPurchaseCounters = {
+  results: number;
+  purchasesChecked: number;
+  purchasesSkipped: number;
+  stoppedAfterConsecutiveRecoverableFailures: boolean;
+};
+
+type ResultPurchaseDeps = {
+  fetchCompraItens: typeof fetchCompraItens;
+  fetchItemResults: typeof fetchItemResults;
+  upsertPncpItemResults: typeof upsertPncpItemResults;
+  markPurchaseChecked: (purchaseControl: string, checkedAt: Date) => Promise<void>;
+  onProgress?: (counters: ResultPurchaseCounters) => Promise<void>;
+  now: () => Date;
+  maxConsecutiveRecoverableFailures: number;
+};
+
+const resultCounterSnapshot = (counters: ResultPurchaseCounters): ResultPurchaseCounters => ({
+  ...counters,
+});
+
+export async function collectTransparencyResultPurchases(
+  candidates: ResultPurchaseCandidate[],
+  deps: Partial<ResultPurchaseDeps> & Pick<ResultPurchaseDeps, "markPurchaseChecked">,
+): Promise<ResultPurchaseCounters> {
+  const fetchItens = deps.fetchCompraItens ?? fetchCompraItens;
+  const fetchResults = deps.fetchItemResults ?? fetchItemResults;
+  const upsertResults = deps.upsertPncpItemResults ?? upsertPncpItemResults;
+  const now = deps.now ?? (() => new Date());
+  const maxConsecutiveRecoverableFailures =
+    deps.maxConsecutiveRecoverableFailures ?? MAX_CONSECUTIVE_RECOVERABLE_RESULT_FAILURES;
+  const counters: ResultPurchaseCounters = {
+    results: 0,
+    purchasesChecked: 0,
+    purchasesSkipped: 0,
+    stoppedAfterConsecutiveRecoverableFailures: false,
+  };
+  let consecutiveRecoverableFailures = 0;
+
+  const notifyProgress = async () => {
+    await deps.onProgress?.(resultCounterSnapshot(counters));
+  };
+
+  for (const { purchaseControl } of candidates) {
+    const identity = parseControlNumber(purchaseControl);
+    if (!identity) continue;
+
+    try {
+      const items = await fetchItens(identity.cnpj, identity.ano, identity.sequencial);
+      for (const item of items) {
+        if (item.temResultado !== true) continue;
+        const itemNumber = Number(item.numeroItem);
+        if (!Number.isInteger(itemNumber) || itemNumber < 1) continue;
+        const records = await fetchResults({
+          cnpj: identity.cnpj,
+          purchaseYear: identity.ano,
+          purchaseSequence: identity.sequencial,
+          itemNumber,
+        });
+        counters.results += await upsertResults({
+          records,
+          purchasePncpControlNumber: purchaseControl,
+          identity,
+          itemNumber,
+          fetchedAt: now(),
+        });
+      }
+      await deps.markPurchaseChecked(purchaseControl, now());
+      counters.purchasesChecked += 1;
+      consecutiveRecoverableFailures = 0;
+      await notifyProgress();
+    } catch (error) {
+      if (!isRecoverablePncpFailure(error)) throw error;
+      counters.purchasesSkipped += 1;
+      consecutiveRecoverableFailures += 1;
+      const reachedRecoverableFailureLimit =
+        consecutiveRecoverableFailures >= maxConsecutiveRecoverableFailures;
+      counters.stoppedAfterConsecutiveRecoverableFailures = reachedRecoverableFailureLimit;
+      logger.warn(
+        { err: error, purchaseControl, consecutiveRecoverableFailures },
+        "PNCP unavailable while collecting purchase results; leaving purchase pending",
+      );
+      await notifyProgress();
+      if (reachedRecoverableFailureLimit) {
+        logger.warn(
+          { purchaseControl, maxConsecutiveRecoverableFailures },
+          "Stopping transparency result collection after consecutive recoverable PNCP failures",
+        );
+        break;
+      }
+    }
+  }
+
+  return counters;
+}
 
 export async function transparencyOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): Promise<TransparencyCollectOptions | null> {
   const yesterday = addDays(saoPauloToday(), -1);
@@ -117,14 +219,16 @@ export async function collectTransparency(options: TransparencyCollectOptions): 
   let results = 0;
   let skipped = 0;
   let purchasesChecked = 0;
+  let purchasesSkipped = 0;
+  let resultsInterrupted = false;
   const checkpoint = async (day: string, phase: string) => {
     await db.update(ingestRunsTable).set({
       pagesRead,
       upserted: contracts + results,
       refreshed: results,
-      refreshErrors: skipped,
+      refreshErrors: skipped + purchasesSkipped,
       heartbeatAt: new Date(),
-      details: { day, phase, contracts, results, skipped, purchasesChecked },
+      details: { day, phase, contracts, results, skipped, purchasesChecked, purchasesSkipped, resultsInterrupted },
     }).where(eq(ingestRunsTable.id, runId));
   };
 
@@ -165,42 +269,43 @@ export async function collectTransparency(options: TransparencyCollectOptions): 
       .orderBy(sql`min(${pncpContractsTable.resultsCheckedAt}) asc nulls first`, asc(pncpContractsTable.purchasePncpControlNumber))
       .limit(options.resultsLimit);
 
-    for (const { purchaseControl } of candidates) {
-      const identity = parseControlNumber(purchaseControl);
-      if (!identity) continue;
-      const items = await fetchCompraItens(identity.cnpj, identity.ano, identity.sequencial);
-      for (const item of items) {
-        if (item.temResultado !== true) continue;
-        const itemNumber = Number(item.numeroItem);
-        if (!Number.isInteger(itemNumber) || itemNumber < 1) continue;
-        const records = await fetchItemResults({
-          cnpj: identity.cnpj,
-          purchaseYear: identity.ano,
-          purchaseSequence: identity.sequencial,
-          itemNumber,
-        });
-        results += await upsertPncpItemResults({
-          records,
-          purchasePncpControlNumber: purchaseControl,
-          identity,
-          itemNumber,
-          fetchedAt: new Date(),
-        });
-      }
-      await db.update(pncpContractsTable).set({ resultsCheckedAt: new Date() })
-        .where(eq(pncpContractsTable.purchasePncpControlNumber, purchaseControl));
-      purchasesChecked += 1;
-      await checkpoint(options.to, "results");
-    }
+    const resultBatch = await collectTransparencyResultPurchases(candidates, {
+      markPurchaseChecked: async (purchaseControl, checkedAt) => {
+        await db.update(pncpContractsTable).set({ resultsCheckedAt: checkedAt })
+          .where(eq(pncpContractsTable.purchasePncpControlNumber, purchaseControl));
+      },
+      onProgress: async (progress) => {
+        results = progress.results;
+        purchasesChecked = progress.purchasesChecked;
+        purchasesSkipped = progress.purchasesSkipped;
+        resultsInterrupted = progress.stoppedAfterConsecutiveRecoverableFailures;
+        await checkpoint(options.to, "results");
+      },
+    });
+    results = resultBatch.results;
+    purchasesChecked = resultBatch.purchasesChecked;
+    purchasesSkipped = resultBatch.purchasesSkipped;
+    resultsInterrupted = resultBatch.stoppedAfterConsecutiveRecoverableFailures;
 
     await db.update(ingestRunsTable).set({
       status: "complete",
       pagesRead,
       upserted: contracts + results,
       refreshed: results,
-      refreshErrors: skipped,
-      error: skipped ? `${skipped} contratos incompletos foram ignorados` : null,
-      details: { contracts, results, skipped, purchasesChecked, scanFeeds: options.scanFeeds !== false },
+      refreshErrors: skipped + purchasesSkipped,
+      error: [
+        skipped ? `${skipped} contratos incompletos foram ignorados` : null,
+        purchasesSkipped ? `${purchasesSkipped} compras tiveram resultados adiados por falha recuperável do PNCP` : null,
+      ].filter(Boolean).join("; ") || null,
+      details: {
+        contracts,
+        results,
+        skipped,
+        purchasesChecked,
+        purchasesSkipped,
+        resultsInterrupted,
+        scanFeeds: options.scanFeeds !== false,
+      },
       finishedAt: new Date(),
       heartbeatAt: new Date(),
     }).where(eq(ingestRunsTable.id, runId));
@@ -212,9 +317,9 @@ export async function collectTransparency(options: TransparencyCollectOptions): 
       pagesRead,
       upserted: contracts + results,
       refreshed: results,
-      refreshErrors: skipped + 1,
+      refreshErrors: skipped + purchasesSkipped + 1,
       error: message,
-      details: { contracts, results, skipped, purchasesChecked, scanFeeds: options.scanFeeds !== false },
+      details: { contracts, results, skipped, purchasesChecked, purchasesSkipped, resultsInterrupted, scanFeeds: options.scanFeeds !== false },
       finishedAt: new Date(),
       heartbeatAt: new Date(),
     }).where(eq(ingestRunsTable.id, runId));
