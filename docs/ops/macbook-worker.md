@@ -208,4 +208,12 @@ por cerca de 1 a 2 minutos (detecção + deploy). Com um domínio ngrok fixo, a 
 - Configuração em `~/licita-monitor/config.env` (`MONITOR_ISSUE`, `ALBERT_TERMINAL`, limites). Teste com
   `python3 ~/licita-monitor/licita_monitor.py status`.
 
+- `licita-monitor-deploy.timer` (10 min): `git fetch` da `ops/macbook-worker`; havendo commits novos, grava
+  `~/licita-monitor/alerts/deploy-<data>.json` (commits, arquivos, tipos `app_build`/`monitor_ops`/`docs`/`db_schema`)
+  e aciona o agente, que segue a seção "Atualização da branch" do `ALBERT.md`: `pull --ff-only`, rebuild só do app
+  quando há código, reinstalação do monitor quando muda `ops/macbook/`, e **nunca** aplica `db_schema` sozinho.
+
+O histórico do Drizzle (`drizzle.__drizzle_migrations`) foi reconciliado em 06/10 com 0024–0026 (hash SHA-256 de
+cada `.sql` e `created_at` = `when` do `_journal.json`), então `migrate` não tenta recriar tabelas existentes.
+
 No Linux, `/usr/bin/orca` é o leitor de tela do GNOME; nunca o execute.
