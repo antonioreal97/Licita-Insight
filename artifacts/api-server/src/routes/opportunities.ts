@@ -4,23 +4,17 @@ import { requireSubscription } from "../billing/require-subscription";
 import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { parseOpportunityQuery } from "../lib/opportunity-query";
+import { pgErrorCode } from "../lib/pg-error";
 import { publicHttpCache } from "../middlewares/request-protection";
 
 const router: IRouter = Router();
 router.use("/v1/opportunities", requireAuth, requireSubscription);
 router.use("/v1/opportunities", publicHttpCache);
 
-const errorCode = (error: unknown): string | undefined => {
-  if (!error || typeof error !== "object") return undefined;
-  if ("code" in error && typeof error.code === "string") return error.code;
-  if ("cause" in error) return errorCode(error.cause);
-  return undefined;
-};
-
 const exposeOpportunityError = (error: unknown): unknown => {
   if (error instanceof ApiError) return error;
   logger.error({ err: error }, "Cultural opportunity search failed");
-  const code = errorCode(error);
+  const code = pgErrorCode(error);
   if (
     code === "ECONNREFUSED" ||
     code === "ENOTFOUND" ||

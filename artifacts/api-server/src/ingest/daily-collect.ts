@@ -2,9 +2,11 @@ import { logger } from "../lib/logger";
 import {
   collectOptionsFromEnv,
   IngestInProgressError,
+  STALE_AFTER_MS as PNCP_STALE_AFTER_MS,
   startPncpIngest,
 } from "./collect-pncp";
 import { tryRunSingletonJob } from "../jobs/job-lock";
+import { inProgressRetry } from "./in-progress-retry";
 
 const TZ = "America/Sao_Paulo";
 
@@ -57,6 +59,7 @@ export function startDailyPncpCollect(): () => void {
   }
 
   const hour = dailyHour();
+  const retry = inProgressRetry(PNCP_STALE_AFTER_MS, (reason) => run(reason));
 
   const run = async (reason: string) => {
     try {
@@ -67,6 +70,7 @@ export function startDailyPncpCollect(): () => void {
       });
       if (!locked.acquired) return;
       const { options, started } = locked.value;
+      retry.reset();
       logger.info(
         { reason, runId: started.runId, from: options.from, to: options.to },
         "Daily PNCP collect started",
@@ -74,7 +78,7 @@ export function startDailyPncpCollect(): () => void {
     } catch (error) {
       if (error instanceof IngestInProgressError) {
         logger.info(
-          { reason },
+          { reason, retryScheduled: retry.schedule() },
           "Daily PNCP collect skipped because one is already running",
         );
         return;
@@ -100,6 +104,7 @@ export function startDailyPncpCollect(): () => void {
   return () => {
     stopped = true;
     if (timer) clearTimeout(timer);
+    retry.stop();
   };
 }
 
@@ -114,6 +119,7 @@ export function startDailyCultureCollect(): () => void {
   }
 
   const hour = dailyHour();
+  let retry: ReturnType<typeof inProgressRetry> | undefined;
 
   const run = async (reason: string) => {
     try {
@@ -123,15 +129,17 @@ export function startDailyCultureCollect(): () => void {
       });
       if (!locked.acquired) return;
       const started = locked.value;
+      retry?.reset();
       logger.info(
         { reason, runId: started.runId },
         "Daily cultural opportunities collect started",
       );
     } catch (error) {
-      const { CultureIngestInProgressError } = await import("./collect-opportunities");
+      const { CultureIngestInProgressError, STALE_AFTER_MS } = await import("./collect-opportunities");
       if (error instanceof CultureIngestInProgressError) {
+        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) => run(retryReason));
         logger.info(
-          { reason },
+          { reason, retryScheduled: retry.schedule() },
           "Daily cultural opportunities collect skipped because one is already running",
         );
         return;
@@ -160,6 +168,7 @@ export function startDailyCultureCollect(): () => void {
   return () => {
     stopped = true;
     if (timer) clearTimeout(timer);
+    retry?.stop();
   };
 }
 
@@ -175,14 +184,25 @@ export function startDailyTransparencyCollect(): () => void {
   const hour = (dailyHour() + 1) % 24;
   let timer: NodeJS.Timeout | undefined;
   let stopped = false;
-  const run = async () => {
+  let retry: ReturnType<typeof inProgressRetry> | undefined;
+  const run = async (reason = "schedule") => {
     try {
       const { collectTransparency, transparencyOptionsFromEnv } = await import("./collect-transparency");
       const options = await transparencyOptionsFromEnv();
       if (!options) return;
-      await tryRunSingletonJob("pncp_transparency_collect", () => collectTransparency(options));
+      const locked = await tryRunSingletonJob("pncp_transparency_collect", () => collectTransparency(options));
+      if (locked.acquired) retry?.reset();
     } catch (error) {
-      logger.error({ err: error }, "Daily transparency collection failed");
+      const { TransparencyIngestInProgressError, STALE_AFTER_MS } = await import("./collect-transparency");
+      if (error instanceof TransparencyIngestInProgressError) {
+        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) => run(retryReason));
+        logger.info(
+          { reason, retryScheduled: retry.schedule() },
+          "Daily transparency collection skipped because one is already running",
+        );
+        return;
+      }
+      logger.error({ err: error, reason }, "Daily transparency collection failed");
     }
   };
   const arm = () => {
@@ -190,9 +210,9 @@ export function startDailyTransparencyCollect(): () => void {
     timer = setTimeout(() => { void run().finally(arm); }, msUntilHour(hour));
     timer.unref();
   };
-  void run();
+  void run("startup");
   arm();
-  return () => { stopped = true; if (timer) clearTimeout(timer); };
+  return () => { stopped = true; if (timer) clearTimeout(timer); retry?.stop(); };
 }
 
 /** Classifies with the category student whatever the post-collect hook left pending, one hour after the PNCP collect. */

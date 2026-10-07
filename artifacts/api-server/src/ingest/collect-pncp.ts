@@ -7,6 +7,7 @@ import {
   tendersTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { isUniqueViolation } from "../lib/pg-error";
 import { InvalidParameterError } from "../lib/api-error";
 import { enrichTenderById } from "./enrich-tender";
 import {
@@ -30,7 +31,7 @@ import {
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-const STALE_AFTER_MS = 10 * 60 * 1000;
+export const STALE_AFTER_MS = 10 * 60 * 1000;
 const MAX_WINDOW_DAYS = 366;
 
 export class IngestInProgressError extends Error {
@@ -562,11 +563,7 @@ export async function startPncpIngest(
       heartbeatAt: startedAt,
     });
   } catch (error) {
-    const code =
-      typeof error === "object" && error && "code" in error
-        ? String(error.code)
-        : "";
-    if (code === "23505") throw new IngestInProgressError();
+    if (isUniqueViolation(error)) throw new IngestInProgressError();
     throw error;
   }
 

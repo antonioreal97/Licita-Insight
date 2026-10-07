@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
+import { pgErrorCode } from "../lib/pg-error";
 
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
   next(new NotFoundError(`Route ${req.method} ${req.path} was not found`));
@@ -29,10 +30,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     return;
   }
 
-  const errorCode =
-    error && typeof error === "object" && "code" in error
-      ? String(error.code)
-      : "";
+  const errorCode = pgErrorCode(error) ?? "";
   const errorMessage = error instanceof Error ? error.message : "";
   if (
     errorCode === "ETIMEDOUT" ||
