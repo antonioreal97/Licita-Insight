@@ -28,17 +28,46 @@ docker compose -f compose.macbook.yml -f compose.macbook.tailscale.yml up -d --n
 
 O override acrescenta somente `${MACBOOK_TAILSCALE_IP}:24252`, preservando
 `127.0.0.1:24252`. Nao use `0.0.0.0`. O app e o PostgreSQL continuam sem portas
-publicadas. A interface Tailscale precisa estar ativa antes da subida do proxy.
-Use os mesmos dois arquivos em todos os deploys futuros, inclusive nos comandos
-do agente de deploy. Atualize a copia instalada de `~/licita-monitor/ALBERT.md`
-com a orientacao deste PR; alterar apenas `COMPOSE_FILE` no monitor nao substitui
-os comandos explicitos com `-f`. Caso contrario, um deploy pode retirar o bind Tailscale.
+publicadas. A interface Tailscale precisa estar ativa antes da subida do proxy. Para
+que um boot com Docker antes do Tailscale nao deixe o proxy sem subir (inclusive em
+loopback),
+instale as units de usuario no servidor. O usuario ja deve ter linger habilitado;
+a unit aguarda ate cinco minutos pelo IPv4 Tailscale esperado e tenta novamente
+a cada 30 segundos se Compose falhar:
+
+```sh
+cd ~/Documentos/LICITA/Licita-Insight
+install -m 644 ops/macbook/licita-proxy-tailscale.service ops/macbook/licita-dashboard-tailscale.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now licita-proxy-tailscale.service licita-dashboard-tailscale.service
+```
+
+A unit do proxy executa `docker compose -f compose.macbook.yml -f
+compose.macbook.tailscale.yml up -d --no-deps proxy`; a do Grafana espera o mesmo
+IP antes de executar `docker compose -f ops/macbook/dashboard/compose.yml up -d`.
+Use os mesmos arquivos Compose em todos os deploys futuros, inclusive nos comandos
+do agente. Atualize a copia instalada de `~/licita-monitor/ALBERT.md` com a
+orientacao deste PR.
 
 ## 2. Preparar a VM e o acesso privado
 
-Instale Docker Engine com Compose e Tailscale pelas fontes oficiais no Ubuntu.
-Autentique a VM no mesmo tailnet. Na politica do Tailscale, autorize a identidade
-ou tag exclusiva da borda a acessar **somente o servidor TCP 24252**. Remova
+A VM ja tem os pacotes `nginx` e `certbot` do apt, com o Nginx do sistema
+ativo na porta 80 e um certificado webroot em
+`/etc/letsencrypt/live/137-131-233-192.sslip.io`. Mantenha os pacotes instalados,
+mas desative os servicos que conflitam com a borda em container. Instale Docker
+Engine pelo pacote `docker.io` e o plugin Compose do Ubuntu, ou pelo repositorio
+oficial do Docker; por exemplo, no Ubuntu 24.04:
+
+```sh
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo systemctl disable --now nginx certbot.timer
+```
+
+Autentique Tailscale no mesmo tailnet (o IPv4 atual da VM e `100.100.59.75`).
+Na politica do Tailscale, autorize a identidade ou tag exclusiva da borda a acessar
+**somente o servidor TCP 24252**. Remova
 permissoes amplas que tambem se apliquem a essa identidade; as regras sao aditivas.
 Teste esse acesso antes de publicar o proxy. Nao anuncie rotas nem use exit node.
 
@@ -48,16 +77,18 @@ permitir TCP 80/443, respostas a conexoes de saida e SSH via Tailscale. Conserve
 a porta 22 publica ate testar uma **nova sessao SSH pelo Tailscale**; so depois
 remova a regra publica 22 da Oracle e do firewall local.
 
-Use um checkout em `/opt/abriu-edge`, contendo este PR. Dentro de
-`ops/oracle-edge`, copie `.env.example` para `.env`, preencha o IP privado do
-servidor e o segredo e aplique `chmod 600 .env`. `network_mode: host` e intencional:
-o Nginx usa o Tailscale do host Linux. A porta 8080 da borda fica em loopback.
+Clone ou copie o repositorio contendo este PR em `/opt/abriu-edge`. Dentro de
+`ops/oracle-edge`, copie `.env.example` para `.env`, preencha o IP Tailscale do
+servidor (`100.76.192.116`) e o segredo e aplique `chmod 600 .env`.
+`network_mode: host` e intencional: o Nginx usa o Tailscale do host Linux. A porta
+8080 da borda fica em loopback.
 
 ## 3. Emitir HTTPS e subir a borda
 
-Confirme que o DNS do hostname resolve para o IP reservado. Na primeira emissao,
-a porta 80 deve estar livre (pare qualquer Nginx antigo que a ocupe). Ainda nao
-suba o servico `proxy`, que precisa dos arquivos do certificado.
+Confirme que o DNS do hostname resolve para o IP reservado. O caminho padrao do
+PR emite um certificado com o nome `abriu-edge` no volume do Compose. O Nginx e
+o timer do Certbot do apt ja foram desativados acima, entao a porta 80 fica livre.
+Ainda nao suba o servico `proxy`, que precisa dos arquivos do certificado.
 
 ```sh
 cd /opt/abriu-edge/ops/oracle-edge
