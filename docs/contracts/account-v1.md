@@ -22,7 +22,7 @@ forma pública consumida pelo frontend. Mesmas convenções de [`search-v1.md`](
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
   Salvar, monitorar, buscas salvas e notificações exigem também assinatura ativa (`402`).
-  Billing, LGPD (`GET /me/export`, `DELETE /me`) e preferências de e-mail exigem só sessão; as
+  Billing, LGPD (`GET /me/export`, `DELETE /me`) e preferências de e-mail/recomendações exigem só sessão; as
   mutações autenticadas também exigem CSRF.
 
 ## Novos códigos de erro
@@ -316,6 +316,10 @@ type AccountExport = {
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
   notifications: Array<Record<string, unknown>>;
   emailDeliveries: Array<{ id: string; mode: 'digest' | 'immediate'; status: 'queued' | 'sent' | 'failed' | 'skipped'; recipientEmail: string; subject: string; attempts: number; lastError: string | null; providerMessageId: string | null; createdAt: string; updatedAt: string; sentAt: string | null }>;
+  recommendationEvents: Array<{ type: 'search' | 'tender_view'; normalizedTerms: string[]; tenderId: string | null; occurredAt: string }>;
+  recommendationDismissals: Array<Record<string, unknown>>;
+  recommendationInterestProfile: Record<string, unknown> | null;
+  recommendations: Array<Record<string, unknown>>;
   subscription: { status: string; currentPeriodEnd: string | null; updatedAt: string } | null;
 };
 ```
@@ -323,7 +327,8 @@ type AccountExport = {
 Somente sessões ativas são exportadas. Tokens, hashes de sessão, `googleSub`, chaves do Asaas,
 identificadores internos de cobrança, tokens de descadastro, corpos/headers de e-mail e `dedupeKey`
 de notificações não são incluídos. Buscas ainda retidas por soft delete e metadados de entregas de
-e-mail são incluídos.
+e-mail são incluídos. A preferência de personalização e o histórico opt-in ainda dentro da retenção de
+180 dias também são incluídos; detalhes em [`recommendations-v1.md`](recommendations-v1.md).
 
 ### `DELETE /api/v1/me`
 

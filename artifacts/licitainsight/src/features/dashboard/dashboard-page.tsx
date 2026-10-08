@@ -17,6 +17,7 @@ import { ProfileInviteCard } from '@/features/company-profile/components/profile
 import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
 import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
+import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
 
 function saoPauloDate(offsetDays = 0): string {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -237,6 +238,7 @@ export default function DashboardPage() {
       {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-8">
+        {personal && <RecommendationsSection />}
         {personal && <PersonalDeadlines />}
         {personal && profile.isPending ? <RowsSkeleton rows={2} />
           : personal && profile.isError ? <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
@@ -244,8 +246,8 @@ export default function DashboardPage() {
           : <section data-testid="dashboard-candidates">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="type-section text-foreground">{personal ? 'Para você' : 'Prazos mais próximos'}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">{personal ? 'Aderência entre os quatro editais com prazo mais próximo — não é uma busca de todo o catálogo pelo seu perfil.' : 'Editais em aberto com prazo de proposta a partir de hoje'}</p>
+              <h2 className="type-section text-foreground">Prazos mais próximos</h2>
+              <p className="mt-1 text-xs text-muted-foreground">{personal ? 'Uma visão complementar dos prazos, com a aderência ao perfil quando disponível.' : 'Editais em aberto com prazo de proposta a partir de hoje'}</p>
             </div>
             <Link
               href={`/search?status=open&sort=deadline_asc&deadlineFrom=${today}`}

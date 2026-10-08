@@ -19,6 +19,8 @@ tags:
     description: Cultural funding opportunity operations
   - name: transparency
     description: Official PNCP contract and item result history
+  - name: recommendations
+    description: Personalized, explainable in-app tender recommendations
 paths:
   /healthz:
     get:
@@ -127,20 +129,50 @@ paths:
       summary: Search PNCP contracts in collected publication and update windows
       parameters:
         - { name: q, in: query, schema: { type: string, maxLength: 160 } }
-        - { name: state, in: query, schema: { type: string, minLength: 2, maxLength: 2 } }
-        - { name: publishedFrom, in: query, schema: { type: string, format: date } }
-        - { name: publishedTo, in: query, schema: { type: string, format: date } }
+        - {
+            name: state,
+            in: query,
+            schema: { type: string, minLength: 2, maxLength: 2 },
+          }
+        - {
+            name: publishedFrom,
+            in: query,
+            schema: { type: string, format: date },
+          }
+        - {
+            name: publishedTo,
+            in: query,
+            schema: { type: string, format: date },
+          }
         - { name: valueMin, in: query, schema: { type: number, minimum: 0 } }
         - { name: valueMax, in: query, schema: { type: number, minimum: 0 } }
-        - { name: sort, in: query, schema: { type: string, enum: [published_desc, published_asc, value_desc, value_asc], default: published_desc } }
-        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
+        - {
+            name: sort,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [published_desc, published_asc, value_desc, value_asc],
+                default: published_desc,
+              },
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, default: 1 },
+          }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 12 },
+          }
       responses:
         "200":
           description: Published contracts with source and coverage metadata
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TransparencyContractsResponse" }
+              schema:
+                { $ref: "#/components/schemas/TransparencyContractsResponse" }
         "400": { $ref: "#/components/responses/InvalidParameter" }
         "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/transparency/contracts:
@@ -149,13 +181,21 @@ paths:
       tags: [transparency]
       summary: Get PNCP contracts linked to a tender
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string, minLength: 1 } }
+        - {
+            name: id,
+            in: path,
+            required: true,
+            schema: { type: string, minLength: 1 },
+          }
       responses:
         "200":
           description: Contracts linked by PNCP purchase control number
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TransparencyTenderContractsResponse" }
+              schema:
+                {
+                  $ref: "#/components/schemas/TransparencyTenderContractsResponse",
+                }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/transparency/results:
@@ -164,13 +204,21 @@ paths:
       tags: [transparency]
       summary: Get PNCP item results linked to a tender
       parameters:
-        - { name: id, in: path, required: true, schema: { type: string, minLength: 1 } }
+        - {
+            name: id,
+            in: path,
+            required: true,
+            schema: { type: string, minLength: 1 },
+          }
       responses:
         "200":
           description: Item results including cancelled history
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/TransparencyTenderResultsResponse" }
+              schema:
+                {
+                  $ref: "#/components/schemas/TransparencyTenderResultsResponse",
+                }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/ask-status:
@@ -1000,6 +1048,112 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/recommendation-preferences:
+    get:
+      operationId: getRecommendationPreferences
+      tags: [recommendations]
+      summary: Read the optional search and click personalization preference
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Current recommendation privacy preference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendationPreferences" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    put:
+      operationId: updateRecommendationPreferences
+      tags: [recommendations]
+      summary: Enable or disable search and click personalization; disabling deletes history by default
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: "#/components/schemas/UpdateRecommendationPreferencesRequest",
+              }
+      responses:
+        "200":
+          description: Updated recommendation preference
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendationPreferences" }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/me/recommendation-history:
+    delete:
+      operationId: deleteRecommendationHistory
+      tags: [recommendations]
+      summary: Delete the signed-in user's opt-in search and tender-view history
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: History deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/recommendations:
+    get:
+      operationId: listRecommendations
+      tags: [recommendations]
+      summary: List the signed-in subscriber's materialized tender recommendations
+      description: Requires an active trial, beta grant, development entitlement, or subscription, following saved account resources.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Explainable recommendation page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendationsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "402": { $ref: "#/components/responses/SubscriptionRequired" }
+  /v1/recommendations/{tenderId}/dismiss:
+    post:
+      operationId: dismissRecommendation
+      tags: [recommendations]
+      summary: Permanently dismiss a tender and lightly penalize similar signals
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: tenderId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "204": { description: Recommendation dismissed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "402": { $ref: "#/components/responses/SubscriptionRequired" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/recommendations/events:
+    post:
+      operationId: recordRecommendationEvent
+      tags: [recommendations]
+      summary: Record an opted-in search/view event or an aggregate recommendation click
+      description: Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecommendationEventRequest" }
+      responses:
+        "202":
+          description: Event accepted; recorded=false means privacy opt-in was off or the query had no useful terms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { recorded: { type: boolean } }
+                required: [recorded]
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/email/unsubscribe:
     post:
       operationId: unsubscribeEmail
@@ -1415,6 +1569,43 @@ components:
           type: [string, "null"]
           format: date-time
       required: [email, profileAlerts, emailAddress, updatedAt]
+    RecommendationPreferences:
+      type: object
+      additionalProperties: false
+      properties:
+        personalizationEnabled: { type: boolean }
+        updatedAt: { type: [string, "null"], format: date-time }
+      required: [personalizationEnabled, updatedAt]
+    UpdateRecommendationPreferencesRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        personalizationEnabled: { type: boolean }
+        deleteHistory:
+          type: boolean
+          default: true
+          description: Applies when disabling; defaults to true so turning opt-in off erases the event history.
+      required: [personalizationEnabled]
+    RecommendationEventRequest:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          properties:
+            type: { type: string, const: search }
+            query: { type: string, maxLength: 2000 }
+          required: [type, query]
+        - type: object
+          additionalProperties: false
+          properties:
+            type: { type: string, const: tender_view }
+            tenderId: { type: string, minLength: 1, maxLength: 200 }
+          required: [type, tenderId]
+        - type: object
+          additionalProperties: false
+          properties:
+            type: { type: string, const: click }
+            tenderId: { type: string, minLength: 1, maxLength: 200 }
+          required: [type]
     UpdateEmailNotificationPreferences:
       type: object
       additionalProperties: false
@@ -1468,6 +1659,9 @@ components:
           $ref: "#/components/schemas/EmailDigestPreference"
         emailImmediateCritical: { type: boolean }
         profileAlerts: { type: boolean }
+        recommendationPersonalizationEnabled: { type: boolean }
+        recommendationPreferencesUpdatedAt:
+          { type: [string, "null"], format: date-time }
         emailPreferencesUpdatedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -1481,6 +1675,8 @@ components:
           emailDigest,
           emailImmediateCritical,
           profileAlerts,
+          recommendationPersonalizationEnabled,
+          recommendationPreferencesUpdatedAt,
           emailPreferencesUpdatedAt,
           createdAt,
           updatedAt,
@@ -1675,6 +1871,21 @@ components:
           items:
             type: object
             additionalProperties: true
+        recommendationEvents:
+          type: array
+          items:
+            { $ref: "#/components/schemas/AccountExportRecommendationEvent" }
+        recommendationDismissals:
+          type: array
+          items: { type: object, additionalProperties: true }
+        recommendationInterestProfile:
+          anyOf:
+            - type: object
+              additionalProperties: true
+            - type: "null"
+        recommendations:
+          type: array
+          items: { type: object, additionalProperties: true }
         subscription:
           anyOf:
             - $ref: "#/components/schemas/AccountExportSubscription"
@@ -1692,18 +1903,46 @@ components:
           companyProfile,
           companyFits,
           fitUsage,
+          recommendationEvents,
+          recommendationDismissals,
+          recommendationInterestProfile,
+          recommendations,
           subscription,
         ]
+    AccountExportRecommendationEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string }
+        type: { type: string, enum: [search, tender_view] }
+        normalizedTerms: { type: array, items: { type: string } }
+        tenderId: { type: [string, "null"] }
+        occurredAt: { type: string, format: date-time }
+      required: [id, userId, type, normalizedTerms, tenderId, occurredAt]
     TenderAskIndexStatus:
       type: string
-      enum: [not_started, processing, ocr_processing, ready, failed, no_documents, unsupported, expired]
+      enum:
+        [
+          not_started,
+          processing,
+          ocr_processing,
+          ready,
+          failed,
+          no_documents,
+          unsupported,
+          expired,
+        ]
     TenderAskDocument:
       type: object
       properties:
         id: { type: string }
         title: { type: string }
         pages: { type: [integer, "null"], minimum: 1 }
-        status: { type: string, enum: [processing, ocr_processing, ready, failed, unsupported] }
+        status:
+          {
+            type: string,
+            enum: [processing, ocr_processing, ready, failed, unsupported],
+          }
         ocrLowConfidencePages:
           type: array
           items: { type: integer, minimum: 1 }
@@ -1734,10 +1973,17 @@ components:
       type: object
       description: Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.
       properties:
-        used: { type: integer, minimum: 0, description: Processes consulted today }
-        limit: { type: integer, minimum: 1, description: Processes allowed per day }
+        used:
+          { type: integer, minimum: 0, description: Processes consulted today }
+        limit:
+          { type: integer, minimum: 1, description: Processes allowed per day }
         resetsAt: { type: string, format: date-time }
-        counted: { type: boolean, description: This tender is already among today's processes, so consulting it again spends nothing }
+        counted:
+          {
+            type: boolean,
+            description: This tender is already among today's processes,
+            so consulting it again spends nothing,
+          }
       required: [used, limit, resetsAt, counted]
     TenderAskStatus:
       type: object
@@ -1881,7 +2127,15 @@ components:
         model: { type: [string, "null"] }
         generatedAt: { type: [string, "null"], format: date-time }
       required:
-        [status, fields, qualificationChecklist, unreadDocuments, documentReading, model, generatedAt]
+        [
+          status,
+          fields,
+          qualificationChecklist,
+          unreadDocuments,
+          documentReading,
+          model,
+          generatedAt,
+        ]
     CompanySize:
       type: string
       enum: [me_epp, cooperative, other]
@@ -2175,6 +2429,47 @@ components:
         - categories
         - relevance
         - updatedAt
+    RecommendationReason:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          enum:
+            [
+              profile,
+              monitored,
+              saved,
+              saved_search,
+              search,
+              location,
+              organization,
+              value,
+            ]
+        text: { type: string }
+      required: [kind, text]
+    Recommendation:
+      type: object
+      additionalProperties: false
+      properties:
+        tender: { $ref: "#/components/schemas/TenderSummary" }
+        score: { type: number }
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items: { $ref: "#/components/schemas/RecommendationReason" }
+        generatedAt: { type: string, format: date-time }
+      required: [tender, score, reasons, generatedAt]
+    RecommendationsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Recommendation" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+      required: [data, pagination]
     TenderItem:
       type: object
       properties:
@@ -2265,7 +2560,15 @@ components:
               format: date-time
               description: Null while PNCP items and documents have not been fetched yet.
           required:
-            [description, processNumber, items, documents, timeline, createdAt, detailsFetchedAt]
+            [
+              description,
+              processNumber,
+              items,
+              documents,
+              timeline,
+              createdAt,
+              detailsFetchedAt,
+            ]
     TransparencySupplier:
       type: [object, "null"]
       description: Identifier is a CNPJ only when a legal entity and valid CNPJ were published; CPF and foreign identifiers are never exposed.
@@ -2329,7 +2632,22 @@ components:
           required: [signature, validFrom, validTo, publishedAt, updatedAt]
         officialUrl: { type: [string, "null"], format: uri }
         provenance: { $ref: "#/components/schemas/TransparencyProvenance" }
-      required: [id, pncpControlNumber, purchasePncpControlNumber, tenderId, contractNumber, organizationName, location, supplier, object, values, dates, officialUrl, provenance]
+      required:
+        [
+          id,
+          pncpControlNumber,
+          purchasePncpControlNumber,
+          tenderId,
+          contractNumber,
+          organizationName,
+          location,
+          supplier,
+          object,
+          values,
+          dates,
+          officialUrl,
+          provenance,
+        ]
     TransparencyResult:
       type: object
       properties:
@@ -2355,28 +2673,59 @@ components:
             unitValueHomologated: { type: [number, "null"] }
             totalValueHomologated: { type: [number, "null"] }
             discountPercent: { type: [number, "null"] }
-          required: [quantityHomologated, unitValueHomologated, totalValueHomologated, discountPercent]
+          required:
+            [
+              quantityHomologated,
+              unitValueHomologated,
+              totalValueHomologated,
+              discountPercent,
+            ]
         resultDate: { type: [string, "null"], format: date }
         officialUrl: { type: [string, "null"], format: uri }
         provenance: { $ref: "#/components/schemas/TransparencyProvenance" }
-      required: [id, purchasePncpControlNumber, tenderId, itemNumber, resultSequence, status, supplier, values, resultDate, officialUrl, provenance]
+      required:
+        [
+          id,
+          purchasePncpControlNumber,
+          tenderId,
+          itemNumber,
+          resultSequence,
+          status,
+          supplier,
+          values,
+          resultDate,
+          officialUrl,
+          provenance,
+        ]
     TransparencyContractsResponse:
       type: object
       properties:
-        data: { type: array, items: { $ref: "#/components/schemas/TransparencyContract" } }
+        data:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/TransparencyContract" },
+          }
         pagination: { $ref: "#/components/schemas/Pagination" }
         meta: { $ref: "#/components/schemas/TransparencyMeta" }
       required: [data, pagination, meta]
     TransparencyTenderContractsResponse:
       type: object
       properties:
-        data: { type: array, items: { $ref: "#/components/schemas/TransparencyContract" } }
+        data:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/TransparencyContract" },
+          }
         meta: { $ref: "#/components/schemas/TransparencyMeta" }
       required: [data, meta]
     TransparencyTenderResultsResponse:
       type: object
       properties:
-        data: { type: array, items: { $ref: "#/components/schemas/TransparencyResult" } }
+        data:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/TransparencyResult" },
+          }
         meta: { $ref: "#/components/schemas/TransparencyMeta" }
       required: [data, meta]
     Pagination:
@@ -2395,14 +2744,32 @@ components:
       required: [page, pageSize, total, totalPages, totalIsEstimate]
     ParticipationStage:
       type: string
-      enum: [analyzing, participating, submitted, awaiting_result, completed, dismissed]
+      enum:
+        [
+          analyzing,
+          participating,
+          submitted,
+          awaiting_result,
+          completed,
+          dismissed,
+        ]
     ParticipationChecklistPatch:
       type: object
       additionalProperties: false
       properties:
         key:
           type: string
-          enum: [ato_societario, regularidade_fiscal, regularidade_trabalhista, qualificacao_tecnica, qualificacao_economica, site_visit, samples, bid_guarantee]
+          enum:
+            [
+              ato_societario,
+              regularidade_fiscal,
+              regularidade_trabalhista,
+              qualificacao_tecnica,
+              qualificacao_economica,
+              site_visit,
+              samples,
+              bid_guarantee,
+            ]
         state:
           type: string
           enum: [have, missing, unknown]
@@ -2413,7 +2780,17 @@ components:
       properties:
         key:
           type: string
-          enum: [ato_societario, regularidade_fiscal, regularidade_trabalhista, qualificacao_tecnica, qualificacao_economica, site_visit, samples, bid_guarantee]
+          enum:
+            [
+              ato_societario,
+              regularidade_fiscal,
+              regularidade_trabalhista,
+              qualificacao_tecnica,
+              qualificacao_economica,
+              site_visit,
+              samples,
+              bid_guarantee,
+            ]
         state:
           type: string
           enum: [have, missing, unknown]
@@ -2450,7 +2827,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ParticipationTransition"
-      required: [stage, stageAt, participationSource, protocol, nextAction, nextActionDeadline, checklist, history]
+      required:
+        [
+          stage,
+          stageAt,
+          participationSource,
+          protocol,
+          nextAction,
+          nextActionDeadline,
+          checklist,
+          history,
+        ]
     SavedTender:
       type: object
       allOf:

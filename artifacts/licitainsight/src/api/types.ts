@@ -464,6 +464,18 @@ export type NotificationPreferences = { email: EmailPreferences; profileAlerts: 
 /** Partial PUT body: only the fields sent change. */
 export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences>; profileAlerts?: boolean };
 
+export type RecommendationPreferences = { personalizationEnabled: boolean; updatedAt: string | null };
+export type RecommendationReason = {
+  kind: 'profile' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value';
+  text: string;
+};
+export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
+export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
+export type RecommendationEvent =
+  | { type: 'search'; query: string }
+  | { type: 'tender_view'; tenderId: string }
+  | { type: 'click'; tenderId?: string };
+
 export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 
 /** Public `POST /api/v1/email/unsubscribe { token, scope }` (no session). Invalid token → 400 INVALID_PARAMETER. */
