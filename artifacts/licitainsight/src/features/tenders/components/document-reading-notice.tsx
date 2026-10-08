@@ -13,7 +13,7 @@ export function documentReadingMessage(reading: DocumentReadingSummary): string 
   const prefix = reading.total === 0
     ? 'Nenhum documento foi localizado'
     : reading.read === 0
-      ? `Nenhum de ${reading.total} documentos foi lido`
+      ? reading.total === 1 ? 'O documento não foi lido' : `Nenhum dos ${reading.total} documentos foi lido`
       : `${reading.read} de ${reading.total} documentos lidos`;
   const groups = new Map<string, number>();
   for (const document of reading.unread) groups.set(document.reason, (groups.get(document.reason) ?? 0) + 1);
