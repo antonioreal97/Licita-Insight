@@ -34,7 +34,7 @@ function MiniMetric({ label, value, detail, attention = false }: { label: string
   return (
     <div className="min-w-0 sm:px-7">
       <div className="type-label text-muted-foreground">{label}</div>
-      <div className="mt-2 type-title type-data text-foreground sm:type-display-sm">{value}</div>
+      <div className="mt-2 type-title type-data text-foreground sm:type-titulo-3">{value}</div>
       <div className={`mt-1 type-meta ${attention ? 'font-medium text-status-under-review-foreground' : 'text-muted-foreground'}`}>{detail}</div>
     </div>
   );
@@ -228,7 +228,7 @@ export default function DashboardPage() {
           <Link
             href="/search"
             data-testid="link-dashboard-search"
-            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring sm:self-auto"
+            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-pill bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring sm:self-auto"
           >
             <Search size={15} strokeWidth={1.75} />
             Explorar editais

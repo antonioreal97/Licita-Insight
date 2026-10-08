@@ -50,7 +50,7 @@ export function SearchUnavailable({ onRetry, retrying, requestId }: { onRetry: (
         </Button>
         <Link
           href="/saved-tenders"
-          className="inline-flex h-9 items-center justify-center rounded-lg px-3.5 type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
+          className="inline-flex h-9 items-center justify-center rounded-pill px-3.5 type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
         >
           Ver editais salvos
         </Link>

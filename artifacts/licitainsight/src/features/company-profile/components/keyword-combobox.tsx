@@ -117,7 +117,7 @@ export function SmartKeywordCombobox({
           autoComplete="off"
           placeholder={selected.length >= 20 ? 'Limite de 20 termos' : placeholder}
           data-testid={`${testId}-input`}
-          className="h-[2.625rem] w-full rounded-lg border border-input bg-background px-3 pr-9 type-ui text-foreground outline-none hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20"
+          className="h-[2.625rem] w-full rounded-lg border border-input bg-background px-3 pr-9 type-ui text-foreground focus:border-ring"
         />
         {result.isFetching && <LoaderCircle aria-label="Buscando sugestões" size={16} className="absolute top-3 right-3 animate-spin text-muted-foreground" />}
         {open && debounced.length >= 2 && (

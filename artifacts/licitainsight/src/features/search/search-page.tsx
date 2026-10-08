@@ -185,7 +185,7 @@ export default function SearchPage() {
               className={`sticky top-[calc(var(--spacing-header-mobile)+1rem)] border-r border-border-subtle pb-2 lg:top-[calc(var(--spacing-header)+1rem)] ${
                 desktopFiltersCollapsed
                   ? 'pr-1'
-                  : 'overflow-y-auto overscroll-contain pr-4 [scrollbar-color:hsl(var(--border-strong))_transparent] [scrollbar-width:thin]'
+                  : 'overflow-y-auto overscroll-contain pr-4 [scrollbar-color:var(--border-strong)_transparent] [scrollbar-width:thin]'
               }`}
             >
               <div

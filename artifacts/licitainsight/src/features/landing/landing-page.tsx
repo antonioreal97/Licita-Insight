@@ -17,7 +17,7 @@ import {
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
-import { BrandName } from '@/components/brand-icon';
+import { BrandLogo } from '@/components/brand-icon';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
@@ -28,11 +28,11 @@ import { cn } from '@/lib/utils';
 import { LegalLinks } from '@/features/legal/legal-content';
 
 const navLink = 'font-semibold text-primary hover:underline';
-const primaryCta = 'rounded-lg bg-action px-4 py-2.5 font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover';
+const primaryCta = 'rounded-pill bg-action px-4 py-2.5 font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover';
 const heroCta =
-  'inline-flex items-center gap-2 rounded-lg bg-action px-5 py-3 text-sm font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover focus-visible:focus-ring';
+  'inline-flex items-center gap-2 rounded-pill bg-action px-5 py-3 text-sm font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover focus-visible:focus-ring';
 const secondaryCta =
-  'inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-5 py-3 text-sm font-semibold text-foreground shadow-2xs transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring';
+  'inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-5 py-3 text-sm font-semibold text-foreground shadow-2xs transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring';
 const eyebrow = 'type-eyebrow font-bold text-primary';
 const sectionTitle = 'mt-4 text-4xl font-semibold leading-[1.05] tracking-display sm:text-[44px]';
 
@@ -273,22 +273,22 @@ function ServicesSection() {
 /** The AI band: dark "instrument" surface, the product's signature. Copy states what the model does and does not do. */
 function EvidenceSection() {
   return (
-    <section id="ia" aria-labelledby="ia-titulo" className="bg-sidebar py-24 text-sidebar-foreground">
+    <section id="ia" aria-labelledby="ia-titulo" className="bg-superficie-inversa py-24 text-texto-inverso">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:items-start">
           <div className="lg:sticky lg:top-10">
-            <div className="type-eyebrow font-bold text-sidebar-primary">IA que mostra a fonte</div>
-            <h2 id="ia-titulo" className="mt-4 text-4xl font-semibold leading-[1.05] tracking-display text-sidebar-strong-foreground sm:text-[44px]">
+            <div className="type-eyebrow font-bold text-texto-inverso">IA que mostra a fonte</div>
+            <h2 id="ia-titulo" className="mt-4 text-4xl font-semibold leading-[1.05] tracking-display text-texto-inverso sm:text-[44px]">
               A IA escolhe o trecho. Quem lê a regra é você.
             </h2>
-            <p className="mt-5 max-w-md text-[15px] leading-7 text-sidebar-muted-foreground">
+            <p className="mt-5 max-w-md text-[15px] leading-7 text-texto-inverso">
               O Pardal Digital não escreve resumos por conta própria. A inteligência artificial procura, nos documentos oficiais, o trecho que responde, e
               mostra a página. Se o edital não diz, o Pardal Digital também não diz.
             </p>
-            <ul className="mt-8 grid gap-3 text-sm text-sidebar-foreground">
+            <ul className="mt-8 grid gap-3 text-sm text-texto-inverso">
               {['Cada resposta aponta documento e página', 'Ausência de trecho nunca vira um “não”', 'A confiança aparece de forma honesta'].map((item) => (
                 <li key={item} className="flex gap-2.5">
-                  <Quote size={15} aria-hidden className="mt-0.5 shrink-0 text-sidebar-primary" />
+                  <Quote size={15} aria-hidden className="mt-0.5 shrink-0 text-texto-inverso" />
                   {item}
                 </li>
               ))}
@@ -298,14 +298,14 @@ function EvidenceSection() {
             {aiServices.map((service) => {
               const Icon = service.icon;
               return (
-                <article key={service.title} className="flex flex-col rounded-2xl border border-sidebar-border bg-sidebar-accent p-6 sm:p-7">
-                  <Icon size={20} aria-hidden className="text-sidebar-primary" />
-                  <h3 className="mt-6 text-lg font-semibold text-sidebar-strong-foreground">{service.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-sidebar-muted-foreground">{service.text}</p>
-                  <ul className="mt-5 grid gap-2.5 border-t border-sidebar-border pt-5 text-sm">
+                <article key={service.title} className="flex flex-col rounded-2xl border border-texto-inverso/25 bg-texto-inverso/10 p-6 sm:p-7">
+                  <Icon size={20} aria-hidden className="text-texto-inverso" />
+                  <h3 className="mt-6 text-lg font-semibold text-texto-inverso">{service.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-texto-inverso">{service.text}</p>
+                  <ul className="mt-5 grid gap-2.5 border-t border-texto-inverso/25 pt-5 text-sm">
                     {service.points.map((point) => (
                       <li key={point} className="flex gap-2.5">
-                        <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-sidebar-primary" />
+                        <Check size={15} aria-hidden className="mt-0.5 shrink-0 text-texto-inverso" />
                         <span>{point}</span>
                       </li>
                     ))}
@@ -313,8 +313,8 @@ function EvidenceSection() {
                 </article>
               );
             })}
-            <p className="flex gap-2.5 rounded-2xl border border-sidebar-border p-5 text-xs leading-5 text-sidebar-muted-foreground sm:col-span-2">
-              <ShieldCheck size={16} aria-hidden className="mt-0.5 shrink-0 text-sidebar-primary" />
+            <p className="flex gap-2.5 rounded-2xl border border-texto-inverso/25 p-5 text-xs leading-5 text-texto-inverso sm:col-span-2">
+              <ShieldCheck size={16} aria-hidden className="mt-0.5 shrink-0 text-texto-inverso" />
               Os trechos são escolhidos automaticamente e orientam a leitura, não substituem o edital. Confira sempre o documento original antes de decidir.
             </p>
           </div>
@@ -549,12 +549,12 @@ function FaqSection() {
 function FinalCta() {
   return (
     <section aria-labelledby="cta-titulo" className="px-5 pb-24 sm:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-3xl bg-sidebar px-7 py-12 sm:px-12 lg:flex-row lg:items-center">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-3xl bg-superficie-inversa px-7 py-12 sm:px-12 lg:flex-row lg:items-center">
         <div>
-          <h2 id="cta-titulo" className="max-w-xl text-3xl font-semibold leading-tight tracking-display text-sidebar-strong-foreground sm:text-4xl">
+          <h2 id="cta-titulo" className="max-w-xl text-3xl font-semibold leading-tight tracking-display text-texto-inverso sm:text-4xl">
             O próximo edital da sua empresa já pode estar publicado.
           </h2>
-          <p className="mt-3 max-w-lg text-sm leading-6 text-sidebar-muted-foreground">Entre com o Google e veja o que combina com vocês ainda hoje.</p>
+          <p className="mt-3 max-w-lg text-sm leading-6 text-texto-inverso">Entre com o Google e veja o que combina com vocês ainda hoje.</p>
         </div>
         <StartCta testId="link-final-start" />
       </div>
@@ -569,7 +569,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-sticky border-b border-transparent bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
           <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
-            <BrandName />
+            <BrandLogo className="h-12" />
           </Link>
           <nav aria-label="Seções" className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
             <a href="#servicos" className="transition-colors duration-fast hover:text-foreground">
@@ -598,7 +598,7 @@ export default function LandingPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Inteligência para compras públicas
             </div>
-            <h1 className="max-w-2xl text-[42px] font-semibold leading-[1.03] tracking-[-0.055em] sm:text-[52px] xl:text-[56px]">
+            <h1 className="max-w-2xl text-[42px] font-semibold leading-[1.03] tracking-display sm:text-[52px] xl:text-[56px]">
               <span className="block text-hero-lead">Encontre o edital</span> <span className="block text-hero-highlight">antes do prazo</span>
             </h1>
             <p className="mt-7 max-w-lg text-[17px] leading-8 text-muted-foreground">

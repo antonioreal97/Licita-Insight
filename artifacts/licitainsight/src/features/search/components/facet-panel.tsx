@@ -21,7 +21,7 @@ type PanelProps = {
 
 /** DS input spec: border-strong on hover, ring + 3px halo on focus. `text-base` on phones avoids iOS zoom. */
 const inputBase =
-  'w-full rounded-md border border-input bg-background text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 aria-[invalid=true]:border-destructive sm:type-ui';
+  'w-full rounded-lg border border-input bg-background text-base transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring aria-[invalid=true]:border-destructive sm:type-ui';
 
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 

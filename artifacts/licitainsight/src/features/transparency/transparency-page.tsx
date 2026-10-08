@@ -81,7 +81,7 @@ export default function TransparencyPage() {
     <div className="space-y-6">
       <header className="border-b border-border pb-6">
         <div className="flex items-center gap-2 type-eyebrow text-primary"><FileCheck2 size={15} aria-hidden /> Transparência</div>
-        <h1 className="mt-3 type-display-sm text-foreground">Contratos e resultados publicados</h1>
+        <h1 className="mt-3 type-titulo-3 text-foreground">Contratos e resultados publicados</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">Consulte contratos divulgados pelo PNCP e siga o vínculo com o edital de origem. O fornecedor do contrato pode ser diferente do vencedor de cada item.</p>
       </header>
 
@@ -90,7 +90,7 @@ export default function TransparencyPage() {
           <form onSubmit={onSearch} role="search" className="flex gap-2">
             <label htmlFor="transparency-query" className="sr-only">Buscar contratos</label>
             <Input id="transparency-query" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={160} placeholder="Fornecedor, órgão, objeto ou número" />
-            <button type="submit" aria-label="Buscar contratos" className="grid size-9 shrink-0 place-items-center rounded-md bg-action text-action-foreground hover:bg-action-hover"><Search size={17} aria-hidden /></button>
+            <button type="submit" aria-label="Buscar contratos" className="grid size-9 shrink-0 place-items-center rounded-pill bg-action text-action-foreground hover:bg-action-hover"><Search size={17} aria-hidden /></button>
           </form>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="type-meta text-muted-foreground">{contracts.data ? `${contracts.data.pagination.total.toLocaleString('pt-BR')} contratos encontrados` : 'Consultando contratos'}</p>
