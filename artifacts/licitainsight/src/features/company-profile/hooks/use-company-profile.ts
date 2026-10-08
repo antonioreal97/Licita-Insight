@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CompanyProfileInput, CompanyProfileResponse, TenderFitsResponse } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
-import { aiService } from '@/services/ai-service';
+import { aiService, PROFILE_LIMITS } from '@/services/ai-service';
 import { queryKeys } from '@/services/query-keys';
 
 /** The signed-in user's company profile (`profile: null` until saved). No access needed to read or edit it. */
@@ -13,6 +13,34 @@ export function useCompanyProfile() {
     queryFn: ({ signal }) => aiService.getCompanyProfile(signal),
     enabled: status === 'authenticated',
     staleTime: 60_000,
+  });
+}
+
+export function useProfileCategories() {
+  return useQuery({
+    queryKey: queryKeys.me.profileCategories,
+    queryFn: ({ signal }) => aiService.listProfileCategories(signal),
+    staleTime: 15 * 60_000,
+  });
+}
+
+export function useProfileKeywordSuggestions(query: string) {
+  const normalized = query.trim();
+  return useQuery({
+    queryKey: queryKeys.me.profileKeywords(normalized),
+    queryFn: ({ signal }) => aiService.suggestProfileKeywords(normalized, signal),
+    enabled: normalized.length >= 2,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useProfileDescriptionSuggestions(description: string) {
+  const normalized = description.trim();
+  return useQuery({
+    queryKey: queryKeys.me.profileDescription(normalized),
+    queryFn: ({ signal }) => aiService.suggestProfileFiltersFromDescription(normalized, signal),
+    enabled: normalized.length >= PROFILE_LIMITS.descriptionMin,
+    staleTime: 5 * 60_000,
   });
 }
 

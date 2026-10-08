@@ -6,6 +6,7 @@ import billingRouter from "./billing";
 import healthRouter from "./health";
 import ingestRouter from "./ingest";
 import opportunitiesRouter from "./opportunities";
+import profileRouter from "./profile";
 import recommendationsRouter from "./recommendations";
 import searchRouter from "./search";
 import transparencyRouter from "./transparency";
@@ -20,6 +21,7 @@ router.use(accountRouter);
 router.use(searchRouter);
 router.use(transparencyRouter);
 router.use(opportunitiesRouter);
+router.use(profileRouter);
 router.use(recommendationsRouter);
 router.use(ingestRouter);
 

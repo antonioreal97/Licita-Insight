@@ -243,6 +243,32 @@ type NotificationPreferences = {
   gerado pela aplicação. O rastreamento de abertura/clique também deve permanecer desligado no
   domínio do provedor.
 
+## 6. Perfil da empresa e filtros inteligentes
+
+`GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
+
+```ts
+type CompanyProfileSmartFilters = {
+  selectedCategories: string[]; // slugs da taxonomia canônica
+  selectedKeywords: string[]; // formas de exibição escolhidas no vocabulário
+  excludedKeywords: string[]; // remoção rígida em recomendações e alertas
+};
+```
+
+Clientes anteriores podem omitir as três propriedades; a API as trata como listas vazias. Os novos clientes sempre as enviam. Cada lista aceita no máximo 20 valores únicos; categorias fora da lista canônica respondem `400 INVALID_PARAMETER`.
+
+| Método | Caminho                                     | Entrada                               | Resposta                                         |
+| ------ | ------------------------------------------- | ------------------------------------- | ------------------------------------------------ |
+| GET    | `/api/v1/profile/categories`                | —                                     | `{data: Array<{slug,label,openTenderCount}>}`    |
+| GET    | `/api/v1/profile/keywords/suggest?q=`       | `q` com 2–80 caracteres               | `{data: ProfileKeywordSuggestion[]}` (máx. 10)   |
+| POST   | `/api/v1/profile/keywords/from-description` | `{description}` com 20–600 caracteres | `{keywords,categories,estimatedOpenTenderCount}` |
+
+As três rotas exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). O POST apenas calcula sugestões e não altera estado, portanto não exige assinatura.
+
+O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
+
+O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
+
 ## Assinatura (Asaas)
 
 Um plano mensal. O valor vem de `BILLING_MONTHLY_BRL` (não fica no código). Sem `ASAAS_API_KEY`,

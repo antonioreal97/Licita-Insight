@@ -9,6 +9,9 @@ const valid = () => ({
     "Fornecemos computadores, servidores e suporte técnico especializado.",
   offerings: ["computadores", "suporte técnico"],
   exclusions: ["locação de veículos"],
+  selectedCategories: ["ti-telecom"],
+  selectedKeywords: ["servidor rack"],
+  excludedKeywords: ["impressora"],
   coverage: { scope: "states", states: ["sp", "DF"] },
   valueRange: { min: 1000, max: 500000 },
   size: "other",
@@ -31,6 +34,18 @@ test("rejeita termos duplicados ignorando caixa e acentos", () => {
       error.details?.[0]?.field === "offerings" &&
       error.details[0].issue === "duplicate",
   );
+});
+
+test("mantém compatibilidade com clientes anteriores e valida a taxonomia", () => {
+  const legacy = valid() as Record<string, unknown>;
+  delete legacy.selectedCategories;
+  delete legacy.selectedKeywords;
+  delete legacy.excludedKeywords;
+  const parsed = parseCompanyProfileInput(legacy);
+  assert.deepEqual(parsed.selectedCategories, []);
+  assert.deepEqual(parsed.selectedKeywords, []);
+  assert.deepEqual(parsed.excludedKeywords, []);
+  assert.throws(() => parseCompanyProfileInput({ ...valid(), selectedCategories: ["inventada"] }), InvalidParameterError);
 });
 
 test("rejeita cobertura, faixa e limites inválidos", () => {

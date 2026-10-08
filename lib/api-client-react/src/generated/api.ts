@@ -55,6 +55,10 @@ import type {
   NotificationPreferences,
   OpportunitySearchResponse,
   OpportunitySummary,
+  ProfileCategoriesResponse,
+  ProfileDescriptionSuggestionRequest,
+  ProfileDescriptionSuggestions,
+  ProfileKeywordSuggestionsResponse,
   PutSavedTenderRequest,
   RateLimitedResponse,
   ReadinessCheck200,
@@ -76,6 +80,7 @@ import type {
   SearchUnavailableResponse,
   StartGoogleAuthParams,
   SubscriptionRequiredResponse,
+  SuggestProfileKeywordsParams,
   SuggestionsResponse,
   TenderAskStatus,
   TenderDetail,
@@ -1159,6 +1164,255 @@ export const useDeleteCompanyProfile = <TError = ErrorType<UnauthenticatedRespon
         TContext
       > => {
       return useMutation(getDeleteCompanyProfileMutationOptions(options));
+    }
+
+export const getListProfileCategoriesUrl = () => {
+
+
+
+
+  return `/api/v1/profile/categories`
+}
+
+/**
+ * @summary List the fixed tender taxonomy with current open-tender counts
+ */
+export const listProfileCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<ProfileCategoriesResponse> => {
+
+  return customFetch<ProfileCategoriesResponse>(getListProfileCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfileCategoriesQueryKey = () => {
+    return [
+    `/api/v1/profile/categories`
+    ] as const;
+    }
+
+
+export const getListProfileCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listProfileCategories>>, TError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfileCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfileCategories>>> = ({ signal }) => listProfileCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfileCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfileCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listProfileCategories>>>
+export type ListProfileCategoriesQueryError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>
+
+
+/**
+ * @summary List the fixed tender taxonomy with current open-tender counts
+ */
+
+export function useListProfileCategories<TData = Awaited<ReturnType<typeof listProfileCategories>>, TError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfileCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSuggestProfileKeywordsUrl = (params: SuggestProfileKeywordsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/profile/keywords/suggest?${stringifiedParams}` : `/api/v1/profile/keywords/suggest`
+}
+
+/**
+ * @summary Autocomplete materialized terms from open tenders
+ */
+export const suggestProfileKeywords = async (params: SuggestProfileKeywordsParams, options?: Parameters<typeof customFetch>[1]): Promise<ProfileKeywordSuggestionsResponse> => {
+
+  return customFetch<ProfileKeywordSuggestionsResponse>(getSuggestProfileKeywordsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSuggestProfileKeywordsQueryKey = (params?: SuggestProfileKeywordsParams,) => {
+    return [
+    `/api/v1/profile/keywords/suggest`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSuggestProfileKeywordsQueryOptions = <TData = Awaited<ReturnType<typeof suggestProfileKeywords>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>>(params: SuggestProfileKeywordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof suggestProfileKeywords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSuggestProfileKeywordsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof suggestProfileKeywords>>> = ({ signal }) => suggestProfileKeywords(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof suggestProfileKeywords>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SuggestProfileKeywordsQueryResult = NonNullable<Awaited<ReturnType<typeof suggestProfileKeywords>>>
+export type SuggestProfileKeywordsQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>
+
+
+/**
+ * @summary Autocomplete materialized terms from open tenders
+ */
+
+export function useSuggestProfileKeywords<TData = Awaited<ReturnType<typeof suggestProfileKeywords>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>>(
+ params: SuggestProfileKeywordsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof suggestProfileKeywords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSuggestProfileKeywordsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSuggestProfileFiltersFromDescriptionUrl = () => {
+
+
+
+
+  return `/api/v1/profile/keywords/from-description`
+}
+
+/**
+ * @summary Suggest categories and materialized keywords from a company description
+ */
+export const suggestProfileFiltersFromDescription = async (profileDescriptionSuggestionRequest: ProfileDescriptionSuggestionRequest, options?: Parameters<typeof customFetch>[1]): Promise<ProfileDescriptionSuggestions> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProfileDescriptionSuggestions>(getSuggestProfileFiltersFromDescriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(profileDescriptionSuggestionRequest)
+  }
+);}
+
+
+
+
+
+export const getSuggestProfileFiltersFromDescriptionMutationKey = () => ['suggestProfileFiltersFromDescription'] as const;
+
+export const getSuggestProfileFiltersFromDescriptionMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>, TError,SuggestProfileFiltersFromDescriptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>, TError,SuggestProfileFiltersFromDescriptionMutationVariables, TContext> => {
+
+const mutationKey = getSuggestProfileFiltersFromDescriptionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>, SuggestProfileFiltersFromDescriptionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  suggestProfileFiltersFromDescription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SuggestProfileFiltersFromDescriptionMutationResult = NonNullable<Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>>
+    export type SuggestProfileFiltersFromDescriptionMutationBody = BodyType<ProfileDescriptionSuggestionRequest>
+    export type SuggestProfileFiltersFromDescriptionMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>
+    export type SuggestProfileFiltersFromDescriptionMutationVariables = {data: BodyType<ProfileDescriptionSuggestionRequest>}
+
+    /**
+ * @summary Suggest categories and materialized keywords from a company description
+ */
+export const useSuggestProfileFiltersFromDescription = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>, TError,SuggestProfileFiltersFromDescriptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof suggestProfileFiltersFromDescription>>,
+        TError,
+        SuggestProfileFiltersFromDescriptionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSuggestProfileFiltersFromDescriptionMutationOptions(options));
     }
 
 export const getGetTenderFitsUrl = (params: GetTenderFitsParams,) => {
