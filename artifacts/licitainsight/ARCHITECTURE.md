@@ -1,4 +1,4 @@
-# Abriu lá — Frontend architecture
+# Pardal Digital — Frontend architecture
 
 ## Layering (mandatory)
 

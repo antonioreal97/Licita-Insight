@@ -30,12 +30,12 @@ export function AccessPanel({ reason }: { reason: 'anonymous' | 'no-access' }) {
         <Lock size={18} aria-hidden />
       </div>
       <h2 id="opportunities-gate-title" className="mx-auto mt-4 max-w-lg type-section text-foreground">
-        {anonymous ? 'Chamadas de fomento cultural fazem parte do acesso à Abriu lá.' : 'Seu acesso terminou'}
+        {anonymous ? 'Chamadas de fomento cultural fazem parte do acesso ao Pardal Digital.' : 'Seu acesso terminou'}
       </h2>
       <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">
         {anonymous
           ? `Entre com Google e ganhe ${trialDays} dias de acesso completo.`
-          : 'Chamadas de fomento cultural fazem parte do acesso à Abriu lá. Assine para voltar a ver as chamadas e a salvar e monitorar editais.'}
+          : 'Chamadas de fomento cultural fazem parte do acesso ao Pardal Digital. Assine para voltar a ver as chamadas e a salvar e monitorar editais.'}
       </p>
       {anonymous ? (
         <>

@@ -17,7 +17,7 @@ import {
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
-import { BrandIcon } from '@/components/brand-icon';
+import { BrandName } from '@/components/brand-icon';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
@@ -126,10 +126,7 @@ function HeroRadar() {
       <div aria-hidden className="absolute -inset-3 rounded-[30px] bg-primary-subtle/70 sm:-inset-6" />
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <BrandIcon className="size-6" />
-            Seu radar
-          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold">Seu radar</div>
           <span className="type-label text-muted-foreground">dados do PNCP, ao vivo</span>
         </div>
         {/* Bottom padding on ≥sm leaves room for the evidence card so it never covers a tender. */}
@@ -254,7 +251,7 @@ function ServicesSection() {
   return (
     <section id="servicos" aria-labelledby="servicos-titulo" className="mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div className="max-w-2xl">
-        <div className={eyebrow}>O que você faz com Abriu lá</div>
+        <div className={eyebrow}>O que você faz com Pardal Digital</div>
         <h2 id="servicos-titulo" className={sectionTitle}>
           Do edital publicado à decisão de participar.
         </h2>
@@ -284,15 +281,11 @@ function EvidenceSection() {
               A IA escolhe o trecho. Quem lê a regra é você.
             </h2>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-sidebar-muted-foreground">
-              A Abriu lá não escreve resumos por conta própria. A inteligência artificial procura, nos documentos oficiais, o trecho que responde, e mostra a
-              página. Se o edital não diz, a Abriu lá também não diz.
+              O Pardal Digital não escreve resumos por conta própria. A inteligência artificial procura, nos documentos oficiais, o trecho que responde, e
+              mostra a página. Se o edital não diz, o Pardal Digital também não diz.
             </p>
             <ul className="mt-8 grid gap-3 text-sm text-sidebar-foreground">
-              {[
-                'Cada resposta aponta documento e página',
-                'Ausência de trecho nunca vira um “não”',
-                'A confiança aparece de forma honesta',
-              ].map((item) => (
+              {['Cada resposta aponta documento e página', 'Ausência de trecho nunca vira um “não”', 'A confiança aparece de forma honesta'].map((item) => (
                 <li key={item} className="flex gap-2.5">
                   <Quote size={15} aria-hidden className="mt-0.5 shrink-0 text-sidebar-primary" />
                   {item}
@@ -350,7 +343,7 @@ function TransparencySection() {
             Veja quais empresas venceram os editais.
           </h2>
           <p className="mt-5 max-w-lg text-[15px] leading-7 text-muted-foreground">
-            Depois da disputa, a Abriu lá também quer mostrar o caminho do dinheiro público: quem venceu, por quanto, em qual órgão e com qual edital de
+            Depois da disputa, o Pardal Digital também quer mostrar o caminho do dinheiro público: quem venceu, por quanto, em qual órgão e com qual edital de
             origem. Resultado publicado vira histórico para consulta, comparação e prospecção.
           </p>
           <ul className="mt-8 grid gap-3 text-sm">
@@ -435,7 +428,7 @@ function ExtrasSection() {
   return (
     <section id="instrumento" aria-labelledby="instrumento-titulo" className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
       <h2 id="instrumento-titulo" className={cn(sectionTitle, 'max-w-lg')}>
-        Também na Abriu lá
+        Também no Pardal Digital
       </h2>
       <ul className="mt-8 grid gap-3 md:grid-cols-3">
         {items.map(({ icon: Icon, title, text }) => (
@@ -476,8 +469,8 @@ function PlanSection() {
             Um plano. Acesso completo.
           </h2>
           <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
-            O teste começa quando você entra com o Google pela primeira vez e libera tudo o que a Abriu lá oferece. Depois, a assinatura é mensal e pode ser
-            cancelada em Configurações.
+            O teste começa quando você entra com o Google pela primeira vez e libera tudo o que o Pardal Digital oferece. Depois, a assinatura é mensal e pode
+            ser cancelada em Configurações.
           </p>
         </div>
         <div className="relative">
@@ -516,7 +509,10 @@ function PlanSection() {
 }
 
 const faqs: [string, string][] = [
-  ['De onde vêm os editais?', 'Do PNCP, o Portal Nacional de Contratações Públicas. A coleta roda todo dia e revisita os editais em aberto para pegar retificações.'],
+  [
+    'De onde vêm os editais?',
+    'Do PNCP, o Portal Nacional de Contratações Públicas. A coleta roda todo dia e revisita os editais em aberto para pegar retificações.',
+  ],
   [
     'A IA pode inventar uma regra do edital?',
     'Não mostramos texto gerado. A ficha e as respostas são trechos oficiais com a página; quando o edital não trata do assunto, o campo fica como “não encontrado”.',
@@ -572,10 +568,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-sticky border-b border-transparent bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
           <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
-            <BrandIcon className="size-9" />
-            <span className="font-semibold tracking-heading">
-              Abriu <span className="text-primary">lá</span>
-            </span>
+            <BrandName />
           </Link>
           <nav aria-label="Seções" className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
             <a href="#servicos" className="transition-colors duration-fast hover:text-foreground">
@@ -605,8 +598,7 @@ export default function LandingPage() {
               Inteligência para compras públicas
             </div>
             <h1 className="max-w-2xl text-[42px] font-semibold leading-[1.03] tracking-[-0.055em] sm:text-[52px] xl:text-[56px]">
-              <span className="block text-hero-lead">Encontre o edital</span>{' '}
-              <span className="block text-hero-highlight">antes do prazo</span>
+              <span className="block text-hero-lead">Encontre o edital</span> <span className="block text-hero-highlight">antes do prazo</span>
             </h1>
             <p className="mt-7 max-w-lg text-[17px] leading-8 text-muted-foreground">
               Busca em todo o PNCP, aderência ao perfil da sua empresa, ficha do edital com a página de cada regra e alertas quando algo muda.
@@ -631,7 +623,7 @@ export default function LandingPage() {
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 Abriu lá · publicações do PNCP e do Mapas Culturais</span>
+          <span>© 2026 Pardal Digital · publicações do PNCP e do Mapas Culturais</span>
           <span>Feito para equipes que leem antes de agir.</span>
         </div>
       </footer>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Redirect, useSearch } from 'wouter';
 import { CircleAlert, LockKeyhole } from 'lucide-react';
-import { BrandIcon } from '@/components/brand-icon';
+import { BrandName } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { signInWithGoogle, useSession } from './hooks/use-session';
@@ -81,10 +81,7 @@ export default function AuthPage() {
     <div className="grid min-h-[100dvh] bg-background text-foreground lg:grid-cols-[.9fr_1.1fr]">
       <div className="hidden bg-sidebar p-10 text-sidebar-strong-foreground lg:flex lg:flex-col lg:justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <BrandIcon className="size-9" />
-          <span className="font-semibold">
-            Abriu <span className="text-sidebar-primary">lá</span>
-          </span>
+          <BrandName className="text-sidebar-strong-foreground" accentClassName="text-sidebar-primary" />
         </Link>
         <div>
           <div className="mb-4 type-eyebrow text-sidebar-primary">Pesquisa com contexto</div>
@@ -98,10 +95,7 @@ export default function AuthPage() {
       <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[400px]">
           <Link href="/" className="mb-12 flex items-center gap-2.5 lg:hidden">
-            <BrandIcon className="size-9" />
-            <span className="font-semibold">
-              Abriu <span className="text-primary">lá</span>
-            </span>
+            <BrandName />
           </Link>
           <div className="mb-8">
             <h1 className="text-3xl font-semibold tracking-display">Entre com sua conta Google.</h1>

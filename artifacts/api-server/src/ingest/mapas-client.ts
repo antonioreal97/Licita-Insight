@@ -86,7 +86,7 @@ async function defaultFetch(url: string): Promise<{ status: number; body: string
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
-      "User-Agent": "AbriuLa/0.1 (coleta de oportunidades do Mapas Culturais)",
+      "User-Agent": "PardalDigital/0.1 (coleta de oportunidades do Mapas Culturais)",
     },
     signal: timeoutSignal("MAPAS_HTTP_TIMEOUT_MS", 30_000),
   });

@@ -65,7 +65,7 @@ describe("notification email template", () => {
       unsubscribeToken: "signed-token",
       notifications: [notification],
     });
-    assert.equal(singular.subject, "Abriu lá: 1 atualização no seu resumo");
+    assert.equal(singular.subject, "Pardal Digital: 1 atualização no seu resumo");
     assert.match(singular.text, /1 novo resultado/);
 
     const plural = renderNotificationEmail({
@@ -78,7 +78,7 @@ describe("notification email template", () => {
         { ...notification, id: "saved-search-4" },
       ],
     });
-    assert.equal(plural.subject, "Abriu lá: 3 atualizações no seu resumo");
+    assert.equal(plural.subject, "Pardal Digital: 3 atualizações no seu resumo");
     assert.match(plural.text, /4 novos resultados/);
     assert.doesNotMatch(plural.text, /\(s\)/);
   });
@@ -248,7 +248,7 @@ describe("daily digest deadlines section", () => {
       ],
       [notification],
     );
-    assert.equal(rendered.subject, "Abriu lá: 2 prazos e 1 atualização no seu resumo");
+    assert.equal(rendered.subject, "Pardal Digital: 2 prazos e 1 atualização no seu resumo");
     assert.match(rendered.html, /<h3[^>]*>Seus prazos<\/h3>/);
     assert.match(rendered.html, /<h3[^>]*>Novidades<\/h3>/);
     assert.ok(rendered.html.indexOf("Seus prazos") < rendered.html.indexOf("Novidades"));
@@ -269,7 +269,7 @@ describe("daily digest deadlines section", () => {
 
   it("sends only the deadlines when there are no updates", () => {
     const rendered = render([deadline()]);
-    assert.equal(rendered.subject, "Abriu lá: 1 prazo nos próximos dias");
+    assert.equal(rendered.subject, "Pardal Digital: 1 prazo nos próximos dias");
     assert.match(rendered.html, /Seus prazos/);
     assert.doesNotMatch(rendered.html, /Novidades/);
     assert.equal(rendered.html.match(/Ver edital/g)?.length, 1);
@@ -280,7 +280,7 @@ describe("daily digest deadlines section", () => {
     const proposalFirst = render([
       deadline({ proposalDeadline: new Date("2026-09-30T13:00:00.000Z") }),
     ]);
-    assert.equal(proposalFirst.subject, "Abriu lá: 2 prazos nos próximos dias");
+    assert.equal(proposalFirst.subject, "Pardal Digital: 2 prazos nos próximos dias");
     assert.equal(proposalFirst.html.match(/Ver edital/g)?.length, 1);
     assert.match(
       proposalFirst.text,
@@ -311,7 +311,7 @@ describe("daily digest deadlines section", () => {
 
   it("omits the section without deadlines", () => {
     const rendered = render([], [notification]);
-    assert.equal(rendered.subject, "Abriu lá: 1 atualização no seu resumo");
+    assert.equal(rendered.subject, "Pardal Digital: 1 atualização no seu resumo");
     assert.doesNotMatch(rendered.html, /Seus prazos|Novidades/);
     assert.doesNotMatch(rendered.text, /Seus prazos|Novidades/);
   });
@@ -334,7 +334,7 @@ describe("daily digest deadlines section", () => {
       }),
     );
     const rendered = render(deadlines.reverse());
-    assert.equal(rendered.subject, "Abriu lá: 26 prazos nos próximos dias");
+    assert.equal(rendered.subject, "Pardal Digital: 26 prazos nos próximos dias");
     assert.equal(rendered.html.match(/Ver edital/g)?.length, 10);
     assert.match(rendered.text, /tender-09/);
     assert.doesNotMatch(rendered.text, /tender-1[0-2]/);
