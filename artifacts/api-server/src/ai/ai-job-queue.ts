@@ -4,7 +4,7 @@ import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { incrementMetric, observeMetric } from "../metrics";
 
-export type AiJobKind = "index" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
+export type AiJobKind = "index" | "document_ocr" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
 export type AiJobLane = "interactive" | "batch";
 
 export type AiJob = {
@@ -77,6 +77,7 @@ export const aiJobQueueConfig = () => ({
   visibilityMs: positiveInteger("AI_JOB_VISIBILITY_TIMEOUT_MS", 5 * 60_000),
   maxDepth: {
     index: positiveInteger("AI_QUEUE_MAX_DEPTH_INDEX", 1_000),
+    document_ocr: positiveInteger("AI_QUEUE_MAX_DEPTH_DOCUMENT_OCR", 1_000),
     fit: positiveInteger("AI_QUEUE_MAX_DEPTH_FIT", 10_000),
     sheet: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
     sheet_summary: positiveInteger("AI_QUEUE_MAX_DEPTH_SHEET", 1_000),
@@ -84,6 +85,7 @@ export const aiJobQueueConfig = () => ({
   } satisfies Record<AiJobKind, number>,
   concurrency: {
     index: positiveInteger("WORKER_INDEX_CONCURRENCY", 2),
+    document_ocr: 1,
     fit: positiveInteger("WORKER_FIT_CONCURRENCY", 8),
     sheet: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
     sheet_summary: positiveInteger("WORKER_SHEET_CONCURRENCY", 2),
@@ -190,10 +192,10 @@ export async function claimAiJobs(
 }
 
 export async function recoverExpiredAiJobs(): Promise<{ requeued: number; dead: number }> {
-  const dead = await pool.query(
+  const dead = await pool.query<{ kind: AiJobKind; payload: Record<string, unknown> }>(
     `update ai_jobs set status = 'dead', locked_by = null, locked_until = null,
        last_error = coalesce(last_error, 'visibility timeout expired'), finished_at = now()
-     where status = 'running' and locked_until < now() and attempts >= max_attempts returning id`,
+     where status = 'running' and locked_until < now() and attempts >= max_attempts returning kind, payload`,
   );
   const requeued = await pool.query(
     `update ai_jobs set status = 'queued', locked_by = null, locked_until = null,
@@ -201,6 +203,11 @@ export async function recoverExpiredAiJobs(): Promise<{ requeued: number; dead: 
        run_after = now() + (least(300, power(2, greatest(attempts - 1, 0))) * interval '1 second')
      where status = 'running' and locked_until < now() and attempts < max_attempts returning id`,
   );
+  for (const job of dead.rows) {
+    if (job.kind !== "document_ocr") continue;
+    const { markDocumentOcrFailed } = await import("./tender-index-service");
+    await markDocumentOcrFailed(String(job.payload.documentId), new Error("OCR visibility timeout expired"));
+  }
   return { requeued: requeued.rowCount ?? 0, dead: dead.rowCount ?? 0 };
 }
 
@@ -224,12 +231,21 @@ const failAiJob = async (job: AiJob, error: unknown): Promise<void> => {
      where id = $1 and locked_by = $2`,
     [job.id, job.lockedBy, terminal ? "dead" : "queued", message],
   );
+  if (terminal && job.kind === "document_ocr") {
+    const { markDocumentOcrFailed } = await import("./tender-index-service");
+    await markDocumentOcrFailed(String(job.payload.documentId), error);
+  }
 };
 
 export async function executeAiJob(job: AiJob): Promise<void> {
   if (job.kind === "index") {
     const { executeTenderIndexJob } = await import("./tender-index-service");
     await executeTenderIndexJob(job.tenderId, Number(job.payload.version), Number(job.payload.previousVersion));
+    return;
+  }
+  if (job.kind === "document_ocr") {
+    const { executeDocumentOcrJob } = await import("./tender-index-service");
+    await executeDocumentOcrJob(job.tenderId, String(job.payload.documentId), Number(job.payload.indexVersion));
     return;
   }
   if (job.kind === "fit") {
@@ -302,6 +318,7 @@ export function startAiJobWorker(options: {
   const active = new Set<Promise<void>>();
   const activeByKind: Record<AiJobKind, number> = {
     index: 0,
+    document_ocr: 0,
     fit: 0,
     sheet: 0,
     sheet_summary: 0,
@@ -383,7 +400,7 @@ export function startAiJobWorker(options: {
     }
     const { isAiBatchBudgetPaused } = await import("./ai-budget");
     const budgetPaused = await isAiBatchBudgetPaused();
-    for (const kind of ["index", "sheet", "sheet_summary", "fit"] as const) {
+    for (const kind of ["index", "document_ocr", "sheet", "sheet_summary", "fit"] as const) {
       if (kind === "fit" && budgetPaused) continue;
       const available = config.concurrency[kind] - activeByKind[kind];
       if (available < 1) continue;

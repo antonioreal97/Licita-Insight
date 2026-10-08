@@ -16,4 +16,6 @@ export interface TenderAskDocument {
      */
   pages: number | null;
   status: TenderAskDocumentStatus;
+  /** @items.minimum 1 */
+  ocrLowConfidencePages: number[];
 }

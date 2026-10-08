@@ -472,9 +472,9 @@ export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPrefere
 // AI v1 ("Perguntar ao edital") — source of truth: docs/contracts/ai-v1.md. Jev selects official passages; OpenAI may write a grounded summary from them.
 
 /** `expired`: the documents were dropped from the index 90 days after the proposal deadline (unless a user saved the tender). Saving reopens it. */
-export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
+export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ocr_processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
 
-export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ready' | 'failed' | 'unsupported' };
+export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ocr_processing' | 'ready' | 'failed' | 'unsupported'; ocrLowConfidencePages: number[] };
 
 export type DocumentReadingSummary = {
   read: number;
@@ -536,7 +536,7 @@ export type QualificationType = 'ato_societario' | 'regularidade_fiscal' | 'regu
 export type QualificationItem = { type: QualificationType; evidence: SheetEvidence; confidence: number };
 
 export type TenderSheet = {
-  status: 'not_started' | 'processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
+  status: TenderAskIndexStatus;
   fields: SheetField[];
   /** Not exhaustive: dedup keeps the strongest passage per (type, page), so a sibling requirement sharing a page can be left out. */
   qualificationChecklist: QualificationItem[];

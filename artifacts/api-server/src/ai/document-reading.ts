@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, tenderAiDocumentsTable } from "@workspace/db";
 
-export type DocumentReadingReason = "scanned_pdf" | "image" | "size_limit" | "download_error" | `unsupported_format:${string}`;
+export type DocumentReadingReason = "scanned_pdf" | "image" | "size_limit" | "download_error" | "ocr_failed" | `unsupported_format:${string}`;
 
 export type DocumentReadingSummary = {
   read: number;
@@ -19,6 +19,7 @@ const publicReason = (status: string, error: string | null): DocumentReadingReas
   if (error === "image") return "image";
   if (error === "size_limit" || error?.includes("SIZE_LIMIT") || error?.includes("PAGE_LIMIT")) return "size_limit";
   if (error?.startsWith("unsupported_format:")) return error as `unsupported_format:${string}`;
+  if (error?.startsWith("ocr_") || error?.startsWith("ocr_failed:")) return "ocr_failed";
   if (status === "failed") return "download_error";
   return "unsupported_format:unknown";
 };

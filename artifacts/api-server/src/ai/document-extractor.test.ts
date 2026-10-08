@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { zipSync } from "fflate";
-import { chunkPages, extractDocuments, joinPositionedTextItems, normalizeExtractedText, normalizePdfPages } from "./document-extractor";
+import { chunkPages, documentBytesAtPath, extractDocuments, joinPositionedTextItems, normalizeExtractedText, normalizePdfPages, ocrKindForBytes } from "./document-extractor";
 
 function fixturePdf(text: string): Uint8Array {
   const escaped = text.replace(/([\\()])/g, "\\$1");
@@ -91,6 +91,7 @@ test("reads accepted formats and one nested ZIP level", async () => {
   assert.equal(documents.length, 2);
   assert.ok(documents.some(({ internalPath }) => internalPath === "inner.zip!/edital.dat"));
   assert.ok(documents.some(({ title, pages }) => title === "anexo.txt" && pages.join(" ").includes("Texto complementar")));
+  assert.equal(ocrKindForBytes(documentBytesAtPath(nested, "inner.zip!/edital.dat")), "pdf");
 });
 
 test("extracts ODS, CSV and TXT into bounded logical pages", async () => {

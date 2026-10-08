@@ -6,6 +6,7 @@ const reasonLabel = (reason: string, count: number) => {
   if (reason === 'image') return count === 1 ? 'é uma imagem' : 'são imagens';
   if (reason === 'size_limit') return count === 1 ? 'excede o limite de tamanho' : 'excedem o limite de tamanho';
   if (reason === 'download_error') return count === 1 ? 'não pôde ser baixado' : 'não puderam ser baixados';
+  if (reason === 'ocr_failed') return count === 1 ? 'não pôde ser reconhecido pelo OCR' : 'não puderam ser reconhecidos pelo OCR';
   return count === 1 ? 'está em formato não compatível' : 'estão em formato não compatível';
 };
 
