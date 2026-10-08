@@ -55,3 +55,6 @@ Thumbs.db
 .cache/
 .local/
 .aider*
+
+# Prévias e saídas locais geradas por ferramentas
+Claude outputs/
