@@ -12,6 +12,7 @@ import type { Modality } from './modality';
 import type { Organization } from './organization';
 import type { Relevance } from './relevance';
 import type { Source } from './source';
+import type { TenderPlatform } from './tenderPlatform';
 import type { TenderStatus } from './tenderStatus';
 import type { TenderSummaryDisplayTitleSource } from './tenderSummaryDisplayTitleSource';
 
@@ -47,6 +48,8 @@ export interface TenderSummary {
   proposalDeadline: Date | null;
   location: Location;
   source: Source;
+  /** Null until the tender is ingested or backfilled with the platform column. */
+  platform: TenderPlatform | null;
   categories: Category[];
   relevance: Relevance;
   updatedAt: Date;

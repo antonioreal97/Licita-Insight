@@ -5,6 +5,7 @@ import type {
   ProfileCategoriesResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
   TenderSheet,
@@ -20,6 +21,7 @@ export interface AiAdapter {
   saveCompanyProfile(profile: CompanyProfileInput): Promise<CompanyProfileResponse>;
   deleteCompanyProfile(): Promise<void>;
   listProfileCategories(signal?: AbortSignal): Promise<ProfileCategoriesResponse>;
+  listProfilePlatforms(signal?: AbortSignal): Promise<ProfilePlatformsResponse>;
   suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
   suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;
   getFits(tenderIds: string[], signal?: AbortSignal): Promise<TenderFitsResponse>;

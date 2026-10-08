@@ -11,4 +11,8 @@ export type CompanyProfile = CompanyProfileInput & {
   /** @minimum 1 */
   version: number;
   updatedAt: Date;
-};
+} & Required<Pick<CompanyProfileInput & {
+  /** @minimum 1 */
+  version: number;
+  updatedAt: Date;
+}, 'registeredPlatforms'>>;

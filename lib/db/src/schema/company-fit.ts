@@ -63,6 +63,10 @@ export const companyProfilesTable = pgTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    registeredPlatforms: jsonb("registered_platforms")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     coverageScope: text("coverage_scope").notNull(),
     coverageStates: jsonb("coverage_states")
       .$type<string[]>()

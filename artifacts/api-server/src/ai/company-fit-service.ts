@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { and, asc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import {
   aiFitDailyUsageTable,
@@ -62,6 +63,7 @@ const toProfile = (
   selectedCategories: row.selectedCategories,
   selectedKeywords: row.selectedKeywords,
   excludedKeywords: row.excludedKeywords,
+  registeredPlatforms: row.registeredPlatforms,
   coverage:
     row.coverageScope === "national"
       ? { scope: "national" }
@@ -74,6 +76,16 @@ const toProfile = (
   version: row.version,
   updatedAt: row.updatedAt,
 });
+
+/** Registered platforms do not feed the AI fit, so changing only them keeps the version and cached fits. */
+const sameFitInput = (
+  saved: CompanyProfile,
+  input: CompanyProfileInput,
+): boolean => {
+  const { version: _version, updatedAt: _updatedAt, registeredPlatforms: _saved, ...savedFit } = saved;
+  const { registeredPlatforms: _input, ...inputFit } = input;
+  return isDeepStrictEqual(savedFit, inputFit);
+};
 
 export async function getCompanyProfile(
   userId: string,
@@ -96,10 +108,18 @@ export async function putCompanyProfile(
       sql`select pg_advisory_xact_lock(hashtext(${`company-profile:${userId}`}))`,
     );
     const [existing] = await tx
-      .select({ version: companyProfilesTable.version })
+      .select()
       .from(companyProfilesTable)
       .where(eq(companyProfilesTable.userId, userId))
       .limit(1);
+    if (existing && sameFitInput(toProfile(existing), input)) {
+      const [saved] = await tx
+        .update(companyProfilesTable)
+        .set({ registeredPlatforms: input.registeredPlatforms, updatedAt: now })
+        .where(eq(companyProfilesTable.userId, userId))
+        .returning();
+      return saved!;
+    }
     const version = (existing?.version ?? 0) + 1;
     await tx
       .delete(companyTenderFitsTable)
@@ -112,6 +132,7 @@ export async function putCompanyProfile(
       selectedCategories: input.selectedCategories,
       selectedKeywords: input.selectedKeywords,
       excludedKeywords: input.excludedKeywords,
+      registeredPlatforms: input.registeredPlatforms,
       coverageScope: input.coverage.scope,
       coverageStates:
         input.coverage.scope === "states" ? input.coverage.states : [],

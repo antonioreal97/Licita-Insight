@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { InvalidParameterError, type ApiErrorDetail } from "../lib/api-error";
 import { TENDER_CATEGORIES } from "../catalog/tender-categories";
+import { isRegistrationSlug } from "../catalog/tender-platforms";
 
 export type CompanySize = "me_epp" | "cooperative" | "other";
 export type CompanyProfileInput = {
@@ -10,6 +11,8 @@ export type CompanyProfileInput = {
   selectedCategories: string[];
   selectedKeywords: string[];
   excludedKeywords: string[];
+  /** Bidding rooms and SICAF the company is registered in. Does not feed the AI fit. */
+  registeredPlatforms: string[];
   coverage: { scope: "national" } | { scope: "states"; states: string[] };
   valueRange: { min: number | null; max: number | null };
   size: CompanySize;
@@ -147,6 +150,23 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
     new Set(selectedCategories).size !== selectedCategories.length
   )
     details.push({ field: "selectedCategories", issue: "invalid_length" });
+  const registeredPlatforms = Array.isArray(body.registeredPlatforms)
+    ? body.registeredPlatforms.filter((platform, index): platform is string => {
+        if (isRegistrationSlug(platform)) return true;
+        details.push({
+          field: `registeredPlatforms.${index}`,
+          issue: "invalid_value",
+        });
+        return false;
+      })
+    : [];
+  if (
+    body.registeredPlatforms !== undefined &&
+    !Array.isArray(body.registeredPlatforms)
+  )
+    details.push({ field: "registeredPlatforms", issue: "invalid_type" });
+  if (new Set(registeredPlatforms).size !== registeredPlatforms.length)
+    details.push({ field: "registeredPlatforms", issue: "duplicate" });
   let coverage: CompanyProfileInput["coverage"] | undefined;
   if (
     !body.coverage ||
@@ -213,6 +233,7 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
     selectedCategories,
     selectedKeywords,
     excludedKeywords,
+    registeredPlatforms,
     coverage: coverage!,
     valueRange: { min: min!, max: max! },
     size: size!,

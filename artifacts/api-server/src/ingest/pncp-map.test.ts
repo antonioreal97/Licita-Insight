@@ -40,6 +40,16 @@ const publication = {
 };
 
 describe("PNCP publication mapping", () => {
+  it("fills the bidding platform from the publishing system", () => {
+    assert.equal(mapPublication(publication, now).platform, "nao-informado");
+    const draft = mapPublication(
+      { ...publication, usuarioNome: "BLL Compras" },
+      now,
+    );
+    assert.equal(draft.platform, "bll");
+    assert.equal(draft.platformLabel, "BLL Compras");
+  });
+
   it("maps a publication into the tender shape the API already serves", () => {
     const draft = mapPublication(publication, now);
 

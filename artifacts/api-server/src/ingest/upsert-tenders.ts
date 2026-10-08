@@ -127,6 +127,8 @@ export async function upsertPublications(
       sourceId: draft.sourceId,
       sourceName: draft.sourceName,
       sourceUrl: draft.sourceUrl,
+      platform: draft.platform,
+      platformLabel: draft.platformLabel,
       categories: draft.categories,
       categorySource: draft.categories.length > 0 ? "rules" as const : null,
       categorizedAt: draft.categories.length > 0 ? now : null,
@@ -197,6 +199,8 @@ export async function upsertPublications(
             sourceId: values.sourceId,
             sourceName: values.sourceName,
             sourceUrl: values.sourceUrl,
+            platform: values.platform,
+            platformLabel: values.platformLabel,
             searchText: sql`trim(concat_ws(' ',
               case when ${tendersTable.displayTitleSource} = 'model'
                 then ${tendersTable.displayTitleNorm}

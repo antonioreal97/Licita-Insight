@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
-import { ChevronDown, CircleAlert, ClipboardList, Info, Loader2, RefreshCw } from 'lucide-react';
-import { isApiError, type ChecklistKey, type QualificationItem, type QualificationType, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
+import { ChevronDown, CircleAlert, ClipboardList, Info, Loader2, RefreshCw, TriangleAlert } from 'lucide-react';
+import { isApiError, type ChecklistKey, type QualificationItem, type QualificationType, type RegistrationRequirement, type SheetField, type SheetFieldId, type TenderSheet } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
@@ -10,6 +10,7 @@ import { ProvenanceLabel } from '@/features/participation/components/provenance-
 import { cn } from '@/lib/utils';
 import { useTenderSheet } from '../hooks/use-tender-sheet';
 import { tendersExhaustedMessage } from '../lib/ai-quota';
+import { registrationRequirementText } from '../lib/registration-requirement';
 import { sheetExcerpt } from '../lib/sheet-excerpt';
 import { FIELDS, QUALIFICATION_LABELS, QUALIFICATION_ORDER } from '../lib/sheet-labels';
 import { SourceLink } from './source-link';
@@ -150,6 +151,47 @@ function FieldRow({ field, sourceNumber, prep }: { field: SheetField; sourceNumb
   );
 }
 
+/** Found by rule in the edital text; the deadline counts weekends and national holidays only. */
+function RegistrationRequirementAlert({ requirement }: { requirement: RegistrationRequirement }) {
+  const [open, setOpen] = useState(false);
+  const passageId = useId();
+  return (
+    <div
+      role="note"
+      className="mb-4 flex gap-2.5 rounded-lg bg-warning-subtle px-4 py-3 type-meta text-warning-subtle-foreground ring-1 ring-warning/40"
+      data-testid="alert-registration-requirement"
+    >
+      <TriangleAlert size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <p className="font-semibold">Credenciamento prévio exigido</p>
+        <p className="mt-0.5" data-testid="text-registration-requirement">
+          {registrationRequirementText(requirement)}
+        </p>
+        {requirement.deadline && <p className="mt-0.5">Feriados estaduais e municipais não entram na conta; confira o calendário local.</p>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <SourceLink evidence={requirement.evidence} />
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={passageId}
+            onClick={() => setOpen((value) => !value)}
+            className="inline-flex items-center gap-1 rounded-sm font-semibold transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+            data-testid="button-registration-requirement-toggle"
+          >
+            {open ? 'Ocultar trecho' : 'Ver trecho'}
+            <ChevronDown size={13} aria-hidden="true" className={cn('transition-transform duration-fast ease-standard', open && 'rotate-180')} />
+          </button>
+        </div>
+        {open && (
+          <blockquote id={passageId} className="mt-2 border-l-2 border-warning/60 pl-3 break-words">
+            {requirement.evidence.text}
+          </blockquote>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }) {
   const byId = new Map(sheet.fields.map((field) => [field.id, field]));
   const found = sheet.fields.filter((field) => field.status === 'found').length;
@@ -234,6 +276,7 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
           <> <DocumentReadingNotice reading={sheet.documentReading} /> A ficha pode estar incompleta.</>
         )}
       </p>
+      {sheet.registrationRequirement && <RegistrationRequirementAlert requirement={sheet.registrationRequirement} />}
       <div className="space-y-6">
         {sections}
         {missing.length > 0 && (

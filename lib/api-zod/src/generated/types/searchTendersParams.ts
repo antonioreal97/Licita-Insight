@@ -15,6 +15,7 @@ import type { ModalityFilterParameter } from './modalityFilterParameter';
 import type { OrganizationFilterParameter } from './organizationFilterParameter';
 import type { PageParameter } from './pageParameter';
 import type { PageSizeParameter } from './pageSizeParameter';
+import type { PlatformFilterParameter } from './platformFilterParameter';
 import type { PublishedFromParameter } from './publishedFromParameter';
 import type { PublishedToParameter } from './publishedToParameter';
 import type { QueryParameter } from './queryParameter';
@@ -55,6 +56,11 @@ sourceId?: SourceFilterParameter;
  * @items.minLength 1
  */
 category?: CategoryFilterParameter;
+/**
+ * Normalized bidding platform slug (`TenderPlatform.slug`).
+ * @items.minLength 1
+ */
+platform?: PlatformFilterParameter;
 /**
  * @minimum 0
  */

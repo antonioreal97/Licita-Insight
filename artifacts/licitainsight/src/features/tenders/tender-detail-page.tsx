@@ -42,6 +42,7 @@ import { AskTenderPanel } from './components/ask-tender-panel';
 import { TenderSheetPanel } from './components/tender-sheet-panel';
 import { DeadlineIndicator } from './components/deadline-indicator';
 import { MetaItem } from './components/meta-item';
+import { PlatformBadge } from './components/platform-badge';
 import { StatusBadge } from './components/status-badge';
 import { ValueDisplay } from './components/value-display';
 import { useTender } from './hooks/use-tender';
@@ -49,6 +50,7 @@ import { TenderTransparency } from '@/features/transparency/tender-transparency'
 import { isFuture } from './lib/deadline';
 import { formatPlace, isMostlyUppercase, shortTenderNumber, sumItems } from './lib/tender-display';
 import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
+import { useRegisteredPlatforms } from '@/features/company-profile/hooks/use-company-profile';
 import { accountService } from '@/services/account-service';
 
 function DetailSkeleton() {
@@ -138,6 +140,7 @@ export default function TenderDetailPage() {
     void accountService.recordRecommendationView(id).catch(() => undefined);
   }, [id, query.isSuccess, recommendationPreferences.data?.personalizationEnabled]);
   const { isSaved, toggle, isMonitored, toggleMonitor, status: savedStatus, entitled } = useSavedTenders();
+  const registeredPlatforms = useRegisteredPlatforms();
   const [titleExpanded, setTitleExpanded] = useState(false);
   // Animate the bookmark swap only after a click, never on load.
   const [saveToggled, setSaveToggled] = useState(false);
@@ -251,6 +254,7 @@ export default function TenderDetailPage() {
               </MetaItem>
             )}
           </div>
+          <PlatformBadge platform={tender.platform} registeredPlatforms={registeredPlatforms} variant="detail" className="mt-2" />
         </div>
         <div className="hidden shrink-0 flex-wrap items-start gap-2 sm:flex">
           <div className="inline-flex gap-2">

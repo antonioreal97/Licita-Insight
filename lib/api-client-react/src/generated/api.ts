@@ -59,6 +59,7 @@ import type {
   ProfileDescriptionSuggestionRequest,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfilePlatformsResponse,
   PutSavedTenderRequest,
   RateLimitedResponse,
   ReadinessCheck200,
@@ -281,7 +282,7 @@ export const getSearchTendersUrl = (params?: SearchTendersParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["status","modality","state","city","organizationId","sourceId","category"];
+    const explodeParameters = ["status","modality","state","city","organizationId","sourceId","category","platform"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -1231,6 +1232,83 @@ export function useListProfileCategories<TData = Awaited<ReturnType<typeof listP
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListProfileCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListProfilePlatformsUrl = () => {
+
+
+
+
+  return `/api/v1/profile/platforms`
+}
+
+/**
+ * @summary List the bidding rooms and SICAF a company can declare it is registered in
+ */
+export const listProfilePlatforms = async ( options?: Parameters<typeof customFetch>[1]): Promise<ProfilePlatformsResponse> => {
+
+  return customFetch<ProfilePlatformsResponse>(getListProfilePlatformsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfilePlatformsQueryKey = () => {
+    return [
+    `/api/v1/profile/platforms`
+    ] as const;
+    }
+
+
+export const getListProfilePlatformsQueryOptions = <TData = Awaited<ReturnType<typeof listProfilePlatforms>>, TError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfilePlatforms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfilePlatformsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfilePlatforms>>> = ({ signal }) => listProfilePlatforms({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfilePlatforms>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfilePlatformsQueryResult = NonNullable<Awaited<ReturnType<typeof listProfilePlatforms>>>
+export type ListProfilePlatformsQueryError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>
+
+
+/**
+ * @summary List the bidding rooms and SICAF a company can declare it is registered in
+ */
+
+export function useListProfilePlatforms<TData = Awaited<ReturnType<typeof listProfilePlatforms>>, TError = ErrorType<UnauthenticatedResponse | RateLimitedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfilePlatforms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfilePlatformsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -263,7 +263,17 @@ Clientes anteriores podem omitir as três propriedades; a API as trata como list
 | GET    | `/api/v1/profile/keywords/suggest?q=`       | `q` com 2–80 caracteres               | `{data: ProfileKeywordSuggestion[]}` (máx. 10)   |
 | POST   | `/api/v1/profile/keywords/from-description` | `{description}` com 20–600 caracteres | `{keywords,categories,estimatedOpenTenderCount}` |
 
-As três rotas exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). O POST apenas calcula sugestões e não altera estado, portanto não exige assinatura.
+### Plataformas em que a empresa é cadastrada
+
+O `PUT` também aceita `registeredPlatforms: string[]` (opcional; omitido = `[]`), devolvido sempre no `GET` e na exportação LGPD. Os valores são slugs de `GET /api/v1/profile/platforms`: as salas de disputa conhecidas (mesmos slugs de `platform.slug` em [`search-v1.md`](./search-v1.md)) e `sicaf`. Slug desconhecido responde `400 INVALID_PARAMETER` com `field: registeredPlatforms.<i>` e `issue: invalid_value`; repetido, `issue: duplicate`.
+
+A lista não entra no cálculo de aderência: quando só ela muda, o `PUT` atualiza `updatedAt` e mantém `version`, sem descartar os selos já calculados nem gerar novas chamadas de IA. Ela serve para desempate nas recomendações ([`recommendations-v1.md`](./recommendations-v1.md)) e para o aviso "Você ainda não é cadastrado nesta plataforma", mostrado só quando o perfil declara ao menos uma plataforma e a disputa é em uma sala conhecida fora da lista.
+
+| Método | Caminho                       | Entrada | Resposta                                                                                                  |
+| ------ | ----------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/profile/platforms`   | —       | `{data: Array<{slug,label,url,kind:'platform'\|'registry',openTenderCount:number\|null}>}` (SICAF com `null`) |
+
+As rotas desta seção exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). O POST apenas calcula sugestões e não altera estado, portanto não exige assinatura.
 
 O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 

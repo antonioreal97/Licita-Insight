@@ -6,6 +6,7 @@ import {
   suggestProfileKeywords,
   suggestionsFromDescription,
 } from "../profile/keyword-vocabulary";
+import { listProfilePlatforms } from "../profile/platform-options";
 
 const router: IRouter = Router();
 
@@ -14,6 +15,14 @@ router.get(
   requireAuth,
   asyncHandler(async (_req, res) => {
     res.json({ data: await listProfileCategories() });
+  }),
+);
+
+router.get(
+  "/v1/profile/platforms",
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    res.json({ data: await listProfilePlatforms() });
   }),
 );
 

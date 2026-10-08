@@ -331,6 +331,52 @@ highlights permanecem disponíveis.
 
 ---
 
+## Aditivo — plataforma de disputa
+
+Aditivo, sem mudança de rota. `TenderSummary` e, por herança, `TenderDetail` passam a incluir:
+
+```ts
+{
+  platform: {
+    slug: string;            // "licitanet", "origem-ipm-sistemas", "outro-governancabrasil", "nao-informado"
+    label: string;           // "Licitanet", "Sistema de origem: IPM Sistemas", "Outro sistema: Governançabrasil"
+    kind: 'platform' | 'source_system' | 'other' | 'unknown';
+    url: string | null;      // site da plataforma; só para kind = platform
+  } | null;                  // null enquanto o registro não foi normalizado (antes do backfill)
+}
+```
+
+A plataforma é derivada na ingestão do PNCP, só por regras, em
+`artifacts/api-server/src/catalog/tender-platforms.ts`:
+
+1. `usuarioNome` casa com uma sala de disputa conhecida (Compras.gov.br, Licitanet, BLL, BNC, Portal de
+   Compras Públicas, Licitações-e, Licitar Digital, BBMNET, Licita Mais Brasil, ComprasBR, Contrata+Brasil,
+   Pregão Banrisul e portais estaduais RS/MG/RJ/AM) → `kind: platform`;
+2. senão, o host de `linkSistemaOrigem` ou `linkProcessoEletronico` é de uma sala conhecida → `kind: platform`;
+3. senão, `usuarioNome` é software de gestão pública (IPM, Betha, Fiorilli…) → `kind: source_system`,
+   rótulo "Sistema de origem: <nome>". Esses sistemas publicam no PNCP, mas não informam onde é a disputa;
+4. qualquer outro nome → `kind: other`, rótulo "Outro sistema: <nome>";
+5. sem `usuarioNome` nem link reconhecível → `nao-informado` / `kind: unknown`.
+
+A API não inventa sala: o card mostra "Disputa em" só para `kind: platform`; o detalhe mostra todos os
+casos, com a explicação de que a sala não foi identificada.
+
+Registros anteriores são preenchidos por
+`pnpm --filter @workspace/api-server run backfill:platform` (lotes por `id`, só onde `platform is null`;
+pode ser repetido). `PLATFORM_BACKFILL_BATCH_SIZE` ajusta o lote (padrão 1000, máximo 5000).
+
+### Filtro e facet
+
+| Nome | Tipo | Notas |
+|---|---|---|
+| `platform` | string[] | slugs de `platform.slug`; OR entre valores |
+
+Com `facets=true`, `facets.platform: FacetBucket[]` (label = `platform.label`) e
+`facets.groupTotals.platform: number`, com a mesma regra disjuntiva dos demais grupos: a contagem
+ignora apenas o próprio filtro `platform`. Buscas salvas preservam o parâmetro.
+
+---
+
 ## Performance esperada
 
 | Rota | p95 |

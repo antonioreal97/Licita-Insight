@@ -24,6 +24,19 @@ export function useProfileCategories() {
   });
 }
 
+export function useProfilePlatforms() {
+  return useQuery({
+    queryKey: queryKeys.me.profilePlatforms,
+    queryFn: ({ signal }) => aiService.listProfilePlatforms(signal),
+    staleTime: 15 * 60_000,
+  });
+}
+
+/** Platforms the signed-in company declared; empty while loading, signed out or without a profile. */
+export function useRegisteredPlatforms(): string[] {
+  return useCompanyProfile().data?.profile?.registeredPlatforms ?? [];
+}
+
 export function useProfileKeywordSuggestions(query: string) {
   const normalized = query.trim();
   return useQuery({
