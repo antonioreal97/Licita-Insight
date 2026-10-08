@@ -27,3 +27,14 @@ test('agrupa formatos não compatíveis sem esconder os demais motivos', () => {
     'Nenhum dos 3 documentos foi lido; 2 estão em formato não compatível; 1 excede o limite de tamanho',
   );
 });
+
+test('explica falha definitiva do OCR', () => {
+  assert.equal(
+    documentReadingMessage({
+      read: 1,
+      total: 2,
+      unread: [{ id: 'scan', title: 'scan.pdf', url: 'https://example.test/scan', reason: 'ocr_failed' }],
+    }),
+    '1 de 2 documentos lidos; 1 não pôde ser reconhecido pelo OCR',
+  );
+});

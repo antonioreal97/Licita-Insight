@@ -495,6 +495,7 @@ export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof Tend
 export const TenderAskIndexStatus = {
   not_started: 'not_started',
   processing: 'processing',
+  ocr_processing: 'ocr_processing',
   ready: 'ready',
   failed: 'failed',
   no_documents: 'no_documents',
@@ -507,6 +508,7 @@ export type TenderAskDocumentStatus = typeof TenderAskDocumentStatus[keyof typeo
 
 export const TenderAskDocumentStatus = {
   processing: 'processing',
+  ocr_processing: 'ocr_processing',
   ready: 'ready',
   failed: 'failed',
   unsupported: 'unsupported',
@@ -521,6 +523,8 @@ export interface TenderAskDocument {
      */
   pages: number | null;
   status: TenderAskDocumentStatus;
+  /** @items.minimum 1 */
+  ocrLowConfidencePages: number[];
 }
 
 export interface DocumentReadingUnread {

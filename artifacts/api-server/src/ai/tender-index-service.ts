@@ -11,7 +11,7 @@ import {
 } from "@workspace/db";
 import { NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
-import { aiConfig } from "./config";
+import { aiConfig, documentOcrConfig } from "./config";
 import {
   classifyDocumentFailure,
   DocumentFetchError,
@@ -20,17 +20,22 @@ import {
 } from "./document-retry-policy";
 import {
   chunkPages,
+  documentBytesAtPath,
   extractDocuments,
+  ocrKindForBytes,
   type ExtractedDocument,
 } from "./document-extractor";
 import { completedIndexStatus } from "./policy";
 import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
 import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
+import { extractionDocumentStatus } from "./ocr-routing";
+import { recognizeDocument } from "./ocr-client";
 
 export type IndexStatus =
   | "not_started"
   | "processing"
+  | "ocr_processing"
   | "ready"
   | "failed"
   | "no_documents"
@@ -38,7 +43,7 @@ export type IndexStatus =
   | "expired";
 type StoredIndexStatus = Exclude<IndexStatus, "not_started" | "expired">;
 
-const EXTRACTOR_VERSION = 4;
+const EXTRACTOR_VERSION = 5;
 const STALE_PROCESSING_MS = 15 * 60_000;
 const RETRY_JOB_BATCH_SIZE = 10;
 const RETRY_CLAIM_MS = 5 * 60_000;
@@ -48,6 +53,7 @@ const fingerprint = (documents: TenderDocumentRecord[]): string =>
     .update(
       JSON.stringify({
         extractorVersion: EXTRACTOR_VERSION,
+        ocrEnabled: documentOcrConfig().enabled,
         documents: documents.map(
           ({ id, name, url, sizeBytes, publishedAt }) => ({
             id,
@@ -116,7 +122,7 @@ const validateDocumentUrl = (value: string): URL => {
   return parsed;
 };
 
-const downloadDocument = async (
+export const downloadDocument = async (
   url: string,
   maxBytes: number,
 ): Promise<Uint8Array> => {
@@ -178,6 +184,7 @@ const prepareExtraction = (
   documents: DocumentInsert[];
   passages: PassageInsert[];
   readable: number;
+  ocrDocumentIds: string[];
 } => {
   if (extracted.length === 0) {
     return {
@@ -201,16 +208,19 @@ const prepareExtraction = (
       ],
       passages: [],
       readable: 0,
+      ocrDocumentIds: [],
     };
   }
 
   const documents: DocumentInsert[] = [];
   const passages: PassageInsert[] = [];
+  const ocrDocumentIds: string[] = [];
   let readable = 0;
   for (const file of extracted) {
     const id = documentId(tenderId, sourceDocument.id, file.idSuffix);
     const chunks = chunkPages(file.pages);
     const hasText = !file.unreadReason && chunks.some(({ text }) => text.length >= 20);
+    const status = extractionDocumentStatus(hasText, file.unreadReason, documentOcrConfig().enabled);
     documents.push({
       id,
       tenderId,
@@ -219,7 +229,7 @@ const prepareExtraction = (
       sourceUrl: sourceDocument.url,
       internalPath: file.internalPath,
       pages: file.pages.length,
-      status: hasText ? "ready" : "unsupported",
+      status,
       error: hasText ? null : file.unreadReason ?? "unsupported_format:empty_document",
       attemptCount: 1,
       retryable: false,
@@ -227,6 +237,7 @@ const prepareExtraction = (
       lastAttemptAt: attemptedAt,
       extractedAt: attemptedAt,
     });
+    if (status === "ocr_processing") ocrDocumentIds.push(id);
     if (!hasText) continue;
     readable += 1;
     passages.push(
@@ -241,7 +252,7 @@ const prepareExtraction = (
       })),
     );
   }
-  return { documents, passages, readable };
+  return { documents, passages, readable, ocrDocumentIds };
 };
 
 const insertExtraction = async (
@@ -250,7 +261,7 @@ const insertExtraction = async (
   extracted: ExtractedDocument[],
   version: number,
   attemptedAt: Date,
-): Promise<number> => {
+): Promise<ReturnType<typeof prepareExtraction>> => {
   const previous = await sourceRows(tenderId, sourceDocument.id);
   const prepared = prepareExtraction(
     tenderId,
@@ -276,7 +287,7 @@ const insertExtraction = async (
       await tx.insert(tenderAiPassagesTable).values(prepared.passages);
     }
   });
-  return prepared.readable;
+  return prepared;
 };
 
 const copyPassages = async (
@@ -418,6 +429,7 @@ const indexStatusFromDocuments = async (
     .select({ status: tenderAiDocumentsTable.status })
     .from(tenderAiDocumentsTable)
     .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
+  if (rows.some(({ status }) => status === "ocr_processing")) return "ocr_processing";
   return completedIndexStatus(
     rows.filter(({ status }) => status === "ready").length,
     rows.filter(({ status }) => status === "unsupported").length,
@@ -430,9 +442,31 @@ const finishIndex = async (tenderId: string): Promise<StoredIndexStatus> => {
   const now = new Date();
   await db
     .update(tenderAiIndexesTable)
-    .set({ status, completedAt: now, updatedAt: now, error: null })
+    .set({ status, completedAt: status === "ocr_processing" ? null : now, updatedAt: now, error: null })
     .where(eq(tenderAiIndexesTable.tenderId, tenderId));
   return status;
+};
+
+const enqueueDocumentOcrJobs = async (tenderId: string, version: number, documentIds: string[]): Promise<void> => {
+  for (const documentId of documentIds) {
+    const dedupeKey = `document_ocr:${documentId}:v${version}`;
+    const queued = await enqueueAiJob({
+      kind: "document_ocr",
+      dedupeKey,
+      tenderId,
+      userId: null,
+      payload: { documentId, indexVersion: version },
+      lane: "interactive",
+      maxAttempts: 4,
+    });
+    if (queued.reason === "queue_full") {
+      await db.update(tenderAiDocumentsTable)
+        .set({ status: "unsupported", error: "ocr_queue_full", extractedAt: new Date() })
+        .where(eq(tenderAiDocumentsTable.id, documentId));
+      continue;
+    }
+    if (appRoleFromEnv() === "all") void runEnqueuedAiJobNow(dedupeKey);
+  }
 };
 
 const processIndex = async (
@@ -442,6 +476,7 @@ const processIndex = async (
   previousVersion: number,
 ): Promise<void> => {
   try {
+    const ocrDocumentIds: string[] = [];
     const sourceIds = new Set(documents.map(({ id }) => id));
     const existingRows = await db
       .select({
@@ -463,13 +498,14 @@ const processIndex = async (
       const attemptedAt = new Date();
       try {
         const extracted = await extractSource(sourceDocument);
-        await insertExtraction(
+        const prepared = await insertExtraction(
           tenderId,
           sourceDocument,
           extracted,
           version,
           attemptedAt,
         );
+        ocrDocumentIds.push(...prepared.ocrDocumentIds);
         logger.info(
           {
             tenderId,
@@ -491,6 +527,7 @@ const processIndex = async (
         );
       }
     }
+    await enqueueDocumentOcrJobs(tenderId, version, ocrDocumentIds);
     await finishIndex(tenderId);
   } catch (error) {
     const now = new Date();
@@ -502,7 +539,7 @@ const processIndex = async (
       .set({
         status,
         error: storedError(error),
-        completedAt: now,
+        completedAt: status === "ocr_processing" ? null : now,
         updatedAt: now,
       })
       .where(eq(tenderAiIndexesTable.tenderId, tenderId));
@@ -524,6 +561,87 @@ export async function executeTenderIndexJob(
   ]);
   if (!tender[0] || index[0]?.version !== version) return;
   await processIndex(tenderId, tender[0].documents, version, previousVersion);
+}
+
+export async function executeDocumentOcrJob(tenderId: string, documentIdValue: string, indexVersion: number): Promise<void> {
+  const [[document], [index], [tender]] = await Promise.all([
+    db.select().from(tenderAiDocumentsTable)
+      .where(and(eq(tenderAiDocumentsTable.id, documentIdValue), eq(tenderAiDocumentsTable.tenderId, tenderId))).limit(1),
+    db.select({ version: tenderAiIndexesTable.version }).from(tenderAiIndexesTable)
+      .where(eq(tenderAiIndexesTable.tenderId, tenderId)).limit(1),
+    db.select({ documents: tendersTable.documents }).from(tendersTable)
+      .where(eq(tendersTable.id, tenderId)).limit(1),
+  ]);
+  if (!document || document.status !== "ocr_processing" || index?.version !== indexVersion || !tender) return;
+  const source = tender.documents.find(({ id }) => id === document.sourceDocumentId);
+  if (!source) throw new Error("OCR_SOURCE_DOCUMENT_NOT_FOUND");
+  const config = aiConfig();
+  const sourceBytes = await downloadDocument(source.url, config.maxDocumentBytes);
+  const targetBytes = documentBytesAtPath(sourceBytes, document.internalPath, config.maxArchiveUncompressedBytes);
+  const kind = ocrKindForBytes(targetBytes);
+  if (!kind) throw new Error("OCR_DOCUMENT_FORMAT_INVALID");
+  const result = await recognizeDocument(targetBytes, kind);
+  const pages = [...result.pages].sort((left, right) => left.page - right.page).map(({ text }) => text.trim());
+  const chunks = chunkPages(pages);
+  const hasText = chunks.some(({ text }) => text.length >= 20);
+  const lowConfidencePages = result.pages.filter(({ lowConfidence }) => lowConfidence).map(({ page }) => page);
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`ai-index:${tenderId}`}))`);
+    const [locked] = await tx.select({ version: tenderAiIndexesTable.version }).from(tenderAiIndexesTable)
+      .where(eq(tenderAiIndexesTable.tenderId, tenderId)).limit(1);
+    if (locked?.version !== indexVersion) return;
+    await tx.delete(tenderAiPassagesTable).where(and(
+      eq(tenderAiPassagesTable.documentId, documentIdValue),
+      eq(tenderAiPassagesTable.indexVersion, indexVersion),
+    ));
+    if (hasText) {
+      await tx.insert(tenderAiPassagesTable).values(chunks.map((chunk) => ({
+        id: passageId(documentIdValue, indexVersion, chunk.page, chunk.order),
+        tenderId,
+        documentId: documentIdValue,
+        indexVersion,
+        page: chunk.page,
+        passageOrder: chunk.order,
+        text: chunk.text,
+      })));
+    }
+    await tx.update(tenderAiDocumentsTable).set({
+      status: hasText ? "ready" : "unsupported",
+      error: hasText ? null : "ocr_no_readable_text",
+      pages: pages.length,
+      ocrConfidence: result.averageConfidence.toFixed(2),
+      ocrLowConfidencePages: lowConfidencePages,
+      extractedAt: now,
+      lastAttemptAt: now,
+    }).where(eq(tenderAiDocumentsTable.id, documentIdValue));
+    const statuses = await tx.select({ status: tenderAiDocumentsTable.status }).from(tenderAiDocumentsTable)
+      .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
+    const pending = statuses.some(({ status }) => status === "ocr_processing");
+    const status: StoredIndexStatus = pending ? "ocr_processing" : completedIndexStatus(
+      statuses.filter(({ status }) => status === "ready").length,
+      statuses.filter(({ status }) => status === "unsupported").length,
+      statuses.filter(({ status }) => status === "failed").length,
+    );
+    await tx.update(tenderAiIndexesTable).set({
+      status,
+      error: null,
+      completedAt: pending ? null : now,
+      updatedAt: now,
+    }).where(eq(tenderAiIndexesTable.tenderId, tenderId));
+  });
+}
+
+export async function markDocumentOcrFailed(documentIdValue: string, error: unknown): Promise<void> {
+  const [document] = await db.select({ tenderId: tenderAiDocumentsTable.tenderId }).from(tenderAiDocumentsTable)
+    .where(eq(tenderAiDocumentsTable.id, documentIdValue)).limit(1);
+  if (!document) return;
+  await db.update(tenderAiDocumentsTable).set({
+    status: "unsupported",
+    error: `ocr_failed:${storedError(error)}`.slice(0, 2_000),
+    extractedAt: new Date(),
+  }).where(and(eq(tenderAiDocumentsTable.id, documentIdValue), eq(tenderAiDocumentsTable.status, "ocr_processing")));
+  await finishIndex(document.tenderId);
 }
 
 export async function ensureTenderIndex(
@@ -665,20 +783,21 @@ const retryDocument = async (
       chunkPages(file.pages).some(({ text }) => text.length >= 20),
     );
     if (!hasReadableText) {
-      await insertExtraction(
+      const prepared = await insertExtraction(
         tenderId,
         sourceDocument,
         extracted,
         currentIndex.version,
         now,
       );
+      await enqueueDocumentOcrJobs(tenderId, currentIndex.version, prepared.ocrDocumentIds);
       await finishIndex(tenderId);
       logger.info(
         {
           tenderId,
           sourceDocumentId,
           attempt: attemptCount,
-          outcome: "unsupported",
+          outcome: prepared.ocrDocumentIds.length > 0 ? "ocr_processing" : "unsupported",
         },
         "Tender document retry completed",
       );
@@ -759,7 +878,7 @@ const retryDocument = async (
         .select({ status: tenderAiDocumentsTable.status })
         .from(tenderAiDocumentsTable)
         .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
-      const status = completedIndexStatus(
+      const status: StoredIndexStatus = statuses.some(({ status: value }) => value === "ocr_processing") ? "ocr_processing" : completedIndexStatus(
         statuses.filter(({ status: value }) => value === "ready").length,
         statuses.filter(({ status: value }) => value === "unsupported").length,
         statuses.filter(({ status: value }) => value === "failed").length,
@@ -770,17 +889,25 @@ const retryDocument = async (
           version: newVersion,
           status,
           error: null,
-          completedAt: now,
+          completedAt: status === "ocr_processing" ? null : now,
           updatedAt: now,
         })
         .where(eq(tenderAiIndexesTable.tenderId, tenderId));
     });
+    const pendingOcrDocuments = await db
+      .select({ id: tenderAiDocumentsTable.id })
+      .from(tenderAiDocumentsTable)
+      .where(and(
+        eq(tenderAiDocumentsTable.tenderId, tenderId),
+        eq(tenderAiDocumentsTable.status, "ocr_processing"),
+      ));
+    await enqueueDocumentOcrJobs(tenderId, newVersion, pendingOcrDocuments.map(({ id }) => id));
     logger.info(
       {
         tenderId,
         sourceDocumentId,
         attempt: attemptCount,
-        outcome: "ready",
+        outcome: pendingOcrDocuments.length > 0 ? "ocr_processing" : "ready",
         previousVersion: currentIndex.version,
         version: newVersion,
       },

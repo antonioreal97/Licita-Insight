@@ -49,6 +49,7 @@ export type AskStatus = {
     title: string;
     pages: number | null;
     status: string;
+    ocrLowConfidencePages: number[];
   }>;
   unreadDocuments: number;
   documentReading: DocumentReadingSummary;
@@ -130,6 +131,7 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
       status: tenderAiDocumentsTable.status,
       sourceUrl: tenderAiDocumentsTable.sourceUrl,
       error: tenderAiDocumentsTable.error,
+      ocrLowConfidencePages: tenderAiDocumentsTable.ocrLowConfidencePages,
     })
     .from(tenderAiDocumentsTable)
     .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
@@ -138,7 +140,7 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
   ).length;
   return {
     index,
-    documents: documents.map(({ id, title, pages, status }) => ({ id, title, pages, status })),
+    documents: documents.map(({ id, title, pages, status, ocrLowConfidencePages }) => ({ id, title, pages, status, ocrLowConfidencePages })),
     unreadDocuments,
     documentReading: summarizeDocumentReading(documents),
     quota: await tenderQuotaFor(userId, tenderId, now),
@@ -184,7 +186,7 @@ export async function askTender(
     ]);
   }
   if (!config.apiKey && indexStatus !== "ready") throw new AiUnavailableError();
-  if (indexStatus === "processing")
+  if (indexStatus === "processing" || indexStatus === "ocr_processing")
     return {
       status: "processing",
       passages: [],

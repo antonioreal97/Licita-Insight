@@ -42,9 +42,11 @@ A cota conta processos, não perguntas. Um processo (edital) entra na cota do us
 
 Exige sessão. Usuários com acesso vigente iniciam somente a primeira indexação ou uma nova versão quando a lista de documentos muda. Retentativas de documentos falhos são feitas por job próprio: o GET nunca baixa novamente antes de `nextRetryAt`.
 
-A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsupported`, e `documentReading`: `{ read, total, unread }`. Cada item de `unread` traz `id`, `title`, `url` do original e um motivo estável (`scanned_pdf`, `image`, `size_limit`, `download_error` ou `unsupported_format:<tipo>`). O índice fica `ready` assim que há pelo menos um documento legível e nenhum documento em processamento; se nenhum documento puder ser lido, fica `failed` (ou `unsupported` quando todos os resultados são desse tipo).
+A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsupported`, e `documentReading`: `{ read, total, unread }`. Cada item de `unread` traz `id`, `title`, `url` do original e um motivo estável (`scanned_pdf`, `image`, `size_limit`, `download_error`, `ocr_failed` ou `unsupported_format:<tipo>`). O índice fica `ready` assim que há pelo menos um documento legível e nenhum documento em processamento; se nenhum documento puder ser lido, fica `failed` (ou `unsupported` quando todos os resultados são desse tipo).
 
 O extrator reconhece o conteúdo, independentemente da extensão declarada. Além de PDF com camada de texto, lê DOCX, ODT, XLSX, ODS, CSV e TXT; arquivos ZIP podem conter esses formatos e mais um nível de ZIP. Arquivos compactados continuam limitados a 50 entradas e 50 MB descompactados (`AI_MAX_ARCHIVE_UNCOMPRESSED_BYTES`), e documentos tabulares/textuais são divididos em páginas lógicas limitadas antes do chunking.
+
+Com `DOCUMENT_OCR_ENABLED=true`, PDF sem texto e imagens JPG/PNG/TIFF entram no estado `ocr_processing`; a UI informa “Lendo documento digitalizado; pode levar alguns minutos”. O job `document_ocr` chama o serviço local e grava o texto no mesmo índice. `ocrLowConfidencePages` em cada item de `documents` marca páginas abaixo do limiar do serviço. Com a flag ausente ou `false`, esses arquivos continuam `unsupported`, sem chamada ao OCR. Operação e limites: [OCR local](../ops/document-ocr.md).
 
 ### `POST /api/v1/tenders/:id/ask`
 
@@ -77,6 +79,7 @@ type TenderSheet = {
   status:
     | "not_started"
     | "processing"
+    | "ocr_processing"
     | "ready"
     | "failed"
     | "no_documents"

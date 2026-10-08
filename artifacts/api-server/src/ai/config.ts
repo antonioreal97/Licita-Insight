@@ -57,3 +57,10 @@ export const aiConfig = () => ({
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean),
 });
+
+export const documentOcrConfig = () => ({
+  enabled: process.env.DOCUMENT_OCR_ENABLED?.trim().toLowerCase() === "true",
+  url: (process.env.DOCUMENT_OCR_URL?.trim() || "http://ocr:8080").replace(/\/$/u, ""),
+  maxPages: positiveInteger("DOCUMENT_OCR_MAX_PAGES", 40),
+  pageTimeoutMs: positiveInteger("DOCUMENT_OCR_PAGE_TIMEOUT_MS", 30_000),
+});

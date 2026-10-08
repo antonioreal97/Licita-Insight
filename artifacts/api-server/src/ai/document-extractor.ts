@@ -63,6 +63,7 @@ const isImage = (bytes: Uint8Array) => (bytes[0] === 0xff && bytes[1] === 0xd8 &
   || (bytes[0] === 0x89 && decoder.decode(bytes.subarray(1, 4)) === "PNG")
   || (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a && bytes[3] === 0)
   || (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[2] === 0 && bytes[3] === 0x2a);
+export const ocrKindForBytes = (bytes: Uint8Array): "pdf" | "image" | null => isPdf(bytes) ? "pdf" : isImage(bytes) ? "image" : null;
 const suffixFor = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 20);
 const leafName = (value: string) => value.split("/").pop() || value;
 
@@ -244,6 +245,21 @@ export async function extractDocuments(bytes: Uint8Array, title: string, maxPage
     if (error instanceof Error && ["ARCHIVE_SIZE_LIMIT", "ARCHIVE_FILE_LIMIT"].includes(error.message)) return [unsupported(title, null, "size_limit")];
     throw error;
   }
+}
+
+export function documentBytesAtPath(bytes: Uint8Array, internalPath: string | null, maxUncompressedBytes = 50 * 1024 * 1024): Uint8Array {
+  if (!internalPath) return bytes;
+  const parts = internalPath.split("!/");
+  if (parts.length > 2) throw new Error("ARCHIVE_NESTING_LIMIT");
+  const budget: ArchiveBudget = { bytes: 0, files: 0, maxBytes: maxUncompressedBytes };
+  let current = bytes;
+  for (const part of parts) {
+    if (!isZip(current)) throw new Error("ARCHIVE_ENTRY_PARENT_INVALID");
+    const entry = unzipLimited(current, budget, false)[part];
+    if (!entry) throw new Error("ARCHIVE_ENTRY_NOT_FOUND");
+    current = entry;
+  }
+  return current;
 }
 
 export function chunkPages(pages: string[], maxCharacters = 700): Array<{ page: number; order: number; text: string }> {
