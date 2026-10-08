@@ -13,7 +13,7 @@ import { sql } from "drizzle-orm";
 import { usersTable } from "./accounts";
 import { tendersTable } from "./tenders";
 
-export type AiJobKind = "index" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
+export type AiJobKind = "index" | "document_ocr" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
 export type AiJobLane = "interactive" | "batch";
 export type AiJobStatus = "queued" | "running" | "succeeded" | "failed" | "dead";
 
@@ -57,7 +57,7 @@ export const aiJobsTable = pgTable(
     index("ai_jobs_user_created_idx").on(table.userId, table.createdAt),
     check(
       "ai_jobs_kind_check",
-      sql`${table.kind} in ('index', 'fit', 'sheet', 'sheet_summary', 'title_rewrite')`,
+      sql`${table.kind} in ('index', 'document_ocr', 'fit', 'sheet', 'sheet_summary', 'title_rewrite')`,
     ),
     check("ai_jobs_lane_check", sql`${table.lane} in ('interactive', 'batch')`),
     check(

@@ -52,6 +52,7 @@ import { documentReadingForTender, type DocumentReadingSummary } from "./documen
 type SheetStatus =
   | "not_started"
   | "processing"
+  | "ocr_processing"
   | "ready"
   | "failed"
   | "no_documents"
