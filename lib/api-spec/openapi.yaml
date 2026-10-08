@@ -477,7 +477,7 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-              description: Attachment filename in the form abriu-la-dados-YYYY-MM-DD.json
+              description: Attachment filename in the form pardal-digital-dados-YYYY-MM-DD.json
           content:
             application/json:
               schema:

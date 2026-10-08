@@ -13,7 +13,7 @@ export function useExportAccountData() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename ?? 'abriu-la-dados.json';
+      link.download = filename ?? 'pardal-digital-dados.json';
       document.body.append(link);
       link.click();
       link.remove();

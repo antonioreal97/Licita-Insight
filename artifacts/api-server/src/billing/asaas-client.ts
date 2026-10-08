@@ -2,7 +2,7 @@ import { BillingUnavailableError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { timeoutSignal } from "../lib/http-timeout";
 
-const USER_AGENT = "AbriuLa/1.0";
+const USER_AGENT = "PardalDigital/1.0";
 
 export type AsaasPaymentLink = {
   id: string;
