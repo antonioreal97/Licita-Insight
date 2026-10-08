@@ -38,7 +38,7 @@ export type IndexStatus =
   | "expired";
 type StoredIndexStatus = Exclude<IndexStatus, "not_started" | "expired">;
 
-const EXTRACTOR_VERSION = 3;
+const EXTRACTOR_VERSION = 4;
 const STALE_PROCESSING_MS = 15 * 60_000;
 const RETRY_JOB_BATCH_SIZE = 10;
 const RETRY_CLAIM_MS = 5 * 60_000;
@@ -161,7 +161,7 @@ const extractSource = async (
     bytes,
     sourceDocument.name,
     config.maxPdfPages,
-    config.maxDocumentBytes,
+    config.maxArchiveUncompressedBytes,
   );
 };
 
@@ -210,7 +210,7 @@ const prepareExtraction = (
   for (const file of extracted) {
     const id = documentId(tenderId, sourceDocument.id, file.idSuffix);
     const chunks = chunkPages(file.pages);
-    const hasText = chunks.some(({ text }) => text.length >= 20);
+    const hasText = !file.unreadReason && chunks.some(({ text }) => text.length >= 20);
     documents.push({
       id,
       tenderId,
@@ -220,7 +220,7 @@ const prepareExtraction = (
       internalPath: file.internalPath,
       pages: file.pages.length,
       status: hasText ? "ready" : "unsupported",
-      error: hasText ? null : "DOCUMENT_WITHOUT_READABLE_TEXT",
+      error: hasText ? null : file.unreadReason ?? "unsupported_format:empty_document",
       attemptCount: 1,
       retryable: false,
       nextRetryAt: null,
