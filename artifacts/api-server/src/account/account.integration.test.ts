@@ -32,9 +32,12 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
   const {
     aiAskRequestsTable,
+    aiDailyTendersTable,
     aiDailyUsageTable,
     aiFitDailyUsageTable,
+    aiJobsTable,
     aiSheetDailyUsageTable,
+    betaAccessGrantsTable,
     companyProfilesTable,
     companyTenderFitsTable,
     profileKeywordVocabularyTable,
@@ -62,7 +65,8 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   } = await import("@workspace/db");
   const { eq, inArray } = await import("drizzle-orm");
   const { default: app } = await import("../app");
-  const { deleteAccount } = await import("./account-privacy-service");
+  const { ACCOUNT_EXPORT_TABLES, deleteAccount } = await import("./account-privacy-service");
+  const { purgeRetainedPersonalData, REDACTED_RECIPIENT } = await import("./personal-data-retention");
   const { BillingUnavailableError } = await import("../lib/api-error");
   const { upsertGoogleUser } = await import("../auth/session-service");
   const { upsertPublications } = await import("../ingest/upsert-tenders");
@@ -88,6 +92,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "email_delivery_notifications",
     "ai_daily_usage",
     "ai_ask_requests",
+    "ai_jobs",
     "tender_ai_answers",
     "tender_ai_indexes",
     "tender_ai_documents",
@@ -1272,8 +1277,67 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     );
   });
 
-  await t.test("exports only the authenticated user's retained data without secrets", async () => {
+  await t.test("purges expired sessions, read notifications and old email content at the configured cutoffs", async () => {
+    const cookie = await login("retention@example.test");
+    const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "retention@example.test"));
+    assert.ok(user);
+    const now = new Date("2026-10-08T12:00:00.000Z");
+    await db.insert(sessionsTable).values([
+      { id: "retention-expired-old", userId: user.id, expiresAt: new Date("2026-08-01T12:00:00.000Z") },
+      { id: "retention-revoked-old", userId: user.id, expiresAt: new Date("2027-01-01T00:00:00.000Z"), revokedAt: new Date("2026-08-01T12:00:00.000Z") },
+      { id: "retention-expired-recent", userId: user.id, expiresAt: new Date("2026-09-20T12:00:00.000Z") },
+    ]);
+    await db.insert(notificationsTable).values([
+      { id: "retention-read-old", userId: user.id, type: "test", dedupeKey: "retention-read-old", readAt: new Date("2026-01-01T00:00:00.000Z") },
+      { id: "retention-unread-old", userId: user.id, type: "test", dedupeKey: "retention-unread-old", createdAt: new Date("2026-01-01T00:00:00.000Z") },
+      { id: "retention-read-recent", userId: user.id, type: "test", dedupeKey: "retention-read-recent", readAt: new Date("2026-09-01T00:00:00.000Z") },
+    ]);
+    await db.insert(emailDeliveriesTable).values([
+      {
+        id: "retention-email-old", userId: user.id, mode: "digest", dedupeKey: "retention-email-old",
+        recipientEmail: "retention@example.test", subject: "TEST OLD", htmlBody: "<p>personal</p>", textBody: "personal",
+        messageHeaders: { "List-Unsubscribe": "personal" }, lastError: "personal error", createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+      {
+        id: "retention-email-recent", userId: user.id, mode: "digest", dedupeKey: "retention-email-recent",
+        recipientEmail: "retention@example.test", subject: "TEST RECENT", htmlBody: "<p>keep</p>", textBody: "keep", createdAt: new Date("2026-09-01T00:00:00.000Z"),
+      },
+    ]);
+
+    const retention = await purgeRetainedPersonalData(now, { sessionDays: 30, readNotificationDays: 180, emailContentDays: 180, hour: 3 });
+    assert.ok(retention.sessionsDeleted >= 2);
+    assert.ok(retention.notificationsDeleted >= 1);
+    assert.ok(retention.emailDeliveriesRedacted >= 1);
+    assert.equal((await db.select().from(sessionsTable).where(eq(sessionsTable.id, "retention-expired-old"))).length, 0);
+    assert.equal((await db.select().from(sessionsTable).where(eq(sessionsTable.id, "retention-revoked-old"))).length, 0);
+    assert.equal((await db.select().from(sessionsTable).where(eq(sessionsTable.id, "retention-expired-recent"))).length, 1);
+    assert.equal((await db.select().from(notificationsTable).where(eq(notificationsTable.id, "retention-unread-old"))).length, 1);
+    assert.equal((await db.select().from(notificationsTable).where(eq(notificationsTable.id, "retention-read-recent"))).length, 1);
+    const [redacted] = await db.select().from(emailDeliveriesTable).where(eq(emailDeliveriesTable.id, "retention-email-old"));
+    assert.equal(redacted?.recipientEmail, REDACTED_RECIPIENT);
+    assert.equal(redacted?.htmlBody, "");
+    assert.equal(redacted?.textBody, "");
+    assert.deepEqual(redacted?.messageHeaders, {});
+    assert.equal(redacted?.lastError, null);
+    const [recent] = await db.select().from(emailDeliveriesTable).where(eq(emailDeliveriesTable.id, "retention-email-recent"));
+    assert.equal(recent?.textBody, "keep");
+    assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+  });
+
+  await t.test("exports every user-owned table without secrets", async () => {
     const [exportUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "user-a@example.test"));
+    await db.insert(emailDeliveriesTable).values({
+      id: "export-email",
+      userId: exportUser!.id,
+      mode: "digest",
+      dedupeKey: "export-email",
+      recipientEmail: "user-a@example.test",
+      subject: "TEST DATA aviso enviado",
+      htmlBody: "<p>TEST DATA corpo HTML</p>",
+      textBody: "TEST DATA corpo texto",
+      status: "sent",
+      sentAt: new Date("2026-10-01T12:00:00.000Z"),
+    });
     await db.insert(aiAskRequestsTable).values({
       id: "export-ai-question",
       userId: exportUser!.id,
@@ -1283,7 +1347,14 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       indexVersion: 1,
       requestedModel: "jev-1.13.0",
       responseModel: "jev-1.13.0",
-      status: "not_found",
+      status: "answered",
+      passages: [{ documentId: "export-doc", documentTitle: "Edital", documentUrl: "https://example.test/edital.pdf", page: 2, text: "TEST DATA passagem vinculada", relevance: 0.9 }],
+      summary: { text: "TEST DATA resposta", citations: [1], model: "summary-test" },
+    });
+    await db.insert(aiDailyUsageTable).values({ userId: exportUser!.id, quotaDay: "2030-01-01", used: 1 });
+    await db.insert(aiDailyTendersTable).values({ userId: exportUser!.id, quotaDay: "2030-01-01", tenderId });
+    await db.insert(aiJobsTable).values({
+      id: "export-ai-job", kind: "fit", dedupeKey: "export-ai-job", tenderId, userId: exportUser!.id, lane: "interactive", status: "succeeded",
     });
     const preference = await request("/v1/me/recommendation-preferences", {
       method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: true }),
@@ -1308,22 +1379,46 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       sessions: unknown[];
       savedTenders: { tenderId: string }[];
       savedSearches: { deletedAt: string | null }[];
-      emailDeliveries: unknown[];
-      aiQuestions: { question: string }[];
+      emailDeliveries: { subject: string; htmlBody: string; textBody: string; status: string }[];
+      aiQuestions: { question: string; passages: { text: string }[]; summary: { text: string } | null }[];
+      aiDailyUsage: { quotaDay: string }[];
+      aiDailyTenders: { quotaDay: string; tenderId: string }[];
+      aiJobs: { id: string; kind: string; status: string }[];
       recommendationEvents: { normalizedTerms: string[] }[];
+      [key: string]: unknown;
     };
     assert.equal(body.user.email, "user-a@example.test");
     assert.equal(body.user.emailDigest, "daily");
     assert.equal(body.user.emailImmediateCritical, true);
-    assert.deepEqual(body.emailDeliveries, []);
+    assert.equal(body.emailDeliveries[0]?.subject, "TEST DATA aviso enviado");
+    assert.equal(body.emailDeliveries[0]?.htmlBody, "<p>TEST DATA corpo HTML</p>");
+    assert.equal(body.emailDeliveries[0]?.textBody, "TEST DATA corpo texto");
     assert.deepEqual(
       body.aiQuestions.map(({ question }) => question),
       ["TEST DATA Qual e o prazo?"],
     );
+    assert.equal(body.aiQuestions[0]?.passages[0]?.text, "TEST DATA passagem vinculada");
+    assert.equal(body.aiQuestions[0]?.summary?.text, "TEST DATA resposta");
+    assert.ok(body.aiDailyUsage.some(({ quotaDay }) => quotaDay === "2030-01-01"));
+    assert.ok(body.aiDailyTenders.some((row) => row.quotaDay === "2030-01-01" && row.tenderId === tenderId));
+    assert.deepEqual(body.aiJobs.map(({ id, kind, status }) => ({ id, kind, status })), [{ id: "export-ai-job", kind: "fit", status: "succeeded" }]);
     assert.ok(body.sessions.length > 0);
     assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
     assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
     assert.deepEqual(body.recommendationEvents.at(-1)?.normalizedTerms, ["hemodialise", "hospitalar"]);
+
+    const userOwnedTables = await pool.query<{ table_name: string }>(
+      `select c.table_name
+       from information_schema.columns c
+       join information_schema.tables t on t.table_schema=c.table_schema and t.table_name=c.table_name
+       where c.table_schema=$1 and c.column_name='user_id' and t.table_type='BASE TABLE'
+       order by c.table_name`,
+      ["public"],
+    );
+    assert.deepEqual(userOwnedTables.rows.map(({ table_name }) => table_name), Object.keys(ACCOUNT_EXPORT_TABLES).sort());
+    for (const exportKey of Object.values(ACCOUNT_EXPORT_TABLES)) {
+      assert.ok(exportKey in body, `${exportKey} must be present in the account export`);
+    }
 
     const serialized = JSON.stringify(body);
     const sessionToken = authenticatedCookie.split("=", 2)[1]!;
@@ -1391,6 +1486,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const cookie = await login("delete-route@example.test");
     const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "delete-route@example.test"));
     assert.ok(user);
+    await db.insert(betaAccessGrantsTable).values({
+      email: "delete-route@example.test",
+      accessUntil: new Date("2099-01-01T00:00:00.000Z"),
+    });
     await db.delete(subscriptionsTable).where(eq(subscriptionsTable.userId, user.id));
     await db.insert(savedSearchesTable).values({
       id: "delete-route-search",
@@ -1434,6 +1533,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       requestedModel: "jev-1.13.0",
       status: "not_found",
     });
+    await db.insert(aiJobsTable).values({
+      id: "delete-route-ai-job", kind: "fit", dedupeKey: "delete-route-ai-job", tenderId, userId: user.id, lane: "interactive",
+    });
     await db.update(usersTable).set({ recommendationPersonalizationEnabled: true }).where(eq(usersTable.id, user.id));
     await db.insert(recommendationEventsTable).values({ userId: user.id, type: "search", normalizedTerms: ["historico"] });
 
@@ -1467,29 +1569,40 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.match(deleted.headers.get("set-cookie") ?? "", /^licita_session=;/);
     assert.equal((await request("/v1/auth/session", {}, cookie)).status, 401);
 
-    for (const table of [
-      "users",
-      "sessions",
-      "saved_tenders",
-      "saved_searches",
-      "notifications",
-      "subscriptions",
-      "email_deliveries",
-      "ai_daily_usage",
-      "ai_daily_tenders",
-      "ai_ask_requests",
-      "recommendation_events",
-      "recommendation_dismissals",
-      "recommendation_interest_profiles",
-      "user_recommendations",
-    ]) {
-      const result = await pool.query(`SELECT count(*) AS count FROM ${table} WHERE ${table === "users" ? "id" : "user_id"} = $1`, [user.id]);
-      assert.equal(Number(result.rows[0].count), 0, `${table} should cascade`);
+    assert.equal(Number((await pool.query("select count(*) as count from users where id=$1", [user.id])).rows[0].count), 0);
+    const userOwnedTables = await pool.query<{ table_name: string }>(
+      `select c.table_name
+       from information_schema.columns c
+       join information_schema.tables t on t.table_schema=c.table_schema and t.table_name=c.table_name
+       where c.table_schema=$1 and c.column_name='user_id' and t.table_type='BASE TABLE'
+       order by c.table_name`,
+      ["public"],
+    );
+    for (const { table_name: table } of userOwnedTables.rows) {
+      const result = await pool.query(`select count(*) as count from "${table}" where user_id=$1`, [user.id]);
+      assert.equal(Number(result.rows[0].count), 0, `${table} should be empty for the deleted user`);
     }
+    const nonCascadeUserTables = await pool.query<{ table_name: string }>(
+      `select c.table_name
+       from information_schema.columns c
+       join information_schema.tables t on t.table_schema=c.table_schema and t.table_name=c.table_name
+       where c.table_schema=$1 and c.column_name='user_id' and t.table_type='BASE TABLE'
+         and not exists (
+           select 1 from pg_constraint fk
+           join pg_class child on child.oid=fk.conrelid
+           join pg_namespace ns on ns.oid=child.relnamespace
+           join pg_class parent on parent.oid=fk.confrelid
+           where fk.contype='f' and ns.nspname=$1 and child.relname=c.table_name
+             and parent.relname='users' and fk.confdeltype='c'
+         )`,
+      ["public"],
+    );
+    assert.deepEqual(nonCascadeUserTables.rows, [], "every user_id table must cascade account deletion");
     assert.equal(
       Number((await pool.query("SELECT count(*) AS count FROM email_delivery_notifications WHERE delivery_id = $1", ["delete-route-delivery"])).rows[0].count),
       0,
     );
+    assert.equal((await db.select().from(betaAccessGrantsTable).where(eq(betaAccessGrantsTable.email, "delete-route@example.test"))).length, 0);
   });
 
   await t.test("keeps the local account intact when Asaas cancellation fails", async () => {

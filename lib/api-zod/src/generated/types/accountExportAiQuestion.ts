@@ -6,16 +6,29 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { AccountExportAiQuestionStatus } from './accountExportAiQuestionStatus';
+import type { AccountExportAiQuestionSummary } from './accountExportAiQuestionSummary';
+import type { AskTenderPassage } from './askTenderPassage';
 
 export interface AccountExportAiQuestion {
   id: string;
   tenderId: string;
   question: string;
   status: AccountExportAiQuestionStatus;
+  passages: AskTenderPassage[];
+  summary: AccountExportAiQuestionSummary;
+  requestedModel: string;
   /** @nullable */
   model: string | null;
   /** @minimum 0 */
   inputTokens: number;
   estimatedCostUsd: string;
+  /** @nullable */
+  summaryModel: string | null;
+  /** @minimum 0 */
+  summaryInputTokens: number;
+  /** @minimum 0 */
+  summaryOutputTokens: number;
+  summaryEstimatedCostUsd: string;
   createdAt: Date;
+  updatedAt: Date;
 }

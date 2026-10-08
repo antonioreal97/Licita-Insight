@@ -25,6 +25,7 @@ import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { formatCurrency, formatCurrencyPrecise, formatDateTime, formatNumber } from '@/lib/format';
 import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
+import { LegalLinks } from '@/features/legal/legal-content';
 
 const navLink = 'font-semibold text-primary hover:underline';
 const primaryCta = 'rounded-lg bg-action px-4 py-2.5 font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover';
@@ -622,9 +623,12 @@ export default function LandingPage() {
         <FinalCta />
       </main>
       <footer className="border-t border-border px-5 py-7 sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
-          <span>© 2026 Pardal Digital · publicações do PNCP e do Mapas Culturais</span>
-          <span>Feito para equipes que leem antes de agir.</span>
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center">
+          <div>
+            <span>© 2026 Pardal Digital · publicações do PNCP e do Mapas Culturais</span>
+            <span className="mt-1 block">Feito para equipes que leem antes de agir.</span>
+          </div>
+          <LegalLinks className="sm:justify-end" />
         </div>
       </footer>
     </div>

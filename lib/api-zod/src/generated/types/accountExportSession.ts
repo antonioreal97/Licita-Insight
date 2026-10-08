@@ -10,4 +10,6 @@ export interface AccountExportSession {
   createdAt: Date;
   lastSeenAt: Date;
   expiresAt: Date;
+  /** @nullable */
+  revokedAt: Date | null;
 }

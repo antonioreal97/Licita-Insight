@@ -43,6 +43,7 @@ import { useBilling } from '@/features/billing/hooks/use-billing';
 import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
 import { useOpportunityAccess } from '@/features/opportunities/hooks/use-opportunities';
 import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
+import { LegalLinks } from '@/features/legal/legal-content';
 import { queryKeys } from '@/services/query-keys';
 import { NotificationItem } from '@/features/monitoring/components/notification-item';
 import { useMarkNotificationsRead, useNotifications, useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
@@ -285,6 +286,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
             {children}
           </main>
+          <footer className="mx-auto flex max-w-page flex-col gap-2 border-t border-border px-4 py-6 type-meta text-muted-foreground sm:px-8 lg:px-10">
+            <span>© {new Date().getFullYear()} Pardal Digital</span>
+            <LegalLinks />
+          </footer>
         </div>
       </Sheet>
     </div>

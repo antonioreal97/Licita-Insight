@@ -32,6 +32,7 @@ import { startAiDocumentRetentionScheduler } from "./ai/ai-document-retention";
 import { startMetricsServer } from "./metrics";
 import { startRecommendationScheduler } from "./recommendations/recommendation-service";
 import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
+import { startPersonalDataRetentionScheduler } from "./account/personal-data-retention";
 
 const parsePort = (
   name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
@@ -85,6 +86,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyCategoryClassify(),
   startRecommendationScheduler(),
   startProfileKeywordScheduler(),
+  startPersonalDataRetentionScheduler(),
 ];
 
 const start = async (): Promise<void> => {

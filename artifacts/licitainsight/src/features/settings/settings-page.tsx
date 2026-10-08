@@ -21,6 +21,8 @@ import { AccountDataSection } from './components/account-data-section';
 import { NotificationPreferencesSection } from './components/notification-preferences-section';
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
 import { RecommendationPreferencesSection } from '@/features/recommendations/components/recommendation-preferences-section';
+import { trackBeginCheckout } from '@/features/analytics/google-analytics';
+import { LegalLinks } from '@/features/legal/legal-content';
 
 // Profile comes from the Google session (read-only). Sections without an `id` have no settings yet.
 const sections = [
@@ -116,6 +118,11 @@ export default function SettingsPage() {
           <NotificationPreferencesSection />
           <RecommendationPreferencesSection />
           <AccountDataSection />
+          <section aria-labelledby="settings-legal" className="rounded-xl border border-border bg-card p-5 sm:p-7">
+            <h2 id="settings-legal" className="type-section">Privacidade e termos</h2>
+            <p className="mt-1 type-meta text-muted-foreground">Consulte como seus dados são tratados e as regras de uso do Pardal Digital.</p>
+            <LegalLinks className="mt-4 type-ui" />
+          </section>
         </div>
       </div>
     </>
@@ -185,6 +192,7 @@ function BillingSection() {
         toast({ variant: 'destructive', title: 'Pagamento indisponível', description: 'O link de pagamento não é válido.' });
         return;
       }
+      trackBeginCheckout();
       window.location.assign(url);
     },
     onError: (error) => {
@@ -264,8 +272,8 @@ function BillingSection() {
                 {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} {trialEndPhrase(trial.endsAt)}.
               </p>
               <p className="mt-0.5 type-meta">
-                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
-                na sua conta.
+                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos
+                continuam guardados na sua conta.
               </p>
             </div>
           ) : (

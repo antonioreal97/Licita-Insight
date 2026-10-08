@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/common/action-button';
 import { readCookieConsent, setCookieConsent, subscribeCookieConsent } from './cookie-consent';
+import { LegalLinks } from '@/features/legal/legal-content';
 
 export function CookieNotice() {
   const choice = useSyncExternalStore(subscribeCookieConsent, readCookieConsent, () => null);
@@ -20,8 +21,10 @@ export function CookieNotice() {
             Cookies neste navegador
           </h2>
           <p id="cookie-notice-body" className="mt-1.5 type-ui text-muted-foreground">
-            Um cookie é necessário para manter sua sessão de login. Ele não serve para anúncio. Tema, barra lateral, buscas recentes e o relógio de inatividade só ficam salvos se você concordar.
+            Um cookie é necessário para manter sua sessão de login. Ele não serve para anúncio. Tema, barra lateral, buscas recentes, relógio de inatividade e
+            medição de audiência (Google Analytics) só são usados se você concordar.
           </p>
+          <LegalLinks className="mt-2 type-meta" />
         </div>
         <div className="flex shrink-0 gap-2">
           <Button type="button" variant="outline" data-testid="button-cookie-refuse" onClick={() => setCookieConsent('refused')}>
