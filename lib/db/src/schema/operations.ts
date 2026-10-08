@@ -55,6 +55,12 @@ export const aiJobsTable = pgTable(
       .on(table.lane, table.runAfter, table.createdAt)
       .where(sql`${table.status} = 'queued'`),
     index("ai_jobs_user_created_idx").on(table.userId, table.createdAt),
+    index("ai_jobs_title_openai_tender_prompt_idx")
+      .on(table.tenderId, sql`(${table.payload}->>'promptVersion')`)
+      .where(sql`${table.kind} = 'title_rewrite' and ${table.payload}->>'provider' = 'openai'`),
+    index("ai_jobs_title_openai_quota_idx")
+      .on(sql`(${table.payload}->>'titleQuotaDay')`)
+      .where(sql`${table.kind} = 'title_rewrite' and ${table.payload}->>'provider' = 'openai'`),
     check(
       "ai_jobs_kind_check",
       sql`${table.kind} in ('index', 'document_ocr', 'fit', 'sheet', 'sheet_summary', 'title_rewrite')`,

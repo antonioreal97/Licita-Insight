@@ -69,12 +69,12 @@ async function enqueueFor(provider: TeacherProvider, tenderIds: readonly string[
   if (eligible.length === 0) return result;
 
   const limit = titleRewriteDailyLimit(provider);
-  let createdToday = (await pool.query<{ count: number }>(
+  let createdToday = provider === "ollama" ? (await pool.query<{ count: number }>(
     `select count(*)::int as count from ai_jobs
      where kind = 'title_rewrite' and coalesce(payload->>'provider', 'ollama') = $1
        and created_at >= (date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')`,
     [provider],
-  )).rows[0]?.count ?? 0;
+  )).rows[0]?.count ?? 0 : 0;
 
   for (const tender of eligible) {
     const dedupeKey = titleRewriteDedupeKey(tender.id, tender.title);
@@ -83,7 +83,9 @@ async function enqueueFor(provider: TeacherProvider, tenderIds: readonly string[
       result.deduplicated += 1;
       continue;
     }
-    if (createdToday >= limit) {
+    // The paid teacher applies its daily limit when claiming jobs.  Creating every
+    // durable job here is what lets overflow carry over into future days.
+    if (provider === "ollama" && createdToday >= limit) {
       result.dailyLimited += 1;
       continue;
     }
@@ -91,13 +93,18 @@ async function enqueueFor(provider: TeacherProvider, tenderIds: readonly string[
       kind: "title_rewrite",
       dedupeKey,
       tenderId: tender.id,
-      payload: { promptVersion: TITLE_TEACHER_PROMPT_VERSION, provider },
+      payload: {
+        promptVersion: TITLE_TEACHER_PROMPT_VERSION,
+        provider,
+        officialTitleHash: textHash(tender.title).slice(0, 16),
+      },
       lane: "batch",
       maxAttempts: 3,
+      ignoreQueueDepth: provider === "openai",
     });
     if (enqueued.reason === "created") {
       result.created += 1;
-      createdToday += 1;
+      if (provider === "ollama") createdToday += 1;
     } else if (enqueued.reason === "deduplicated") {
       result.deduplicated += 1;
     }
@@ -126,7 +133,7 @@ export async function enqueueCollectedTitleRewrites(tenderIds: readonly string[]
   if (!titleTeacherOpenAiEnabled() || tenderIds.length === 0) return;
   try {
     const result = await enqueueOpenAiTitleRewrites(tenderIds);
-    if (result.dailyLimited > 0) logger.warn({ ...result }, "OpenAI title rewrite daily limit reached");
+    logger.info({ ...result }, "OpenAI title rewrites added to durable queue");
   } catch (error) {
     logger.warn({ err: error, tenders: tenderIds.length }, "OpenAI title rewrite enqueue failed");
   }

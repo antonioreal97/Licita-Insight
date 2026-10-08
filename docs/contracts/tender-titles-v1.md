@@ -98,7 +98,8 @@ dos slugs e dos rótulos.
 
 ## Professor e aluno
 
-Os editais que já estão no banco usam só o Ollama local, sem API paga. O **professor**
+Os editais que já estão no banco recebem categoria de reserva por regras e entram gradualmente no
+backfill OpenAI quando ele está habilitado. O **professor**
 (`gemma4:12b`) escreve títulos fiéis e escolhe categorias, mas leva de 10 a 17 s por título; por
 isso rotula uma amostra uma vez e reescreve sob demanda só os títulos que as pessoas veem. O
 **aluno** (`bge-m3` + vizinhos mais próximos) classifica todos os editais em milissegundos.
@@ -119,7 +120,12 @@ isso rotula uma amostra uma vez e reescreve sob demanda só os títulos que as p
 | `CATEGORY_STUDENT_MIN_CONFIDENCE` | `0.42` | confiança mínima para gravar categorias |
 | `TITLE_REWRITE_DAILY_LIMIT` | `2000` | jobs `title_rewrite` locais criados por dia (America/Sao_Paulo) |
 | `TITLE_TEACHER_OPENAI_ENABLED` | `false` | editais novos e com título alterado vão para o professor OpenAI; exige `OPENAI_API_KEY` |
-| `TITLE_OPENAI_DAILY_LIMIT` | `5000` | jobs `title_rewrite` OpenAI criados por dia (America/Sao_Paulo) |
+| `TITLE_OPENAI_DAILY_LIMIT` | `5000` | jobs `title_rewrite` OpenAI reivindicados por dia (America/Sao_Paulo) |
+| `TITLE_OPENAI_BUDGET_USD` | `1` | custo máximo do professor na janela móvel; `0` desliga o disjuntor |
+| `TITLE_OPENAI_BUDGET_DAYS` | `3` | tamanho da janela móvel em dias de 24 horas |
+| `TITLE_BACKFILL_ENABLED` | `true` | alimenta continuamente a fila com o acervo `open` ainda em `rules` |
+| `TITLE_BACKFILL_BATCH_SIZE` | `50` | tamanho máximo do pequeno lote de backfill |
+| `TITLE_BACKFILL_INTERVAL_MS` | `300000` | intervalo mínimo entre lotes de backfill |
 
 O cliente (`src/ai/ollama-client.ts`) usa `POST /api/generate` (JSON Schema em `format`,
 `think: false`, `temperature` 0.1, sem streaming) e `POST /api/embed` em lote. Faz no máximo um
@@ -211,19 +217,22 @@ Só com as flags ligadas:
 
 ### Professor OpenAI para editais novos e atualizados
 
-Decisão do owner (02/10/2026): o acervo é processado localmente e, depois que a aplicação subir,
-os editais **novos** e os **atualizados** (título oficial diferente do gravado) passam pela OpenAI
+Decisão do owner: os editais **novos**, os **atualizados** (título oficial diferente do gravado)
+e, de forma incremental, o acervo `open` ainda em `rules` passam pela OpenAI
 (`OPENAI_MODEL`, padrão `gpt-4o-mini`). Com `TITLE_TEACHER_OPENAI_ENABLED=true` e
 `OPENAI_API_KEY` configurada, a coleta enfileira um job `title_rewrite` com `provider = openai` para
-cada edital novo ou com título alterado; editais já armazenados e sem mudança de título nunca vão
-para a OpenAI. O dedupe é por edital, versão do prompt e hash do título oficial, então cada nova
-versão do título gera um job e repetições da mesma versão não geram.
+cada edital novo ou com título alterado. O backfill ocupa somente a capacidade diária que não está
+na fila, prioriza linhas sem categoria e pausa na hora da coleta das 06:00. O dedupe é por edital,
+versão do prompt e hash do título oficial, então cada nova versão do título gera um job e repetições
+da mesma versão não geram.
 
 O prompt tem o mesmo texto do professor local (instruções no `system`, itens no `user`), com JSON
 Schema estrito (`additionalProperties: false`, `temperature` 0.1, `store: false`) e a mesma
 validação. O worker reúne até 10 jobs do mesmo provedor numa chamada só; o custo e os tokens da
-chamada são rateados entre os editais em `ai_title_usage`, entram no ledger como `title` e no
-orçamento diário `AI_DAILY_BUDGET_USD`. Com o orçamento esgotado, os jobs OpenAI esperam na fila.
+chamada são rateados entre os editais em `ai_title_usage` e entram no ledger como `title`. O custo
+usa o orçamento exclusivo `TITLE_OPENAI_BUDGET_USD` na janela móvel de
+`TITLE_OPENAI_BUDGET_DAYS`; o teto diário é aplicado no claim. Com qualquer limite esgotado, os
+jobs OpenAI esperam na fila e continuam disponíveis nos dias seguintes.
 
 A coleta continua preservando o título `model` quando o título oficial muda; o job OpenAI desse
 edital substitui o título antigo, enquanto a reescrita local sob demanda nunca substitui um título
@@ -232,8 +241,9 @@ versão nova faz o trabalho. Estimativa com os preços padrão: cerca de US$ 0,0
 
 ### Sem Ollama
 
-Com as flags desligadas, nada é enfileirado nem classificado (sem `TITLE_TEACHER_OPENAI_ENABLED`, nem a coleta chama a OpenAI): o título vem das regras e não há
-categorias. Com as flags ligadas e o Ollama fora do ar, busca e detalhe continuam respondendo
+Com as flags de modelo desligadas, nada é enfileirado para professor/aluno e a coleta não chama a
+OpenAI: título e categoria de reserva continuam vindo das regras determinísticas. Com as flags
+ligadas e o Ollama fora do ar, busca e detalhe continuam respondendo
 normalmente (o enfileiramento só toca o banco), o job `title_rewrite` falha e volta à fila com
 backoff até 3 tentativas, e a classificação registra o erro e deixa os editais pendentes para a
 próxima rodada. Nenhuma dessas falhas gera 5xx.
@@ -256,6 +266,12 @@ pnpm --filter @workspace/api-server run backfill:display-titles -- --batch 1000
 ```
 
 A versão 2 das regras exige rodar o backfill de novo para atualizar os títulos `rules` da versão 1.
+
+Categorias vazias do acervo usam um backfill separado, idempotente quanto à propriedade `teacher`:
+
+```sh
+pnpm --filter @workspace/api-server run categorize:rules
+```
 
 `--dry-run` calcula sem gravar, `--limit N` limita a execução e `--cursor ID` retoma depois do ID
 informado. O resumo final mostra processados, títulos que pedem modelo, linhas ignoradas por fonte

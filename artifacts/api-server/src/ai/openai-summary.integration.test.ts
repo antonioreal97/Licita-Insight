@@ -92,7 +92,8 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     publishedAt: null,
   }];
   const sourceFingerprint = createHash("sha256").update(JSON.stringify({
-    extractorVersion: 3,
+    extractorVersion: 5,
+    ocrEnabled: false,
     documents: documents.map(({ id, name, url: documentUrl, sizeBytes, publishedAt }) => ({
       id,
       name,

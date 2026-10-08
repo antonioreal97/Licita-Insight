@@ -125,6 +125,9 @@ export const tendersTable = pgTable(
     index("tenders_display_title_needs_model_idx")
       .on(table.status, table.id)
       .where(sql`${table.displayTitleNeedsModel} and ${table.displayTitleSource} = 'rules'`),
+    index("tenders_title_backfill_idx")
+      .on(sql`(jsonb_array_length(${table.categories}))`, table.proposalDeadline, table.publishedAt, table.id)
+      .where(sql`${table.status} = 'open' and ${table.displayTitleSource} = 'rules'`),
     check(
       "tenders_display_title_source_check",
       sql`${table.displayTitleSource} is null or ${table.displayTitleSource} in ('rules', 'model')`,

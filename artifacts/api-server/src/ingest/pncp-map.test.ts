@@ -69,6 +69,8 @@ describe("PNCP publication mapping", () => {
       "2026-09-30T20:00:00.000Z",
     );
     assert.match(draft.searchText, /equipamentos de informatica/);
+    assert.deepEqual(draft.categories, [{ slug: "ti-telecom", label: "Tecnologia da informação e telecomunicações" }]);
+    assert.match(draft.searchText, /tecnologia da informacao e telecomunicacoes/);
     assert.match(draft.searchText, /rio de janeiro/);
   });
 
