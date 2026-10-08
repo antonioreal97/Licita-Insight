@@ -1535,6 +1535,42 @@ export const OpportunityProgram = {
   fsa: 'fsa',
 } as const;
 
+export type OpportunityKind = typeof OpportunityKind[keyof typeof OpportunityKind];
+
+
+export const OpportunityKind = {
+  culture: 'culture',
+  funding: 'funding',
+  innovation: 'innovation',
+  partnership: 'partnership',
+} as const;
+
+export type OpportunitySource = typeof OpportunitySource[keyof typeof OpportunitySource];
+
+
+export const OpportunitySource = {
+  mapas: 'mapas',
+  finep: 'finep',
+  cnpq: 'cnpq',
+  capes: 'capes',
+} as const;
+
+export interface OpportunityDocument {
+  title: string;
+  url: string;
+  /** @nullable */
+  mediaType: string | null;
+}
+
+export interface OpportunityProfileMatch {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  score: number;
+  reasons: string[];
+}
+
 export interface OpportunityInstallation {
   id: string;
   name: string;
@@ -1548,7 +1584,18 @@ export interface OpportunitySummary {
   summary: string | null;
   organizationName: string;
   status: OpportunityStatus;
-  program: OpportunityProgram;
+  program: OpportunityProgram | null;
+  kind: OpportunityKind;
+  source: OpportunitySource;
+  sourceName: string;
+  /** @nullable */
+  audience: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  amount: number | null;
+  documents: OpportunityDocument[];
   /** @nullable */
   registrationFrom: string | null;
   /** @nullable */
@@ -1559,6 +1606,7 @@ export interface OpportunitySummary {
   /** @nullable */
   sourceUrl: string | null;
   updatedAt: string;
+  profileMatch: OpportunityProfileMatch | null;
 }
 
 export interface FacetBucket {
@@ -1573,6 +1621,8 @@ export interface OpportunityFacets {
   state: FacetBucket[];
   installation: FacetBucket[];
   program: FacetBucket[];
+  kind: FacetBucket[];
+  source: FacetBucket[];
 }
 
 export interface OpportunityInstallationIssue {
@@ -2026,6 +2076,8 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+kind?: OpportunityKind[];
+source?: OpportunitySource[];
 /**
  * Inclusive lower date in America/Sao_Paulo.
  */

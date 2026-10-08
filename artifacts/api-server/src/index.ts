@@ -8,8 +8,15 @@ import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
+import { abandonStaleFundingRuns } from "./ingest/collect-funding";
 import { abandonStaleTransparencyRuns } from "./ingest/collect-transparency";
-import { startDailyCategoryClassify, startDailyCultureCollect, startDailyPncpCollect, startDailyTransparencyCollect } from "./ingest/daily-collect";
+import {
+  startDailyCategoryClassify,
+  startDailyCultureCollect,
+  startDailyFundingCollect,
+  startDailyPncpCollect,
+  startDailyTransparencyCollect,
+} from "./ingest/daily-collect";
 import { startTenderDeadlineReconciliation } from "./ingest/reconcile-tender-deadlines";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
@@ -26,10 +33,16 @@ import { startMetricsServer } from "./metrics";
 import { startRecommendationScheduler } from "./recommendations/recommendation-service";
 import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 
-const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT", required: boolean): number | undefined => {
+const parsePort = (
+  name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
+  required: boolean,
+): number | undefined => {
   const raw = process.env[name]?.trim();
   if (!raw) {
-    if (required) throw new Error(`${name} environment variable is required but was not provided.`);
+    if (required)
+      throw new Error(
+        `${name} environment variable is required but was not provided.`,
+      );
     return undefined;
   }
   const port = Number(raw);
@@ -40,9 +53,15 @@ const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT", require
 };
 
 const startHttpServer = (port: number, healthOnly: boolean): Server => {
-  const server = (healthOnly ? createWorkerHealthApp() : app).listen(port, () => {
-    logger.info({ port, healthOnly }, healthOnly ? "Worker health server listening" : "Server listening");
-  });
+  const server = (healthOnly ? createWorkerHealthApp() : app).listen(
+    port,
+    () => {
+      logger.info(
+        { port, healthOnly },
+        healthOnly ? "Worker health server listening" : "Server listening",
+      );
+    },
+  );
   configureHttpServer(server, httpServerConfig());
   server.once("error", (error) => {
     logger.error({ err: error, port }, "Error listening on port");
@@ -62,6 +81,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyTransparencyCollect(),
   startTenderDeadlineReconciliation(),
   startDailyCultureCollect(),
+  startDailyFundingCollect(),
   startDailyCategoryClassify(),
   startRecommendationScheduler(),
   startProfileKeywordScheduler(),
@@ -72,9 +92,8 @@ const start = async (): Promise<void> => {
   const servesApi = roleServesApi(role);
   const runsJobs = roleRunsJobs(role);
   const apiPort = servesApi ? parsePort("PORT", true) : undefined;
-  const workerHealthPort = role === "worker"
-    ? parsePort("WORKER_HEALTH_PORT", false)
-    : undefined;
+  const workerHealthPort =
+    role === "worker" ? parsePort("WORKER_HEALTH_PORT", false) : undefined;
   const metricsPort = parsePort("METRICS_PORT", false);
 
   if (devEntitlementEnabled()) {
@@ -89,6 +108,7 @@ const start = async (): Promise<void> => {
       await tryRunSingletonJob("ingest_reconciliation", async () => {
         await abandonStalePncpRuns();
         await abandonStaleCultureRuns();
+        await abandonStaleFundingRuns();
         await abandonStaleTransparencyRuns();
       });
     } catch (error) {
@@ -101,7 +121,9 @@ const start = async (): Promise<void> => {
     : workerHealthPort
       ? startHttpServer(workerHealthPort, true)
       : undefined;
-  const metricsServer = metricsPort ? startMetricsServer(metricsPort) : undefined;
+  const metricsServer = metricsPort
+    ? startMetricsServer(metricsPort)
+    : undefined;
   const stops = runsJobs ? startSchedulers() : [];
   const config = httpServerConfig();
   installGracefulShutdown({
@@ -113,7 +135,10 @@ const start = async (): Promise<void> => {
     closePool: () => pool.end(),
     timeoutMs: config.shutdownTimeoutMs,
   });
-  logger.info({ role, apiPort, workerHealthPort, metricsPort, schedulers: runsJobs }, "Application role started");
+  logger.info(
+    { role, apiPort, workerHealthPort, metricsPort, schedulers: runsJobs },
+    "Application role started",
+  );
 };
 
 void start().catch((error) => {

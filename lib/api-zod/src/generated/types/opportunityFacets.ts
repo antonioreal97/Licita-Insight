@@ -12,4 +12,6 @@ export interface OpportunityFacets {
   state: FacetBucket[];
   installation: FacetBucket[];
   program: FacetBucket[];
+  kind: FacetBucket[];
+  source: FacetBucket[];
 }

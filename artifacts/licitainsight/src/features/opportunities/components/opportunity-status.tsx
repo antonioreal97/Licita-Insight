@@ -1,4 +1,4 @@
-import type { OpportunityProgram, OpportunityStatus } from '@/api';
+import type { OpportunityKind, OpportunityProgram, OpportunitySource, OpportunityStatus } from '@/api';
 
 export const opportunityStatusLabels: Record<OpportunityStatus, string> = {
   open: 'Inscrições abertas',
@@ -12,6 +12,20 @@ export const opportunityProgramLabels: Record<OpportunityProgram, string> = {
   lpg: 'Lei Paulo Gustavo',
   fac: 'Fundo de Apoio à Cultura',
   fsa: 'Fundo Setorial do Audiovisual',
+};
+
+export const opportunityKindLabels: Record<OpportunityKind, string> = {
+  culture: 'Cultura',
+  funding: 'Fomento',
+  innovation: 'Inovação',
+  partnership: 'Parceria',
+};
+
+export const opportunitySourceLabels: Record<OpportunitySource, string> = {
+  mapas: 'Mapas Culturais',
+  finep: 'FINEP',
+  cnpq: 'CNPq',
+  capes: 'CAPES',
 };
 
 const tones: Record<OpportunityStatus, string> = {

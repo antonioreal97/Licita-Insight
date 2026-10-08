@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { parseOpportunityQuery } from "../lib/opportunity-query";
 import { pgErrorCode } from "../lib/pg-error";
 import { publicHttpCache } from "../middlewares/request-protection";
+import { authContext } from "../auth/http";
 
 const router: IRouter = Router();
 router.use("/v1/opportunities", requireAuth, requireSubscription);
@@ -13,7 +14,7 @@ router.use("/v1/opportunities", publicHttpCache);
 
 const exposeOpportunityError = (error: unknown): unknown => {
   if (error instanceof ApiError) return error;
-  logger.error({ err: error }, "Cultural opportunity search failed");
+  logger.error({ err: error }, "Opportunity search failed");
   const code = pgErrorCode(error);
   if (
     code === "ECONNREFUSED" ||
@@ -26,7 +27,11 @@ const exposeOpportunityError = (error: unknown): unknown => {
     code === "08006" ||
     code === "08001"
   ) {
-    return new ApiError(503, "SEARCH_UNAVAILABLE", "Cultural opportunity search is unavailable");
+    return new ApiError(
+      503,
+      "SEARCH_UNAVAILABLE",
+      "Opportunity search is unavailable",
+    );
   }
   return error;
 };
@@ -41,8 +46,9 @@ router.get("/v1/opportunities", async (req, res, next) => {
   try {
     requireDatabase();
     const criteria = parseOpportunityQuery(req.query);
-    const { searchOpportunities } = await import("../repositories/postgres-opportunity-repository");
-    res.json(await searchOpportunities(criteria));
+    const { searchOpportunities } =
+      await import("../repositories/postgres-opportunity-repository");
+    res.json(await searchOpportunities(criteria, authContext(res).user.id));
   } catch (error) {
     next(exposeOpportunityError(error));
   }
@@ -51,8 +57,12 @@ router.get("/v1/opportunities", async (req, res, next) => {
 router.get("/v1/opportunities/:id", async (req, res, next) => {
   try {
     requireDatabase();
-    const { findOpportunity } = await import("../repositories/postgres-opportunity-repository");
-    const opportunity = await findOpportunity(req.params.id);
+    const { findOpportunity } =
+      await import("../repositories/postgres-opportunity-repository");
+    const opportunity = await findOpportunity(
+      req.params.id,
+      authContext(res).user.id,
+    );
     if (!opportunity) {
       throw new NotFoundError(`Opportunity ${req.params.id} was not found`);
     }
