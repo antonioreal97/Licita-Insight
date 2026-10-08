@@ -225,6 +225,13 @@
       "when": 1791482400000,
       "tag": "0031_opportunities_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791482401000,
+      "tag": "0032_recommendation_interests",
+      "breakpoints": true
     }
   ]
 }

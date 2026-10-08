@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef } from 'react';
+import React, { type ComponentPropsWithRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

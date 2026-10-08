@@ -1216,8 +1216,8 @@ paths:
     post:
       operationId: recordRecommendationEvent
       tags: [recommendations]
-      summary: Record an opted-in search/view event or an aggregate recommendation click
-      description: Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
+      summary: Record an opted-in search/view event or an aggregate recommendation action
+      description: Search terms and tender views are discarded when opt-in is off. Impression, click, interest and dismiss metrics contain no search content.
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1688,6 +1688,12 @@ components:
             type: { type: string, const: click }
             tenderId: { type: string, minLength: 1, maxLength: 200 }
           required: [type]
+        - type: object
+          additionalProperties: false
+          properties:
+            type: { type: string, const: interest }
+            tenderId: { type: string, minLength: 1, maxLength: 200 }
+          required: [type, tenderId]
     UpdateEmailNotificationPreferences:
       type: object
       additionalProperties: false
