@@ -93,7 +93,7 @@ export const tenderAiIndexesTable = pgTable(
   (table) => [
     check(
       "tender_ai_indexes_status_check",
-      sql`${table.status} in ('processing', 'ready', 'failed', 'no_documents', 'unsupported')`,
+      sql`${table.status} in ('processing', 'ocr_processing', 'ready', 'failed', 'no_documents', 'unsupported')`,
     ),
   ],
 );
@@ -117,6 +117,8 @@ export const tenderAiDocumentsTable = pgTable(
     nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
     lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
     extractedAt: timestamp("extracted_at", { withTimezone: true }),
+    ocrConfidence: numeric("ocr_confidence", { precision: 5, scale: 2 }),
+    ocrLowConfidencePages: integer("ocr_low_confidence_pages").array().notNull().default(sql`'{}'::integer[]`),
   },
   (table) => [
     index("tender_ai_documents_tender_idx").on(table.tenderId),
@@ -124,7 +126,7 @@ export const tenderAiDocumentsTable = pgTable(
     check("tender_ai_documents_attempt_count_check", sql`${table.attemptCount} >= 0`),
     check(
       "tender_ai_documents_status_check",
-      sql`${table.status} in ('processing', 'ready', 'failed', 'unsupported')`,
+      sql`${table.status} in ('processing', 'ocr_processing', 'ready', 'failed', 'unsupported')`,
     ),
   ],
 );

@@ -11,6 +11,7 @@ export type TenderAskDocumentStatus = typeof TenderAskDocumentStatus[keyof typeo
 
 export const TenderAskDocumentStatus = {
   processing: 'processing',
+  ocr_processing: 'ocr_processing',
   ready: 'ready',
   failed: 'failed',
   unsupported: 'unsupported',

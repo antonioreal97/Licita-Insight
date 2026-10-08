@@ -307,6 +307,13 @@ function IndexState({ status, onRetry, retrying }: { status: TenderAskStatus; on
           A fonte não publicou documentos para consultar neste edital.
         </p>
       );
+    case 'ocr_processing':
+      return (
+        <p role="status" className={noteBox} data-testid="text-ask-ocr-processing">
+          <Loader2 size={15} aria-hidden="true" className="mt-0.5 shrink-0 animate-spin text-muted-foreground" />
+          Lendo documento digitalizado; pode levar alguns minutos.
+        </p>
+      );
     case 'unsupported':
       return (
         <p className={noteBox} data-testid="text-ask-unsupported">

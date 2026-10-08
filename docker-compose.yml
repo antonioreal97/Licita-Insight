@@ -12,6 +12,19 @@ x-app: &app
     - ./tsconfig.base.json:/app/tsconfig.base.json:ro
 
 services:
+  ocr:
+    profiles: ["ocr"]
+    platform: linux/amd64
+    build:
+      context: ./ops/ocr
+      dockerfile: Dockerfile
+    environment:
+      DOCUMENT_OCR_MAX_PAGES: ${DOCUMENT_OCR_MAX_PAGES:-40}
+      DOCUMENT_OCR_PAGE_TIMEOUT_MS: ${DOCUMENT_OCR_PAGE_TIMEOUT_MS:-30000}
+      OCR_LOW_CONFIDENCE_THRESHOLD: ${OCR_LOW_CONFIDENCE_THRESHOLD:-35}
+    ports:
+      - "8080:8080"
+
   postgres:
     image: postgres:16
     environment:
@@ -52,6 +65,8 @@ services:
       NODE_ENV: development
       METRICS_PORT: ${API_METRICS_PORT:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      DOCUMENT_OCR_ENABLED: ${DOCUMENT_OCR_ENABLED:-false}
+      DOCUMENT_OCR_URL: http://ocr:8080
     ports:
       - "3001:3001"
     command: pnpm --filter @workspace/api-server run dev
@@ -82,6 +97,8 @@ services:
       NODE_ENV: development
       METRICS_PORT: ${WORKER_METRICS_PORT:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      DOCUMENT_OCR_ENABLED: ${DOCUMENT_OCR_ENABLED:-false}
+      DOCUMENT_OCR_URL: http://ocr:8080
     command: pnpm --filter @workspace/api-server run dev:worker
     depends_on:
       db-setup:

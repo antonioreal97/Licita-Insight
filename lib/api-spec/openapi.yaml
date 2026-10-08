@@ -1696,15 +1696,18 @@ components:
         ]
     TenderAskIndexStatus:
       type: string
-      enum: [not_started, processing, ready, failed, no_documents, unsupported, expired]
+      enum: [not_started, processing, ocr_processing, ready, failed, no_documents, unsupported, expired]
     TenderAskDocument:
       type: object
       properties:
         id: { type: string }
         title: { type: string }
         pages: { type: [integer, "null"], minimum: 1 }
-        status: { type: string, enum: [processing, ready, failed, unsupported] }
-      required: [id, title, pages, status]
+        status: { type: string, enum: [processing, ocr_processing, ready, failed, unsupported] }
+        ocrLowConfidencePages:
+          type: array
+          items: { type: integer, minimum: 1 }
+      required: [id, title, pages, status, ocrLowConfidencePages]
     DocumentReadingUnread:
       type: object
       additionalProperties: false

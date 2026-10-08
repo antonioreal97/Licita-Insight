@@ -1,6 +1,8 @@
 # Contrato interno — fila durável de IA v1
 
-`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), aderência (`fit`), ficha (`sheet`), resumo de ficha (`sheet_summary`) e reescrita de título pelo professor local (`title_rewrite`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada aos modelos.
+`ai_jobs` é a fonte de verdade para os trabalhos de índice (`index`), OCR local (`document_ocr`), aderência (`fit`), ficha (`sheet`), resumo de ficha (`sheet_summary`) e reescrita de título pelo professor local (`title_rewrite`). A API grava o estado de domínio, insere o job e responde; somente um papel que executa jobs (`worker` ou `all`) faz download, extração ou chamada aos modelos.
+
+`document_ocr` é criado pelo job de índice para cada PDF digitalizado ou imagem elegível quando a flag está ligada. Mantém concorrência 1 por consumidor, quatro tentativas e o backoff normal; enquanto estiver na fila ou rodando, documento e índice ficam `ocr_processing`. Ao esgotar tentativas ou a visibilidade, o documento vira `unsupported` com motivo `ocr_failed`, para não prender o índice.
 
 Uma ficha nova pode produzir o resumo OpenAI ao fim do próprio job `sheet`. Para fichas prontas cujo modelo ou versão do resumo esteja desatualizado, `GET /sheet` devolve imediatamente os campos em cache com `summary: null` e enfileira `sheet_summary`; esse job lê os campos e o checklist gravados e chama somente a OpenAI, sem repetir o Jev. Falha, disjuntor aberto ou ausência posterior da chave deixam o resumo nulo e encerram o job sem retentativa automática.
 
@@ -21,11 +23,13 @@ Novos índices disparados por usuário estão limitados a `AI_INDEX_ENQUEUE_PER_
 | `AI_JOB_POLL_MS` | `1000` |
 | `AI_JOB_VISIBILITY_TIMEOUT_MS` | `300000` |
 | `WORKER_INDEX_CONCURRENCY` | `2` |
+| concorrência de `document_ocr` | `1` |
 | `WORKER_SHEET_CONCURRENCY` | `2` |
 | `WORKER_FIT_CONCURRENCY` | `8` |
 | lote de `title_rewrite` | até 10 jobs, 1 lote por provedor |
 | `AI_INDEX_ENQUEUE_PER_USER_PER_HOUR` | `60` |
 | `AI_QUEUE_MAX_DEPTH_INDEX` | `1000` |
+| `AI_QUEUE_MAX_DEPTH_DOCUMENT_OCR` | `1000` |
 | `AI_QUEUE_MAX_DEPTH_SHEET` | `1000` |
 | `AI_QUEUE_MAX_DEPTH_FIT` | `10000` |
 | `AI_QUEUE_MAX_DEPTH_TITLE_REWRITE` | `2000` |

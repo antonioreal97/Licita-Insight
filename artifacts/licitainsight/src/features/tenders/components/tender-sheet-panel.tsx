@@ -264,6 +264,13 @@ function SheetState({ sheet, tenderId, onRetry, retrying }: { sheet: TenderSheet
           A fonte não publicou documentos para montar a ficha.
         </p>
       );
+    case 'ocr_processing':
+      return (
+        <p role="status" className={noteBox} data-testid="text-sheet-ocr-processing">
+          <Loader2 size={15} aria-hidden="true" className="mt-0.5 shrink-0 animate-spin text-muted-foreground" />
+          Lendo documento digitalizado; pode levar alguns minutos.
+        </p>
+      );
     case 'unsupported':
       return (
         <p className={noteBox} data-testid="text-sheet-unsupported">
