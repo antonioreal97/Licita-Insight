@@ -476,6 +476,12 @@ export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ready' | 'fai
 
 export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ready' | 'failed' | 'unsupported' };
 
+export type DocumentReadingSummary = {
+  read: number;
+  total: number;
+  unread: Array<{ id: string; title: string; url: string; reason: string }>;
+};
+
 /**
  * Per user and day in São Paulo, counted in processes: a tender with readable documents spends 1 the first time
  * the user asks about it or opens its sheet that day. `counted`: this tender already spent it, so it is free now.
@@ -485,7 +491,7 @@ export type AiQuota = { used: number; limit: number; resetsAt: string; counted: 
 
 /** `GET /api/v1/tenders/:id/ask-status` (session). Signed-in users with access start the indexing by calling it. */
 /** `unreadDocuments`: documents that failed or could not be read. The index is `ready` with a partial reading, so answers may be incomplete. */
-export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; unreadDocuments: number; quota: AiQuota };
+export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; unreadDocuments: number; documentReading: DocumentReadingSummary; quota: AiQuota };
 
 /** `relevance` is Jev's probability (0–1) that the passage answers the question; only passages above the threshold come back. */
 export type AskTenderPassage = { documentId: string; documentTitle: string; documentUrl: string; page: number; text: string; relevance: number };
@@ -536,6 +542,7 @@ export type TenderSheet = {
   qualificationChecklist: QualificationItem[];
   summary: AiGeneratedSummary | null;
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   model: string | null;
   generatedAt: string | null;
 };

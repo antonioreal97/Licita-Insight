@@ -14,6 +14,7 @@ import { sheetExcerpt } from '../lib/sheet-excerpt';
 import { FIELDS, QUALIFICATION_LABELS, QUALIFICATION_ORDER } from '../lib/sheet-labels';
 import { SourceLink } from './source-link';
 import { AutomaticSummary } from './automatic-summary';
+import { DocumentReadingNotice } from './document-reading-notice';
 
 /** One row per requirement type; each official passage keeps its own page link. `prep`: the user's mark, in "O que preparar". */
 function QualificationRow({ type, items, sourceNumbers, prep }: { type: QualificationType; items: QualificationItem[]; sourceNumbers: number[]; prep?: ReactNode }) {
@@ -229,8 +230,9 @@ function SheetBody({ sheet, tenderId }: { sheet: TenderSheet; tenderId: string }
         {found === 0
           ? 'Nenhum dos campos foi encontrado nos documentos lidos.'
           : `${found} de ${sheet.fields.length} campos encontrados nos documentos.`}
-        {sheet.unreadDocuments > 0 &&
-          ` ${sheet.unreadDocuments === 1 ? '1 documento não pôde ser lido' : `${sheet.unreadDocuments} documentos não puderam ser lidos`}; a ficha pode estar incompleta.`}
+        {sheet.unreadDocuments > 0 && (
+          <> <DocumentReadingNotice reading={sheet.documentReading} /> A ficha pode estar incompleta.</>
+        )}
       </p>
       <div className="space-y-6">
         {sections}
@@ -266,7 +268,7 @@ function SheetState({ sheet, tenderId, onRetry, retrying }: { sheet: TenderSheet
       return (
         <p className={noteBox} data-testid="text-sheet-unsupported">
           <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-          Ainda não conseguimos ler o texto dos documentos deste edital (imagens digitalizadas ou formato que não lemos).
+          <DocumentReadingNotice reading={sheet.documentReading} />
         </p>
       );
     case 'expired':

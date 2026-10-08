@@ -56,6 +56,8 @@ export * from './deadlineToParameter';
 export * from './deleteAccountRequest';
 export * from './deleteAccountRequestConfirm';
 export * from './devLoginRequest';
+export * from './documentReadingSummary';
+export * from './documentReadingUnread';
 export * from './emailDigestPreference';
 export * from './emailNotificationPreferences';
 export * from './emailUnsubscribeRequest';

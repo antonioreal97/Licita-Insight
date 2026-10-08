@@ -523,6 +523,22 @@ export interface TenderAskDocument {
   status: TenderAskDocumentStatus;
 }
 
+export interface DocumentReadingUnread {
+  id: string;
+  title: string;
+  url: string;
+  /** Stable reason such as scanned_pdf, image, size_limit, download_error, or unsupported_format:<type>. */
+  reason: string;
+}
+
+export interface DocumentReadingSummary {
+  /** @minimum 0 */
+  read: number;
+  /** @minimum 0 */
+  total: number;
+  unread: DocumentReadingUnread[];
+}
+
 /**
  * Daily AI quota in processes. A tender with readable documents spends 1 the first time the user asks about it or opens its sheet that day.
  */
@@ -547,6 +563,7 @@ export interface TenderAskStatus {
   documents: TenderAskDocument[];
   /** @minimum 0 */
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   quota: AiQuota;
 }
 
@@ -686,6 +703,7 @@ export interface TenderSheet {
   qualificationChecklist: QualificationItem[];
   /** @minimum 0 */
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   /** @nullable */
   model: string | null;
   /** @nullable */

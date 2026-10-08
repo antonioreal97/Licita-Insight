@@ -5,6 +5,7 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { DocumentReadingSummary } from './documentReadingSummary';
 import type { QualificationItem } from './qualificationItem';
 import type { SheetField } from './sheetField';
 import type { TenderAskIndexStatus } from './tenderAskIndexStatus';
@@ -16,6 +17,7 @@ export interface TenderSheet {
   qualificationChecklist: QualificationItem[];
   /** @minimum 0 */
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   /** @nullable */
   model: string | null;
   /** @nullable */
