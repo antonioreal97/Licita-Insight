@@ -91,7 +91,7 @@ from {DAYS_30}
 order by d.day""", {"bars": True}),
     ("IA", "Cota de processos por usuário e dia (30 dias)", "table", f"""
 select q.quota_day as "Dia", coalesce(u.name, '') as "Nome", u.email as "E-mail",
-       count(*) as "Processos consultados", 5 as "Limite"
+       count(*) as "Processos consultados", 10 as "Limite"
 from ai_daily_tenders q join users u on u.id = q.user_id
 where q.quota_day >= (now() at time zone '{TZ}')::date - 29
 group by q.quota_day, u.name, u.email

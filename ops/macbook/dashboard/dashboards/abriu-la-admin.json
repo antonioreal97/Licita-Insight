@@ -820,7 +820,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "select q.quota_day as \"Dia\", coalesce(u.name, '') as \"Nome\", u.email as \"E-mail\",\n       count(*) as \"Processos consultados\", 5 as \"Limite\"\nfrom ai_daily_tenders q join users u on u.id = q.user_id\nwhere q.quota_day >= (now() at time zone 'America/Sao_Paulo')::date - 29\ngroup by q.quota_day, u.name, u.email\norder by q.quota_day desc, 4 desc"
+          "rawSql": "select q.quota_day as \"Dia\", coalesce(u.name, '') as \"Nome\", u.email as \"E-mail\",\n       count(*) as \"Processos consultados\", 10 as \"Limite\"\nfrom ai_daily_tenders q join users u on u.id = q.user_id\nwhere q.quota_day >= (now() at time zone 'America/Sao_Paulo')::date - 29\ngroup by q.quota_day, u.name, u.email\norder by q.quota_day desc, 4 desc"
         }
       ],
       "fieldConfig": {
