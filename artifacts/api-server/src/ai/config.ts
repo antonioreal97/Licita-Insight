@@ -29,7 +29,7 @@ export const aiConfig = () => ({
   threshold: probability("JEV_RELEVANCE_THRESHOLD", 0.5),
   relativeThresholdDelta: probability("JEV_RELATIVE_RELEVANCE_DELTA", 0.25),
   /** Processes with readable documents a user may consult with AI per São Paulo day (trial and paid). */
-  tenderDailyLimit: positiveInteger("AI_DAILY_TENDER_LIMIT", 5),
+  tenderDailyLimit: positiveInteger("AI_DAILY_TENDER_LIMIT", 10),
   /** Safety cap on new (uncached) questions per day, on top of the process cap. */
   trialDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_TRIAL", 30),
   paidDailyLimit: positiveInteger("AI_DAILY_ASK_LIMIT_PAID", 30),
