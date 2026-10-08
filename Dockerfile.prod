@@ -1,5 +1,5 @@
 ARG TARGETPLATFORM=linux/amd64
-FROM --platform=${TARGETPLATFORM} node:24-bookworm-slim AS build
+FROM --platform=${TARGETPLATFORM} node:25-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN pnpm --filter @workspace/api-server run build
 RUN PORT=4173 BASE_PATH=/ VITE_API_BASE_URL=/api NODE_ENV=production \
     pnpm --filter @workspace/licitainsight run build
 
-FROM --platform=${TARGETPLATFORM} node:24-bookworm-slim AS runtime
+FROM --platform=${TARGETPLATFORM} node:25-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app
