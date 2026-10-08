@@ -100,7 +100,7 @@ redirecionamento não expande seu conteúdo. Não use
 | `ASAAS_API_KEY` | chave sandbox ou produção, decisão explícita do owner |
 | `ASAAS_WEBHOOK_TOKEN` | token aleatório igual ao painel Asaas |
 | `JEV_API_KEY` | chave de produção do Jev |
-| `RESEND_API_KEY` | chave do domínio de produção no Resend |
+| `BREVO_API_KEY` ou `RESEND_API_KEY` | chave do domínio de produção no provedor escolhido |
 | `EMAIL_UNSUBSCRIBE_SECRET` | aleatório estável, pelo menos 32 caracteres |
 
 ### Configuração obrigatória
@@ -144,7 +144,7 @@ fly secrets set --app licitai \
 Revise, mas normalmente mantenha os defaults de `.env.example`: `DB_POOL_*`,
 `DB_*TIMEOUT*`, `RATE_LIMIT_*`, `MAX_INFLIGHT_*`, `REQUEST_*`, `HTTP_*`,
 `SHUTDOWN_TIMEOUT_MS`, `GOOGLE_HTTP_TIMEOUT_MS`, `ASAAS_HTTP_TIMEOUT_MS`,
-`RESEND_HTTP_TIMEOUT_MS`, `PNCP_DAILY_HOUR=6`, lookbacks/delays das coletas,
+`BREVO_HTTP_TIMEOUT_MS`, `RESEND_HTTP_TIMEOUT_MS`, `PNCP_DAILY_HOUR=6`, lookbacks/delays das coletas,
 `JEV_*`, limites `AI_*`, concorrências `WORKER_*`, `EMAIL_DIGEST_HOUR=7`,
 `EMAIL_IMMEDIATE_WINDOW_MINUTES=10`, `SAVED_SEARCH_JOB_INTERVAL_MINUTES=15` e
 `LOG_LEVEL=info`.
@@ -162,8 +162,9 @@ Revise, mas normalmente mantenha os defaults de `.env.example`: `DB_POOL_*`,
 2. Asaas: escolher sandbox ou produção e usar chave/base coerentes; cadastrar
    exatamente `https://<origem-final>/api/v1/billing/asaas/webhook` com o mesmo
    `ASAAS_WEBHOOK_TOKEN` importado.
-3. Resend: verificar o domínio, publicar DNS e usá-lo em `MAIL_FROM`.
-   `onboarding@resend.dev` só entrega para o e-mail da conta e não serve usuários.
+3. Brevo ou Resend: verificar o domínio, publicar DNS, definir `EMAIL_PROVIDER` e usar o remetente
+   verificado em `MAIL_FROM`. No Resend, `onboarding@resend.dev` só entrega para o e-mail da conta e
+   não serve usuários.
    Manter tracking de abertura/clique desligado.
 4. Domínio customizado: terminar a verificação antes de trocar origem, redirect e
    webhook.
