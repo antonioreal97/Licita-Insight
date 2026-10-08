@@ -20,6 +20,7 @@ import { CompanyProfileSection } from '@/features/company-profile/components/com
 import { AccountDataSection } from './components/account-data-section';
 import { NotificationPreferencesSection } from './components/notification-preferences-section';
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
+import { RecommendationPreferencesSection } from '@/features/recommendations/components/recommendation-preferences-section';
 
 // Profile comes from the Google session (read-only). Sections without an `id` have no settings yet.
 const sections = [
@@ -27,8 +28,8 @@ const sections = [
   { name: 'Perfil e conta', id: 'perfil' },
   { name: 'Perfil da empresa', id: 'perfil-empresa' },
   { name: 'Notificações', id: 'notificacoes' },
+  { name: 'Recomendações', id: 'recomendacoes' },
   { name: 'Seus dados', id: 'seus-dados' },
-  { name: 'Preferências de busca', id: null },
   { name: 'Aparência', id: null },
 ];
 
@@ -54,7 +55,7 @@ export default function SettingsPage() {
         className="mb-6 flex items-start gap-2 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-muted-foreground"
       >
         <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Nome, e-mail e foto vêm da sua conta Google e não são editados aqui. Preferências de busca e aparência ainda não são configuráveis.
+        Nome, e-mail e foto vêm da sua conta Google e não são editados aqui. A aparência ainda não é configurável.
       </p>
       <div className="grid gap-6 xl:grid-cols-[220px_1fr]">
         {/* In-page anchors, not tabs: the page is short enough to scroll; later sections are labelled as coming later. */}
@@ -113,6 +114,7 @@ export default function SettingsPage() {
           </section>
           <CompanyProfileSection />
           <NotificationPreferencesSection />
+          <RecommendationPreferencesSection />
           <AccountDataSection />
         </div>
       </div>

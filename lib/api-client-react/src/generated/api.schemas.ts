@@ -126,6 +126,38 @@ export interface NotificationPreferences {
   updatedAt: string | null;
 }
 
+export interface RecommendationPreferences {
+  personalizationEnabled: boolean;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface UpdateRecommendationPreferencesRequest {
+  personalizationEnabled: boolean;
+  /** Applies when disabling; defaults to true so turning opt-in off erases the event history. */
+  deleteHistory?: boolean;
+}
+
+export type RecommendationEventRequest = {
+  type: 'search';
+  /** @maxLength 2000 */
+  query: string;
+} | {
+  type: 'tender_view';
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  tenderId: string;
+} | {
+  type: 'click';
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  tenderId?: string;
+};
+
 export interface UpdateEmailNotificationPreferences {
   digest?: EmailDigestPreference;
   immediateCritical?: boolean;
@@ -170,6 +202,9 @@ export interface AccountExportUser {
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
+  recommendationPersonalizationEnabled: boolean;
+  /** @nullable */
+  recommendationPreferencesUpdatedAt: string | null;
   /** @nullable */
   emailPreferencesUpdatedAt: string | null;
   createdAt: string;
@@ -409,6 +444,12 @@ export type AccountExportCompanyFitsItem = { [key: string]: unknown };
 
 export type AccountExportFitUsageItem = { [key: string]: unknown };
 
+export type AccountExportRecommendationDismissalsItem = { [key: string]: unknown };
+
+export type AccountExportRecommendationInterestProfile = { [key: string]: unknown } | null;
+
+export type AccountExportRecommendationsItem = { [key: string]: unknown };
+
 export type CompanyCoverage = {
   scope: 'national';
 } | {
@@ -474,6 +515,24 @@ export type CompanyProfile = CompanyProfileInput & {
   updatedAt: string;
 };
 
+export type AccountExportRecommendationEventType = typeof AccountExportRecommendationEventType[keyof typeof AccountExportRecommendationEventType];
+
+
+export const AccountExportRecommendationEventType = {
+  search: 'search',
+  tender_view: 'tender_view',
+} as const;
+
+export interface AccountExportRecommendationEvent {
+  id: string;
+  userId: string;
+  type: AccountExportRecommendationEventType;
+  normalizedTerms: string[];
+  /** @nullable */
+  tenderId: string | null;
+  occurredAt: string;
+}
+
 export interface AccountExport {
   exportedAt: string;
   user: AccountExportUser;
@@ -486,6 +545,10 @@ export interface AccountExport {
   companyProfile: CompanyProfile | null;
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];
+  recommendationEvents: AccountExportRecommendationEvent[];
+  recommendationDismissals: AccountExportRecommendationDismissalsItem[];
+  recommendationInterestProfile: AccountExportRecommendationInterestProfile;
+  recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
 }
 
@@ -951,6 +1014,49 @@ export interface TenderSummary {
   updatedAt: string;
 }
 
+export type RecommendationReasonKind = typeof RecommendationReasonKind[keyof typeof RecommendationReasonKind];
+
+
+export const RecommendationReasonKind = {
+  profile: 'profile',
+  monitored: 'monitored',
+  saved: 'saved',
+  saved_search: 'saved_search',
+  search: 'search',
+  location: 'location',
+  organization: 'organization',
+  value: 'value',
+} as const;
+
+export interface RecommendationReason {
+  kind: RecommendationReasonKind;
+  text: string;
+}
+
+export interface Recommendation {
+  tender: TenderSummary;
+  score: number;
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  reasons: RecommendationReason[];
+  generatedAt: string;
+}
+
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  totalIsEstimate: boolean;
+}
+
+export interface RecommendationsResponse {
+  data: Recommendation[];
+  pagination: Pagination;
+}
+
 export interface TenderItem {
   id: string;
   description: string;
@@ -1126,14 +1232,6 @@ export interface TransparencyResult {
   /** @nullable */
   officialUrl: string | null;
   provenance: TransparencyProvenance;
-}
-
-export interface Pagination {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-  totalIsEstimate: boolean;
 }
 
 export interface TransparencyContractsResponse {
@@ -1912,5 +2010,21 @@ page?: PageParameter;
  * @maximum 50
  */
 pageSize?: number;
+};
+
+export type ListRecommendationsParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+pageSize?: number;
+};
+
+export type RecordRecommendationEvent202 = {
+  recorded: boolean;
 };
 

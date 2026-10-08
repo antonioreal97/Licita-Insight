@@ -4,6 +4,7 @@ export * from "./ai-ledger";
 export * from "./company-fit";
 export * from "./opportunities";
 export * from "./operations";
+export * from "./recommendations";
 export * from "./tenders";
 export * from "./title-examples";
 export * from "./transparency";

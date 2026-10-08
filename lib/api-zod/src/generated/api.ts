@@ -1028,6 +1028,8 @@ export const ExportAccountDataResponse = zod.object({
   "emailDigest": zod.enum(['daily', 'off']),
   "emailImmediateCritical": zod.boolean(),
   "profileAlerts": zod.boolean(),
+  "recommendationPersonalizationEnabled": zod.boolean(),
+  "recommendationPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "emailPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1141,6 +1143,17 @@ export const ExportAccountDataResponse = zod.object({
 })),zod.null()]),
   "companyFits": zod.array(zod.record(zod.string(), zod.unknown())),
   "fitUsage": zod.array(zod.record(zod.string(), zod.unknown())),
+  "recommendationEvents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "userId": zod.string(),
+  "type": zod.enum(['search', 'tender_view']),
+  "normalizedTerms": zod.array(zod.string()),
+  "tenderId": zod.string().nullable(),
+  "occurredAt": zod.coerce.date()
+})),
+  "recommendationDismissals": zod.array(zod.record(zod.string(), zod.unknown())),
+  "recommendationInterestProfile": zod.union([zod.record(zod.string(), zod.unknown()),zod.null()]),
+  "recommendations": zod.array(zod.record(zod.string(), zod.unknown())),
   "subscription": zod.union([zod.object({
   "status": zod.string(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
@@ -1911,6 +1924,165 @@ export const UpdateNotificationPreferencesResponse = zod.object({
   "profileAlerts": zod.boolean(),
   "emailAddress": zod.string().email(),
   "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Read the optional search and click personalization preference
+ */
+export const GetRecommendationPreferencesResponse = zod.object({
+  "personalizationEnabled": zod.boolean(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Enable or disable search and click personalization; disabling deletes history by default
+ */
+export const updateRecommendationPreferencesBodyDeleteHistoryDefault = true;
+
+export const UpdateRecommendationPreferencesBody = zod.object({
+  "personalizationEnabled": zod.boolean(),
+  "deleteHistory": zod.boolean().default(updateRecommendationPreferencesBodyDeleteHistoryDefault).describe('Applies when disabling; defaults to true so turning opt-in off erases the event history.')
+})
+
+export const UpdateRecommendationPreferencesResponse = zod.object({
+  "personalizationEnabled": zod.boolean(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Delete the signed-in user's opt-in search and tender-view history
+ */
+export const DeleteRecommendationHistoryResponse = zod.void()
+
+
+/**
+ * Requires an active trial, beta grant, development entitlement, or subscription, following saved account resources.
+ * @summary List the signed-in subscriber's materialized tender recommendations
+ */
+export const listRecommendationsQueryPageDefault = 1;
+
+export const listRecommendationsQueryPageSizeDefault = 10;
+export const listRecommendationsQueryPageSizeMax = 50;
+
+
+
+export const ListRecommendationsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listRecommendationsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listRecommendationsQueryPageSizeMax).default(listRecommendationsQueryPageSizeDefault)
+})
+
+export const listRecommendationsResponseDataItemTenderRelevanceScoreMin = 0;
+export const listRecommendationsResponseDataItemTenderRelevanceScoreMax = 1;
+
+export const listRecommendationsResponseDataItemReasonsMax = 3;
+
+
+
+export const ListRecommendationsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "tender": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
+  "objectSummary": zod.string().nullable(),
+  "organization": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}),
+  "purchasingUnit": zod.string().nullable(),
+  "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
+  "modalityLabel": zod.string(),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
+  "estimatedValue": zod.number().nullable(),
+  "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "openingAt": zod.coerce.date().nullable(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "cityIbgeCode": zod.string().nullable()
+}),
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().url().nullable()
+}),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "relevance": zod.object({
+  "score": zod.number().min(listRecommendationsResponseDataItemTenderRelevanceScoreMin).max(listRecommendationsResponseDataItemTenderRelevanceScoreMax).nullable(),
+  "highlights": zod.array(zod.object({
+  "field": zod.enum(['title', 'objectSummary', 'items']),
+  "fragments": zod.array(zod.string())
+}))
+}),
+  "updatedAt": zod.coerce.date()
+}),
+  "score": zod.number(),
+  "reasons": zod.array(zod.object({
+  "kind": zod.enum(['profile', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value']),
+  "text": zod.string()
+})).min(1).max(listRecommendationsResponseDataItemReasonsMax),
+  "generatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+})
+})
+
+
+/**
+ * @summary Permanently dismiss a tender and lightly penalize similar signals
+ */
+export const dismissRecommendationPathTenderIdMax = 200;
+
+
+
+export const DismissRecommendationParams = zod.object({
+  "tenderId": zod.coerce.string().min(1).max(dismissRecommendationPathTenderIdMax)
+})
+
+export const DismissRecommendationResponse = zod.void()
+
+
+/**
+ * Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
+ * @summary Record an opted-in search/view event or an aggregate recommendation click
+ */
+export const recordRecommendationEventBodyOneQueryMax = 2000;
+
+export const recordRecommendationEventBodyTwoTenderIdMax = 200;
+
+export const recordRecommendationEventBodyThreeTenderIdMax = 200;
+
+
+
+export const RecordRecommendationEventBody = zod.union([zod.object({
+  "type": zod.literal("search"),
+  "query": zod.string().max(recordRecommendationEventBodyOneQueryMax)
+}),zod.object({
+  "type": zod.literal("tender_view"),
+  "tenderId": zod.string().min(1).max(recordRecommendationEventBodyTwoTenderIdMax)
+}),zod.object({
+  "type": zod.literal("click"),
+  "tenderId": zod.string().min(1).max(recordRecommendationEventBodyThreeTenderIdMax).optional()
+})])
+
+export const RecordRecommendationEventResponse = zod.object({
+  "recorded": zod.boolean()
 })
 
 

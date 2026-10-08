@@ -26,6 +26,8 @@ export const queryKeys = {
     all: ['me'] as const,
     billing: ['me', 'billing'] as const,
     notificationPreferences: ['me', 'notification-preferences'] as const,
+    recommendationPreferences: ['me', 'recommendation-preferences'] as const,
+    recommendations: ['me', 'recommendations'] as const,
     /** Index state and quota of "Perguntar ao edital" for one tender (the quota is per user). */
     askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
     /** The sheet is public tender data, but only served with access: it lives under `me` so sign-out drops it. */

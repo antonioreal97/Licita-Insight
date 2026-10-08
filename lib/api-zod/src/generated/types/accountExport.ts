@@ -10,6 +10,10 @@ import type { AccountExportCompanyFitsItem } from './accountExportCompanyFitsIte
 import type { AccountExportEmailDelivery } from './accountExportEmailDelivery';
 import type { AccountExportFitUsageItem } from './accountExportFitUsageItem';
 import type { AccountExportNotification } from './accountExportNotification';
+import type { AccountExportRecommendationDismissalsItem } from './accountExportRecommendationDismissalsItem';
+import type { AccountExportRecommendationEvent } from './accountExportRecommendationEvent';
+import type { AccountExportRecommendationInterestProfile } from './accountExportRecommendationInterestProfile';
+import type { AccountExportRecommendationsItem } from './accountExportRecommendationsItem';
 import type { AccountExportSavedSearch } from './accountExportSavedSearch';
 import type { AccountExportSavedTender } from './accountExportSavedTender';
 import type { AccountExportSession } from './accountExportSession';
@@ -29,5 +33,9 @@ export interface AccountExport {
   companyProfile: CompanyProfile | null;
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];
+  recommendationEvents: AccountExportRecommendationEvent[];
+  recommendationDismissals: AccountExportRecommendationDismissalsItem[];
+  recommendationInterestProfile: AccountExportRecommendationInterestProfile;
+  recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
 }

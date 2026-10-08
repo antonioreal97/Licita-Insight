@@ -28,6 +28,8 @@ import { useTenderSearch } from './hooks/use-tender-search';
 import { rememberFacetLabels, rememberLabel } from './lib/facet-config';
 import { searchDefaultsToUrl } from './lib/search-defaults';
 import { relevanceVaries } from '@/features/tenders/lib/tender-display';
+import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
+import { accountService } from '@/services/account-service';
 
 const SORTS = Object.keys(sortLabels) as SortOption[];
 const PAGE_SIZES = [10, 20, 50];
@@ -41,6 +43,8 @@ export default function SearchPage() {
   const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState(false);
   const resultsRef = useRef<HTMLElement>(null);
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
+  const lastRecordedSearch = useRef<string | null>(null);
+  const recommendationPreferences = useRecommendationPreferences();
   const desktopFiltersRef = useRef<HTMLDivElement>(null);
 
   const response = search.data;
@@ -66,6 +70,13 @@ export default function SearchPage() {
   useEffect(() => {
     if (pageOutOfRange && pagination && page > pagination.totalPages) update({ page: pagination.totalPages }, { replace: true });
   }, [pageOutOfRange, pagination, page, update]);
+
+  useEffect(() => {
+    const query = params.q?.trim();
+    if (!query || page !== 1 || !search.isSuccess || !recommendationPreferences.data?.personalizationEnabled || lastRecordedSearch.current === query) return;
+    lastRecordedSearch.current = query;
+    void accountService.recordRecommendationSearch(query).catch(() => undefined);
+  }, [page, params.q, recommendationPreferences.data?.personalizationEnabled, search.isSuccess]);
 
   useLayoutEffect(() => {
     let frame = 0;

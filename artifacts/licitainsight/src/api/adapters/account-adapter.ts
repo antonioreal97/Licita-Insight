@@ -6,6 +6,9 @@ import type {
   ImportSavedTendersResponse,
   MarkNotificationsReadBody,
   NotificationPreferences,
+  RecommendationEvent,
+  RecommendationPreferences,
+  RecommendationsResponse,
   NotificationsParams,
   NotificationsResponse,
   PublicPlan,
@@ -68,6 +71,12 @@ export interface AccountAdapter {
   /** E-mail preferences: session only, no 402 gate (turning e-mail off is the user's right). */
   getNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences>;
   updateNotificationPreferences(body: UpdateNotificationPreferencesBody): Promise<NotificationPreferences>;
+  getRecommendationPreferences(signal?: AbortSignal): Promise<RecommendationPreferences>;
+  updateRecommendationPreferences(body: { personalizationEnabled: boolean; deleteHistory?: boolean }): Promise<RecommendationPreferences>;
+  deleteRecommendationHistory(): Promise<void>;
+  listRecommendations(params: { page?: number; pageSize?: number }, signal?: AbortSignal): Promise<RecommendationsResponse>;
+  dismissRecommendation(tenderId: string): Promise<void>;
+  recordRecommendationEvent(event: RecommendationEvent): Promise<{ recorded: boolean }>;
   /** Public, no session: the signed token from the e-mail link. */
   unsubscribe(token: string, scope: UnsubscribeScope): Promise<UnsubscribeResponse>;
 }

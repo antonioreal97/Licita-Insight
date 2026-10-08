@@ -23,6 +23,7 @@ import { tryRunSingletonJob } from "./jobs/job-lock";
 import { startAiJobWorker } from "./ai/ai-job-queue";
 import { startAiDocumentRetentionScheduler } from "./ai/ai-document-retention";
 import { startMetricsServer } from "./metrics";
+import { startRecommendationScheduler } from "./recommendations/recommendation-service";
 
 const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT", required: boolean): number | undefined => {
   const raw = process.env[name]?.trim();
@@ -61,6 +62,7 @@ const startSchedulers = (): Array<() => void> => [
   startTenderDeadlineReconciliation(),
   startDailyCultureCollect(),
   startDailyCategoryClassify(),
+  startRecommendationScheduler(),
 ];
 
 const start = async (): Promise<void> => {
