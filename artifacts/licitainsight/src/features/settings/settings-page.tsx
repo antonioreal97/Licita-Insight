@@ -21,6 +21,7 @@ import { AccountDataSection } from './components/account-data-section';
 import { NotificationPreferencesSection } from './components/notification-preferences-section';
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
 import { RecommendationPreferencesSection } from '@/features/recommendations/components/recommendation-preferences-section';
+import { trackBeginCheckout } from '@/features/analytics/google-analytics';
 
 // Profile comes from the Google session (read-only). Sections without an `id` have no settings yet.
 const sections = [
@@ -185,6 +186,7 @@ function BillingSection() {
         toast({ variant: 'destructive', title: 'Pagamento indisponível', description: 'O link de pagamento não é válido.' });
         return;
       }
+      trackBeginCheckout();
       window.location.assign(url);
     },
     onError: (error) => {
@@ -264,8 +266,8 @@ function BillingSection() {
                 {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} {trialEndPhrase(trial.endsAt)}.
               </p>
               <p className="mt-0.5 type-meta">
-                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos continuam guardados
-                na sua conta.
+                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos
+                continuam guardados na sua conta.
               </p>
             </div>
           ) : (

@@ -3,6 +3,7 @@ import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
+import { trackRecommendationAction } from '@/features/analytics/google-analytics';
 
 export function useRecommendationPreferences() {
   const session = useSession();
@@ -47,6 +48,9 @@ export function useDismissRecommendation() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (tenderId: string) => accountService.dismissRecommendation(tenderId),
-    onSuccess: () => void client.invalidateQueries({ queryKey: queryKeys.me.recommendations }),
+    onSuccess: () => {
+      trackRecommendationAction('recommendation_dismiss');
+      void client.invalidateQueries({ queryKey: queryKeys.me.recommendations });
+    },
   });
 }

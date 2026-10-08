@@ -30,6 +30,7 @@ import { searchDefaultsToUrl } from './lib/search-defaults';
 import { relevanceVaries } from '@/features/tenders/lib/tender-display';
 import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
 import { accountService } from '@/services/account-service';
+import { trackSearch } from '@/features/analytics/google-analytics';
 
 const SORTS = Object.keys(sortLabels) as SortOption[];
 const PAGE_SIZES = [10, 20, 50];
@@ -114,7 +115,10 @@ export default function SearchPage() {
   }, [desktopFiltersCollapsed, params.q, response?.meta.searchMode, response?.meta.searchModeFallbackReason]);
 
   const submitQuery = (q: string) => {
-    if (q) recent.add(q);
+    if (q) {
+      recent.add(q);
+      trackSearch();
+    }
     update({ q: q || undefined });
   };
 
@@ -167,9 +171,7 @@ export default function SearchPage() {
       <div className="@container/page">
         <div
           className={`grid gap-6 transition-[grid-template-columns] duration-slow ease-emphasized ${
-            desktopFiltersCollapsed
-              ? '@min-[52rem]/page:grid-cols-[40px_minmax(0,1fr)]'
-              : '@min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]'
+            desktopFiltersCollapsed ? '@min-[52rem]/page:grid-cols-[40px_minmax(0,1fr)]' : '@min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]'
           }`}
         >
           <aside
@@ -350,7 +352,14 @@ export default function SearchPage() {
                   {/* Table view is a desktop affordance; phones always get the list. */}
                   <div className={`overflow-hidden rounded-xl border border-border bg-card ${view === 'table' ? 'md:hidden' : ''}`}>
                     {response!.data.map((tender) => (
-                      <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} relevanceVaries={scoresVary} fit={fits.data?.results[tender.id]} />
+                      <TenderRow
+                        key={tender.id}
+                        tender={tender}
+                        saved={isSaved(tender.id)}
+                        onSave={() => toggle(tender.id)}
+                        relevanceVaries={scoresVary}
+                        fit={fits.data?.results[tender.id]}
+                      />
                     ))}
                   </div>
                   {view === 'table' && (

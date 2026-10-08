@@ -7,6 +7,7 @@ import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tender
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { accountService } from '@/services/account-service';
 import { useDismissRecommendation, useRecommendations } from '../hooks/use-recommendations';
+import { trackRecommendationAction } from '@/features/analytics/google-analytics';
 
 export function RecommendationsSection() {
   const recommendations = useRecommendations();
@@ -33,7 +34,10 @@ export function RecommendationsSection() {
                 tender={recommendation.tender}
                 saved={isSaved(recommendation.tender.id)}
                 onSave={() => toggle(recommendation.tender.id)}
-                onOpen={() => void accountService.recordRecommendationClick(recommendation.tender.id).catch(() => undefined)}
+                onOpen={() => {
+                  trackRecommendationAction('recommendation_interest');
+                  void accountService.recordRecommendationClick(recommendation.tender.id).catch(() => undefined);
+                }}
                 compact
               />
               <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-sunken px-4 py-2.5 sm:px-5">

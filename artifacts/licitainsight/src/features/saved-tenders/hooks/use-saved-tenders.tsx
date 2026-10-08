@@ -7,6 +7,7 @@ import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling, useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
+import { trackTenderAction } from '@/features/analytics/google-analytics';
 
 /** Before accounts, saved ids lived in this browser. They are imported once into the account, then the key is removed. */
 const LEGACY_STORAGE_KEY = 'licita-saved-tenders';
@@ -134,7 +135,11 @@ export function useSavedTenders() {
     },
     // Declarations are deleted with the save. Re-saving is not an undo of that data loss.
     onSuccess: (_data, change) => {
-      if (change.save) return;
+      if (change.save) {
+        if (change.monitored === true) trackTenderAction('monitor_tender');
+        else if (change.monitored === undefined) trackTenderAction('save_tender');
+        return;
+      }
       toast({
         title: 'Edital removido dos salvos',
         description: 'O monitoramento foi desligado, e a etapa e as marcações deste edital foram apagadas.',
@@ -183,7 +188,13 @@ export function useSavedTenders() {
   const toggle = useCallback(
     (id: string) => {
       const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
-      if (current?.saved.includes(id) && !window.confirm('Remover este edital dos salvos? Isso apaga sua etapa, checklist, protocolo, próxima ação e histórico, e desliga o monitoramento. Salvar novamente não recupera esses dados.')) return;
+      if (
+        current?.saved.includes(id) &&
+        !window.confirm(
+          'Remover este edital dos salvos? Isso apaga sua etapa, checklist, protocolo, próxima ação e histórico, e desliga o monitoramento. Salvar novamente não recupera esses dados.',
+        )
+      )
+        return;
       change((current) => {
         if (!current.saved.includes(id)) return { id, save: true };
         return { id, save: false, wasMonitored: current.monitored.includes(id) };

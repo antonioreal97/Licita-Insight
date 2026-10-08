@@ -4,12 +4,14 @@ import { useLocation } from 'wouter';
 import type { User } from '@/api';
 import { toast } from '@/hooks/use-toast';
 import { optionalStorageAllowed, readCookieConsent } from '@/features/privacy/cookie-consent';
+import { trackAuthentication } from '@/features/analytics/google-analytics';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 
 export const LAST_ACTIVITY_KEY = 'licita-last-activity';
 export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 const ACTIVITY_WRITE_MS = 5_000;
+const NEW_ACCOUNT_WINDOW_MS = 5 * 60_000;
 
 export type SessionStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -95,7 +97,7 @@ export function useSignOut() {
 
 /** Logs the open session out after 10 minutes without a click, key, or scroll. Other tabs share the clock. */
 export function useIdleSession(): void {
-  const { status } = useSession();
+  const { status, user } = useSession();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const navigateRef = useRef(navigate);
@@ -167,6 +169,9 @@ export function useIdleSession(): void {
       } catch (error) {
         console.error('[auth] Não foi possível concluir o login em andamento.', error);
       }
+      const createdAt = user ? Date.parse(user.createdAt) : Number.NaN;
+      const accountAge = Date.now() - createdAt;
+      trackAuthentication(Number.isFinite(accountAge) && accountAge >= 0 && accountAge <= NEW_ACCOUNT_WINDOW_MS ? 'sign_up' : 'login');
       markActivity();
     } else {
       const stored = readLastActivity();
@@ -185,5 +190,5 @@ export function useIdleSession(): void {
       window.removeEventListener('scroll', markActivity, true);
       window.removeEventListener('storage', onStorage);
     };
-  }, [status]);
+  }, [status, user]);
 }

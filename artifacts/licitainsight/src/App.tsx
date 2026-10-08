@@ -24,6 +24,7 @@ import TenderDetailPage from '@/features/tenders/tender-detail-page';
 import TransparencyPage from '@/features/transparency/transparency-page';
 import UnsubscribePage from '@/features/unsubscribe/unsubscribe-page';
 import { CookieNotice } from '@/features/privacy/cookie-notice';
+import { GoogleAnalyticsPageViews } from '@/features/analytics/google-analytics-page-views';
 import { queryKeys } from '@/services/query-keys';
 import { toast } from '@/hooks/use-toast';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
@@ -202,6 +203,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <GoogleAnalyticsPageViews />
           <Router />
         </WouterRouter>
         <CookieNotice />
