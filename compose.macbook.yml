@@ -105,6 +105,12 @@ services:
     image: nginx:1.27.5-alpine
     restart: unless-stopped
     mem_limit: 64m
+    # Retenção técnica limitada: no máximo 18 arquivos de 10 MiB por container.
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "18"
     environment:
       ORIGIN_SHARED_SECRET: ${ORIGIN_SHARED_SECRET:-}
       ORIGIN_MODE: ${ORIGIN_MODE:-log}

@@ -18,12 +18,20 @@ map "$abriu_origin_valid:$http_x_abriu_client_ip" $abriu_client_ip {
   "~^1:(?<forwarded_client_ip>.+)$" $forwarded_client_ip;
 }
 
+# A borda Oracle guarda o IP pelo prazo legal. O proxy interno precisa apenas de uma rede
+# aproximada para diagnóstico e nunca duplica o endereço completo nos seus logs.
+map $abriu_client_ip $abriu_client_network {
+  default "masked";
+  ~^(?<client_ipv4_prefix>\d+\.\d+\.\d+)\.\d+$ "$client_ipv4_prefix.0/24";
+  ~: "ipv6/64";
+}
+
 log_format abriu_json escape=json
   '{"time":"$time_iso8601",'
   '"status":$status,'
   '"method":"$request_method",'
   '"route":"$uri",'
-  '"client_ip":"$abriu_client_ip",'
+  '"client_network":"$abriu_client_network",'
   '"origin_valid":"$abriu_origin_valid_label",'
   '"request_time":$request_time,'
   '"upstream_time":"$upstream_response_time"}';
