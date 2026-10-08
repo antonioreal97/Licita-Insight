@@ -29,7 +29,7 @@ describe("Resend client", () => {
     const result = await sendWithResend(message, "delivery/test", {
       env: {
         RESEND_API_KEY: "re_test",
-        MAIL_FROM: "Abriu lá <alertas@example.test>",
+        MAIL_FROM: "Pardal Digital <alertas@example.test>",
         MAIL_REPLY_TO: "suporte@example.test",
       },
       fetchImpl: async (input, init) => {

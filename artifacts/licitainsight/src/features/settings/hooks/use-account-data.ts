@@ -35,7 +35,7 @@ export function useDeleteAccount() {
       queryClient.removeQueries({ queryKey: queryKeys.me.all });
       queryClient.setQueryData(queryKeys.session, null);
       navigate('/');
-      toast({ title: 'Conta excluída', description: 'Seus dados pessoais foram apagados da Abriu lá.' });
+      toast({ title: 'Conta excluída', description: 'Seus dados pessoais foram apagados do Pardal Digital.' });
     },
     onError: (error) => console.error('[lgpd] Falha ao excluir a conta.', error),
   });

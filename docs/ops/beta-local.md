@@ -63,7 +63,7 @@ Preencha `~/.licitai-secrets/beta.env` (a lista completa está no `.example`):
 - Tela de consentimento em **Testing** e cada convidado em **Test users** (até 100). Fora dessa lista o
   Google não deixa entrar.
 - Resend → Domains → adicione o domínio e publique os registros DNS na Cloudflare. Use em `MAIL_FROM` um
-  remetente desse domínio (ex. `Abriu lá <alertas@<dominio>>`). Com `onboarding@resend.dev` o Resend só
+  remetente desse domínio (ex. `Pardal Digital <alertas@<dominio>>`). Com `onboarding@resend.dev` o Resend só
   entrega para o e-mail da própria conta.
 
 ## 5. Subir, convidar e ir ao ar

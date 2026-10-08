@@ -1,9 +1,8 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
+  title: Pardal Digital API
   version: 1.3.0
-  description: API pública da Abriu lá
+  description: API pública do Pardal Digital
 servers:
   - url: /api
     description: Base API path
