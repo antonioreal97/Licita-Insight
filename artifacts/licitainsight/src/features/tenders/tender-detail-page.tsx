@@ -48,6 +48,8 @@ import { useTender } from './hooks/use-tender';
 import { TenderTransparency } from '@/features/transparency/tender-transparency';
 import { isFuture } from './lib/deadline';
 import { formatPlace, isMostlyUppercase, shortTenderNumber, sumItems } from './lib/tender-display';
+import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
+import { accountService } from '@/services/account-service';
 
 function DetailSkeleton() {
   return (
@@ -128,6 +130,13 @@ function useStuck(ready: boolean) {
 export default function TenderDetailPage() {
   const { id } = useParams();
   const query = useTender(id);
+  const recommendationPreferences = useRecommendationPreferences();
+  const recordedView = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id || !query.isSuccess || !recommendationPreferences.data?.personalizationEnabled || recordedView.current === id) return;
+    recordedView.current = id;
+    void accountService.recordRecommendationView(id).catch(() => undefined);
+  }, [id, query.isSuccess, recommendationPreferences.data?.personalizationEnabled]);
   const { isSaved, toggle, isMonitored, toggleMonitor, status: savedStatus, entitled } = useSavedTenders();
   const [titleExpanded, setTitleExpanded] = useState(false);
   // Animate the bookmark swap only after a click, never on load.

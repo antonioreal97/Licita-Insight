@@ -44,6 +44,8 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     googleTrialTombstonesTable,
     pool,
     notificationsTable,
+    recommendationDismissalsTable,
+    recommendationEventsTable,
     savedSearchesTable,
     savedTendersTable,
     sessionsTable,
@@ -65,6 +67,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   const { createUnsubscribeToken } = await import("../email/unsubscribe-token");
   const { retryEmailDeliveries, runDailyEmailDigest, runImmediateEmailAlerts } = await import("../email/email-service");
   const { runSavedSearchEvaluationJob } = await import("../email/email-scheduler");
+  const { rebuildInterestProfile } = await import("../recommendations/recommendation-service");
 
   await pool.query(`CREATE SCHEMA "${schema}"`);
   for (const table of [
@@ -91,6 +94,11 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "company_profiles",
     "company_tender_fits",
     "ai_fit_daily_usage",
+    "recommendation_events",
+    "recommendation_dismissals",
+    "recommendation_interest_profiles",
+    "user_recommendations",
+    "recommendation_metrics_daily",
   ]) {
     await pool.query(`CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`);
   }
@@ -1127,6 +1135,15 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       responseModel: "jev-1.13.0",
       status: "not_found",
     });
+    const preference = await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: true }),
+    }, authenticatedCookie);
+    assert.equal(preference.status, 200);
+    const event = await request("/v1/recommendations/events", {
+      method: "POST", headers: csrf, body: JSON.stringify({ type: "search", query: "hemodiálise hospitalar" }),
+    }, authenticatedCookie);
+    assert.equal(event.status, 202);
+    assert.equal(((await event.json()) as { recorded: boolean }).recorded, true);
     const response = await request("/v1/me/export", {}, authenticatedCookie);
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-disposition") ?? "", /^attachment; filename="pardal-digital-dados-\d{4}-\d{2}-\d{2}\.json"$/);
@@ -1143,6 +1160,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       savedSearches: { deletedAt: string | null }[];
       emailDeliveries: unknown[];
       aiQuestions: { question: string }[];
+      recommendationEvents: { normalizedTerms: string[] }[];
     };
     assert.equal(body.user.email, "user-a@example.test");
     assert.equal(body.user.emailDigest, "daily");
@@ -1155,6 +1173,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.ok(body.sessions.length > 0);
     assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
     assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
+    assert.deepEqual(body.recommendationEvents.at(-1)?.normalizedTerms, ["hemodialise", "hospitalar"]);
 
     const serialized = JSON.stringify(body);
     const sessionToken = authenticatedCookie.split("=", 2)[1]!;
@@ -1164,6 +1183,41 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.equal(serialized.includes("user-b@example.test"), false);
     assert.equal(serialized.includes("asaasSubscriptionId"), false);
     assert.equal(serialized.includes("dedupeKey"), false);
+  });
+
+  await t.test("does not record behavioral events without opt-in, erases them on opt-out, and persists dismiss", async () => {
+    const cookie = await login("recommendations-privacy@example.test");
+    const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "recommendations-privacy@example.test"));
+    assert.ok(user);
+    const ignored = await request("/v1/recommendations/events", {
+      method: "POST", headers: csrf, body: JSON.stringify({ type: "search", query: "medicamentos" }),
+    }, cookie);
+    assert.equal(ignored.status, 202);
+    assert.equal(((await ignored.json()) as { recorded: boolean }).recorded, false);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, user.id))).length, 0);
+
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: true }),
+    }, cookie)).status, 200);
+    assert.equal((await request("/v1/recommendations/events", {
+      method: "POST", headers: csrf, body: JSON.stringify({ type: "tender_view", tenderId }),
+    }, cookie)).status, 202);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, user.id))).length, 1);
+    assert.equal((await request(`/v1/me/saved-tenders/${encodeURIComponent(tenderId)}`, {
+      method: "PUT", headers: csrf, body: JSON.stringify({ monitored: true }),
+    }, cookie)).status, 200);
+    const interest = await rebuildInterestProfile(user.id);
+    assert.ok(interest.signalCount >= 3);
+    assert.ok(interest.terms.some(({ weight }) => weight >= 10), "monitored tender should be a strong interest signal");
+    assert.equal((await request(`/v1/recommendations/${encodeURIComponent(tenderId)}/dismiss`, {
+      method: "POST", headers: csrf, body: "{}",
+    }, cookie)).status, 204);
+    assert.equal((await db.select().from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, user.id))).length, 1);
+
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: false }),
+    }, cookie)).status, 200);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, user.id))).length, 0);
   });
 
   await t.test("deletes the account atomically, cascades personal data, and clears the cookie", async () => {
@@ -1213,6 +1267,8 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       requestedModel: "jev-1.13.0",
       status: "not_found",
     });
+    await db.update(usersTable).set({ recommendationPersonalizationEnabled: true }).where(eq(usersTable.id, user.id));
+    await db.insert(recommendationEventsTable).values({ userId: user.id, type: "search", normalizedTerms: ["historico"] });
 
     const missingConfirmation = await request("/v1/me", { method: "DELETE", headers: csrf, body: "{}" }, cookie);
     assert.equal(missingConfirmation.status, 400);
@@ -1255,6 +1311,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       "ai_daily_usage",
       "ai_daily_tenders",
       "ai_ask_requests",
+      "recommendation_events",
+      "recommendation_dismissals",
+      "recommendation_interest_profiles",
+      "user_recommendations",
     ]) {
       const result = await pool.query(`SELECT count(*) AS count FROM ${table} WHERE ${table === "users" ? "id" : "user_id"} = $1`, [user.id]);
       assert.equal(Number(result.rows[0].count), 0, `${table} should cascade`);

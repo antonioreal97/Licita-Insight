@@ -4,6 +4,9 @@ import type {
   BillingResponse,
   ImportSavedTendersResponse,
   NotificationPreferences,
+  RecommendationEvent,
+  RecommendationPreferences,
+  RecommendationsResponse,
   NotificationsResponse,
   PublicPlan,
   SavedSearch,
@@ -53,6 +56,12 @@ export const httpAccountAdapter: AccountAdapter = {
 
   getNotificationPreferences: (signal) => getJson<NotificationPreferences>('/v1/me/notification-preferences', {}, signal),
   updateNotificationPreferences: (body) => sendJson<NotificationPreferences>('PUT', '/v1/me/notification-preferences', body),
+  getRecommendationPreferences: (signal) => getJson<RecommendationPreferences>('/v1/me/recommendation-preferences', {}, signal),
+  updateRecommendationPreferences: (body) => sendJson<RecommendationPreferences>('PUT', '/v1/me/recommendation-preferences', body),
+  deleteRecommendationHistory: () => sendJson<void>('DELETE', '/v1/me/recommendation-history'),
+  listRecommendations: (params, signal) => getJson<RecommendationsResponse>('/v1/recommendations', params, signal),
+  dismissRecommendation: (tenderId) => sendJson<void>('POST', `/v1/recommendations/${enc(tenderId)}/dismiss`),
+  recordRecommendationEvent: (event: RecommendationEvent) => sendJson<{ recorded: boolean }>('POST', '/v1/recommendations/events', event),
   // Public route; the CSRF header sendJson adds is harmless there (and keeps the call a non-simple CORS request).
   unsubscribe: (token, scope) => sendJson<UnsubscribeResponse>('POST', '/v1/email/unsubscribe', { token, scope }),
 };

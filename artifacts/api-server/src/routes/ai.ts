@@ -16,6 +16,7 @@ import {
   putCompanyProfile,
 } from "../ai/company-fit-service";
 import { getTenderSheet } from "../ai/tender-sheet-service";
+import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
 
 const router: IRouter = Router();
 
@@ -33,9 +34,9 @@ router.put(
   requireCsrf,
   asyncHandler(async (req, res) => {
     const input = parseCompanyProfileInput(req.body);
-    res.json({
-      profile: await putCompanyProfile(authContext(res).user.id, input),
-    });
+    const userId = authContext(res).user.id;
+    res.json({ profile: await putCompanyProfile(userId, input) });
+    scheduleRecommendationRebuild(userId);
   }),
 );
 
@@ -45,6 +46,7 @@ router.delete(
   requireCsrf,
   asyncHandler(async (_req, res) => {
     await deleteCompanyProfile(authContext(res).user.id);
+    scheduleRecommendationRebuild(authContext(res).user.id);
     res.status(204).end();
   }),
 );

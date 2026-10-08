@@ -47,6 +47,7 @@ import type {
   InternalErrorResponse,
   InvalidParameterResponse,
   ListNotificationsParams,
+  ListRecommendationsParams,
   ListSavedTendersParams,
   MarkNotificationsReadRequest,
   NotFoundResponse,
@@ -58,6 +59,10 @@ import type {
   RateLimitedResponse,
   ReadinessCheck200,
   ReadinessCheck503,
+  RecommendationEventRequest,
+  RecommendationPreferences,
+  RecommendationsResponse,
+  RecordRecommendationEvent202,
   SavedSearch,
   SavedSearchList,
   SavedTender,
@@ -82,6 +87,7 @@ import type {
   UnauthenticatedResponse,
   UnreadNotificationCount,
   UpdateNotificationPreferencesRequest,
+  UpdateRecommendationPreferencesRequest,
   UpdateSavedSearchRequest
 } from './api.schemas';
 
@@ -3579,6 +3585,493 @@ export const useUpdateNotificationPreferences = <TError = ErrorType<InvalidParam
         TContext
       > => {
       return useMutation(getUpdateNotificationPreferencesMutationOptions(options));
+    }
+
+export const getGetRecommendationPreferencesUrl = () => {
+
+
+
+
+  return `/api/v1/me/recommendation-preferences`
+}
+
+/**
+ * @summary Read the optional search and click personalization preference
+ */
+export const getRecommendationPreferences = async ( options?: Parameters<typeof customFetch>[1]): Promise<RecommendationPreferences> => {
+
+  return customFetch<RecommendationPreferences>(getGetRecommendationPreferencesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRecommendationPreferencesQueryKey = () => {
+    return [
+    `/api/v1/me/recommendation-preferences`
+    ] as const;
+    }
+
+
+export const getGetRecommendationPreferencesQueryOptions = <TData = Awaited<ReturnType<typeof getRecommendationPreferences>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendationPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRecommendationPreferencesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecommendationPreferences>>> = ({ signal }) => getRecommendationPreferences({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRecommendationPreferences>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRecommendationPreferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getRecommendationPreferences>>>
+export type GetRecommendationPreferencesQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Read the optional search and click personalization preference
+ */
+
+export function useGetRecommendationPreferences<TData = Awaited<ReturnType<typeof getRecommendationPreferences>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendationPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRecommendationPreferencesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateRecommendationPreferencesUrl = () => {
+
+
+
+
+  return `/api/v1/me/recommendation-preferences`
+}
+
+/**
+ * @summary Enable or disable search and click personalization; disabling deletes history by default
+ */
+export const updateRecommendationPreferences = async (updateRecommendationPreferencesRequest: UpdateRecommendationPreferencesRequest, options?: Parameters<typeof customFetch>[1]): Promise<RecommendationPreferences> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RecommendationPreferences>(getUpdateRecommendationPreferencesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateRecommendationPreferencesRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateRecommendationPreferencesMutationKey = () => ['updateRecommendationPreferences'] as const;
+
+export const getUpdateRecommendationPreferencesMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRecommendationPreferences>>, TError,UpdateRecommendationPreferencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRecommendationPreferences>>, TError,UpdateRecommendationPreferencesMutationVariables, TContext> => {
+
+const mutationKey = getUpdateRecommendationPreferencesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRecommendationPreferences>>, UpdateRecommendationPreferencesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateRecommendationPreferences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRecommendationPreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updateRecommendationPreferences>>>
+    export type UpdateRecommendationPreferencesMutationBody = BodyType<UpdateRecommendationPreferencesRequest>
+    export type UpdateRecommendationPreferencesMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type UpdateRecommendationPreferencesMutationVariables = {data: BodyType<UpdateRecommendationPreferencesRequest>}
+
+    /**
+ * @summary Enable or disable search and click personalization; disabling deletes history by default
+ */
+export const useUpdateRecommendationPreferences = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRecommendationPreferences>>, TError,UpdateRecommendationPreferencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRecommendationPreferences>>,
+        TError,
+        UpdateRecommendationPreferencesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateRecommendationPreferencesMutationOptions(options));
+    }
+
+export const getDeleteRecommendationHistoryUrl = () => {
+
+
+
+
+  return `/api/v1/me/recommendation-history`
+}
+
+/**
+ * @summary Delete the signed-in user's opt-in search and tender-view history
+ */
+export const deleteRecommendationHistory = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRecommendationHistoryUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRecommendationHistoryMutationKey = () => ['deleteRecommendationHistory'] as const;
+
+export const getDeleteRecommendationHistoryMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRecommendationHistory>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRecommendationHistory>>, TError,void, TContext> => {
+
+const mutationKey = getDeleteRecommendationHistoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRecommendationHistory>>, void> = () => {
+
+
+          return  deleteRecommendationHistory(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRecommendationHistoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRecommendationHistory>>>
+
+    export type DeleteRecommendationHistoryMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>
+
+
+    /**
+ * @summary Delete the signed-in user's opt-in search and tender-view history
+ */
+export const useDeleteRecommendationHistory = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRecommendationHistory>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRecommendationHistory>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteRecommendationHistoryMutationOptions(options));
+    }
+
+export const getListRecommendationsUrl = (params?: ListRecommendationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/recommendations?${stringifiedParams}` : `/api/v1/recommendations`
+}
+
+/**
+ * Requires an active trial, beta grant, development entitlement, or subscription, following saved account resources.
+ * @summary List the signed-in subscriber's materialized tender recommendations
+ */
+export const listRecommendations = async (params?: ListRecommendationsParams, options?: Parameters<typeof customFetch>[1]): Promise<RecommendationsResponse> => {
+
+  return customFetch<RecommendationsResponse>(getListRecommendationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRecommendationsQueryKey = (params?: ListRecommendationsParams,) => {
+    return [
+    `/api/v1/recommendations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListRecommendationsQueryOptions = <TData = Awaited<ReturnType<typeof listRecommendations>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse>>(params?: ListRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRecommendationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRecommendations>>> = ({ signal }) => listRecommendations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRecommendations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRecommendationsQueryResult = NonNullable<Awaited<ReturnType<typeof listRecommendations>>>
+export type ListRecommendationsQueryError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse>
+
+
+/**
+ * @summary List the signed-in subscriber's materialized tender recommendations
+ */
+
+export function useListRecommendations<TData = Awaited<ReturnType<typeof listRecommendations>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse>>(
+ params?: ListRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRecommendationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDismissRecommendationUrl = (tenderId: string,) => {
+
+
+
+
+  return `/api/v1/recommendations/${tenderId}/dismiss`
+}
+
+/**
+ * @summary Permanently dismiss a tender and lightly penalize similar signals
+ */
+export const dismissRecommendation = async (tenderId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDismissRecommendationUrl(tenderId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getDismissRecommendationMutationKey = () => ['dismissRecommendation'] as const;
+
+export const getDismissRecommendationMutationOptions = <TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissRecommendation>>, TError,DismissRecommendationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dismissRecommendation>>, TError,DismissRecommendationMutationVariables, TContext> => {
+
+const mutationKey = getDismissRecommendationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dismissRecommendation>>, DismissRecommendationMutationVariables> = (props) => {
+          const {tenderId} = props ?? {};
+
+          return  dismissRecommendation(tenderId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DismissRecommendationMutationResult = NonNullable<Awaited<ReturnType<typeof dismissRecommendation>>>
+
+    export type DismissRecommendationMutationError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse>
+    export type DismissRecommendationMutationVariables = {tenderId: string}
+
+    /**
+ * @summary Permanently dismiss a tender and lightly penalize similar signals
+ */
+export const useDismissRecommendation = <TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissRecommendation>>, TError,DismissRecommendationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dismissRecommendation>>,
+        TError,
+        DismissRecommendationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDismissRecommendationMutationOptions(options));
+    }
+
+export const getRecordRecommendationEventUrl = () => {
+
+
+
+
+  return `/api/v1/recommendations/events`
+}
+
+/**
+ * Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
+ * @summary Record an opted-in search/view event or an aggregate recommendation click
+ */
+export const recordRecommendationEvent = async (recommendationEventRequest: RecommendationEventRequest, options?: Parameters<typeof customFetch>[1]): Promise<RecordRecommendationEvent202> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RecordRecommendationEvent202>(getRecordRecommendationEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recommendationEventRequest)
+  }
+);}
+
+
+
+
+
+export const getRecordRecommendationEventMutationKey = () => ['recordRecommendationEvent'] as const;
+
+export const getRecordRecommendationEventMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRecommendationEvent>>, TError,RecordRecommendationEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordRecommendationEvent>>, TError,RecordRecommendationEventMutationVariables, TContext> => {
+
+const mutationKey = getRecordRecommendationEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordRecommendationEvent>>, RecordRecommendationEventMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordRecommendationEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordRecommendationEventMutationResult = NonNullable<Awaited<ReturnType<typeof recordRecommendationEvent>>>
+    export type RecordRecommendationEventMutationBody = BodyType<RecommendationEventRequest>
+    export type RecordRecommendationEventMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type RecordRecommendationEventMutationVariables = {data: BodyType<RecommendationEventRequest>}
+
+    /**
+ * @summary Record an opted-in search/view event or an aggregate recommendation click
+ */
+export const useRecordRecommendationEvent = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRecommendationEvent>>, TError,RecordRecommendationEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordRecommendationEvent>>,
+        TError,
+        RecordRecommendationEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordRecommendationEventMutationOptions(options));
     }
 
 export const getUnsubscribeEmailUrl = () => {

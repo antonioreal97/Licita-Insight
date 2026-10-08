@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -14,6 +15,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
 export type TenderCategory = { slug: string; label: string };
 
@@ -91,6 +94,8 @@ export const tendersTable = pgTable(
     documents: jsonArray("documents").$type<TenderDocumentRecord[]>(),
     timeline: jsonArray("timeline").$type<TenderTimelineRecord[]>(),
     searchText: text("search_text").notNull(),
+    recommendationSearchVector: tsvector("recommendation_search_vector")
+      .generatedAlwaysAs(sql`to_tsvector('portuguese', "search_text")`),
     titleNorm: text("title_norm").notNull(),
     objectNorm: text("object_norm").notNull(),
     itemsNorm: text("items_norm").notNull(),
@@ -121,6 +126,14 @@ export const tendersTable = pgTable(
     index("tenders_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),
+    ),
+    index("tenders_recommendation_search_idx").using(
+      "gin",
+      table.recommendationSearchVector,
+    ),
+    index("tenders_categories_gin_idx").using(
+      "gin",
+      table.categories.asc().op("jsonb_path_ops"),
     ),
     index("tenders_display_title_needs_model_idx")
       .on(table.status, table.id)

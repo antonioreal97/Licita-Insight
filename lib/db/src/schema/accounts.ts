@@ -44,6 +44,13 @@ export const usersTable = pgTable(
       .notNull()
       .default(true),
     profileAlerts: boolean("profile_alerts").notNull().default(true),
+    recommendationPersonalizationEnabled: boolean("recommendation_personalization_enabled")
+      .notNull()
+      .default(false),
+    recommendationPreferencesUpdatedAt: timestamp(
+      "recommendation_preferences_updated_at",
+      { withTimezone: true },
+    ),
     emailPreferencesUpdatedAt: timestamp("email_preferences_updated_at", {
       withTimezone: true,
     }),

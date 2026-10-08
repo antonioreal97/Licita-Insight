@@ -24,6 +24,7 @@ type Props = {
   relevanceVaries?: boolean;
   /** Aderência ao perfil da empresa; nothing renders while pending or without a profile. */
   fit?: TenderFit;
+  onOpen?: () => void;
 };
 
 /**
@@ -32,7 +33,7 @@ type Props = {
  * Layout (grid): mobile stacks facts under the text; ≥sm moves value/deadline/relevance to a right-aligned column
  * so values line up vertically across rows for fast scanning. The whole row opens the detail (title link overlay).
  */
-export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit }: Props) {
+export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit, onOpen }: Props) {
   const place = formatPlace(tender.location);
   const titleFragment = highlightFor(tender, 'title');
   const snippet = highlightFor(tender, 'objectSummary') ?? highlightFor(tender, 'items');
@@ -72,6 +73,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
             data-testid={`link-tender-${tender.id}`}
             title={tender.title}
             className="line-clamp-2 break-words transition-colors duration-fast ease-standard after:absolute after:inset-0 after:content-[''] hover:text-primary focus-visible:outline-none"
+            onClick={onOpen}
           >
             <HighlightedText fragment={titleFragment} fallback={tender.title} />
           </Link>

@@ -18,6 +18,9 @@ export interface AccountExportUser {
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
+  recommendationPersonalizationEnabled: boolean;
+  /** @nullable */
+  recommendationPreferencesUpdatedAt: Date | null;
   /** @nullable */
   emailPreferencesUpdatedAt: Date | null;
   createdAt: Date;

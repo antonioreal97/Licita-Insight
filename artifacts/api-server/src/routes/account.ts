@@ -37,6 +37,7 @@ import {
 import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 import { parseParticipationPatch, parseStage } from '../account/participation';
+import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
 
 const router: IRouter = Router();
 
@@ -261,12 +262,14 @@ router.post(
         { field: "ids", issue: "invalid_array" },
       ]);
     }
+    const userId = authContext(res).user.id;
     res.json(
       await importSavedTenders(
-        authContext(res).user.id,
+        userId,
         body.ids.map((id) => String(id).trim()),
       ),
     );
+    scheduleRecommendationRebuild(userId);
   }),
 );
 
@@ -283,14 +286,16 @@ router.put(
   asyncHandler(async (req, res) => {
     const body = recordBody(req.body);
     const monitored = boolean(body.monitored, "monitored");
+    const userId = authContext(res).user.id;
     res.json(
       await putSavedTender({
         ...parseParticipationPatch(body),
-        userId: authContext(res).user.id,
+        userId,
         tenderId: pathParam(req.params.tenderId, "tenderId"),
         monitored,
       }),
     );
+    scheduleRecommendationRebuild(userId);
   }),
 );
 
@@ -302,6 +307,7 @@ router.delete(
       authContext(res).user.id,
       pathParam(req.params.tenderId, "tenderId"),
     );
+    scheduleRecommendationRebuild(authContext(res).user.id);
     res.status(204).end();
   }),
 );
@@ -329,6 +335,7 @@ router.post(
       query: string(body.query, "query", 0, 2000),
       alertsEnabled: body.alertsEnabled,
     });
+    scheduleRecommendationRebuild(authContext(res).user.id);
     res.status(201).json(saved);
   }),
 );
@@ -351,9 +358,10 @@ router.patch(
         { field: "alertsEnabled", issue: "invalid_type" },
       ]);
     }
+    const userId = authContext(res).user.id;
     res.json(
       await updateSavedSearch({
-        userId: authContext(res).user.id,
+        userId,
         id: pathParam(req.params.id, "id"),
         ...(body.name !== undefined
           ? { name: string(body.name, "name", 1, 80) }
@@ -366,6 +374,7 @@ router.patch(
           : {}),
       }),
     );
+    scheduleRecommendationRebuild(userId);
   }),
 );
 
@@ -377,6 +386,7 @@ router.delete(
       authContext(res).user.id,
       pathParam(req.params.id, "id"),
     );
+    scheduleRecommendationRebuild(authContext(res).user.id);
     res.status(204).end();
   }),
 );
@@ -385,12 +395,14 @@ router.post(
   "/v1/me/saved-searches/:id/restore",
   requireCsrf,
   asyncHandler(async (req, res) => {
+    const userId = authContext(res).user.id;
     res.json(
       await restoreSavedSearch(
-        authContext(res).user.id,
+        userId,
         pathParam(req.params.id, "id"),
       ),
     );
+    scheduleRecommendationRebuild(userId);
   }),
 );
 
