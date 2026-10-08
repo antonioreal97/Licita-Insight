@@ -73,7 +73,7 @@ function OpportunityDetail() {
         <span className="type-label text-muted-foreground">{opportunity.state ?? 'Nacional'}</span>
       </div>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <h1 className="max-w-3xl type-display-sm text-foreground">{opportunity.title}</h1>
+        <h1 className="max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
         {opportunity.sourceUrl && (
           <a href={opportunity.sourceUrl} target="_blank" rel="noreferrer" data-testid="link-opportunity-source" className={linkButtonClass}>
             Ver na fonte

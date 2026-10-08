@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Redirect, useSearch } from 'wouter';
 import { CircleAlert, LockKeyhole } from 'lucide-react';
-import { BrandName } from '@/components/brand-icon';
+import { BrandLogo } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { signInWithGoogle, useSession } from './hooks/use-session';
@@ -79,14 +79,14 @@ export default function AuthPage() {
 
   return (
     <div className="grid min-h-[100dvh] bg-background text-foreground lg:grid-cols-[.9fr_1.1fr]">
-      <div className="hidden bg-sidebar p-10 text-sidebar-strong-foreground lg:flex lg:flex-col lg:justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <BrandName className="text-sidebar-strong-foreground" accentClassName="text-sidebar-primary" />
+      <div className="hidden bg-sidebar p-10 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
+        <Link href="/" className="flex w-fit items-center">
+          <BrandLogo className="h-24" />
         </Link>
         <div>
-          <div className="mb-4 type-eyebrow text-sidebar-primary">Pesquisa com contexto</div>
-          <p className="max-w-md text-5xl font-semibold leading-[1.02] tracking-display">A decisão começa antes do lance.</p>
-          <p className="mt-6 max-w-sm text-sm leading-7 text-sidebar-muted-foreground">
+          <div className="mb-4 type-rotulo text-sidebar-muted-foreground">Pesquisa com contexto</div>
+          <p className="max-w-md type-titulo-1">A decisão começa antes do lance.</p>
+          <p className="mt-6 max-w-sm type-corpo text-sidebar-muted-foreground">
             Organize o mercado público em um lugar feito para leitura rápida e ação segura.
           </p>
         </div>
@@ -94,11 +94,11 @@ export default function AuthPage() {
       </div>
       <main id="conteudo" tabIndex={-1} className="flex items-center justify-center p-5 outline-none sm:p-10">
         <div className="w-full max-w-[400px]">
-          <Link href="/" className="mb-12 flex items-center gap-2.5 lg:hidden">
-            <BrandName />
+          <Link href="/" className="mb-12 flex w-fit items-center lg:hidden">
+            <BrandLogo className="h-16" />
           </Link>
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold tracking-display">Entre com sua conta Google.</h1>
+            <h1 className="type-titulo-2">Entre com sua conta Google.</h1>
             <p className="mt-2 type-body text-muted-foreground">Salve editais, monitore mudanças e receba alertas das suas buscas.</p>
           </div>
           {error && (
@@ -118,7 +118,7 @@ export default function AuthPage() {
             <Link
               href="/search"
               data-testid="link-auth-public-search"
-              className="flex h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
+              className="flex h-11 w-full items-center justify-center rounded-pill border border-border bg-card px-4 type-ui font-semibold text-foreground transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
             >
               Pesquisar editais sem entrar
             </Link>

@@ -32,4 +32,4 @@ API (`artifacts/api-server`) lê os editais no Postgres. A UI chama essa API; n�
 
 ## Visual
 
-Primary azul (cor de ação), sidebar navy, âmbar (`warning`) para atenção, DM Sans + Space Mono. Densidade de desktop, bordas sutis, objeto da licitação com mais hierarquia que o resto. Status com texto e cor (tokens `status-*`). Sem cor crua: usar tokens e papéis `type-*` de `design-system/`.
+Design system Pardal: [`docs/design-system.md`](docs/design-system.md), tokens em `artifacts/licitainsight/src/index.css` (nomes de `src/styles/tokens.json`). Tema Creme (claro, padrão) e Petróleo (`.dark`). Só cores da paleta: texto em `--texto`, botão principal em `--destaque` (lima, no máximo um por tela; em listas, `variant="dark"`), erro = `--superficie-inversa` com texto e ícone. Quicksand (títulos) e Montserrat (texto) servidas de `public/fonts/`, nunca de CDN. Sem sombras e sem gradientes. Foco: anel sólido 2px `--foco`, afastado 2px. Cartões `rounded-xl` (`--raio-md`), botões/chips `rounded-pill`, campos `rounded-lg` (`--raio-sm`). Usar papéis `type-*`; `src/styles/contrast.test.ts` reprova pares abaixo de AA.

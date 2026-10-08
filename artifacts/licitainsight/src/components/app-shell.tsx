@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { User } from '@/api';
-import { BrandName } from '@/components/brand-icon';
+import { BrandLogo } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -97,13 +97,7 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
-        {collapsed ? (
-          <span aria-label="Pardal Digital" className="w-full text-center font-semibold text-sidebar-primary">
-            P
-          </span>
-        ) : (
-          <BrandName className="min-w-0 text-sidebar-strong-foreground" accentClassName="text-sidebar-primary" />
-        )}
+        {collapsed ? <BrandLogo symbol className="mx-auto h-6" /> : <BrandLogo className="h-12" />}
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-6">
         {navGroups.map((group, index) => (
@@ -126,7 +120,7 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
                     onClick={onNavigate}
                     data-testid={testId}
                     aria-current={active ? 'page' : undefined}
-                    className={`flex items-center gap-3 rounded-lg py-2.5 type-ui font-medium transition-colors duration-fast ease-standard focus-visible:outline-sidebar-ring ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-sidebar-primary/15 text-sidebar-primary' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
+                    className={`flex items-center gap-3 rounded-lg py-2.5 type-ui font-medium transition-colors duration-fast ease-standard focus-visible:outline-sidebar-ring ${collapsed ? 'justify-center px-0' : 'px-3'} ${active ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-strong-foreground'}`}
                   >
                     <Icon size={17} strokeWidth={active ? 2 : 1.75} className="shrink-0" />
                     {/* The hint sits under the label: side by side it doesn't fit the sidebar width. */}
@@ -253,7 +247,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               </SheetTrigger>
               <Link href="/dashboard" aria-label="Pardal Digital — Visão geral" className="lg:hidden">
-                <BrandName className="text-sm text-foreground" />
+                <BrandLogo className="h-8" />
               </Link>
               <button
                 aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}

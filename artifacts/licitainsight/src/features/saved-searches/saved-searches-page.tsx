@@ -16,7 +16,7 @@ import { searchParamsFromUrl } from '@/services/search-service';
 import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
 
 const primaryLinkClass =
-  'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring';
+  'inline-flex h-9 shrink-0 items-center gap-2 rounded-pill bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring';
 
 function errorDescription(error: unknown) {
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas.';
@@ -247,7 +247,7 @@ function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch
               aria-invalid={update.isError || name.trim().length === 0 || undefined}
               aria-describedby={update.isError ? `${nameId}-error` : undefined}
               data-testid={`input-rename-saved-search-${search.id}`}
-              className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 type-ui text-foreground outline-none transition-colors duration-fast ease-standard hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 aria-[invalid=true]:border-destructive sm:max-w-sm"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 type-ui text-foreground transition-colors duration-fast ease-standard focus:border-ring aria-[invalid=true]:border-destructive sm:max-w-sm"
             />
             <Button size="sm" type="submit" loading={update.isPending} disabled={name.trim().length === 0} data-testid={`button-save-rename-${search.id}`}>
               Salvar

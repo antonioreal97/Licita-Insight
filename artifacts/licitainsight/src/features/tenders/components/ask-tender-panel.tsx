@@ -240,7 +240,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
           data-testid="input-ask-tender"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+          className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-base transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         />
         <Button type="submit" size="lg" loading={pending} disabled={tooShort || exhausted} data-testid="button-ask-tender">
           Perguntar

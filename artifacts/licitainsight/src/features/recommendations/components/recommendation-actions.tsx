@@ -19,6 +19,7 @@ export function RecommendationActions({ saved, saving, dismissing, describedBy, 
     <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto" role="group" aria-label="Avaliar recomendação">
       <Button
         type="button"
+        variant="dark"
         size="sm"
         loading={saving}
         disabled={saved}

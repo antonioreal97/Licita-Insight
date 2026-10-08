@@ -12,10 +12,12 @@ Tokens live in `artifacts/licitainsight/src/index.css`. The living reference ren
 
 ## Identity (keep it)
 
-- **Petroleum blue** anchors the sidebar and dark panels in both themes.
-- **Teal** (`--primary`) marks links and selection. Action buttons use `#39F3F3` (`--action`), and sage fills accents and quiet surfaces.
-- **DM Sans** for reading, **Space Mono** for data: IDs, money, dates, percentages, labels.
-- Light and dark themes are equals. `.dark` on `<html>` flips every token. Nothing is hard-coded to one theme.
+> Since October 2026 the palette, type and logo follow the Pardal design system: [`docs/design-system.md`](../docs/design-system.md).
+> Where this folder disagrees on colors, fonts, radius or shadows, that document wins.
+
+- **Creme** (light) and **Petróleo** (dark) themes; `.dark` on `<html>` flips every token. Nothing is hard-coded to one theme.
+- **Petróleo** ink for all text; **lima** (`--destaque` / `--action`) fills the one main action per screen.
+- **Qurova** for titles and **Nexa** for text (Quicksand and Montserrat stand in, self-hosted in `public/fonts/`).
 
 ## Principles
 
