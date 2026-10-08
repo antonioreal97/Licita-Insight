@@ -4,7 +4,7 @@ O lançamento inicial é o beta fechado no Mac do owner via Cloudflare Tunnel. S
 
 # Deploy de produção no Fly.io
 
-Este runbook prepara o lançamento enxuto da Abriu lá em `gru`: um app monolítico
+Este runbook prepara o lançamento enxuto do Pardal Digital em `gru`: um app monolítico
 `APP_ROLE=all` e um PostgreSQL 16 próprio, privado, em outro app. O nome `licitai`
 em `fly.toml` e `licitai-db` em `deploy/fly-db/fly.toml` são placeholders; o owner
 deve confirmar os nomes e a origem pública antes de executar os comandos.
@@ -59,7 +59,7 @@ fly checks list --app licitai-db
 ```
 
 O arquivo local (`~/.licitai-secrets/postgres.env`, fora do repositório) deve ter modo `0600`, não usar `export` e nunca ser versionado. O
-TOML não declara `services.ports`, portanto não há listener público; o app Abriu lá
+TOML não declara `services.ports`, portanto não há listener público; o app Pardal Digital
 conecta diretamente a `licitai-db.internal:5432` pela rede 6PN. Não crie IPv4/IPv6
 público para o banco.
 
@@ -100,7 +100,7 @@ redirecionamento não expande seu conteúdo. Não use
 | `ASAAS_API_KEY` | chave sandbox ou produção, decisão explícita do owner |
 | `ASAAS_WEBHOOK_TOKEN` | token aleatório igual ao painel Asaas |
 | `JEV_API_KEY` | chave de produção do Jev |
-| `RESEND_API_KEY` | chave do domínio de produção no Resend |
+| `BREVO_API_KEY` ou `RESEND_API_KEY` | chave do domínio de produção no provedor escolhido |
 | `EMAIL_UNSUBSCRIBE_SECRET` | aleatório estável, pelo menos 32 caracteres |
 
 ### Configuração obrigatória
@@ -116,7 +116,7 @@ redirecionamento não expande seu conteúdo. Não use
 | `STATIC_DIR` | `/app/artifacts/licitainsight/dist/public`, no processo `app` |
 | `ASAAS_API_BASE_URL` | sandbox `https://api-sandbox.asaas.com/v3` ou produção `https://api.asaas.com/v3` |
 | `BILLING_MONTHLY_BRL` | `49.90` |
-| `MAIL_FROM` | remetente no domínio verificado, ex. `Abriu lá <alertas@dominio>` |
+| `MAIL_FROM` | remetente no domínio verificado, ex. `Pardal Digital <alertas@dominio>` |
 | `MAIL_REPLY_TO` | endereço de suporte |
 | `PNCP_DAILY_COLLECT` | `true` |
 | `CULTURE_DAILY_COLLECT` | `true` |
@@ -131,7 +131,7 @@ fly secrets set --app licitai \
   GOOGLE_CLIENT_ID=<client-id> \
   ASAAS_API_BASE_URL=https://api.asaas.com/v3 \
   BILLING_MONTHLY_BRL=49.90 \
-  MAIL_FROM='Abriu lá <alertas@dominio>' \
+  MAIL_FROM='Pardal Digital <alertas@dominio>' \
   MAIL_REPLY_TO=suporte@dominio \
   PNCP_DAILY_COLLECT=true \
   CULTURE_DAILY_COLLECT=true \
@@ -144,7 +144,7 @@ fly secrets set --app licitai \
 Revise, mas normalmente mantenha os defaults de `.env.example`: `DB_POOL_*`,
 `DB_*TIMEOUT*`, `RATE_LIMIT_*`, `MAX_INFLIGHT_*`, `REQUEST_*`, `HTTP_*`,
 `SHUTDOWN_TIMEOUT_MS`, `GOOGLE_HTTP_TIMEOUT_MS`, `ASAAS_HTTP_TIMEOUT_MS`,
-`RESEND_HTTP_TIMEOUT_MS`, `PNCP_DAILY_HOUR=6`, lookbacks/delays das coletas,
+`BREVO_HTTP_TIMEOUT_MS`, `RESEND_HTTP_TIMEOUT_MS`, `PNCP_DAILY_HOUR=6`, lookbacks/delays das coletas,
 `JEV_*`, limites `AI_*`, concorrências `WORKER_*`, `EMAIL_DIGEST_HOUR=7`,
 `EMAIL_IMMEDIATE_WINDOW_MINUTES=10`, `SAVED_SEARCH_JOB_INTERVAL_MINUTES=15` e
 `LOG_LEVEL=info`.
@@ -162,8 +162,9 @@ Revise, mas normalmente mantenha os defaults de `.env.example`: `DB_POOL_*`,
 2. Asaas: escolher sandbox ou produção e usar chave/base coerentes; cadastrar
    exatamente `https://<origem-final>/api/v1/billing/asaas/webhook` com o mesmo
    `ASAAS_WEBHOOK_TOKEN` importado.
-3. Resend: verificar o domínio, publicar DNS e usá-lo em `MAIL_FROM`.
-   `onboarding@resend.dev` só entrega para o e-mail da conta e não serve usuários.
+3. Brevo ou Resend: verificar o domínio, publicar DNS, definir `EMAIL_PROVIDER` e usar o remetente
+   verificado em `MAIL_FROM`. No Resend, `onboarding@resend.dev` só entrega para o e-mail da conta e
+   não serve usuários.
    Manter tracking de abertura/clique desligado.
 4. Domínio customizado: terminar a verificação antes de trocar origem, redirect e
    webhook.
@@ -239,8 +240,8 @@ os agendadores residem nela.
 curl -fsS https://<origem-final>/api/healthz
 curl -fsS https://<origem-final>/api/readyz
 curl -fsS https://<origem-final>/api/v1/billing/plan
-curl -fsS https://<origem-final>/ | grep '<title>Abriu lá</title>'
-curl -fsS https://<origem-final>/tenders/teste | grep '<title>Abriu lá</title>'
+curl -fsS https://<origem-final>/ | grep '<title>Pardal Digital</title>'
+curl -fsS https://<origem-final>/tenders/teste | grep '<title>Pardal Digital</title>'
 curl -sS -o /dev/null -w '%{http_code}\n' https://<origem-final>/api/x
 ```
 

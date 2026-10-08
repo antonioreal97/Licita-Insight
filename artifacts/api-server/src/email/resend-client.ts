@@ -1,20 +1,10 @@
 import { logger } from "../lib/logger";
 import { timeoutSignal } from "../lib/http-timeout";
+import type { EmailMessage, EmailSendResult } from "./email-client";
+
+export type { EmailMessage, EmailSendResult } from "./email-client";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-
-export type EmailMessage = {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-  headers: Record<string, string>;
-};
-
-export type EmailSendResult =
-  | { status: "sent"; providerMessageId: string }
-  | { status: "skipped"; reason: string }
-  | { status: "failed"; reason: string; retryable: boolean };
 
 type ResendEnvironment = Partial<Pick<
   NodeJS.ProcessEnv,

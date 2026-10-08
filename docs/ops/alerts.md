@@ -1,4 +1,4 @@
-# Alertas operacionais — Abriu lá
+# Alertas operacionais — Pardal Digital
 
 As métricas são expostas somente na porta interna configurada por `METRICS_PORT`, em `GET /metrics`. A porta pública não oferece essa rota. Rótulos são limitados a papel, padrão de rota, classe HTTP, tipo/lane/status/feature e nomes fechados de jobs; ids de usuário, edital e job não são rótulos.
 

@@ -14,7 +14,7 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 SESSION_SECRET=... # mínimo 32 caracteres, valor aleatório
 RESEND_API_KEY=...
-MAIL_FROM=Abriu lá <alertas@example.com>
+MAIL_FROM=Pardal Digital <alertas@example.com>
 # MAIL_REPLY_TO=suporte@example.com
 ```
 
@@ -100,15 +100,18 @@ preferências, snapshots e a fila auditável de entregas de e-mail.
 - `EMAIL_JOBS_ENABLED=false` desliga só envio imediato, digest e retries de e-mail. A avaliação de
   buscas salvas e os alertas de perfil continuam ativos quando há `DATABASE_URL`, gerando
   notificações no app.
-- Sem `RESEND_API_KEY` ou `MAIL_FROM`, as entregas são persistidas como `skipped` e a API segue no
-  ar. `MAIL_REPLY_TO` é opcional.
+- `EMAIL_PROVIDER=brevo|resend` escolhe explicitamente o provedor. Sem a variável, a API usa Brevo
+  quando `BREVO_API_KEY` existe, depois Resend quando `RESEND_API_KEY` existe. Sem chave de provedor
+  ou `MAIL_FROM`, as entregas são persistidas como `skipped` e a API segue no ar.
+  `MAIL_REPLY_TO` é opcional. Os timeouts usam `BREVO_HTTP_TIMEOUT_MS` e
+  `RESEND_HTTP_TIMEOUT_MS`, ambos com padrão de 15 segundos.
 - `EMAIL_UNSUBSCRIBE_SECRET` aceita um segredo dedicado de no mínimo 32 caracteres. Mantenha-o
   estável ao rotacionar `SESSION_SECRET`; sem ele, a API usa `SESSION_SECRET` por compatibilidade.
 - O conteúdo é persistido antes do envio para retry determinístico. Falhas transitórias usam
-  backoff de 1, 5 e 30 minutos, com no máximo três tentativas, além da idempotência local e do
-  `Idempotency-Key` enviado ao Resend.
+  backoff de 1, 5 e 30 minutos, com no máximo três tentativas, além da idempotência local. Resend
+  recebe `Idempotency-Key`; Brevo recebe uma tag de entrega derivada por hash para rastreabilidade.
 - A aplicação não injeta pixels, imagens nem links de tracking. Desative também click/open tracking
-  no domínio configurado no Resend.
+  no domínio configurado no provedor.
 - Entregas com mais de 90 dias são removidas após o digest diário. Exclusão de conta remove
   preferências, entregas e vínculos na mesma transação.
 

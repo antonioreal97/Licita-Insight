@@ -136,7 +136,7 @@ export default function TenderDetailPage() {
   const pageTitle = query.data?.title;
   // No restore on unmount: the shell sets each route's static title on navigation.
   useEffect(() => {
-    if (pageTitle) document.title = `${shortTitle(pageTitle)} · Abriu lá`;
+    if (pageTitle) document.title = `${shortTitle(pageTitle)} · Pardal Digital`;
   }, [pageTitle]);
 
   if (query.isPending) return <DetailSkeleton />;

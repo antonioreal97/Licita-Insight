@@ -233,12 +233,15 @@ type NotificationPreferences = {
   uma entrega de e-mail, evitando duplicação entre envio imediato e digest.
 - A entrega persiste o payload exato, status `queued | sent | failed | skipped`, tentativas, próximo
   retry, erro e id do provedor. Falhas transitórias usam backoff de 1, 5 e 30 minutos, com no máximo
-  três tentativas. `dedupeKey` local e `Idempotency-Key` no Resend tornam o envio idempotente.
-- Sem `RESEND_API_KEY` ou `MAIL_FROM`, a API permanece disponível, registra warning e marca a
-  entrega como `skipped`.
+  três tentativas. `dedupeKey` local evita duplicação; Resend recebe `Idempotency-Key` e Brevo recebe
+  uma tag de entrega derivada por hash para rastreabilidade sem expor o identificador interno.
+- `EMAIL_PROVIDER=brevo|resend` escolhe explicitamente o provedor. Sem a variável, Brevo é usado
+  quando `BREVO_API_KEY` existe; caso contrário, Resend é usado quando `RESEND_API_KEY` existe.
+  Sem chave de provedor ou `MAIL_FROM`, a API permanece disponível, registra warning e marca a
+  entrega como `skipped`. `MAIL_REPLY_TO` é opcional.
 - As mensagens são HTML simples + texto puro em PT-BR, sem pixel, imagem ou link de tracking
   gerado pela aplicação. O rastreamento de abertura/clique também deve permanecer desligado no
-  domínio do Resend.
+  domínio do provedor.
 
 ## Assinatura (Asaas)
 

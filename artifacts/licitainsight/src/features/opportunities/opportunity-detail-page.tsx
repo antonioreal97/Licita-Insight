@@ -33,9 +33,9 @@ function OpportunityDetail() {
   const opportunity = query.data;
 
   useEffect(() => {
-    if (opportunity) document.title = `${opportunity.title} · Abriu lá`;
+    if (opportunity) document.title = `${opportunity.title} · Pardal Digital`;
     else if (query.isError && isApiError(query.error) && query.error.code === 'NOT_FOUND') {
-      document.title = 'Chamada não encontrada · Abriu lá';
+      document.title = 'Chamada não encontrada · Pardal Digital';
     }
   }, [opportunity, query.isError, query.error]);
 

@@ -79,7 +79,7 @@ function ParticipationForm({ current, saving, onSave }: { current: SavedTender; 
           data-testid="input-protocol"
         />
         <span id={`${ids}-protocol-hint`} className="type-meta font-normal">
-          A Abriu lá não confere este número no sistema de compras.
+          O Pardal Digital não confere este número no sistema de compras.
         </span>
       </label>
       <div className="flex flex-wrap gap-2 sm:col-span-2">
@@ -218,7 +218,7 @@ export function ParticipationPanel({ tenderId }: { tenderId: string }) {
         </h2>
       </div>
       <ProvenanceLabel kind="user" className="mt-1 mb-4 flex">
-        Informado por você. A Abriu lá não envia propostas nem confirma envio, protocolo ou resultado no portal oficial.
+        Informado por você. O Pardal Digital não envia propostas nem confirma envio, protocolo ou resultado no portal oficial.
       </ProvenanceLabel>
       {body}
     </section>

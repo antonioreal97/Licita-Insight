@@ -4,7 +4,7 @@
 - Preservar o `memory-bank/` local (e docs locais associados como `.cursorrules`) em pulls; não descartar ao alinhar com o remoto.
 - Preferir o comando exato de `dev` do frontend (com `PORT`/`BASE_PATH`) em vez de assumir scripts genéricos na raiz.
 - Preferir a stack completa via `docker compose up --build` em vez de vários terminais no host.
-- Nome do produto na UI: Abriu lá (com acento); ícone oficial em `artifacts/licitainsight/public/abriu-la-logo.png` e favicon em `abriu-la-favicon.svg`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
+- Nome do produto na UI: Pardal Digital; a marca aparece em texto nos cabeçalhos e o favicon provisório fica em `artifacts/licitainsight/public/favicon.svg`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
 - Sessão: manter o cookie HttpOnly `licita_session`; não guardar o token no `localStorage` — só o relógio de inatividade e preferências opcionais.
 
 ## Learned Workspace Facts
