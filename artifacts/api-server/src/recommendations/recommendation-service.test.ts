@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 process.env.DATABASE_URL ??= "postgresql://unused:unused@127.0.0.1:1/unused";
-const { normalizeSignalTerms, scoreRecommendation, temporalWeight } =
-  await import("./recommendation-service");
+const {
+  normalizeSignalTerms,
+  scoreOpportunityForProfile,
+  scoreRecommendation,
+  temporalWeight,
+} = await import("./recommendation-service");
 
 test("normaliza termos de busca e remove palavras genéricas", () => {
   assert.deepEqual(
@@ -91,4 +95,29 @@ test("exclusões eliminam o candidato", () => {
     new Date("2026-10-08"),
   );
   assert.equal(result, null);
+});
+
+test("oportunidades reutilizam termos, cobertura e faixa do perfil", () => {
+  const match = scoreOpportunityForProfile(
+    {
+      searchText: "programa de inovacao para empresas de inteligencia artificial",
+      audience: "startups e ICTs",
+      state: "SP",
+      amount: 250_000,
+    },
+    {
+      description: "Desenvolvemos inteligência artificial para indústrias",
+      offerings: ["software de inteligência artificial"],
+      exclusions: [],
+      selectedKeywords: ["inovação", "startups"],
+      excludedKeywords: [],
+      coverageScope: "states",
+      coverageStates: ["SP"],
+      valueMin: "100000",
+      valueMax: "500000",
+    },
+  );
+  assert.ok(match);
+  assert.ok(match.score >= 55);
+  assert.match(match.reasons.join(" "), /perfil|SP|Valor/);
 });

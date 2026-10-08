@@ -1,130 +1,40 @@
-# Contrato — Oportunidades culturais v1
+# Contrato — Hub de oportunidades v1
 
-Chamadas de fomento audiovisual (Mapa da Cultura e instâncias estaduais do Mapas Culturais). Não são licitações do PNCP e não entram em `/v1/tenders/search`.
+O endpoint preserva o contrato cultural original e passa a reunir oportunidades públicas de cultura, fomento e inovação. Não são licitações do PNCP e não entram em `/v1/tenders/search`.
 
-## Convenções
+## Modelo e compatibilidade
 
-Iguais às de [`docs/contracts/search-v1.md`](search-v1.md): JSON `camelCase`, enums em inglês, datas ISO 8601, erro no envelope padrão. `null` explícito quando o campo existe e a fonte não trouxe o valor.
+- `kind`: `culture` | `funding` | `innovation` | `partnership`.
+- `source`: `mapas` | `finep` | `cnpq` | `capes`.
+- `status`: `open` | `upcoming` | `closed` | `undated`.
+- `program`: `audiovisual` | `lpg` | `fac` | `fsa` | `null`; continua preenchido para cultura.
+- `audience`, `amount` e datas são `null` quando a fonte não os publica de forma explícita.
+- `documents` contém apenas título, URL oficial e media type; o Pardal Digital não copia o conteúdo integral dos PDFs.
+- `installation` continua presente para clientes v1. Em fontes não-Mapas, seu `id` é o id da fonte e o nome é a atribuição oficial.
+- `sourceUrl` é sempre o link canônico oficial quando disponível.
+- `profileMatch` é uma pontuação determinística opcional, baseada nos termos, exclusões, UFs e faixa de valor do perfil autenticado; `null` significa ausência de combinação suficiente.
 
-`OpportunityStatus`: `open` | `upcoming` | `closed` | `undated`
-
-`OpportunityProgram`: `audiovisual` | `lpg` | `fac` | `fsa`
-
-A coleta já restringe a lista a audiovisual. `program` só distingue o fundo quando o título ou o resumo cita FSA, Lei Paulo Gustavo ou FAC.
-
-## Acesso
-
-As duas rotas de leitura exigem sessão e acesso vigente (teste, assinatura ou bypass de
-desenvolvimento). Sem sessão respondem `401 UNAUTHENTICATED`; sessão sem acesso responde
-`402 SUBSCRIPTION_REQUIRED`. A coleta agendada e o comando CLI permanecem inalterados; as
-rotas HTTP operacionais de ingestão exigem token próprio.
+A migração `0031_opportunities_hub.sql` é não destrutiva: mantém `cultural_opportunities`, adiciona colunas com defaults `culture`/`mapas`, preserva todos os registros e relaxa somente o `NOT NULL` de `program`. No PostgreSQL 11+, defaults constantes são adicionados por metadados e não reescrevem a tabela; ainda assim, índices são construídos e devem ser aplicados na janela operacional normal.
 
 ## `GET /api/v1/opportunities`
 
-| Nome                          | Tipo                 | Default | Notas                                                                                       |
-| ----------------------------- | -------------------- | ------- | ------------------------------------------------------------------------------------------- |
-| `q`                           | string               | —       | texto no título, resumo e órgão                                                             |
-| `state`                       | UF[]                 | —       | OR. Não inclui o mapa federal (`state` nulo)                                                |
-| `installation`                | string[]             | —       | id da instalação (`br`, `ce`, …)                                                            |
-| `status`                      | OpportunityStatus[]  | —       | OR                                                                                          |
-| `program`                     | OpportunityProgram[] | —       | OR                                                                                          |
-| `deadlineFrom` / `deadlineTo` | `YYYY-MM-DD`         | —       | sobre o fim das inscrições, inclusivo, horário de Brasília. Registro sem prazo fica de fora |
-| `page`                        | int ≥ 1              | 1       |                                                                                             |
-| `pageSize`                    | int 1–100            | 20      |                                                                                             |
-| `facets`                      | boolean              | `true`  |                                                                                             |
+Filtros: `q`, `state`, `installation`, `status`, `program`, `kind`, `source`, `deadlineFrom`, `deadlineTo`, `page`, `pageSize` e `facets`. Arrays usam parâmetros repetidos. A coleta cultural continua consultando o Mapas Culturais com `@keyword`; o contrato de busca do Pardal Digital permanece `q`.
 
-Ordem fixa: inscrições abertas, depois em breve, sem prazo e encerradas; dentro do grupo, pelo fim das inscrições.
+`kind` e `source` são facetas adicionais; `status`, `state`, `installation` e `program` permanecem compatíveis. A ordenação continua: abertas, futuras, sem data e encerradas; depois prazo e título.
 
-```ts
-{
-  data: OpportunitySummary[];
-  pagination: { page: number; pageSize: number; total: number; totalPages: number; totalIsEstimate: boolean };
-  facets: {
-    status: FacetBucket[];
-    state: FacetBucket[];
-    installation: FacetBucket[];
-    program: FacetBucket[];
-  } | null;
-  meta: {
-    query: string | null;
-    tookMs: number;
-    indexUpdatedAt: string | null;
-    installationIssues: { installationId: string; name: string; message: string }[];
-    gaps: { uf: string; name: string }[];
-  };
-}
-
-type OpportunitySummary = {
-  id: string;
-  title: string;
-  summary: string | null;
-  organizationName: string;
-  status: OpportunityStatus;
-  program: OpportunityProgram;
-  registrationFrom: string | null;
-  registrationTo: string | null;
-  state: string | null;
-  installation: { id: string; name: string; uf: string };
-  sourceUrl: string | null;
-  updatedAt: string;
-};
-```
-
-`installationIssues` traz falha de coleta ou ausência do termo Audiovisual na última execução. `gaps` são UFs sem instalação do Mapas Culturais. 401 sem sessão, 402 sem acesso e 503 `SEARCH_UNAVAILABLE` quando o Postgres não responde.
+As rotas continuam exigindo a mesma sessão/acesso vigente da versão anterior: `401` sem sessão, `402 SUBSCRIPTION_REQUIRED` sem acesso, `503 SEARCH_UNAVAILABLE` se o Postgres não responder.
 
 ## `GET /api/v1/opportunities/{id}`
 
-200: `OpportunitySummary`. 401 sem sessão, 402 sem acesso e 404 `NOT_FOUND` quando o id não existe.
+Retorna o mesmo `OpportunitySummary` da busca, incluindo documentos oficiais e atribuição. `404 NOT_FOUND` para id ausente.
 
-## `POST /api/v1/ingest/opportunities`
+## Coleta
 
-Rota operacional protegida por `Authorization: Bearer <INGEST_API_TOKEN>`.
-`INGEST_API_TOKEN` precisa ter pelo menos 32 caracteres; sem segredo válido no
-ambiente, a rota responde `404 NOT_FOUND`. Com segredo configurado e token
-ausente ou incorreto, responde `401 UNAUTHENTICATED`.
+- Cultura: `pnpm --filter @workspace/api-server run collect:opportunities`; `CULTURE_DAILY_COLLECT` mantém o comportamento anterior.
+- Fomento: `pnpm --filter @workspace/api-server run collect:funding`; agenda somente quando `FUNDING_DAILY_COLLECT=true`, por padrão às 08:00 de `America/Sao_Paulo` (`FUNDING_DAILY_HOUR`).
+- O User-Agent é `PardalDigital/<versão> (+https://pardaldigital.com; contato@pardaldigital.com)`, com intervalo de um segundo por padrão.
+- Cada fonte tem `robots.txt` consultado antes da página. Bloqueio é registrado como `blocked_by_robots`, sem tentativa de evasão.
+- Deduplicação usa o índice compatível `(installationId, externalId)`; nas fontes de fomento `installationId` é o id da fonte e `externalId` é o SHA-256 truncado da URL canônica. Isso preserva ids iguais publicados por instalações Mapas diferentes.
+- Encerramento é derivado de `registrationTo`; prazo futuro usa `upcoming` e ausência de data usa `undated` (ou `open` quando a própria lista oficial declara que a chamada está aberta).
 
-202 `{ runId, status: "running" }`. 409 `INGEST_IN_PROGRESS` se já houver coleta desta fonte.
-
-## `GET /api/v1/ingest/opportunities`
-
-Mesma proteção de token de `POST /api/v1/ingest/opportunities`; a coleta
-agendada e o comando CLI `collect:opportunities` não passam por HTTP.
-
-```ts
-{
-  run: {
-    id: string;
-    status: string;
-    windowFrom: string;
-    windowTo: string;
-    pagesRead: number;
-    upserted: number;
-    refreshed: number;
-    refreshErrors: number;
-    error: string | null;
-    startedAt: string;
-    finishedAt: string | null;
-    coverage: InstallationCoverage[];
-  } | null;
-  coverage: InstallationCoverage[];
-}
-
-type InstallationCoverage = {
-  id: string;
-  uf: string;
-  name: string;
-  kind: "mapas" | "gap";
-  url: string | null;
-  outcome: "ok" | "gap" | "failed" | "degraded" | "blocked" | "vocabulary_fallback" | "pending";
-  upserted: number;
-  message: string | null;
-};
-```
-
-Sem execução anterior, `coverage` lista as 27 UFs e o mapa federal, com `pending` nas instalações Mapas e `gap` nas demais.
-
-`degraded` identifica uma fonte recusada por problema temporário ou de confiança (por
-exemplo, certificado expirado); `blocked` identifica bloqueio deliberado do site de
-origem, como um WAF. A mensagem é específica por fonte e não expõe detalhes internos.
-O diagnóstico operacional e a política TLS ficam em
-[`../ops/cultural-sources.md`](../ops/cultural-sources.md).
+FINEP atualmente publica `Disallow: /`; portanto o adaptador e o parser ficam prontos, mas a coleta real retorna zero e `blocked_by_robots` até autorização/alteração oficial. CNPq usa a página “Abertas para Submissão”. CAPES usa a seção “Editais Abertos”; o catálogo CKAN não continha, na pesquisa de referência, um recurso que substituísse integralmente essa lista.

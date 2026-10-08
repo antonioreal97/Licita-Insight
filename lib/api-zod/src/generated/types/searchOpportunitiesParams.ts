@@ -6,7 +6,9 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { FacetsParameter } from './facetsParameter';
+import type { OpportunityKind } from './opportunityKind';
 import type { OpportunityProgram } from './opportunityProgram';
+import type { OpportunitySource } from './opportunitySource';
 import type { OpportunityStatus } from './opportunityStatus';
 import type { PageParameter } from './pageParameter';
 import type { PageSizeParameter } from './pageSizeParameter';
@@ -20,6 +22,8 @@ state?: string[];
 installation?: string[];
 status?: OpportunityStatus[];
 program?: OpportunityProgram[];
+kind?: OpportunityKind[];
+source?: OpportunitySource[];
 /**
  * Inclusive lower date in America/Sao_Paulo.
  */

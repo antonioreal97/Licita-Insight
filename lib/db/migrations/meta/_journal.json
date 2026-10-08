@@ -218,6 +218,13 @@
       "when": 1791450000000,
       "tag": "0030_profile_smart_filters",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791482400000,
+      "tag": "0031_opportunities_hub",
+      "breakpoints": true
     }
   ]
 }
