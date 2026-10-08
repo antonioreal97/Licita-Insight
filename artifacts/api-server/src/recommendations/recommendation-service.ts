@@ -703,7 +703,7 @@ export function scheduleRecommendationRebuild(
 }
 
 const incrementMetric = async (
-  field: "impressions" | "clicks" | "dismissals",
+  field: "impressions" | "clicks" | "interests" | "dismissals",
   amount = 1,
   now = new Date(),
 ) => {
@@ -738,6 +738,7 @@ export async function listRecommendations(
     eq(userRecommendationsTable.userId, userId),
     eq(tendersTable.status, "open"),
     gt(tendersTable.proposalDeadline, now),
+    isNull(savedTendersTable.tenderId),
   );
   const [rows, [{ total }]] = await Promise.all([
     db
@@ -750,6 +751,13 @@ export async function listRecommendations(
         tendersTable,
         eq(tendersTable.id, userRecommendationsTable.tenderId),
       )
+      .leftJoin(
+        savedTendersTable,
+        and(
+          eq(savedTendersTable.tenderId, tendersTable.id),
+          eq(savedTendersTable.userId, userId),
+        ),
+      )
       .where(valid)
       .orderBy(asc(userRecommendationsTable.rank))
       .limit(pageSize)
@@ -760,6 +768,13 @@ export async function listRecommendations(
       .innerJoin(
         tendersTable,
         eq(tendersTable.id, userRecommendationsTable.tenderId),
+      )
+      .leftJoin(
+        savedTendersTable,
+        and(
+          eq(savedTendersTable.tenderId, tendersTable.id),
+          eq(savedTendersTable.userId, userId),
+        ),
       )
       .where(valid),
   ]);
@@ -891,12 +906,39 @@ export async function recordRecommendationEvent(
   input:
     | { type: "search"; query: string }
     | { type: "tender_view"; tenderId: string }
-    | { type: "click" },
+    | { type: "click" }
+    | { type: "interest"; tenderId: string },
   now = new Date(),
 ): Promise<boolean> {
   if (input.type === "click") {
     await incrementMetric("clicks", 1, now);
     return true;
+  }
+  if (input.type === "interest") {
+    return db.transaction(async (tx) => {
+      const removed = await tx
+        .delete(userRecommendationsTable)
+        .where(
+          and(
+            eq(userRecommendationsTable.userId, userId),
+            eq(userRecommendationsTable.tenderId, input.tenderId),
+          ),
+        )
+        .returning({ tenderId: userRecommendationsTable.tenderId });
+      if (removed.length === 0) return false;
+      const day = dateInSaoPaulo(now);
+      await tx
+        .insert(recommendationMetricsDailyTable)
+        .values({ day, interests: 1, updatedAt: now })
+        .onConflictDoUpdate({
+          target: recommendationMetricsDailyTable.day,
+          set: {
+            interests: sql`${recommendationMetricsDailyTable.interests} + 1`,
+            updatedAt: now,
+          },
+        });
+      return true;
+    });
   }
   const [user] = await db
     .select({ enabled: usersTable.recommendationPersonalizationEnabled })

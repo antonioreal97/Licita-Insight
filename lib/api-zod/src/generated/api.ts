@@ -2215,14 +2215,16 @@ export const DismissRecommendationResponse = zod.void()
 
 
 /**
- * Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
- * @summary Record an opted-in search/view event or an aggregate recommendation click
+ * Search terms and tender views are discarded when opt-in is off. Impression, click, interest and dismiss metrics contain no search content.
+ * @summary Record an opted-in search/view event or an aggregate recommendation action
  */
 export const recordRecommendationEventBodyOneQueryMax = 2000;
 
 export const recordRecommendationEventBodyTwoTenderIdMax = 200;
 
 export const recordRecommendationEventBodyThreeTenderIdMax = 200;
+
+export const recordRecommendationEventBodyFourTenderIdMax = 200;
 
 
 
@@ -2235,6 +2237,9 @@ export const RecordRecommendationEventBody = zod.union([zod.object({
 }),zod.object({
   "type": zod.literal("click"),
   "tenderId": zod.string().min(1).max(recordRecommendationEventBodyThreeTenderIdMax).optional()
+}),zod.object({
+  "type": zod.literal("interest"),
+  "tenderId": zod.string().min(1).max(recordRecommendationEventBodyFourTenderIdMax)
 })])
 
 export const RecordRecommendationEventResponse = zod.object({

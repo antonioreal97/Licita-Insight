@@ -4248,8 +4248,8 @@ export const getRecordRecommendationEventUrl = () => {
 }
 
 /**
- * Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
- * @summary Record an opted-in search/view event or an aggregate recommendation click
+ * Search terms and tender views are discarded when opt-in is off. Impression, click, interest and dismiss metrics contain no search content.
+ * @summary Record an opted-in search/view event or an aggregate recommendation action
  */
 export const recordRecommendationEvent = async (recommendationEventRequest: RecommendationEventRequest, options?: Parameters<typeof customFetch>[1]): Promise<RecordRecommendationEvent202> => {
 
@@ -4315,7 +4315,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RecordRecommendationEventMutationVariables = {data: BodyType<RecommendationEventRequest>}
 
     /**
- * @summary Record an opted-in search/view event or an aggregate recommendation click
+ * @summary Record an opted-in search/view event or an aggregate recommendation action
  */
 export const useRecordRecommendationEvent = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRecommendationEvent>>, TError,RecordRecommendationEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

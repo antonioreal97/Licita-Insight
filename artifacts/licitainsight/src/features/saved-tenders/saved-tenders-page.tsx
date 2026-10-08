@@ -23,6 +23,7 @@ import { TenderRow } from '@/features/tenders/components/tender-row';
 import { formatCurrencyPrecise, formatDateTime } from '@/lib/format';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
+import { SavedTenderDecisionActions } from './components/saved-tender-decision-actions';
 import { useSavedTenders } from './hooks/use-saved-tenders';
 import { fetchAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
 import { csvCell } from './lib/csv-cell';
@@ -40,7 +41,10 @@ const EMPTY: Record<ParticipationStage, { title: string; text: string }> = {
     title: 'Nenhuma participação marcada como enviada',
     text: 'Depois de enviar no sistema indicado no edital, marque “Participação enviada” para continuar acompanhando.',
   },
-  awaiting_result: { title: 'Nenhum edital aguardando resultado', text: 'Marque “Aguardando resultado” no edital enquanto o resultado não sai no portal oficial.' },
+  awaiting_result: {
+    title: 'Nenhum edital aguardando resultado',
+    text: 'Marque “Aguardando resultado” no edital enquanto o resultado não sai no portal oficial.',
+  },
   completed: { title: 'Nenhum edital concluído', text: 'Editais que você marcar como “Concluída” ficam aqui.' },
   dismissed: { title: 'Nenhum edital descartado', text: 'Editais marcados como “Não vou participar” ficam aqui.' },
 };
@@ -124,42 +128,60 @@ function ParticipationBar({ item, monitored, onMonitor }: { item: SavedTender; m
         )}
         {item.protocol && <span className="min-w-0 break-all type-meta text-muted-foreground">Protocolo informado por você: {item.protocol}</span>}
       </div>
-      <div className="flex gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" loading={isPending} aria-describedby={`tender-title-${id}`} className="h-11 sm:h-8" data-testid={`button-stage-menu-${id}`}>
-              Mudar etapa
-              <ChevronDown size={13} aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={6} className="w-60 rounded-xl bg-surface-raised p-1.5 shadow-lg">
-            <DropdownMenuLabel className="px-2.5 py-1.5 type-meta font-semibold text-muted-foreground">Etapa deste edital</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={item.stage}
-              onValueChange={(value) => value !== item.stage && update({ tenderId: id, previous: item, body: { stage: value as ParticipationStage } })}
-            >
-              {STAGE_ORDER.map((stage) => (
-                <DropdownMenuRadioItem key={stage} value={stage} className="cursor-pointer rounded-md py-2 type-ui" data-testid={`menu-stage-${stage}`}>
-                  {STAGE_LABELS[stage]}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-pressed={monitored}
-          aria-describedby={`tender-title-${id}`}
-          title={monitored ? 'Parar de monitorar este edital' : 'Monitorar mudanças neste edital'}
-          onClick={onMonitor}
-          className="h-11 sm:h-8"
-          data-testid={`button-monitor-saved-${id}`}
-        >
-          <Target size={13} aria-hidden="true" />
-          {monitored ? 'Monitorando' : 'Monitorar'}
-        </Button>
-      </div>
+      {item.stage === 'analyzing' ? (
+        <SavedTenderDecisionActions
+          monitored={monitored}
+          pending={isPending}
+          describedBy={`tender-title-${id}`}
+          onParticipate={() => update({ tenderId: id, previous: item, body: { stage: 'participating' } })}
+          onDismiss={() => update({ tenderId: id, previous: item, body: { stage: 'dismissed' } })}
+          onMonitor={onMonitor}
+        />
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={isPending}
+                aria-describedby={`tender-title-${id}`}
+                className="h-11 sm:h-8"
+                data-testid={`button-stage-menu-${id}`}
+              >
+                Mudar etapa
+                <ChevronDown size={13} aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={6} className="w-60 rounded-xl bg-surface-raised p-1.5 shadow-lg">
+              <DropdownMenuLabel className="px-2.5 py-1.5 type-meta font-semibold text-muted-foreground">Etapa deste edital</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={item.stage}
+                onValueChange={(value) => value !== item.stage && update({ tenderId: id, previous: item, body: { stage: value as ParticipationStage } })}
+              >
+                {STAGE_ORDER.map((stage) => (
+                  <DropdownMenuRadioItem key={stage} value={stage} className="cursor-pointer rounded-md py-2 type-ui" data-testid={`menu-stage-${stage}`}>
+                    {STAGE_LABELS[stage]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={monitored}
+            aria-describedby={`tender-title-${id}`}
+            title={monitored ? 'Parar de monitorar este edital' : 'Monitorar mudanças neste edital'}
+            onClick={onMonitor}
+            className="h-11 sm:h-8"
+            data-testid={`button-monitor-saved-${id}`}
+          >
+            <Target size={13} aria-hidden="true" />
+            {monitored ? 'Monitorando' : 'Monitorar'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -183,6 +205,14 @@ export default function SavedTendersPage() {
   useEffect(() => {
     if (page > 1 && page > totalPages) setPage(Math.max(1, totalPages));
   }, [page, totalPages]);
+
+  useEffect(() => {
+    if (!list.isSuccess || !window.location.hash.startsWith('#saved-tender-')) return;
+    const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.focus({ preventScroll: true });
+  }, [list.isSuccess, rows.length]);
 
   const filter = (next: ParticipationStage | undefined) => {
     setPage(1);
@@ -278,7 +308,12 @@ export default function SavedTendersPage() {
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             {rows.map((item) => (
               // The row's own bottom border moves to the wrapper so the participation bar sits inside the same item.
-              <div key={item.tender.id} className="border-b border-border last:border-0 [&>article]:border-0">
+              <div
+                key={item.tender.id}
+                id={`saved-tender-${item.tender.id}`}
+                tabIndex={-1}
+                className="scroll-mt-24 border-b border-border last:border-0 target:bg-primary-subtle/30 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&>article]:border-0"
+              >
                 <TenderRow tender={item.tender} saved onSave={() => remove(item.tender.id)} />
                 <ParticipationBar item={item} monitored={isMonitored(item.tender.id)} onMonitor={() => toggleMonitor(item.tender.id)} />
               </div>

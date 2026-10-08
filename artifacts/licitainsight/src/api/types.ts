@@ -467,7 +467,8 @@ export type RecommendationReason = {
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
 export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
-export type RecommendationEvent = { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string };
+export type RecommendationEvent =
+  { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string } | { type: 'interest'; tenderId: string };
 
 export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 

@@ -86,14 +86,12 @@ router.post(
       typeof req.body.query === "string" &&
       req.body.query.trim().length <= 2_000
     ) {
-      res
-        .status(202)
-        .json({
-          recorded: await recordRecommendationEvent(userId, {
-            type: "search",
-            query: req.body.query,
-          }),
-        });
+      res.status(202).json({
+        recorded: await recordRecommendationEvent(userId, {
+          type: "search",
+          query: req.body.query,
+        }),
+      });
       return;
     }
     if (
@@ -101,22 +99,32 @@ router.post(
       typeof req.body.tenderId === "string" &&
       req.body.tenderId.length <= 200
     ) {
-      res
-        .status(202)
-        .json({
-          recorded: await recordRecommendationEvent(userId, {
-            type: "tender_view",
-            tenderId: req.body.tenderId,
-          }),
-        });
+      res.status(202).json({
+        recorded: await recordRecommendationEvent(userId, {
+          type: "tender_view",
+          tenderId: req.body.tenderId,
+        }),
+      });
       return;
     }
     if (req.body?.type === "click") {
-      res
-        .status(202)
-        .json({
-          recorded: await recordRecommendationEvent(userId, { type: "click" }),
-        });
+      res.status(202).json({
+        recorded: await recordRecommendationEvent(userId, { type: "click" }),
+      });
+      return;
+    }
+    if (
+      req.body?.type === "interest" &&
+      typeof req.body.tenderId === "string" &&
+      req.body.tenderId.length > 0 &&
+      req.body.tenderId.length <= 200
+    ) {
+      res.status(202).json({
+        recorded: await recordRecommendationEvent(userId, {
+          type: "interest",
+          tenderId: req.body.tenderId,
+        }),
+      });
       return;
     }
     throw new InvalidParameterError("Recommendation event is invalid", [
