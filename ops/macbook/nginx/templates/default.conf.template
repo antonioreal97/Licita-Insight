@@ -48,8 +48,11 @@ gzip_types
   text/plain
   text/xml;
 
+resolver 127.0.0.11 valid=10s ipv6=off;
+
 upstream abriu_app {
-  server ${NGINX_UPSTREAM};
+  zone abriu_app 64k;
+  server ${NGINX_UPSTREAM} resolve;
   keepalive 16;
 }
 

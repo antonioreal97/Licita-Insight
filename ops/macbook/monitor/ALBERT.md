@@ -44,8 +44,9 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
    - `app_build`: `docker compose -f compose.macbook.yml up -d --build` (todos os serviços do compose, para incluir
      serviços novos como o proxy; o Compose só recria o que mudou e o `db-setup` fica fora por estar no profile
      `setup`; nunca `down`, `-v`, `db-setup` ou `migrate`). Em seguida rode `docker exec licita-macbook-proxy-1
-     nginx -s reload`: o Nginx guarda o IP do `app` resolvido na subida e, se o app recriado ganhar outro IP, o
-     proxy responde 502 em tudo (incidente de 08/10). Espere `healthy` em todos os serviços (até 5 min) e
+     nginx -s reload` como redundância operacional. Desde a correção do incidente de 08/10, o Nginx re-resolve
+     `app` pelo DNS do Docker a cada 10 s, mas o reload pós-deploy continua obrigatório como proteção adicional.
+     Espere `healthy` em todos os serviços (até 5 min) e
      confira `curl -fsS localhost:24252/api/readyz` e `curl -fsS https://abriu-la.vercel.app/api/readyz`. Coletas em andamento são interrompidas; o app as retoma
      sozinho após a janela de heartbeat (PNCP ~11 min, transparência ~2 h).
    - `monitor_ops`: reinstale com `install -m 755 ops/macbook/monitor/licita_monitor.py ~/licita-monitor/`,

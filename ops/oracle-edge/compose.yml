@@ -15,7 +15,7 @@ services:
       EDGE_HOST: ${EDGE_HOST:-137-131-233-192.sslip.io}
       NGINX_ENVSUBST_FILTER: "^(NGINX_LISTEN|NGINX_UPSTREAM|ORIGIN_SHARED_SECRET|ORIGIN_MODE|EDGE_HOST)$"
     volumes:
-      - ../macbook/nginx/templates/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./templates/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./templates/http.conf.template:/etc/nginx/templates/http.conf.template:ro
       - ./tls.conf:/etc/nginx/abriu-server.conf:ro
       - ./letsencrypt:/etc/letsencrypt:ro

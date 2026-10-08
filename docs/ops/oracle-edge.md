@@ -6,9 +6,13 @@ Dependencias integradas: PR #39 em `ops/macbook-worker` e PR #38 em `main`
 O IP reservado e `137.131.233.192`; o hostname e `137-131-233-192.sslip.io`.
 A VM usa Ubuntu 24.04 / E2.1.Micro porque A1 estava sem capacidade.
 
-Os dois proxies reutilizam `ops/macbook/nginx/templates/default.conf.template`:
-validacao de `x-abriu-origin`, IP do cliente autenticado por esse segredo,
-limites, bloqueio de ingest/metrics e timeouts de 180s. O proxy da borda preserva
+Os dois proxies mantem a mesma politica de validacao de `x-abriu-origin`, IP do
+cliente autenticado por esse segredo, limites, bloqueio de ingest/metrics e
+timeouts de 180s, mas usam templates separados. O proxy do servidor usa
+`ops/macbook/nginx/templates/default.conf.template` e re-resolve `app` pelo DNS
+interno do Docker. A borda usa `ops/oracle-edge/templates/default.conf.template`:
+seu upstream e um IP Tailscale no `network_mode: host`, portanto nao usa
+`resolver 127.0.0.11` nem o parametro `resolve`. O proxy da borda preserva
 `x-abriu-origin` e `x-abriu-client-ip` para o proxy do servidor; o app continua
 com `TRUST_PROXY=1`. O segredo deve ser o mesmo nas tres pontas. Health/readiness
 continuam publicos. A VM executa somente o proxy; banco e app ficam no servidor.
