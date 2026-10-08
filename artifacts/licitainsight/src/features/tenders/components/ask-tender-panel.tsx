@@ -13,6 +13,7 @@ import { useAskStatus, useAskTender } from '../hooks/use-ask-tender';
 import { processes, QUOTA_RESET, tendersExhaustedMessage } from '../lib/ai-quota';
 import { markQuestionTerms, questionStems } from '../lib/question-terms';
 import { AutomaticSummary } from './automatic-summary';
+import { DocumentReadingNotice } from './document-reading-notice';
 
 /** Fill the field, never submit: the first question spends 1 of the day's processes. */
 const SUGGESTIONS = [
@@ -252,7 +253,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
       {status.unreadDocuments > 0 && (
         <p className="mt-2 flex gap-1.5 type-meta text-muted-foreground" data-testid="text-ask-partial">
           <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
-          {unreadNote(status.unreadDocuments)}; as respostas vêm só dos demais e podem estar incompletas.
+          <span><DocumentReadingNotice reading={status.documentReading} /> As respostas vêm só dos documentos lidos e podem estar incompletas.</span>
         </p>
       )}
 
@@ -310,8 +311,7 @@ function IndexState({ status, onRetry, retrying }: { status: TenderAskStatus; on
       return (
         <p className={noteBox} data-testid="text-ask-unsupported">
           <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
-          Ainda não conseguimos ler o texto dos documentos deste edital: são imagens digitalizadas ou estão num formato que não lemos (como planilhas).
-          Consulte os documentos na lista.
+          <DocumentReadingNotice reading={status.documentReading} />
         </p>
       );
     case 'expired':

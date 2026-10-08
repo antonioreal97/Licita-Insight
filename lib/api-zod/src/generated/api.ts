@@ -527,6 +527,10 @@ export const GetTenderAskStatusParams = zod.object({
 
 export const getTenderAskStatusResponseUnreadDocumentsMin = 0;
 
+export const getTenderAskStatusResponseDocumentReadingReadMin = 0;
+
+export const getTenderAskStatusResponseDocumentReadingTotalMin = 0;
+
 export const getTenderAskStatusResponseQuotaUsedMin = 0;
 
 
@@ -541,6 +545,16 @@ export const GetTenderAskStatusResponse = zod.object({
   "status": zod.enum(['processing', 'ready', 'failed', 'unsupported'])
 })),
   "unreadDocuments": zod.number().int().min(getTenderAskStatusResponseUnreadDocumentsMin),
+  "documentReading": zod.object({
+  "read": zod.number().int().min(getTenderAskStatusResponseDocumentReadingReadMin),
+  "total": zod.number().int().min(getTenderAskStatusResponseDocumentReadingTotalMin),
+  "unread": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "reason": zod.string().describe('Stable reason such as scanned_pdf, image, size_limit, download_error, or unsupported_format:<type>.')
+}))
+}),
   "quota": zod.object({
   "used": zod.number().int().min(getTenderAskStatusResponseQuotaUsedMin).describe('Processes consulted today'),
   "limit": zod.number().int().min(1).describe('Processes allowed per day'),
@@ -622,6 +636,10 @@ export const getTenderSheetResponseQualificationChecklistItemConfidenceMax = 1;
 
 export const getTenderSheetResponseUnreadDocumentsMin = 0;
 
+export const getTenderSheetResponseDocumentReadingReadMin = 0;
+
+export const getTenderSheetResponseDocumentReadingTotalMin = 0;
+
 
 
 export const GetTenderSheetResponse = zod.object({
@@ -649,6 +667,16 @@ export const GetTenderSheetResponse = zod.object({
   "confidence": zod.number().min(getTenderSheetResponseQualificationChecklistItemConfidenceMin).max(getTenderSheetResponseQualificationChecklistItemConfidenceMax)
 })),
   "unreadDocuments": zod.number().int().min(getTenderSheetResponseUnreadDocumentsMin),
+  "documentReading": zod.object({
+  "read": zod.number().int().min(getTenderSheetResponseDocumentReadingReadMin),
+  "total": zod.number().int().min(getTenderSheetResponseDocumentReadingTotalMin),
+  "unread": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "reason": zod.string().describe('Stable reason such as scanned_pdf, image, size_limit, download_error, or unsupported_format:<type>.')
+}))
+}),
   "model": zod.string().nullable(),
   "generatedAt": zod.coerce.date().nullable()
 })

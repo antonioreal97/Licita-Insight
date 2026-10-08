@@ -42,7 +42,9 @@ A cota conta processos, não perguntas. Um processo (edital) entra na cota do us
 
 Exige sessão. Usuários com acesso vigente iniciam somente a primeira indexação ou uma nova versão quando a lista de documentos muda. Retentativas de documentos falhos são feitas por job próprio: o GET nunca baixa novamente antes de `nextRetryAt`.
 
-A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsupported`. O índice fica `ready` assim que há pelo menos um documento legível e nenhum documento em processamento; se nenhum documento puder ser lido, fica `failed` (ou `unsupported` quando todos os resultados são desse tipo).
+A resposta inclui `unreadDocuments`, a contagem de documentos `failed` ou `unsupported`, e `documentReading`: `{ read, total, unread }`. Cada item de `unread` traz `id`, `title`, `url` do original e um motivo estável (`scanned_pdf`, `image`, `size_limit`, `download_error` ou `unsupported_format:<tipo>`). O índice fica `ready` assim que há pelo menos um documento legível e nenhum documento em processamento; se nenhum documento puder ser lido, fica `failed` (ou `unsupported` quando todos os resultados são desse tipo).
+
+O extrator reconhece o conteúdo, independentemente da extensão declarada. Além de PDF com camada de texto, lê DOCX, ODT, XLSX, ODS, CSV e TXT; arquivos ZIP podem conter esses formatos e mais um nível de ZIP. Arquivos compactados continuam limitados a 50 entradas e 50 MB descompactados (`AI_MAX_ARCHIVE_UNCOMPRESSED_BYTES`), e documentos tabulares/textuais são divididos em páginas lógicas limitadas antes do chunking.
 
 ### `POST /api/v1/tenders/:id/ask`
 
@@ -84,6 +86,11 @@ type TenderSheet = {
   qualificationChecklist: QualificationItem[];
   summary: { text: string; citations: number[]; model: string } | null;
   unreadDocuments: number;
+  documentReading: {
+    read: number;
+    total: number;
+    unread: Array<{ id: string; title: string; url: string; reason: string }>;
+  };
   model: string | null;
   generatedAt: string | null;
 };

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { AiQuota } from './aiQuota';
+import type { DocumentReadingSummary } from './documentReadingSummary';
 import type { TenderAskDocument } from './tenderAskDocument';
 import type { TenderAskIndexStatus } from './tenderAskIndexStatus';
 
@@ -14,5 +15,6 @@ export interface TenderAskStatus {
   documents: TenderAskDocument[];
   /** @minimum 0 */
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   quota: AiQuota;
 }

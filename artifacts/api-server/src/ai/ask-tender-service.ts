@@ -38,6 +38,7 @@ import {
 import { aiDailyLimit, askSearchQueries, mergeAskShortlists, selectEvidencePassages, type PassageCandidate } from "./policy";
 import { ensureTenderIndex, type IndexStatus } from "./tender-index-service";
 import { reserveTenderConsultation, tenderQuotaFor, type Quota } from "./tender-quota";
+import { summarizeDocumentReading, type DocumentReadingSummary } from "./document-reading";
 
 export { ensureTenderIndex } from "./tender-index-service";
 export type { Quota } from "./tender-quota";
@@ -50,6 +51,7 @@ export type AskStatus = {
     status: string;
   }>;
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   quota: Quota;
 };
 
@@ -126,6 +128,8 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
       title: tenderAiDocumentsTable.title,
       pages: tenderAiDocumentsTable.pages,
       status: tenderAiDocumentsTable.status,
+      sourceUrl: tenderAiDocumentsTable.sourceUrl,
+      error: tenderAiDocumentsTable.error,
     })
     .from(tenderAiDocumentsTable)
     .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
@@ -134,8 +138,9 @@ export async function getAskStatus(userId: string, tenderId: string, trigger: bo
   ).length;
   return {
     index,
-    documents,
+    documents: documents.map(({ id, title, pages, status }) => ({ id, title, pages, status })),
     unreadDocuments,
+    documentReading: summarizeDocumentReading(documents),
     quota: await tenderQuotaFor(userId, tenderId, now),
   };
 }

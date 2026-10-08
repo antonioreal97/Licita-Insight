@@ -47,6 +47,7 @@ import {
   SHEET_SUMMARY_PROMPT_VERSION,
   type SummaryAttempt,
 } from "./openai-summary";
+import { documentReadingForTender, type DocumentReadingSummary } from "./document-reading";
 
 type SheetStatus =
   | "not_started"
@@ -63,6 +64,7 @@ export type TenderSheetResponse = {
   qualificationChecklist: QualificationItem[];
   summary: AiGeneratedSummary | null;
   unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
   model: string | null;
   generatedAt: string | null;
 };
@@ -145,6 +147,7 @@ async function readySheetResponse(
     qualificationChecklist: sheet.qualificationChecklist,
     summary: current ? sheet.summary : null,
     unreadDocuments: sheet.unreadDocuments,
+    documentReading: await documentReadingForTender(sheet.tenderId),
     model: sheet.responseModel ?? sheet.requestedModel,
     generatedAt: sheet.generatedAt?.toISOString() ?? null,
   };
@@ -186,26 +189,17 @@ type QualificationPageRow = {
 
 const EMPTY_RESPONSE = (
   status: SheetStatus,
-  unreadDocuments: number,
+  documentReading: DocumentReadingSummary,
 ): TenderSheetResponse => ({
   status,
   fields: [],
   qualificationChecklist: [],
   summary: null,
-  unreadDocuments,
+  unreadDocuments: documentReading.unread.length,
+  documentReading,
   model: null,
   generatedAt: null,
 });
-
-async function unreadDocumentCount(tenderId: string): Promise<number> {
-  const documents = await db
-    .select({ status: tenderAiDocumentsTable.status })
-    .from(tenderAiDocumentsTable)
-    .where(eq(tenderAiDocumentsTable.tenderId, tenderId));
-  return documents.filter(
-    ({ status }) => status === "failed" || status === "unsupported",
-  ).length;
-}
 
 async function reserveDailySheet(now: Date): Promise<void> {
   const day = dateInSaoPaulo(now);
@@ -590,7 +584,8 @@ export async function getTenderSheet(
 ): Promise<TenderSheetResponse> {
   const summaryConfig = openAiConfig();
   const indexStatus = await ensureTenderIndex(tenderId, true, { userId, lane: "interactive" });
-  const unreadDocuments = await unreadDocumentCount(tenderId);
+  const documentReading = await documentReadingForTender(tenderId);
+  const unreadDocuments = documentReading.unread.length;
   if (indexStatus === "expired") {
     const [cachedSheet] = await db.select().from(tenderAiSheetsTable)
       .where(and(eq(tenderAiSheetsTable.tenderId, tenderId), eq(tenderAiSheetsTable.status, "ready")))
@@ -601,7 +596,7 @@ export async function getTenderSheet(
     }
   }
   if (indexStatus !== "ready")
-    return EMPTY_RESPONSE(indexStatus, unreadDocuments);
+    return EMPTY_RESPONSE(indexStatus, documentReading);
 
   const config = aiConfig();
   const [index] = await db
@@ -609,7 +604,7 @@ export async function getTenderSheet(
     .from(tenderAiIndexesTable)
     .where(eq(tenderAiIndexesTable.tenderId, tenderId))
     .limit(1);
-  if (!index) return EMPTY_RESPONSE("not_started", unreadDocuments);
+  if (!index) return EMPTY_RESPONSE("not_started", documentReading);
   // The process has readable documents: opening its sheet counts (once a day) against the user's quota.
   if (userId) await reserveTenderConsultation(userId, tenderId, now);
   const cacheKey = sheetCacheKey(tenderId, index.version, config.model);
@@ -633,7 +628,7 @@ export async function getTenderSheet(
   if (
     cached?.status === "processing" && !staleProcessing
   ) {
-    return EMPTY_RESPONSE("processing", unreadDocuments);
+    return EMPTY_RESPONSE("processing", documentReading);
   }
   if (!config.apiKey)
     throw new AiUnavailableError(
@@ -660,7 +655,7 @@ export async function getTenderSheet(
       .returning({ id: tenderAiSheetsTable.id });
     ownsGeneration = inserted.length === 1;
   }
-  if (!ownsGeneration) return EMPTY_RESPONSE("processing", unreadDocuments);
+  if (!ownsGeneration) return EMPTY_RESPONSE("processing", documentReading);
 
   try {
     await reserveDailySheet(now);
@@ -707,5 +702,5 @@ export async function getTenderSheet(
     lane: "interactive",
   });
   if (appRoleFromEnv() === "all") void runEnqueuedAiJobNow(dedupeKey);
-  return EMPTY_RESPONSE("processing", unreadDocuments);
+  return EMPTY_RESPONSE("processing", documentReading);
 }
