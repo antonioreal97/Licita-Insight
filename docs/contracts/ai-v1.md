@@ -8,7 +8,7 @@ O recurso procura trechos em documentos oficiais, usa o Jev para escolher evidê
 - `JEV_MODEL`: versão fixa, padrão `jev-1.13.0`.
 - `JEV_RELEVANCE_THRESHOLD`: limiar inicial, padrão `0.5`.
 - `AI_SHORTLIST_SIZE`: máximo de trechos distintos enviados ao Jev por pergunta, padrão `10`.
-- `AI_DAILY_TENDER_LIMIT`: cota diária por usuário, em processos, padrão `5` (teste e pago). Veja "Cota diária".
+- `AI_DAILY_TENDER_LIMIT`: cota diária por usuário, em processos, padrão `10` (teste e pago). Veja "Cota diária".
 - `AI_DAILY_ASK_LIMIT_TRIAL`: teto de segurança de perguntas novas por dia no teste, padrão `30`.
 - `AI_DAILY_ASK_LIMIT_PAID`: teto de segurança de perguntas novas por dia no pago, padrão `30`.
 - `AI_MAX_DOCUMENT_BYTES`: limite por download, padrão `26214400`.
