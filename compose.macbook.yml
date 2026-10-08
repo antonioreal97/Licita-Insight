@@ -57,6 +57,8 @@ services:
       TITLE_TEACHER_OPENAI_ENABLED: "true"
       TITLE_OPENAI_DAILY_LIMIT: ${TITLE_OPENAI_DAILY_LIMIT:-500}
       AI_DAILY_BUDGET_USD: ${AI_DAILY_BUDGET_USD:-10}
+      DOCUMENT_OCR_ENABLED: ${DOCUMENT_OCR_ENABLED:-false}
+      DOCUMENT_OCR_URL: http://ocr:8080
       PNCP_DAILY_COLLECT: ${PNCP_DAILY_COLLECT:-false}
       TRANSPARENCY_DAILY_COLLECT: ${TRANSPARENCY_DAILY_COLLECT:-false}
       CULTURE_DAILY_COLLECT: ${CULTURE_DAILY_COLLECT:-false}
@@ -81,6 +83,23 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+
+  ocr:
+    platform: linux/amd64
+    build:
+      context: ./ops/ocr
+      dockerfile: Dockerfile
+      platforms: [linux/amd64]
+    restart: unless-stopped
+    init: true
+    cpus: 1
+    mem_limit: 768m
+    environment:
+      DOCUMENT_OCR_MAX_PAGES: ${DOCUMENT_OCR_MAX_PAGES:-40}
+      DOCUMENT_OCR_PAGE_TIMEOUT_MS: ${DOCUMENT_OCR_PAGE_TIMEOUT_MS:-30000}
+      OMP_THREAD_LIMIT: "1"
+    expose:
+      - "8080"
 
   proxy:
     image: nginx:1.27-alpine
