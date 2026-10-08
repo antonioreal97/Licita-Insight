@@ -101,5 +101,6 @@ export const accountService = {
   recordRecommendationSearch: (query: string) => accountAdapter.recordRecommendationEvent({ type: 'search', query }),
   recordRecommendationView: (tenderId: string) => accountAdapter.recordRecommendationEvent({ type: 'tender_view', tenderId }),
   recordRecommendationClick: (tenderId: string) => accountAdapter.recordRecommendationEvent({ type: 'click', tenderId }),
+  recordRecommendationInterest: (tenderId: string) => accountAdapter.recordRecommendationEvent({ type: 'interest', tenderId }),
   unsubscribe: (token: string, scope: UnsubscribeScope) => accountAdapter.unsubscribe(token, scope),
 };

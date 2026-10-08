@@ -3,9 +3,9 @@ import { Link, useParams } from 'wouter';
 import { ExternalLink } from 'lucide-react';
 import { isApiError } from '@/api';
 import { ErrorState } from '@/components/common/query-states';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { AccessPanel, OpportunityAccessGate, linkButtonClass } from './components/access-gate';
-import { OpportunityStatusBadge, opportunityProgramLabels } from './components/opportunity-status';
+import { OpportunityStatusBadge, opportunityKindLabels, opportunityProgramLabels } from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 
 function DetailSkeleton() {
@@ -67,7 +67,9 @@ function OpportunityDetail() {
       </Link>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <OpportunityStatusBadge status={opportunity.status} />
-        <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-2xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
+        <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
+        {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
         <span className="type-label text-muted-foreground">{opportunity.state ?? 'Nacional'}</span>
       </div>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
@@ -93,14 +95,47 @@ function OpportunityDetail() {
           </div>
           <div>
             <dt className="type-label text-muted-foreground">Fonte</dt>
-            <dd className="mt-1 type-ui">{opportunity.installation.name}</dd>
+            <dd className="mt-1 type-ui">{opportunity.sourceName}</dd>
           </div>
           <div>
             <dt className="type-label text-muted-foreground">Atualizado em</dt>
             <dd className="mt-1 type-ui">{formatDateTime(opportunity.updatedAt)}</dd>
           </div>
         </dl>
+        {(opportunity.audience || opportunity.amount !== null) && (
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            {opportunity.audience && (
+              <div>
+                <dt className="type-label text-muted-foreground">Público</dt>
+                <dd className="mt-1 type-ui">{opportunity.audience}</dd>
+              </div>
+            )}
+            {opportunity.amount !== null && (
+              <div>
+                <dt className="type-label text-muted-foreground">Valor informado</dt>
+                <dd className="mt-1 type-ui">{formatCurrency(opportunity.amount)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
         {opportunity.summary && <p className="mt-6 type-body text-foreground">{opportunity.summary}</p>}
+        {opportunity.documents.length > 0 && (
+          <div className="mt-6">
+            <h2 className="type-section text-foreground">Documentos oficiais</h2>
+            <ul className="mt-3 space-y-2">
+              {opportunity.documents.map((document) => (
+                <li key={document.url}>
+                  <a href={document.url} target="_blank" rel="noreferrer" className="type-ui font-semibold text-primary hover:underline">
+                    {document.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {opportunity.profileMatch && (
+          <p className="mt-6 rounded-lg bg-secondary px-4 py-3 type-ui text-secondary-foreground">{opportunity.profileMatch.reasons.join(' · ')}</p>
+        )}
       </section>
     </article>
   );

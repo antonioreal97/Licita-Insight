@@ -40,12 +40,23 @@ const msUntilHour = (hour: number, now = new Date()): number => {
   const [year, month, day] = date.split("-").map(Number);
   const [currentHour, minute, second] = clock.split(":").map(Number);
   const past =
-    currentHour > hour ||
-    (currentHour === hour && (minute > 0 || second > 0));
+    currentHour > hour || (currentHour === hour && (minute > 0 || second > 0));
   const target = new Date(
     Date.UTC(year, month - 1, past ? day + 1 : day, hour + 3, 0, 0),
   );
   return Math.max(1_000, target.getTime() - now.getTime());
+};
+
+const fundingDailyHour = (): number => {
+  const raw = process.env.FUNDING_DAILY_HOUR;
+  if (raw === undefined || raw.trim() === "") return 8;
+  const hour = Number(raw);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    throw new Error(
+      `FUNDING_DAILY_HOUR must be an integer from 0 to 23, received "${raw}"`,
+    );
+  }
+  return hour;
 };
 
 export function startDailyPncpCollect(): () => void {
@@ -83,7 +94,10 @@ export function startDailyPncpCollect(): () => void {
         );
         return;
       }
-      logger.error({ err: error, reason }, "Daily PNCP collect failed to start");
+      logger.error(
+        { err: error, reason },
+        "Daily PNCP collect failed to start",
+      );
     }
   };
 
@@ -114,7 +128,9 @@ export function startDailyCultureCollect(): () => void {
     return () => undefined;
   }
   if (!process.env.DATABASE_URL) {
-    logger.error("DATABASE_URL is not set; daily cultural opportunities collect will not start");
+    logger.error(
+      "DATABASE_URL is not set; daily cultural opportunities collect will not start",
+    );
     return () => undefined;
   }
 
@@ -135,9 +151,12 @@ export function startDailyCultureCollect(): () => void {
         "Daily cultural opportunities collect started",
       );
     } catch (error) {
-      const { CultureIngestInProgressError, STALE_AFTER_MS } = await import("./collect-opportunities");
+      const { CultureIngestInProgressError, STALE_AFTER_MS } =
+        await import("./collect-opportunities");
       if (error instanceof CultureIngestInProgressError) {
-        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) => run(retryReason));
+        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) =>
+          run(retryReason),
+        );
         logger.info(
           { reason, retryScheduled: retry.schedule() },
           "Daily cultural opportunities collect skipped because one is already running",
@@ -156,7 +175,10 @@ export function startDailyCultureCollect(): () => void {
   const arm = () => {
     if (stopped) return;
     const delay = msUntilHour(hour);
-    logger.info({ hour, delayMs: delay }, "Next cultural opportunities collect scheduled");
+    logger.info(
+      { hour, delayMs: delay },
+      "Next cultural opportunities collect scheduled",
+    );
     timer = setTimeout(() => {
       void run("schedule").finally(arm);
     }, delay);
@@ -172,13 +194,73 @@ export function startDailyCultureCollect(): () => void {
   };
 }
 
+export function startDailyFundingCollect(): () => void {
+  if (process.env.FUNDING_DAILY_COLLECT !== "true") {
+    logger.info("Daily funding opportunities collect is disabled");
+    return () => undefined;
+  }
+  if (!process.env.DATABASE_URL) {
+    logger.error(
+      "DATABASE_URL is not set; daily funding opportunities collect will not start",
+    );
+    return () => undefined;
+  }
+
+  const hour = fundingDailyHour();
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const run = async (reason: string) => {
+    try {
+      const { collectFunding } = await import("./collect-funding");
+      const locked = await tryRunSingletonJob(
+        "funding_collect",
+        collectFunding,
+      );
+      if (locked.acquired)
+        logger.info(
+          { reason, runId: locked.value.runId },
+          "Daily funding opportunities collected",
+        );
+    } catch (error) {
+      const { FundingIngestInProgressError } =
+        await import("./collect-funding");
+      if (error instanceof FundingIngestInProgressError) {
+        logger.info(
+          { reason },
+          "Daily funding opportunities collect skipped because one is already running",
+        );
+        return;
+      }
+      logger.error(
+        { err: error, reason },
+        "Daily funding opportunities collect failed",
+      );
+    }
+  };
+  const arm = () => {
+    if (stopped) return;
+    timer = setTimeout(
+      () => void run("schedule").finally(arm),
+      msUntilHour(hour),
+    );
+    timer.unref();
+  };
+  arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+
 export function startDailyTransparencyCollect(): () => void {
   if (process.env.TRANSPARENCY_DAILY_COLLECT !== "true") {
     logger.info("Daily transparency collect is disabled");
     return () => undefined;
   }
   if (!process.env.DATABASE_URL) {
-    logger.error("DATABASE_URL is not set; daily transparency collect will not start");
+    logger.error(
+      "DATABASE_URL is not set; daily transparency collect will not start",
+    );
     return () => undefined;
   }
   const hour = (dailyHour() + 1) % 24;
@@ -187,39 +269,56 @@ export function startDailyTransparencyCollect(): () => void {
   let retry: ReturnType<typeof inProgressRetry> | undefined;
   const run = async (reason = "schedule") => {
     try {
-      const { collectTransparency, transparencyOptionsFromEnv } = await import("./collect-transparency");
+      const { collectTransparency, transparencyOptionsFromEnv } =
+        await import("./collect-transparency");
       const options = await transparencyOptionsFromEnv();
       if (!options) return;
-      const locked = await tryRunSingletonJob("pncp_transparency_collect", () => collectTransparency(options));
+      const locked = await tryRunSingletonJob("pncp_transparency_collect", () =>
+        collectTransparency(options),
+      );
       if (locked.acquired) retry?.reset();
     } catch (error) {
-      const { TransparencyIngestInProgressError, STALE_AFTER_MS } = await import("./collect-transparency");
+      const { TransparencyIngestInProgressError, STALE_AFTER_MS } =
+        await import("./collect-transparency");
       if (error instanceof TransparencyIngestInProgressError) {
-        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) => run(retryReason));
+        retry ??= inProgressRetry(STALE_AFTER_MS, (retryReason) =>
+          run(retryReason),
+        );
         logger.info(
           { reason, retryScheduled: retry.schedule() },
           "Daily transparency collection skipped because one is already running",
         );
         return;
       }
-      logger.error({ err: error, reason }, "Daily transparency collection failed");
+      logger.error(
+        { err: error, reason },
+        "Daily transparency collection failed",
+      );
     }
   };
   const arm = () => {
     if (stopped) return;
-    timer = setTimeout(() => { void run().finally(arm); }, msUntilHour(hour));
+    timer = setTimeout(() => {
+      void run().finally(arm);
+    }, msUntilHour(hour));
     timer.unref();
   };
   void run("startup");
   arm();
-  return () => { stopped = true; if (timer) clearTimeout(timer); retry?.stop(); };
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    retry?.stop();
+  };
 }
 
 /** Classifies with the category student whatever the post-collect hook left pending, one hour after the PNCP collect. */
 export function startDailyCategoryClassify(): () => void {
   if (process.env.CATEGORY_STUDENT_ENABLED !== "true") return () => undefined;
   if (!process.env.DATABASE_URL) {
-    logger.error("DATABASE_URL is not set; daily category classification will not start");
+    logger.error(
+      "DATABASE_URL is not set; daily category classification will not start",
+    );
     return () => undefined;
   }
 
@@ -234,7 +333,10 @@ export function startDailyCategoryClassify(): () => void {
   const arm = () => {
     if (stopped) return;
     const delay = msUntilHour(hour);
-    logger.info({ hour, delayMs: delay }, "Next category classification scheduled");
+    logger.info(
+      { hour, delayMs: delay },
+      "Next category classification scheduled",
+    );
     timer = setTimeout(() => {
       void run("schedule").finally(arm);
     }, delay);

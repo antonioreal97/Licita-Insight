@@ -93,6 +93,88 @@ export const temporalWeight = (occurredAt: Date, now = new Date()): number => {
   return 2 ** (-ageDays / EVENT_HALF_LIFE_DAYS);
 };
 
+type OpportunityProfileInput = Pick<
+  typeof companyProfilesTable.$inferSelect,
+  | "description"
+  | "offerings"
+  | "exclusions"
+  | "selectedKeywords"
+  | "excludedKeywords"
+  | "coverageScope"
+  | "coverageStates"
+  | "valueMin"
+  | "valueMax"
+>;
+
+/** Lightweight, deterministic opportunity matching reusing the recommendation/profile signals. */
+export const scoreOpportunityForProfile = (
+  opportunity: {
+    searchText: string;
+    state: string | null;
+    amount: number | null;
+    audience: string | null;
+  },
+  profile: OpportunityProfileInput,
+): { score: number; reasons: string[] } | null => {
+  const haystack = normalizeText(
+    `${opportunity.searchText} ${opportunity.audience ?? ""}`,
+  );
+  const exclusions = [...profile.exclusions, ...profile.excludedKeywords]
+    .flatMap((value) => [
+      normalizeText(value).trim(),
+      ...normalizeSignalTerms(value),
+    ])
+    .filter(Boolean);
+  if (exclusions.some((term) => haystack.includes(term))) return null;
+
+  const terms = [
+    ...profile.selectedKeywords,
+    ...profile.offerings,
+    profile.description,
+  ].flatMap((value) => normalizeSignalTerms(value));
+  const matched = [
+    ...new Set(terms.filter((term) => haystack.includes(term))),
+  ].slice(0, 4);
+  let score = Math.min(60, matched.length * 15);
+  const reasons: string[] = [];
+  if (matched.length > 0)
+    reasons.push(`Combina com seu perfil: ${matched.join(", ")}`);
+
+  const state = opportunity.state?.toUpperCase() ?? null;
+  if (profile.coverageScope === "states") {
+    if (
+      !state ||
+      !profile.coverageStates
+        .map((value) => value.toUpperCase())
+        .includes(state)
+    ) {
+      score -= 30;
+    } else {
+      score += 25;
+      reasons.push(`Na sua área de atuação: ${state}`);
+    }
+  }
+
+  if (
+    opportunity.amount !== null &&
+    (profile.valueMin !== null || profile.valueMax !== null)
+  ) {
+    const minimum = profile.valueMin === null ? null : Number(profile.valueMin);
+    const maximum = profile.valueMax === null ? null : Number(profile.valueMax);
+    if (
+      (minimum === null || opportunity.amount >= minimum) &&
+      (maximum === null || opportunity.amount <= maximum)
+    ) {
+      score += 15;
+      reasons.push("Valor dentro da faixa do seu perfil");
+    }
+  }
+
+  return score > 0 && reasons.length > 0
+    ? { score: Math.min(100, score), reasons: reasons.slice(0, 3) }
+    : null;
+};
+
 type WeightMap = Map<string, { label?: string; weight: number }>;
 const addWeight = (
   map: WeightMap,
@@ -703,7 +785,7 @@ export function scheduleRecommendationRebuild(
 }
 
 const incrementMetric = async (
-  field: "impressions" | "clicks" | "dismissals",
+  field: "impressions" | "clicks" | "interests" | "dismissals",
   amount = 1,
   now = new Date(),
 ) => {
@@ -738,6 +820,7 @@ export async function listRecommendations(
     eq(userRecommendationsTable.userId, userId),
     eq(tendersTable.status, "open"),
     gt(tendersTable.proposalDeadline, now),
+    isNull(savedTendersTable.tenderId),
   );
   const [rows, [{ total }]] = await Promise.all([
     db
@@ -750,6 +833,13 @@ export async function listRecommendations(
         tendersTable,
         eq(tendersTable.id, userRecommendationsTable.tenderId),
       )
+      .leftJoin(
+        savedTendersTable,
+        and(
+          eq(savedTendersTable.tenderId, tendersTable.id),
+          eq(savedTendersTable.userId, userId),
+        ),
+      )
       .where(valid)
       .orderBy(asc(userRecommendationsTable.rank))
       .limit(pageSize)
@@ -760,6 +850,13 @@ export async function listRecommendations(
       .innerJoin(
         tendersTable,
         eq(tendersTable.id, userRecommendationsTable.tenderId),
+      )
+      .leftJoin(
+        savedTendersTable,
+        and(
+          eq(savedTendersTable.tenderId, tendersTable.id),
+          eq(savedTendersTable.userId, userId),
+        ),
       )
       .where(valid),
   ]);
@@ -891,12 +988,39 @@ export async function recordRecommendationEvent(
   input:
     | { type: "search"; query: string }
     | { type: "tender_view"; tenderId: string }
-    | { type: "click" },
+    | { type: "click" }
+    | { type: "interest"; tenderId: string },
   now = new Date(),
 ): Promise<boolean> {
   if (input.type === "click") {
     await incrementMetric("clicks", 1, now);
     return true;
+  }
+  if (input.type === "interest") {
+    return db.transaction(async (tx) => {
+      const removed = await tx
+        .delete(userRecommendationsTable)
+        .where(
+          and(
+            eq(userRecommendationsTable.userId, userId),
+            eq(userRecommendationsTable.tenderId, input.tenderId),
+          ),
+        )
+        .returning({ tenderId: userRecommendationsTable.tenderId });
+      if (removed.length === 0) return false;
+      const day = dateInSaoPaulo(now);
+      await tx
+        .insert(recommendationMetricsDailyTable)
+        .values({ day, interests: 1, updatedAt: now })
+        .onConflictDoUpdate({
+          target: recommendationMetricsDailyTable.day,
+          set: {
+            interests: sql`${recommendationMetricsDailyTable.interests} + 1`,
+            updatedAt: now,
+          },
+        });
+      return true;
+    });
   }
   const [user] = await db
     .select({ enabled: usersTable.recommendationPersonalizationEnabled })

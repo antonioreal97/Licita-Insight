@@ -1373,7 +1373,7 @@ export const ApplyAsaasBillingWebhookResponse = zod.object({
 
 
 /**
- * @summary Search cultural funding opportunities
+ * @summary Search culture, funding and innovation opportunities
  */
 export const searchOpportunitiesQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 export const searchOpportunitiesQueryPageDefault = 1;
@@ -1389,12 +1389,19 @@ export const SearchOpportunitiesQueryParams = zod.object({
   "installation": zod.array(zod.coerce.string()).optional(),
   "status": zod.array(zod.enum(['open', 'upcoming', 'closed', 'undated'])).optional(),
   "program": zod.array(zod.enum(['audiovisual', 'lpg', 'fac', 'fsa'])).optional(),
+  "kind": zod.array(zod.enum(['culture', 'funding', 'innovation', 'partnership'])).optional(),
+  "source": zod.array(zod.enum(['mapas', 'finep', 'cnpq', 'capes'])).optional(),
   "deadlineFrom": zod.date().optional().describe('Inclusive lower date in America/Sao_Paulo.'),
   "deadlineTo": zod.date().optional().describe('Inclusive upper date in America/Sao_Paulo.'),
   "page": zod.coerce.number().int().min(1).default(searchOpportunitiesQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(searchOpportunitiesQueryPageSizeMax).default(searchOpportunitiesQueryPageSizeDefault),
   "facets": zod.coerce.boolean().default(searchOpportunitiesQueryFacetsDefault)
 })
+
+export const searchOpportunitiesResponseDataItemAmountMin = 0;
+
+export const searchOpportunitiesResponseDataItemProfileMatchOneScoreMin = 0;
+export const searchOpportunitiesResponseDataItemProfileMatchOneScoreMax = 100;
 
 export const searchOpportunitiesResponseFacetsOneStatusItemCountMin = 0;
 
@@ -1403,6 +1410,10 @@ export const searchOpportunitiesResponseFacetsOneStateItemCountMin = 0;
 export const searchOpportunitiesResponseFacetsOneInstallationItemCountMin = 0;
 
 export const searchOpportunitiesResponseFacetsOneProgramItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneKindItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneSourceItemCountMin = 0;
 
 export const searchOpportunitiesResponseMetaTookMsMin = 0;
 
@@ -1415,7 +1426,17 @@ export const SearchOpportunitiesResponse = zod.object({
   "summary": zod.string().nullable(),
   "organizationName": zod.string(),
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
-  "program": zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),
+  "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
+  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes']),
+  "sourceName": zod.string(),
+  "audience": zod.string().nullable(),
+  "amount": zod.number().min(searchOpportunitiesResponseDataItemAmountMin).nullable(),
+  "documents": zod.array(zod.object({
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "mediaType": zod.string().nullable()
+})),
   "registrationFrom": zod.coerce.date().nullable(),
   "registrationTo": zod.coerce.date().nullable(),
   "state": zod.string().nullable(),
@@ -1425,7 +1446,11 @@ export const SearchOpportunitiesResponse = zod.object({
   "uf": zod.string()
 }),
   "sourceUrl": zod.string().url().nullable(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "profileMatch": zod.union([zod.object({
+  "score": zod.number().min(searchOpportunitiesResponseDataItemProfileMatchOneScoreMin).max(searchOpportunitiesResponseDataItemProfileMatchOneScoreMax),
+  "reasons": zod.array(zod.string())
+}),zod.null()])
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -1454,6 +1479,16 @@ export const SearchOpportunitiesResponse = zod.object({
   "value": zod.string(),
   "label": zod.string(),
   "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneProgramItemCountMin)
+})),
+  "kind": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneKindItemCountMin)
+})),
+  "source": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneSourceItemCountMin)
 }))
 }),zod.null()]),
   "meta": zod.object({
@@ -1474,7 +1509,7 @@ export const SearchOpportunitiesResponse = zod.object({
 
 
 /**
- * @summary Get a cultural funding opportunity
+ * @summary Get an opportunity
  */
 
 
@@ -1483,13 +1518,30 @@ export const GetOpportunityByIdParams = zod.object({
   "id": zod.coerce.string().min(1)
 })
 
+export const getOpportunityByIdResponseAmountMin = 0;
+
+export const getOpportunityByIdResponseProfileMatchOneScoreMin = 0;
+export const getOpportunityByIdResponseProfileMatchOneScoreMax = 100;
+
+
+
 export const GetOpportunityByIdResponse = zod.object({
   "id": zod.string(),
   "title": zod.string(),
   "summary": zod.string().nullable(),
   "organizationName": zod.string(),
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
-  "program": zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),
+  "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
+  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes']),
+  "sourceName": zod.string(),
+  "audience": zod.string().nullable(),
+  "amount": zod.number().min(getOpportunityByIdResponseAmountMin).nullable(),
+  "documents": zod.array(zod.object({
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "mediaType": zod.string().nullable()
+})),
   "registrationFrom": zod.coerce.date().nullable(),
   "registrationTo": zod.coerce.date().nullable(),
   "state": zod.string().nullable(),
@@ -1499,7 +1551,11 @@ export const GetOpportunityByIdResponse = zod.object({
   "uf": zod.string()
 }),
   "sourceUrl": zod.string().url().nullable(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "profileMatch": zod.union([zod.object({
+  "score": zod.number().min(getOpportunityByIdResponseProfileMatchOneScoreMin).max(getOpportunityByIdResponseProfileMatchOneScoreMax),
+  "reasons": zod.array(zod.string())
+}),zod.null()])
 })
 
 
@@ -2215,14 +2271,16 @@ export const DismissRecommendationResponse = zod.void()
 
 
 /**
- * Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
- * @summary Record an opted-in search/view event or an aggregate recommendation click
+ * Search terms and tender views are discarded when opt-in is off. Impression, click, interest and dismiss metrics contain no search content.
+ * @summary Record an opted-in search/view event or an aggregate recommendation action
  */
 export const recordRecommendationEventBodyOneQueryMax = 2000;
 
 export const recordRecommendationEventBodyTwoTenderIdMax = 200;
 
 export const recordRecommendationEventBodyThreeTenderIdMax = 200;
+
+export const recordRecommendationEventBodyFourTenderIdMax = 200;
 
 
 
@@ -2235,6 +2293,9 @@ export const RecordRecommendationEventBody = zod.union([zod.object({
 }),zod.object({
   "type": zod.literal("click"),
   "tenderId": zod.string().min(1).max(recordRecommendationEventBodyThreeTenderIdMax).optional()
+}),zod.object({
+  "type": zod.literal("interest"),
+  "tenderId": zod.string().min(1).max(recordRecommendationEventBodyFourTenderIdMax)
 })])
 
 export const RecordRecommendationEventResponse = zod.object({

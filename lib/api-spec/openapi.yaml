@@ -688,7 +688,7 @@ paths:
     get:
       operationId: searchOpportunities
       tags: [opportunities]
-      summary: Search cultural funding opportunities
+      summary: Search culture, funding and innovation opportunities
       security: [{ sessionCookie: [] }]
       parameters:
         - name: q
@@ -724,6 +724,22 @@ paths:
             type: array
             items:
               $ref: "#/components/schemas/OpportunityProgram"
+        - name: kind
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/OpportunityKind"
+        - name: source
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/OpportunitySource"
         - name: deadlineFrom
           in: query
           description: Inclusive lower date in America/Sao_Paulo.
@@ -737,7 +753,7 @@ paths:
         - $ref: "#/components/parameters/Facets"
       responses:
         "200":
-          description: Cultural opportunity result page
+          description: Opportunity result page
           content:
             application/json:
               schema:
@@ -754,7 +770,7 @@ paths:
     get:
       operationId: getOpportunityById
       tags: [opportunities]
-      summary: Get a cultural funding opportunity
+      summary: Get an opportunity
       security: [{ sessionCookie: [] }]
       parameters:
         - name: id
@@ -1200,8 +1216,8 @@ paths:
     post:
       operationId: recordRecommendationEvent
       tags: [recommendations]
-      summary: Record an opted-in search/view event or an aggregate recommendation click
-      description: Search terms and tender views are discarded when opt-in is off. Impression, click and dismiss metrics contain no search content.
+      summary: Record an opted-in search/view event or an aggregate recommendation action
+      description: Search terms and tender views are discarded when opt-in is off. Impression, click, interest and dismiss metrics contain no search content.
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1672,6 +1688,12 @@ components:
             type: { type: string, const: click }
             tenderId: { type: string, minLength: 1, maxLength: 200 }
           required: [type]
+        - type: object
+          additionalProperties: false
+          properties:
+            type: { type: string, const: interest }
+            tenderId: { type: string, minLength: 1, maxLength: 200 }
+          required: [type, tenderId]
     UpdateEmailNotificationPreferences:
       type: object
       additionalProperties: false
@@ -3228,6 +3250,27 @@ components:
     OpportunityProgram:
       type: string
       enum: [audiovisual, lpg, fac, fsa]
+    OpportunityKind:
+      type: string
+      enum: [culture, funding, innovation, partnership]
+    OpportunitySource:
+      type: string
+      enum: [mapas, finep, cnpq, capes]
+    OpportunityDocument:
+      type: object
+      properties:
+        title: { type: string }
+        url: { type: string, format: uri }
+        mediaType: { type: [string, "null"] }
+      required: [title, url, mediaType]
+    OpportunityProfileMatch:
+      type: object
+      properties:
+        score: { type: number, minimum: 0, maximum: 100 }
+        reasons:
+          type: array
+          items: { type: string }
+      required: [score, reasons]
     OpportunityInstallation:
       type: object
       properties:
@@ -3245,7 +3288,20 @@ components:
         status:
           $ref: "#/components/schemas/OpportunityStatus"
         program:
-          $ref: "#/components/schemas/OpportunityProgram"
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityProgram"
+            - type: "null"
+        kind:
+          $ref: "#/components/schemas/OpportunityKind"
+        source:
+          $ref: "#/components/schemas/OpportunitySource"
+        sourceName: { type: string }
+        audience: { type: [string, "null"] }
+        amount: { type: [number, "null"], minimum: 0 }
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpportunityDocument"
         registrationFrom: { type: [string, "null"], format: date-time }
         registrationTo: { type: [string, "null"], format: date-time }
         state: { type: [string, "null"] }
@@ -3253,6 +3309,10 @@ components:
           $ref: "#/components/schemas/OpportunityInstallation"
         sourceUrl: { type: [string, "null"], format: uri }
         updatedAt: { type: string, format: date-time }
+        profileMatch:
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityProfileMatch"
+            - type: "null"
       required:
         [
           id,
@@ -3261,12 +3321,19 @@ components:
           organizationName,
           status,
           program,
+          kind,
+          source,
+          sourceName,
+          audience,
+          amount,
+          documents,
           registrationFrom,
           registrationTo,
           state,
           installation,
           sourceUrl,
           updatedAt,
+          profileMatch,
         ]
     OpportunityFacets:
       type: object
@@ -3287,7 +3354,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FacetBucket"
-      required: [status, state, installation, program]
+        kind:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+      required: [status, state, installation, program, kind, source]
     OpportunityInstallationIssue:
       type: object
       properties:

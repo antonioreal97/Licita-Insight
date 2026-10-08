@@ -1,7 +1,7 @@
 import { FormEvent } from 'react';
 import { Link } from 'wouter';
-import { SearchX } from 'lucide-react';
-import { isApiError, type OpportunityStatus, type OpportunitySummary } from '@/api';
+import { ExternalLink, SearchX } from 'lucide-react';
+import { isApiError, type OpportunityKind, type OpportunitySource, type OpportunityStatus, type OpportunitySummary } from '@/api';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { SearchPagination } from '@/features/search/components/search-pagination';
@@ -9,7 +9,13 @@ import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
 import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
-import { OpportunityStatusBadge, opportunityProgramLabels, opportunityStatusLabels } from './components/opportunity-status';
+import {
+  OpportunityStatusBadge,
+  opportunityKindLabels,
+  opportunityProgramLabels,
+  opportunitySourceLabels,
+  opportunityStatusLabels,
+} from './components/opportunity-status';
 
 const UFS = [
   'AC',
@@ -42,6 +48,8 @@ const UFS = [
 ];
 
 const STATUSES = Object.keys(opportunityStatusLabels) as OpportunityStatus[];
+const KINDS = Object.keys(opportunityKindLabels) as OpportunityKind[];
+const SOURCES = Object.keys(opportunitySourceLabels) as OpportunitySource[];
 
 const selectClass =
   'h-10 rounded-lg border border-border bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -50,27 +58,34 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
   const place = opportunity.state ?? 'Nacional';
   return (
     <li className="border-b border-border-subtle last:border-0">
-      <Link
-        href={`/oportunidades/${encodeURIComponent(opportunity.id)}`}
-        data-testid={`opportunity-${opportunity.id}`}
-        className="grid gap-3 px-4 py-4 transition-colors duration-fast ease-standard hover:bg-muted/60 sm:px-5"
-      >
+      <div className="grid gap-3 px-4 py-4 transition-colors duration-fast ease-standard hover:bg-muted/60 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <OpportunityStatusBadge status={opportunity.status} />
-          <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>
+          <span className="rounded-full bg-secondary px-2.5 py-1 text-2xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
+          <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
+          {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
           <span className="type-label text-muted-foreground">{place}</span>
+          {opportunity.profileMatch && <span className="type-label font-semibold text-primary">Combina com seu perfil</span>}
         </div>
-        <h2 className="type-section text-foreground">{opportunity.title}</h2>
-        <p className="type-meta text-muted-foreground">
-          {opportunity.organizationName}
-          {' · '}
-          {opportunity.installation.name}
-        </p>
-        {opportunity.summary && <p className="line-clamp-2 type-body text-muted-foreground">{opportunity.summary}</p>}
+        <Link href={`/oportunidades/${encodeURIComponent(opportunity.id)}`} data-testid={`opportunity-${opportunity.id}`}>
+          <h2 className="type-section text-foreground hover:text-primary">{opportunity.title}</h2>
+          <p className="mt-2 type-meta text-muted-foreground">{opportunity.organizationName}</p>
+          {opportunity.summary && <p className="mt-2 line-clamp-2 type-body text-muted-foreground">{opportunity.summary}</p>}
+        </Link>
         <p className="type-meta text-muted-foreground">
           Inscrições {formatDate(opportunity.registrationFrom)} – {formatDate(opportunity.registrationTo)}
         </p>
-      </Link>
+        {opportunity.sourceUrl && (
+          <a
+            href={opportunity.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex w-fit items-center gap-1 type-meta font-semibold text-primary hover:underline"
+          >
+            Ver fonte oficial <ExternalLink size={13} aria-hidden />
+          </a>
+        )}
+      </div>
     </li>
   );
 }
@@ -79,8 +94,8 @@ export default function OpportunitiesPage() {
   return (
     <>
       <PageTitle
-        title="Chamadas culturais"
-        description="Fomento do Mapa da Cultura e das secretarias que publicam no Mapas Culturais. Licitações do PNCP continuam em Explorar editais."
+        title="Hub de oportunidades"
+        description="Chamadas de cultura, fomento e inovação publicadas por fontes oficiais. Licitações do PNCP continuam em Explorar editais."
       />
       <OpportunityAccessGate>
         <OpportunitySearch />
@@ -107,6 +122,8 @@ function OpportunitySearch() {
 
   const setState = (value: string) => update({ state: value ? [value] : undefined });
   const setStatus = (value: string) => update({ status: value ? [value as OpportunityStatus] : undefined });
+  const setKind = (value: string) => update({ kind: value ? [value as OpportunityKind] : undefined });
+  const setSource = (value: string) => update({ source: value ? [value as OpportunitySource] : undefined });
 
   return (
     <>
@@ -121,6 +138,38 @@ function OpportunitySearch() {
             placeholder="Título, órgão ou resumo"
             className="h-10 w-full rounded-lg border border-border bg-card px-3 type-ui text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
+        </label>
+        <label>
+          <span className="sr-only">Tipo de oportunidade</span>
+          <select
+            data-testid="select-opportunity-kind"
+            className={selectClass}
+            value={params.kind?.[0] ?? ''}
+            onChange={(event) => setKind(event.target.value)}
+          >
+            <option value="">Todos os tipos</option>
+            {KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {opportunityKindLabels[kind]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="sr-only">Fonte</span>
+          <select
+            data-testid="select-opportunity-source"
+            className={selectClass}
+            value={params.source?.[0] ?? ''}
+            onChange={(event) => setSource(event.target.value)}
+          >
+            <option value="">Todas as fontes</option>
+            {SOURCES.map((source) => (
+              <option key={source} value={source}>
+                {opportunitySourceLabels[source]}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           <span className="sr-only">Estado</span>
@@ -193,12 +242,10 @@ function OpportunitySearch() {
             <SearchX size={19} aria-hidden />
           </div>
           <h2 className="mt-4 type-section">Nenhuma chamada encontrada</h2>
-          <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">
-            Não há chamadas de audiovisual com esses filtros. A coleta ainda pode não ter rodado.
-          </p>
+          <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.</p>
         </div>
       ) : (
-        <section aria-label="Chamadas culturais" data-testid="list-opportunities">
+        <section aria-label="Oportunidades" data-testid="list-opportunities">
           <p className="mb-3 type-meta text-muted-foreground">
             {pagination ? `${formatNumber(pagination.total)} ${pagination.total === 1 ? 'chamada' : 'chamadas'}` : ''}
             {response?.meta.indexUpdatedAt ? ` · Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}` : ''}

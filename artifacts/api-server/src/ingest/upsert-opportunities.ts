@@ -1,6 +1,7 @@
 import { db, culturalOpportunitiesTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import type { OpportunityDraft } from "./opportunity-map";
+import type { FundingOpportunityDraft } from "./funding-parsers";
 
 export async function upsertOpportunities(
   drafts: OpportunityDraft[],
@@ -53,6 +54,65 @@ export async function upsertOpportunities(
       });
   }
 
+  return drafts.length;
+}
+
+export async function upsertFundingOpportunities(
+  drafts: FundingOpportunityDraft[],
+  now: Date,
+): Promise<number> {
+  for (const draft of drafts) {
+    const values = {
+      id: draft.id,
+      installationId: draft.installationId,
+      externalId: draft.externalId,
+      kind: draft.kind,
+      source: draft.source,
+      title: draft.title,
+      summary: draft.summary,
+      organizationName: draft.organizationName,
+      audience: draft.audience,
+      amount: draft.amount === null ? null : String(draft.amount),
+      documents: draft.documents,
+      state: draft.state,
+      registrationFrom: draft.registrationFrom,
+      registrationTo: draft.registrationTo,
+      status: draft.status,
+      program: null,
+      sourceUrl: draft.sourceUrl,
+      searchText: draft.searchText,
+      rawPayload: draft.raw,
+      fetchedAt: now,
+      updatedAt: now,
+    };
+    await db
+      .insert(culturalOpportunitiesTable)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [
+          culturalOpportunitiesTable.installationId,
+          culturalOpportunitiesTable.externalId,
+        ],
+        set: {
+          kind: values.kind,
+          title: values.title,
+          summary: values.summary,
+          organizationName: values.organizationName,
+          audience: values.audience,
+          amount: values.amount,
+          documents: values.documents,
+          state: values.state,
+          registrationFrom: values.registrationFrom,
+          registrationTo: values.registrationTo,
+          status: values.status,
+          sourceUrl: values.sourceUrl,
+          searchText: values.searchText,
+          rawPayload: values.rawPayload,
+          fetchedAt: values.fetchedAt,
+          updatedAt: values.updatedAt,
+        },
+      });
+  }
   return drafts.length;
 }
 

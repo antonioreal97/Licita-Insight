@@ -169,7 +169,7 @@ export function useSavedTenders() {
   const { mutate } = mutation;
   // Reads the cache at call time (not the render closure), so an Undo in a toast sees the current state.
   const change = useCallback(
-    (build: (current: SavedTenderIdsResponse) => Change) => {
+    (build: (current: SavedTenderIdsResponse) => Change | undefined, onSuccess?: () => void) => {
       if (!requireEntitled()) return;
       const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
       if (!current) {
@@ -181,7 +181,8 @@ export function useSavedTenders() {
         });
         return;
       }
-      mutate(build(current));
+      const next = build(current);
+      if (next) mutate(next, onSuccess ? { onSuccess } : undefined);
     },
     [queryClient, mutate, requireEntitled],
   );
@@ -202,6 +203,10 @@ export function useSavedTenders() {
     },
     [change, queryClient],
   );
+  const save = useCallback(
+    (id: string, onSuccess?: () => void) => change((current) => (current.saved.includes(id) ? undefined : { id, save: true }), onSuccess),
+    [change],
+  );
   /** Monitoring implies saving: turning it on saves the tender too; turning it off keeps it saved. */
   const toggleMonitor = useCallback((id: string) => change((current) => ({ id, save: true, monitored: !current.monitored.includes(id) })), [change]);
 
@@ -218,5 +223,7 @@ export function useSavedTenders() {
               ? 'ready'
               : 'loading';
 
-  return { saved, isSaved, toggle, isMonitored, toggleMonitor, status, entitled };
+  const changingId = mutation.isPending ? mutation.variables?.id : undefined;
+
+  return { saved, isSaved, save, toggle, isMonitored, toggleMonitor, changingId, status, entitled };
 }
