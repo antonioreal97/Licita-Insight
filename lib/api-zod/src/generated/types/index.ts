@@ -7,8 +7,14 @@
  */
 
 export * from './accountExport';
+export * from './accountExportAiDailyTender';
+export * from './accountExportAiDailyUsage';
+export * from './accountExportAiJob';
+export * from './accountExportAiJobLane';
+export * from './accountExportAiJobStatus';
 export * from './accountExportAiQuestion';
 export * from './accountExportAiQuestionStatus';
+export * from './accountExportAiQuestionSummary';
 export * from './accountExportCompanyFitsItem';
 export * from './accountExportEmailDelivery';
 export * from './accountExportEmailDeliveryMode';

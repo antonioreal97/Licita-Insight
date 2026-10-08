@@ -1775,7 +1775,8 @@ components:
         createdAt: { type: string, format: date-time }
         lastSeenAt: { type: string, format: date-time }
         expiresAt: { type: string, format: date-time }
-      required: [createdAt, lastSeenAt, expiresAt]
+        revokedAt: { type: [string, "null"], format: date-time }
+      required: [createdAt, lastSeenAt, expiresAt, revokedAt]
     AccountExportSavedTender:
       type: object
       allOf:
@@ -1865,6 +1866,8 @@ components:
         status: { type: string, enum: [queued, sent, failed, skipped] }
         recipientEmail: { type: string, format: email }
         subject: { type: string }
+        htmlBody: { type: string }
+        textBody: { type: string }
         attempts: { type: integer, minimum: 0 }
         lastError: { type: [string, "null"] }
         providerMessageId: { type: [string, "null"] }
@@ -1878,6 +1881,8 @@ components:
           status,
           recipientEmail,
           subject,
+          htmlBody,
+          textBody,
           attempts,
           lastError,
           providerMessageId,
@@ -1900,21 +1905,82 @@ components:
         question: { type: string }
         status:
           { type: string, enum: [processing, answered, not_found, failed] }
+        passages:
+          type: array
+          items:
+            $ref: "#/components/schemas/AskTenderPassage"
+        summary:
+          anyOf:
+            - type: object
+              properties:
+                text: { type: string }
+                citations: { type: array, items: { type: integer, minimum: 1 } }
+                model: { type: string }
+              required: [text, citations, model]
+            - type: "null"
+        requestedModel: { type: string }
         model: { type: [string, "null"] }
         inputTokens: { type: integer, minimum: 0 }
         estimatedCostUsd: { type: string }
+        summaryModel: { type: [string, "null"] }
+        summaryInputTokens: { type: integer, minimum: 0 }
+        summaryOutputTokens: { type: integer, minimum: 0 }
+        summaryEstimatedCostUsd: { type: string }
         createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
       required:
         [
           id,
           tenderId,
           question,
           status,
+          passages,
+          summary,
+          requestedModel,
           model,
           inputTokens,
           estimatedCostUsd,
+          summaryModel,
+          summaryInputTokens,
+          summaryOutputTokens,
+          summaryEstimatedCostUsd,
           createdAt,
+          updatedAt,
         ]
+    AccountExportAiDailyUsage:
+      type: object
+      properties:
+        userId: { type: string }
+        quotaDay: { type: string, format: date }
+        used: { type: integer, minimum: 0 }
+        inputTokens: { type: integer, minimum: 0 }
+        estimatedCostUsd: { type: string }
+        updatedAt: { type: string, format: date-time }
+      required: [userId, quotaDay, used, inputTokens, estimatedCostUsd, updatedAt]
+    AccountExportAiDailyTender:
+      type: object
+      properties:
+        userId: { type: string }
+        quotaDay: { type: string, format: date }
+        tenderId: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [userId, quotaDay, tenderId, createdAt]
+    AccountExportAiJob:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        tenderId: { type: string }
+        lane: { type: string, enum: [interactive, batch] }
+        status: { type: string, enum: [queued, running, succeeded, failed, dead] }
+        attempts: { type: integer, minimum: 0 }
+        maxAttempts: { type: integer, minimum: 1 }
+        runAfter: { type: string, format: date-time }
+        lastError: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, "null"], format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }
+      required: [id, kind, tenderId, lane, status, attempts, maxAttempts, runAfter, lastError, createdAt, startedAt, finishedAt]
     AccountExport:
       type: object
       properties:
@@ -1945,6 +2011,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountExportAiQuestion"
+        aiDailyUsage:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportAiDailyUsage"
+        aiDailyTenders:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportAiDailyTender"
+        aiJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportAiJob"
         companyProfile:
           anyOf:
             - $ref: "#/components/schemas/CompanyProfile"
@@ -1988,6 +2066,9 @@ components:
           notifications,
           emailDeliveries,
           aiQuestions,
+          aiDailyUsage,
+          aiDailyTenders,
+          aiJobs,
           companyProfile,
           companyFits,
           fitUsage,

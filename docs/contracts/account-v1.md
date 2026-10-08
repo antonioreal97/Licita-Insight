@@ -331,17 +331,24 @@ titular mesmo sem plano ativo.
 ### `GET /api/v1/me/export`
 
 Responde `200 application/json` com `Content-Disposition: attachment;
-filename="licitai-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
+filename="pardal-digital-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
 
 ```ts
 type AccountExport = {
   exportedAt: string;
   user: { id: string; email: string; name: string | null; avatarUrl: string | null; trialEndsAt: string; emailDigest: 'daily' | 'off'; emailImmediateCritical: boolean; emailPreferencesUpdatedAt: string | null; createdAt: string; updatedAt: string };
-  sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string }>;
+  sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string; revokedAt: string | null }>;
   savedTenders: Array<{ tenderId: string; savedAt: string; monitored: boolean; monitoredAt: string | null }>;
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
   notifications: Array<Record<string, unknown>>;
-  emailDeliveries: Array<{ id: string; mode: 'digest' | 'immediate'; status: 'queued' | 'sent' | 'failed' | 'skipped'; recipientEmail: string; subject: string; attempts: number; lastError: string | null; providerMessageId: string | null; createdAt: string; updatedAt: string; sentAt: string | null }>;
+  emailDeliveries: Array<{ id: string; mode: 'digest' | 'immediate'; status: 'queued' | 'sent' | 'failed' | 'skipped'; recipientEmail: string; subject: string; htmlBody: string; textBody: string; attempts: number; lastError: string | null; providerMessageId: string | null; createdAt: string; updatedAt: string; sentAt: string | null }>;
+  aiQuestions: Array<{ question: string; passages: unknown[]; summary: Record<string, unknown> | null; requestedModel: string; model: string | null; createdAt: string; updatedAt: string }>;
+  aiDailyUsage: Array<Record<string, unknown>>;
+  aiDailyTenders: Array<Record<string, unknown>>;
+  aiJobs: Array<{ id: string; kind: string; tenderId: string; lane: 'interactive' | 'batch'; status: string; attempts: number; createdAt: string }>;
+  companyProfile: Record<string, unknown> | null;
+  companyFits: Array<Record<string, unknown>>;
+  fitUsage: Array<Record<string, unknown>>;
   recommendationEvents: Array<{ type: 'search' | 'tender_view'; normalizedTerms: string[]; tenderId: string | null; occurredAt: string }>;
   recommendationDismissals: Array<Record<string, unknown>>;
   recommendationInterestProfile: Record<string, unknown> | null;
@@ -350,17 +357,23 @@ type AccountExport = {
 };
 ```
 
-Somente sessões ativas são exportadas. Tokens, hashes de sessão, `googleSub`, chaves do Asaas,
-identificadores internos de cobrança, tokens de descadastro, corpos/headers de e-mail e `dedupeKey`
-de notificações não são incluídos. Buscas ainda retidas por soft delete e metadados de entregas de
-e-mail são incluídos. A preferência de personalização e o histórico opt-in ainda dentro da retenção de
-180 dias também são incluídos; detalhes em [`recommendations-v1.md`](recommendations-v1.md).
+Todas as sessões ainda retidas são exportadas, inclusive revogadas/expiradas aguardando o expurgo. Tokens,
+hashes de sessão, `googleSub`, chaves do Asaas, identificadores internos de cobrança, tokens de descadastro,
+headers de e-mail e `dedupeKey` não são incluídos. Entram o assunto, status, datas e os corpos de e-mails que
+ainda não foram expurgados, perguntas, respostas/passagens, metadados dos jobs de IA, cotas, preferências,
+filtros do perfil, eventos e descartes de recomendação. Não há tabela de plataformas cadastradas nesta
+versão. Um teste compara todas as tabelas com `user_id` ao registro `ACCOUNT_EXPORT_TABLES`, para que uma
+nova tabela não seja omitida silenciosamente.
 
 ### `DELETE /api/v1/me`
 
 Exige sessão, CSRF e corpo exato `{ "confirm": "EXCLUIR" }`; confirmação ausente ou diferente
 responde `400 INVALID_PARAMETER`. Sucesso responde `204`, remove `users` e todos os dados pessoais
 por cascata, invalida todas as sessões e limpa o cookie.
+
+O e-mail também é removido de `beta_access_grants`, tabela independente da conta. Um teste genérico verifica
+que toda tabela com `user_id` possui FK `ON DELETE CASCADE` para `users`; identificadores fora desse padrão
+exigem tratamento e teste explícitos.
 
 Quando existe assinatura remota não cancelada, a API cancela primeiro no Asaas. Falha remota responde
 `503 BILLING_UNAVAILABLE` sem iniciar a exclusão local. Depois do sucesso remoto, a exclusão local
@@ -371,6 +384,10 @@ novo.
 O tombstone antiabuso do teste é deliberadamente preservado após a exclusão. Ele não possui FK para
 `users` e contém somente HMAC não reversível do Google `sub`, `trialEndsAt` e `createdAt`, com
 finalidade documentada de impedir repetição do benefício.
+
+O banco local não mantém faturas, documentos fiscais nem dados de cartão depois da exclusão. Registros que o
+Asaas precise preservar por obrigação fiscal, contábil ou regulatória permanecem sob responsabilidade desse
+operador, conforme sua base legal e seus prazos.
 
 ## Performance esperada
 
@@ -398,6 +415,6 @@ Push, compartilhamento de buscas, times/organizações e papéis.
 - Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 10 minutos sem atividade, com renovação deslizante. O token não vai para o `localStorage`.
 - Limites de salvos são serializados por usuário com advisory lock transacional, além das constraints de unicidade do PostgreSQL.
 - Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados por job próprio, desacoplado da coleta PNCP.
-- Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; notificações e entregas de e-mail têm retenção operacional de 90 dias.
+- Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; notificações lidas e conteúdo de entregas de e-mail têm retenção operacional padrão de 180 dias, conforme [`../compliance/retencao-dados-pessoais.md`](../compliance/retencao-dados-pessoais.md).
 - O índice de busca continua reconstruível a partir do banco canônico; nenhuma tabela de conta passa a ser fonte de verdade para os dados públicos do edital.
 - Follow-up 005: OAuth indisponível redireciona com `oauth_unavailable`; dev-login exige CSRF; queries canônicas ativas são únicas por usuário; exclusão de busca usa soft delete com restore de 30 segundos.

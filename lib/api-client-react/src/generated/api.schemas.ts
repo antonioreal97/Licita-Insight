@@ -222,6 +222,8 @@ export interface AccountExportSession {
   createdAt: string;
   lastSeenAt: string;
   expiresAt: string;
+  /** @nullable */
+  revokedAt: string | null;
 }
 
 export type ParticipationStage = typeof ParticipationStage[keyof typeof ParticipationStage];
@@ -405,6 +407,8 @@ export interface AccountExportEmailDelivery {
   status: AccountExportEmailDeliveryStatus;
   recipientEmail: string;
   subject: string;
+  htmlBody: string;
+  textBody: string;
   /** @minimum 0 */
   attempts: number;
   /** @nullable */
@@ -434,17 +438,106 @@ export const AccountExportAiQuestionStatus = {
   failed: 'failed',
 } as const;
 
+export type AccountExportAiQuestionSummary = {
+  text: string;
+  /** @items.minimum 1 */
+  citations: number[];
+  model: string;
+} | null;
+
+export interface AskTenderPassage {
+  documentId: string;
+  documentTitle: string;
+  documentUrl: string;
+  /** @minimum 1 */
+  page: number;
+  text: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  relevance: number;
+}
+
 export interface AccountExportAiQuestion {
   id: string;
   tenderId: string;
   question: string;
   status: AccountExportAiQuestionStatus;
+  passages: AskTenderPassage[];
+  summary: AccountExportAiQuestionSummary;
+  requestedModel: string;
   /** @nullable */
   model: string | null;
   /** @minimum 0 */
   inputTokens: number;
   estimatedCostUsd: string;
+  /** @nullable */
+  summaryModel: string | null;
+  /** @minimum 0 */
+  summaryInputTokens: number;
+  /** @minimum 0 */
+  summaryOutputTokens: number;
+  summaryEstimatedCostUsd: string;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountExportAiDailyUsage {
+  userId: string;
+  quotaDay: string;
+  /** @minimum 0 */
+  used: number;
+  /** @minimum 0 */
+  inputTokens: number;
+  estimatedCostUsd: string;
+  updatedAt: string;
+}
+
+export interface AccountExportAiDailyTender {
+  userId: string;
+  quotaDay: string;
+  tenderId: string;
+  createdAt: string;
+}
+
+export type AccountExportAiJobLane = typeof AccountExportAiJobLane[keyof typeof AccountExportAiJobLane];
+
+
+export const AccountExportAiJobLane = {
+  interactive: 'interactive',
+  batch: 'batch',
+} as const;
+
+export type AccountExportAiJobStatus = typeof AccountExportAiJobStatus[keyof typeof AccountExportAiJobStatus];
+
+
+export const AccountExportAiJobStatus = {
+  queued: 'queued',
+  running: 'running',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  dead: 'dead',
+} as const;
+
+export interface AccountExportAiJob {
+  id: string;
+  kind: string;
+  tenderId: string;
+  lane: AccountExportAiJobLane;
+  status: AccountExportAiJobStatus;
+  /** @minimum 0 */
+  attempts: number;
+  /** @minimum 1 */
+  maxAttempts: number;
+  runAfter: string;
+  /** @nullable */
+  lastError: string | null;
+  createdAt: string;
+  /** @nullable */
+  startedAt: string | null;
+  /** @nullable */
+  finishedAt: string | null;
 }
 
 export type AccountExportCompanyFitsItem = { [key: string]: unknown };
@@ -567,6 +660,9 @@ export interface AccountExport {
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
   aiQuestions: AccountExportAiQuestion[];
+  aiDailyUsage: AccountExportAiDailyUsage[];
+  aiDailyTenders: AccountExportAiDailyTender[];
+  aiJobs: AccountExportAiJob[];
   companyProfile: CompanyProfile | null;
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];
@@ -665,20 +761,6 @@ export interface AskTenderRequest {
      * @maxLength 300
      */
   question: string;
-}
-
-export interface AskTenderPassage {
-  documentId: string;
-  documentTitle: string;
-  documentUrl: string;
-  /** @minimum 1 */
-  page: number;
-  text: string;
-  /**
-     * @minimum 0
-     * @maximum 1
-     */
-  relevance: number;
 }
 
 export type AskTenderResultStatus = typeof AskTenderResultStatus[keyof typeof AskTenderResultStatus];

@@ -22,6 +22,7 @@ import { NotificationPreferencesSection } from './components/notification-prefer
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
 import { RecommendationPreferencesSection } from '@/features/recommendations/components/recommendation-preferences-section';
 import { trackBeginCheckout } from '@/features/analytics/google-analytics';
+import { LegalLinks } from '@/features/legal/legal-content';
 
 // Profile comes from the Google session (read-only). Sections without an `id` have no settings yet.
 const sections = [
@@ -117,6 +118,11 @@ export default function SettingsPage() {
           <NotificationPreferencesSection />
           <RecommendationPreferencesSection />
           <AccountDataSection />
+          <section aria-labelledby="settings-legal" className="rounded-xl border border-border bg-card p-5 sm:p-7">
+            <h2 id="settings-legal" className="type-section">Privacidade e termos</h2>
+            <p className="mt-1 type-meta text-muted-foreground">Consulte como seus dados são tratados e as regras de uso do Pardal Digital.</p>
+            <LegalLinks className="mt-4 type-ui" />
+          </section>
         </div>
       </div>
     </>

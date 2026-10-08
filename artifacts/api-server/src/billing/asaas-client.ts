@@ -150,7 +150,8 @@ async function asaas<T>(
     }
   }
   if (!response.ok) {
-    logger.error({ path, status: response.status, body: payload }, "Asaas rejected the request");
+    // Provider bodies can echo customer fields. Keep only operational metadata in application logs.
+    logger.error({ path, status: response.status }, "Asaas rejected the request");
     throw new BillingUnavailableError(asaasErrorMessage(payload, response.status));
   }
   return payload as T;
