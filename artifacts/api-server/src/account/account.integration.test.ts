@@ -47,6 +47,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     notificationsTable,
     recommendationDismissalsTable,
     recommendationEventsTable,
+    recommendationMetricsDailyTable,
     savedSearchesTable,
     savedTendersTable,
     sessionsTable,
@@ -57,6 +58,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     tenderAiSheetsTable,
     tendersTable,
     usersTable,
+    userRecommendationsTable,
   } = await import("@workspace/db");
   const { eq, inArray } = await import("drizzle-orm");
   const { default: app } = await import("../app");
@@ -114,6 +116,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   const participationColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'saved_tenders' and column_name = 'stage'", [schema]);
   if (participationColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0019_participation.sql', import.meta.url), 'utf8'),
+  );
+  const interestsColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'recommendation_metrics_daily' and column_name = 'interests'", [schema]);
+  if (interestsColumn.rowCount === 0) await pool.query(
+    readFileSync(new URL('../../../../lib/db/migrations/0032_recommendation_interests.sql', import.meta.url), 'utf8'),
   );
 
   const server: Server = app.listen(0, "127.0.0.1");
@@ -1353,6 +1359,23 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const interest = await rebuildInterestProfile(user.id);
     assert.ok(interest.signalCount >= 3);
     assert.ok(interest.terms.some(({ weight }) => weight >= 10), "monitored tender should be a strong interest signal");
+    await db.insert(userRecommendationsTable).values({ userId: user.id, tenderId, rank: 1, score: '42', reasons: [] }).onConflictDoUpdate({
+      target: [userRecommendationsTable.userId, userRecommendationsTable.tenderId],
+      set: { rank: 1, score: '42', reasons: [] },
+    });
+    const positive = await request('/v1/recommendations/events', {
+      method: 'POST', headers: csrf, body: JSON.stringify({ type: 'interest', tenderId }),
+    }, cookie);
+    assert.equal(positive.status, 202);
+    assert.equal(((await positive.json()) as { recorded: boolean }).recorded, true);
+    assert.equal((await db.select().from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, user.id))).length, 0);
+    const interests = (await db.select().from(recommendationMetricsDailyTable)).reduce((sum, metric) => sum + metric.interests, 0);
+    assert.ok(interests >= 1);
+    const duplicate = await request('/v1/recommendations/events', {
+      method: 'POST', headers: csrf, body: JSON.stringify({ type: 'interest', tenderId }),
+    }, cookie);
+    assert.equal(((await duplicate.json()) as { recorded: boolean }).recorded, false);
+    assert.equal((await db.select().from(recommendationMetricsDailyTable)).reduce((sum, metric) => sum + metric.interests, 0), interests);
     assert.equal((await request(`/v1/recommendations/${encodeURIComponent(tenderId)}/dismiss`, {
       method: "POST", headers: csrf, body: "{}",
     }, cookie)).status, 204);

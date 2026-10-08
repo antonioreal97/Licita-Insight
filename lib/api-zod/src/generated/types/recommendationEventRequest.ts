@@ -24,4 +24,11 @@ export type RecommendationEventRequest = {
      * @maxLength 200
      */
   tenderId?: string;
+} | {
+  type: 'interest';
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  tenderId: string;
 };

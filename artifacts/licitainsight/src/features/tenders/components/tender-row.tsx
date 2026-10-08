@@ -17,7 +17,7 @@ import { ValueDisplay } from './value-display';
 type Props = {
   tender: TenderSummary;
   saved: boolean;
-  onSave: () => void;
+  onSave?: () => void;
   /** Overview lists (dashboard): no snippet, categories or published/fonte line. */
   compact?: boolean;
   /** Pass `relevanceVaries(results)` from the page; the meter stays hidden when every visible result has the same score. */
@@ -25,6 +25,8 @@ type Props = {
   /** Aderência ao perfil da empresa; nothing renders while pending or without a profile. */
   fit?: TenderFit;
   onOpen?: () => void;
+  /** Recommendation cards use explicit feedback actions instead of a duplicate bookmark. */
+  showSave?: boolean;
 };
 
 /**
@@ -33,7 +35,7 @@ type Props = {
  * Layout (grid): mobile stacks facts under the text; ≥sm moves value/deadline/relevance to a right-aligned column
  * so values line up vertically across rows for fast scanning. The whole row opens the detail (title link overlay).
  */
-export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit, onOpen }: Props) {
+export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit, onOpen, showSave = true }: Props) {
   const place = formatPlace(tender.location);
   const titleFragment = highlightFor(tender, 'title');
   const snippet = highlightFor(tender, 'objectSummary') ?? highlightFor(tender, 'items');
@@ -140,10 +142,12 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
         )}
       </dl>
 
-      {/* Save — always visible and focusable (not hover-only); sits above the row link overlay. */}
-      <div className="relative z-raised col-start-2 row-start-1 -mr-1.5 -mt-1 sm:col-start-3">
-        <SaveButton saved={saved} onToggle={onSave} describedBy={titleId} testId={`button-save-${tender.id}`} className="h-9 w-9" />
-      </div>
+      {/* Save — when present, always visible and focusable; sits above the row link overlay. */}
+      {showSave && onSave && (
+        <div className="relative z-raised col-start-2 row-start-1 -mr-1.5 -mt-1 sm:col-start-3">
+          <SaveButton saved={saved} onToggle={onSave} describedBy={titleId} testId={`button-save-${tender.id}`} className="h-9 w-9" />
+        </div>
+      )}
     </article>
   );
 }

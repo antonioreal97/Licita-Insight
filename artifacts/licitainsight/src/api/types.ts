@@ -467,7 +467,8 @@ export type RecommendationReason = {
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
 export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
-export type RecommendationEvent = { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string };
+export type RecommendationEvent =
+  { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string } | { type: 'interest'; tenderId: string };
 
 export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 
@@ -638,6 +639,8 @@ export type TenderFitsResponse = { profileVersion: number | null; results: Recor
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
+export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership';
+export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes';
 
 export type OpportunitySearchParams = {
   q?: string;
@@ -645,6 +648,8 @@ export type OpportunitySearchParams = {
   installation?: string[];
   status?: OpportunityStatus[];
   program?: OpportunityProgram[];
+  kind?: OpportunityKind[];
+  source?: OpportunitySource[];
   deadlineFrom?: string;
   deadlineTo?: string;
   page?: number;
@@ -658,13 +663,20 @@ export type OpportunitySummary = {
   summary: string | null;
   organizationName: string;
   status: OpportunityStatus;
-  program: OpportunityProgram;
+  program: OpportunityProgram | null;
+  kind: OpportunityKind;
+  source: OpportunitySource;
+  sourceName: string;
+  audience: string | null;
+  amount: number | null;
+  documents: { title: string; url: string; mediaType: string | null }[];
   registrationFrom: string | null;
   registrationTo: string | null;
   state: string | null;
   installation: { id: string; name: string; uf: string };
   sourceUrl: string | null;
   updatedAt: string;
+  profileMatch: { score: number; reasons: string[] } | null;
 };
 
 export type OpportunitySearchResponse = {
@@ -675,6 +687,8 @@ export type OpportunitySearchResponse = {
     state: FacetBucket[];
     installation: FacetBucket[];
     program: FacetBucket[];
+    kind: FacetBucket[];
+    source: FacetBucket[];
   } | null;
   meta: {
     query: string | null;

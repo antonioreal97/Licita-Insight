@@ -164,6 +164,7 @@ export const recommendationMetricsDailyTable = pgTable(
     day: date("day", { mode: "string" }).primaryKey(),
     impressions: integer("impressions").notNull().default(0),
     clicks: integer("clicks").notNull().default(0),
+    interests: integer("interests").notNull().default(0),
     dismissals: integer("dismissals").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
