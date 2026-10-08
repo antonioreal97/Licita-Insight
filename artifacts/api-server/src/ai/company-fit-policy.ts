@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
 import { InvalidParameterError, type ApiErrorDetail } from "../lib/api-error";
+import { TENDER_CATEGORIES } from "../catalog/tender-categories";
 
 export type CompanySize = "me_epp" | "cooperative" | "other";
 export type CompanyProfileInput = {
   description: string;
   offerings: string[];
   exclusions: string[];
+  selectedCategories: string[];
+  selectedKeywords: string[];
+  excludedKeywords: string[];
   coverage: { scope: "national" } | { scope: "states"; states: string[] };
   valueRange: { min: number | null; max: number | null };
   size: CompanySize;
@@ -40,6 +44,9 @@ const UFS = new Set([
   "SE",
   "TO",
 ]);
+const CATEGORY_SLUGS = new Set<string>(
+  TENDER_CATEGORIES.map(({ slug }) => slug),
+);
 
 const normalized = (value: string): string =>
   value.normalize("NFKC").trim().replace(/\s+/g, " ");
@@ -104,6 +111,42 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
     details.push({ field: "description", issue: "invalid_length" });
   const offerings = terms(body.offerings, "offerings", 1, details);
   const exclusions = terms(body.exclusions, "exclusions", 0, details);
+  const selectedKeywords = terms(
+    body.selectedKeywords ?? [],
+    "selectedKeywords",
+    0,
+    details,
+  );
+  const excludedKeywords = terms(
+    body.excludedKeywords ?? [],
+    "excludedKeywords",
+    0,
+    details,
+  );
+  const selectedCategories = Array.isArray(body.selectedCategories)
+    ? body.selectedCategories
+        .map((category, index) => {
+          if (typeof category !== "string" || !CATEGORY_SLUGS.has(category)) {
+            details.push({
+              field: `selectedCategories.${index}`,
+              issue: "invalid_value",
+            });
+            return "";
+          }
+          return category;
+        })
+        .filter(Boolean)
+    : [];
+  if (
+    body.selectedCategories !== undefined &&
+    !Array.isArray(body.selectedCategories)
+  )
+    details.push({ field: "selectedCategories", issue: "invalid_type" });
+  if (
+    selectedCategories.length > 20 ||
+    new Set(selectedCategories).size !== selectedCategories.length
+  )
+    details.push({ field: "selectedCategories", issue: "invalid_length" });
   let coverage: CompanyProfileInput["coverage"] | undefined;
   if (
     !body.coverage ||
@@ -167,6 +210,9 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
     description,
     offerings,
     exclusions,
+    selectedCategories,
+    selectedKeywords,
+    excludedKeywords,
     coverage: coverage!,
     valueRange: { min: min!, max: max! },
     size: size!,
@@ -200,6 +246,8 @@ export type FitTenderFingerprintInput = {
   estimatedValue: string | null;
   state: string | null;
   items: unknown;
+  categories?: unknown;
+  searchText?: string;
 };
 
 export const companyFitTenderFingerprint = (
@@ -215,6 +263,8 @@ export const companyFitTenderFingerprint = (
         estimatedValue: tender.estimatedValue,
         state: tender.state,
         items: tender.items,
+        categories: tender.categories,
+        searchText: tender.searchText,
       }),
     )
     .digest("hex");

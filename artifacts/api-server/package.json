@@ -27,6 +27,8 @@
     "titles:eval": "node --env-file-if-exists=../../.env --import tsx scripts/titles-eval.ts",
     "titles:classify": "node --env-file-if-exists=../../.env --import tsx scripts/titles-classify.ts",
     "categorize:rules": "node --env-file-if-exists=../../.env --import tsx scripts/categorize-rules.ts",
+    "profile-keywords:refresh": "node --env-file-if-exists=../../.env --import tsx scripts/refresh-profile-keywords.ts",
+    "profile-keywords:benchmark": "node --env-file-if-exists=../../.env --import tsx scripts/benchmark-profile-keywords.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",
@@ -48,7 +50,8 @@
     "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "pino": "^9.14.0",
-    "pino-http": "^10.5.0"
+    "pino-http": "^10.5.0",
+    "undici": "^7.29.1"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.7",

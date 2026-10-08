@@ -6,7 +6,11 @@ import {
   STATE_INSTALLATIONS,
   mapasInstallations,
 } from "./cultural-installations";
-import { fetchAudiovisualOpportunities } from "./mapas-client";
+import {
+  fetchAudiovisualOpportunities,
+  retryAfterMilliseconds,
+} from "./mapas-client";
+import { MapasClientError } from "./mapas-errors";
 import {
   mapOpportunity,
   matchesAudiovisualText,
@@ -16,8 +20,33 @@ import {
 const now = new Date("2026-09-23T15:00:00-03:00");
 
 const UFS = [
-  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
-  "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
 ];
 
 describe("cultural installations", () => {
@@ -56,7 +85,12 @@ describe("mapOpportunity", () => {
         registrationTo: "2026-10-01 18:00:00",
         owner: { name: "Secretaria de Cultura" },
       },
-      { ...FEDERAL_INSTALLATION, uf: "CE", id: "ce", name: "Mapa Cultural do Ceará" },
+      {
+        ...FEDERAL_INSTALLATION,
+        uf: "CE",
+        id: "ce",
+        name: "Mapa Cultural do Ceará",
+      },
       now,
     );
     assert.ok(draft);
@@ -65,8 +99,14 @@ describe("mapOpportunity", () => {
     assert.equal(draft.program, "lpg");
     assert.equal(draft.state, "CE");
     assert.equal(draft.organizationName, "Secretaria de Cultura");
-    assert.equal(draft.registrationFrom?.toISOString(), "2026-09-01T03:00:00.000Z");
-    assert.equal(draft.sourceUrl, "https://mapa.cultura.gov.br/oportunidade/77/");
+    assert.equal(
+      draft.registrationFrom?.toISOString(),
+      "2026-09-01T03:00:00.000Z",
+    );
+    assert.equal(
+      draft.sourceUrl,
+      "https://mapa.cultura.gov.br/oportunidade/77/",
+    );
   });
 
   it("leaves the value of a call without dates as undated and uses the installation name", () => {
@@ -87,13 +127,22 @@ describe("mapOpportunity", () => {
       {
         id: 3,
         name: "Edital de cinema",
-        registrationFrom: { date: "2026-09-01 00:00:00.000000", timezone: "America/Fortaleza" },
-        registrationTo: { date: "2026-10-01 18:00:00.000000", timezone: "America/Fortaleza" },
+        registrationFrom: {
+          date: "2026-09-01 00:00:00.000000",
+          timezone: "America/Fortaleza",
+        },
+        registrationTo: {
+          date: "2026-10-01 18:00:00.000000",
+          timezone: "America/Fortaleza",
+        },
       },
       FEDERAL_INSTALLATION,
       now,
     );
-    assert.equal(draft?.registrationFrom?.toISOString(), "2026-09-01T03:00:00.000Z");
+    assert.equal(
+      draft?.registrationFrom?.toISOString(),
+      "2026-09-01T03:00:00.000Z",
+    );
     assert.equal(draft?.status, "open");
   });
 
@@ -104,7 +153,10 @@ describe("mapOpportunity", () => {
   it("recognizes FSA and FAC without matching unrelated words", () => {
     assert.equal(programFromText("Chamada FSA de produção", null), "fsa");
     assert.equal(programFromText("Edital FAC de documentário", null), "fac");
-    assert.equal(programFromText("Mostra da faculdade de cinema", null), "audiovisual");
+    assert.equal(
+      programFromText("Mostra da faculdade de cinema", null),
+      "audiovisual",
+    );
     assert.equal(matchesAudiovisualText("Mostra de teatro", null), false);
     assert.equal(matchesAudiovisualText("Oficina de cinema", null), true);
   });
@@ -123,41 +175,54 @@ describe("fetchAudiovisualOpportunities", () => {
 
   it("searches by keyword and keeps audiovisual titles", async () => {
     const seen: string[] = [];
-    const result = await fetchAudiovisualOpportunities(FEDERAL_INSTALLATION, now, 30, {
-      maxPages: 2,
-      fetcher: async (url) => {
-        seen.push(url);
-        return {
-          status: 200,
-          body: JSON.stringify([
-            {
-              id: 9,
-              name: "Edital de cinema",
-              registrationFrom: "2026-09-10 00:00:00",
-              registrationTo: "2026-09-30 18:00:00",
-            },
-          ]),
-          metadata: JSON.stringify({ numPages: 1 }),
-        };
+    const result = await fetchAudiovisualOpportunities(
+      FEDERAL_INSTALLATION,
+      now,
+      30,
+      {
+        maxPages: 2,
+        fetcher: async (url) => {
+          seen.push(url);
+          return {
+            status: 200,
+            body: JSON.stringify([
+              {
+                id: 9,
+                name: "Edital de cinema",
+                registrationFrom: "2026-09-10 00:00:00",
+                registrationTo: "2026-09-30 18:00:00",
+              },
+            ]),
+            metadata: JSON.stringify({ numPages: 1 }),
+          };
+        },
       },
-    });
+    );
     assert.equal(result.vocabularyFallback, false);
     assert.equal(result.drafts.length, 1);
     assert.equal(result.drafts[0]?.program, "audiovisual");
     assert.ok(seen.some((url) => url.includes("@keyword=audiovisual")));
-    assert.equal(seen.some((url) => url.includes("term:linguagem")), false);
+    assert.equal(
+      seen.some((url) => url.includes("term:linguagem")),
+      false,
+    );
   });
 
   it("drops calls whose title is not audiovisual", async () => {
-    const result = await fetchAudiovisualOpportunities(FEDERAL_INSTALLATION, now, 30, {
-      fetcher: respond({
-        "continuousFlow=": [],
-        "/api/opportunity/find": [
-          { id: 1, name: "Edital de teatro" },
-          { id: 2, name: "Edital de documentário" },
-        ],
-      }),
-    });
+    const result = await fetchAudiovisualOpportunities(
+      FEDERAL_INSTALLATION,
+      now,
+      30,
+      {
+        fetcher: respond({
+          "continuousFlow=": [],
+          "/api/opportunity/find": [
+            { id: 1, name: "Edital de teatro" },
+            { id: 2, name: "Edital de documentário" },
+          ],
+        }),
+      },
+    );
     assert.deepEqual(
       result.drafts.map((draft) => draft.id),
       ["br-2"],
@@ -172,5 +237,31 @@ describe("fetchAudiovisualOpportunities", () => {
         }),
       /listing failed \(503\)/,
     );
+  });
+
+  it("stops a mocked collection after the first blocked response", async () => {
+    let calls = 0;
+    await assert.rejects(
+      () =>
+        fetchAudiovisualOpportunities(FEDERAL_INSTALLATION, now, 30, {
+          fetcher: async () => {
+            calls += 1;
+            return { status: 403, body: "blocked", metadata: null };
+          },
+        }),
+      (error: unknown) =>
+        error instanceof MapasClientError && error.kind === "blocked",
+    );
+    assert.equal(calls, 1);
+  });
+
+  it("honors Retry-After in seconds or HTTP-date form", () => {
+    const now = Date.parse("2026-10-08T15:00:00Z");
+    assert.equal(retryAfterMilliseconds("12", now), 12_000);
+    assert.equal(
+      retryAfterMilliseconds("Thu, 08 Oct 2026 15:00:30 GMT", now),
+      30_000,
+    );
+    assert.equal(retryAfterMilliseconds("invalid", now), null);
   });
 });

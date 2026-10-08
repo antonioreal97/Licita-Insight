@@ -51,6 +51,18 @@ export const companyProfilesTable = pgTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    selectedCategories: jsonb("selected_categories")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    selectedKeywords: jsonb("selected_keywords")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    excludedKeywords: jsonb("excluded_keywords")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     coverageScope: text("coverage_scope").notNull(),
     coverageStates: jsonb("coverage_states")
       .$type<string[]>()
@@ -85,6 +97,49 @@ export const companyProfilesTable = pgTable(
       sql`${table.valueMin} is null or ${table.valueMax} is null or ${table.valueMin} <= ${table.valueMax}`,
     ),
     index("company_profiles_alert_idx").on(table.lastAlertAt),
+  ],
+);
+
+export type ProfileKeywordRelatedTerm = {
+  normalizedTerm: string;
+  displayTerm: string;
+  openTenderCount: number;
+};
+
+/** Daily materialized vocabulary used by profile autocomplete. It is global and contains no user data. */
+export const profileKeywordVocabularyTable = pgTable(
+  "profile_keyword_vocabulary",
+  {
+    normalizedTerm: text("normalized_term").primaryKey(),
+    displayTerm: text("display_term").notNull(),
+    ngramSize: integer("ngram_size").notNull(),
+    openTenderCount: integer("open_tender_count").notNull(),
+    predominantCategorySlug: text("predominant_category_slug"),
+    predominantCategoryLabel: text("predominant_category_label"),
+    relatedTerms: jsonb("related_terms")
+      .$type<ProfileKeywordRelatedTerm[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("profile_keyword_vocabulary_trgm_idx").using(
+      "gin",
+      table.normalizedTerm.asc().op("gin_trgm_ops"),
+    ),
+    index("profile_keyword_vocabulary_count_idx").on(
+      table.openTenderCount.desc(),
+    ),
+    check(
+      "profile_keyword_vocabulary_ngram_size_check",
+      sql`${table.ngramSize} between 1 and 3`,
+    ),
+    check(
+      "profile_keyword_vocabulary_open_count_check",
+      sql`${table.openTenderCount} >= 3`,
+    ),
   ],
 );
 

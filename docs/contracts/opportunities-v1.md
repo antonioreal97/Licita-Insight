@@ -21,17 +21,17 @@ rotas HTTP operacionais de ingestão exigem token próprio.
 
 ## `GET /api/v1/opportunities`
 
-| Nome | Tipo | Default | Notas |
-|---|---|---|---|
-| `q` | string | — | texto no título, resumo e órgão |
-| `state` | UF[] | — | OR. Não inclui o mapa federal (`state` nulo) |
-| `installation` | string[] | — | id da instalação (`br`, `ce`, …) |
-| `status` | OpportunityStatus[] | — | OR |
-| `program` | OpportunityProgram[] | — | OR |
-| `deadlineFrom` / `deadlineTo` | `YYYY-MM-DD` | — | sobre o fim das inscrições, inclusivo, horário de Brasília. Registro sem prazo fica de fora |
-| `page` | int ≥ 1 | 1 | |
-| `pageSize` | int 1–100 | 20 | |
-| `facets` | boolean | `true` | |
+| Nome                          | Tipo                 | Default | Notas                                                                                       |
+| ----------------------------- | -------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| `q`                           | string               | —       | texto no título, resumo e órgão                                                             |
+| `state`                       | UF[]                 | —       | OR. Não inclui o mapa federal (`state` nulo)                                                |
+| `installation`                | string[]             | —       | id da instalação (`br`, `ce`, …)                                                            |
+| `status`                      | OpportunityStatus[]  | —       | OR                                                                                          |
+| `program`                     | OpportunityProgram[] | —       | OR                                                                                          |
+| `deadlineFrom` / `deadlineTo` | `YYYY-MM-DD`         | —       | sobre o fim das inscrições, inclusivo, horário de Brasília. Registro sem prazo fica de fora |
+| `page`                        | int ≥ 1              | 1       |                                                                                             |
+| `pageSize`                    | int 1–100            | 20      |                                                                                             |
+| `facets`                      | boolean              | `true`  |                                                                                             |
 
 Ordem fixa: inscrições abertas, depois em breve, sem prazo e encerradas; dentro do grupo, pelo fim das inscrições.
 
@@ -115,10 +115,16 @@ type InstallationCoverage = {
   name: string;
   kind: "mapas" | "gap";
   url: string | null;
-  outcome: "ok" | "gap" | "failed" | "vocabulary_fallback" | "pending";
+  outcome: "ok" | "gap" | "failed" | "degraded" | "blocked" | "vocabulary_fallback" | "pending";
   upserted: number;
   message: string | null;
 };
 ```
 
 Sem execução anterior, `coverage` lista as 27 UFs e o mapa federal, com `pending` nas instalações Mapas e `gap` nas demais.
+
+`degraded` identifica uma fonte recusada por problema temporário ou de confiança (por
+exemplo, certificado expirado); `blocked` identifica bloqueio deliberado do site de
+origem, como um WAF. A mensagem é específica por fonte e não expõe detalhes internos.
+O diagnóstico operacional e a política TLS ficam em
+[`../ops/cultural-sources.md`](../ops/cultural-sources.md).

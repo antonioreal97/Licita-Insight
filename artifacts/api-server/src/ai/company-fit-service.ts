@@ -51,7 +51,7 @@ export type TenderFit = {
   checkedAt: Date | null;
 };
 
-export const COMPANY_FIT_PROMPT_VERSION = 2;
+export const COMPANY_FIT_PROMPT_VERSION = 3;
 
 const toProfile = (
   row: typeof companyProfilesTable.$inferSelect,
@@ -59,6 +59,9 @@ const toProfile = (
   description: row.description,
   offerings: row.offerings,
   exclusions: row.exclusions,
+  selectedCategories: row.selectedCategories,
+  selectedKeywords: row.selectedKeywords,
+  excludedKeywords: row.excludedKeywords,
   coverage:
     row.coverageScope === "national"
       ? { scope: "national" }
@@ -106,6 +109,9 @@ export async function putCompanyProfile(
       description: input.description,
       offerings: input.offerings,
       exclusions: input.exclusions,
+      selectedCategories: input.selectedCategories,
+      selectedKeywords: input.selectedKeywords,
+      excludedKeywords: input.excludedKeywords,
       coverageScope: input.coverage.scope,
       coverageStates:
         input.coverage.scope === "states" ? input.coverage.states : [],
@@ -152,6 +158,8 @@ type TenderRow = Pick<
   | "estimatedValue"
   | "state"
   | "items"
+  | "categories"
+  | "searchText"
 >;
 
 const tenderText = (tender: TenderRow): string =>
@@ -201,10 +209,23 @@ export async function lexicalGatePasses(
   return result.rows[0]?.passed === true;
 }
 
+const normalizeProfileText = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR");
+
 function explicitFilter(
   profile: CompanyProfile,
   tender: TenderRow,
 ): FitReasonRecord[] {
+  const normalizedText = normalizeProfileText(tender.searchText);
+  const excludedTerms = [
+    ...profile.excludedKeywords,
+    ...profile.exclusions,
+  ].filter((term) => normalizedText.includes(normalizeProfileText(term)));
+  if (excludedTerms.length > 0)
+    return [{ kind: "exclusion", terms: excludedTerms.slice(0, 6) }];
   if (
     profile.coverage.scope === "states" &&
     (!tender.state ||
@@ -345,11 +366,16 @@ async function processFit(
 ): Promise<void> {
   if (!(await reserveFitQuota(userId, now))) return;
   try {
-    const offeringTerms = await lexicalMatches(tender.id, profile.offerings);
+    const explicitOfferings = [
+      ...profile.selectedKeywords,
+      ...profile.offerings,
+    ];
+    const allExclusions = [...profile.excludedKeywords, ...profile.exclusions];
+    const offeringTerms = await lexicalMatches(tender.id, explicitOfferings);
     const semantic = await scoreCompanyFit({
       description: profile.description,
-      offerings: profile.offerings,
-      exclusions: profile.exclusions,
+      offerings: explicitOfferings,
+      exclusions: allExclusions,
       tenderText: tenderText(tender),
     });
     let inputTokens = semantic.inputTokens;
@@ -380,7 +406,21 @@ async function processFit(
       inputTokens += size.inputTokens;
       model = size.model;
     }
-    const score = Math.max(0, Math.min(1, semantic.fitScore / 3));
+    const selectedKeywordMatch = offeringTerms.some((term) =>
+      profile.selectedKeywords.includes(term),
+    );
+    const selectedCategoryMatch = tender.categories.some(({ slug }) =>
+      profile.selectedCategories.includes(slug),
+    );
+    const score = Math.max(
+      0,
+      Math.min(
+        1,
+        semantic.fitScore / 3 +
+          (selectedKeywordMatch ? 0.2 : 0) +
+          (selectedCategoryMatch ? 0.25 : 0),
+      ),
+    );
     const level = fitLevel(
       score,
       excluded,
@@ -416,21 +456,30 @@ async function processFit(
 }
 
 export async function executeCompanyFitJob(fitId: string): Promise<void> {
-  const [fit] = await db.select().from(companyTenderFitsTable)
-    .where(eq(companyTenderFitsTable.id, fitId)).limit(1);
+  const [fit] = await db
+    .select()
+    .from(companyTenderFitsTable)
+    .where(eq(companyTenderFitsTable.id, fitId))
+    .limit(1);
   if (!fit || fit.status === "ready" || fit.status === "filtered") return;
   const [profile, tender] = await Promise.all([
     getCompanyProfile(fit.userId),
-    db.select({
-      id: tendersTable.id,
-      title: tendersTable.title,
-      objectSummary: tendersTable.objectSummary,
-      description: tendersTable.description,
-      organizationName: tendersTable.organizationName,
-      estimatedValue: tendersTable.estimatedValue,
-      state: tendersTable.state,
-      items: tendersTable.items,
-    }).from(tendersTable).where(eq(tendersTable.id, fit.tenderId)).limit(1),
+    db
+      .select({
+        id: tendersTable.id,
+        title: tendersTable.title,
+        objectSummary: tendersTable.objectSummary,
+        description: tendersTable.description,
+        organizationName: tendersTable.organizationName,
+        estimatedValue: tendersTable.estimatedValue,
+        state: tendersTable.state,
+        items: tendersTable.items,
+        categories: tendersTable.categories,
+        searchText: tendersTable.searchText,
+      })
+      .from(tendersTable)
+      .where(eq(tendersTable.id, fit.tenderId))
+      .limit(1),
   ]);
   if (!profile || !tender[0] || profile.version !== fit.profileVersion) return;
   await processFit(fit.id, fit.userId, profile, tender[0]);
@@ -533,9 +582,13 @@ async function ensureFit(
       .returning();
     return publicFit(row!);
   }
-  const lexicalGatePass = gateMode === "off"
-    ? null
-    : await lexicalGatePasses(tender.id, profile.offerings);
+  const lexicalGatePass =
+    gateMode === "off"
+      ? null
+      : await lexicalGatePasses(tender.id, [
+          ...profile.selectedKeywords,
+          ...profile.offerings,
+        ]);
   if (gateMode === "on" && !lexicalGatePass) {
     const checkedAt = new Date();
     const [gated] = await db
@@ -625,7 +678,9 @@ async function ensureFit(
     lane: "batch",
   });
   if (queued.reason === "queue_full") {
-    await db.update(companyTenderFitsTable).set({ status: "failed", updatedAt: new Date() })
+    await db
+      .update(companyTenderFitsTable)
+      .set({ status: "failed", updatedAt: new Date() })
       .where(eq(companyTenderFitsTable.id, row!.id));
   }
   if (wait) {
@@ -633,9 +688,17 @@ async function ensureFit(
       await runEnqueuedAiJobNow(`fit:${key}`);
     } else {
       for (let attempt = 0; attempt < 600; attempt += 1) {
-        const [current] = await db.select({ status: companyTenderFitsTable.status })
-          .from(companyTenderFitsTable).where(eq(companyTenderFitsTable.id, row!.id)).limit(1);
-        if (current?.status === "ready" || current?.status === "filtered" || current?.status === "failed") break;
+        const [current] = await db
+          .select({ status: companyTenderFitsTable.status })
+          .from(companyTenderFitsTable)
+          .where(eq(companyTenderFitsTable.id, row!.id))
+          .limit(1);
+        if (
+          current?.status === "ready" ||
+          current?.status === "filtered" ||
+          current?.status === "failed"
+        )
+          break;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
@@ -670,6 +733,8 @@ export async function getTenderFits(
       estimatedValue: tendersTable.estimatedValue,
       state: tendersTable.state,
       items: tendersTable.items,
+      categories: tendersTable.categories,
+      searchText: tendersTable.searchText,
     })
     .from(tendersTable)
     .where(inArray(tendersTable.id, tenderIds));

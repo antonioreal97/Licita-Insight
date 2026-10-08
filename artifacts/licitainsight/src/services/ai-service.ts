@@ -19,6 +19,9 @@ export const aiService = {
   getCompanyProfile: (signal?: AbortSignal) => aiAdapter.getCompanyProfile(signal),
   saveCompanyProfile: (profile: CompanyProfileInput) => aiAdapter.saveCompanyProfile(profile),
   deleteCompanyProfile: () => aiAdapter.deleteCompanyProfile(),
+  listProfileCategories: (signal?: AbortSignal) => aiAdapter.listProfileCategories(signal),
+  suggestProfileKeywords: (query: string, signal?: AbortSignal) => aiAdapter.suggestProfileKeywords(query, signal),
+  suggestProfileFiltersFromDescription: (description: string, signal?: AbortSignal) => aiAdapter.suggestProfileFiltersFromDescription(description, signal),
   /** Sorted and de-duplicated so the cache key does not depend on list order. */
   getFits: (tenderIds: string[], signal?: AbortSignal) => aiAdapter.getFits([...new Set(tenderIds)].sort().slice(0, FIT_BATCH_MAX), signal),
 };

@@ -222,6 +222,17 @@ export async function rebuildInterestProfile(
   const values: number[] = [];
 
   if (profile) {
+    profile.selectedKeywords.forEach((keyword) =>
+      addWeight(
+        maps.terms,
+        keyword,
+        12,
+        `profile_selected:${normalizeText(keyword)}`,
+      ),
+    );
+    profile.selectedCategories.forEach((category) =>
+      addWeight(maps.categories, category, 12, `profile_category:${category}`),
+    );
     profile.offerings.forEach((offering) =>
       normalizeSignalTerms(offering).forEach((term) =>
         addWeight(maps.terms, term, 6, `profile:${term}`),
@@ -231,7 +242,10 @@ export async function rebuildInterestProfile(
       addWeight(maps.terms, term, 2, `profile:${term}`),
     );
     profile.coverageStates.forEach((state) => addWeight(maps.states, state, 5));
-    signalCount += profile.offerings.length || 1;
+    signalCount +=
+      profile.offerings.length +
+        profile.selectedKeywords.length +
+        profile.selectedCategories.length || 1;
   }
   for (const row of saved) {
     const weight = row.saved.monitored ? 10 : 6;
@@ -310,8 +324,14 @@ export async function rebuildInterestProfile(
       : null,
     coverageStates:
       profile?.coverageStates.map((state) => state.toUpperCase()) ?? [],
-    exclusions:
-      profile?.exclusions.flatMap((value) => normalizeSignalTerms(value)) ?? [],
+    exclusions: profile
+      ? [...profile.excludedKeywords, ...profile.exclusions].flatMap(
+          (value) => {
+            const phrase = normalizeText(value).trim();
+            return phrase ? [phrase, ...normalizeSignalTerms(value)] : [];
+          },
+        )
+      : [],
     companySize: profile
       ? (profile.size as "me_epp" | "cooperative" | "other")
       : null,
@@ -408,7 +428,7 @@ export function scoreRecommendation(
         kind: "saved",
         text: `Parecido com editais salvos: ${terms}`,
       });
-    else if (source === "profile")
+    else if (source === "profile" || source === "profile_selected")
       reasons.push({
         kind: "profile",
         text: `No seu perfil de atividade: ${terms}`,
@@ -721,7 +741,10 @@ export async function listRecommendations(
   );
   const [rows, [{ total }]] = await Promise.all([
     db
-      .select({ recommendation: userRecommendationsTable, tender: tendersTable })
+      .select({
+        recommendation: userRecommendationsTable,
+        tender: tendersTable,
+      })
       .from(userRecommendationsTable)
       .innerJoin(
         tendersTable,
@@ -894,14 +917,12 @@ export async function recordRecommendationEvent(
       .where(eq(tendersTable.id, input.tenderId))
       .limit(1);
     if (!tender) throw new NotFoundError("Tender was not found");
-    await db
-      .insert(recommendationEventsTable)
-      .values({
-        userId,
-        type: "tender_view",
-        tenderId: input.tenderId,
-        occurredAt: now,
-      });
+    await db.insert(recommendationEventsTable).values({
+      userId,
+      type: "tender_view",
+      tenderId: input.tenderId,
+      occurredAt: now,
+    });
   }
   scheduleRecommendationRebuild(userId);
   return true;

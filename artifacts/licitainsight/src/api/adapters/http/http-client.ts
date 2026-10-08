@@ -4,7 +4,7 @@ import type { ApiErrorBody, DownloadedFile } from '../../types';
 type QueryValue = string | number | boolean | undefined | null | (string | number)[];
 
 /** Same origin by default (Vite proxies `/api` in dev, a reverse proxy in production), so the session cookie is first-party. */
-export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
+export const apiBaseUrl = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
 
 /** Serializes arrays as repeated params (`?status=open&status=closed`), per contract. */
 export function toQueryString(query: Record<string, QueryValue>) {
@@ -76,8 +76,8 @@ export function getJson<T>(path: string, query: Record<string, QueryValue> = {},
 }
 
 /** State-changing call. `X-Requested-With` is the CSRF header the API requires on POST/PUT/PATCH/DELETE (account-v1). */
-export function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
+export function sendJson<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json', 'X-Requested-With': 'licita-insight' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  return request<T>(`${apiBaseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  return request<T>(`${apiBaseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
 }

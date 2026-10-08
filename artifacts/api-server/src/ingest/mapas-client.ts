@@ -1,6 +1,13 @@
 import { logger } from "../lib/logger";
 import { timeoutSignal } from "../lib/http-timeout";
+import { fetch as undiciFetch } from "undici";
 import type { MapasInstallation } from "./cultural-installations";
+import {
+  httpMapasError,
+  MapasClientError,
+  transportMapasError,
+} from "./mapas-errors";
+import { dispatcherForUrl } from "./mapas-tls";
 import {
   mapOpportunity,
   matchesAudiovisualText,
@@ -11,18 +18,12 @@ import {
 const SELECT =
   "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,continuousFlow,owner.{id,name}";
 const PAGE_SIZE = 50;
+const USER_AGENT =
+  "PardalDigital/0.1 (+https://pardaldigital.com; contato@pardaldigital.com)";
 /** `term:linguagem` returns 500 or HTML on the live installs. Keyword search does not. */
 const KEYWORDS = ["audiovisual", "cinema", "filme", "documentario"] as const;
 
-export class MapasClientError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "MapasClientError";
-  }
-}
+export { MapasClientError } from "./mapas-errors";
 
 export type FetchOpportunitiesResult = {
   drafts: OpportunityDraft[];
@@ -31,7 +32,50 @@ export type FetchOpportunitiesResult = {
   warning: string | null;
 };
 
-type Fetcher = (url: string) => Promise<{ status: number; body: string; metadata: string | null }>;
+export type MapasFetchResponse = {
+  status: number;
+  body: string;
+  metadata: string | null;
+  retryAfterMs?: number | null;
+};
+
+export type MapasFetcher = (url: string) => Promise<MapasFetchResponse>;
+
+const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const positiveInteger = (name: string, fallback: number): number => {
+  const value = process.env[name];
+  if (value === undefined || value.trim() === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(
+      `${name} must be a non-negative integer, received "${value}"`,
+    );
+  }
+  return parsed;
+};
+
+export const retryAfterMilliseconds = (
+  value: string | null,
+  now = Date.now(),
+): number | null => {
+  if (!value) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0)
+    return Math.ceil(seconds * 1_000);
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? null : Math.max(0, date - now);
+};
+
+let lastLiveRequestAt = 0;
+
+const waitForPace = async (): Promise<void> => {
+  const minimumDelay = positiveInteger("CULTURE_PAGE_DELAY_MS", 500);
+  const remaining = lastLiveRequestAt + minimumDelay - Date.now();
+  if (remaining > 0) await sleep(remaining);
+  lastLiveRequestAt = Date.now();
+};
 
 const saoPauloDate = (date: Date): string =>
   new Intl.DateTimeFormat("en-CA", {
@@ -43,7 +87,9 @@ const saoPauloDate = (date: Date): string =>
 
 const addCalendarDays = (isoDate: string, days: number): string => {
   const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 };
 
 export const lookbackStart = (now: Date, days: number): string =>
@@ -54,7 +100,10 @@ const query = (params: Record<string, string>): string =>
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join("&");
 
-const pageCount = (metadata: string | null, received: number): number | null => {
+const pageCount = (
+  metadata: string | null,
+  received: number,
+): number | null => {
   if (!metadata) return received < PAGE_SIZE ? 1 : null;
   try {
     const parsed = JSON.parse(metadata) as { numPages?: unknown };
@@ -74,58 +123,80 @@ const asRecords = (body: string, url: string): MapasOpportunity[] => {
     throw new MapasClientError(
       `Mapas Culturais returned invalid JSON for ${url}: ${error instanceof Error ? error.message : String(error)}`,
       200,
+      "invalid_response",
     );
   }
   if (!Array.isArray(parsed)) {
-    throw new MapasClientError(`Mapas Culturais listing was not an array: ${url}`, 200);
+    throw new MapasClientError(
+      `Mapas Culturais listing was not an array: ${url}`,
+      200,
+      "invalid_response",
+    );
   }
-  return parsed.filter((item): item is MapasOpportunity => item !== null && typeof item === "object");
+  return parsed.filter(
+    (item): item is MapasOpportunity =>
+      item !== null && typeof item === "object",
+  );
 };
 
-async function defaultFetch(url: string): Promise<{ status: number; body: string; metadata: string | null }> {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "PardalDigital/0.1 (coleta de oportunidades do Mapas Culturais)",
-    },
-    signal: timeoutSignal("MAPAS_HTTP_TIMEOUT_MS", 30_000),
-  });
-  return {
-    status: response.status,
-    body: await response.text(),
-    metadata: response.headers.get("API-Metadata"),
-  };
+export async function defaultMapasFetch(
+  url: string,
+): Promise<MapasFetchResponse> {
+  const retries = positiveInteger("CULTURE_HTTP_MAX_RETRIES", 2);
+  const backoffBaseMs = positiveInteger("CULTURE_RETRY_BASE_MS", 1_000);
+
+  for (let attempt = 0; ; attempt += 1) {
+    await waitForPace();
+    const response = await undiciFetch(url, {
+      dispatcher: dispatcherForUrl(url),
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      signal: timeoutSignal("MAPAS_HTTP_TIMEOUT_MS", 30_000),
+    });
+    const retryAfterMs = retryAfterMilliseconds(
+      response.headers.get("Retry-After"),
+    );
+    const retriable = response.status === 429 || response.status >= 500;
+    if (!retriable || attempt >= retries) {
+      return {
+        status: response.status,
+        body: await response.text(),
+        metadata: response.headers.get("API-Metadata"),
+        retryAfterMs,
+      };
+    }
+
+    await response.body?.cancel();
+    const delay = retryAfterMs ?? backoffBaseMs * 2 ** attempt;
+    logger.warn(
+      { url, status: response.status, attempt: attempt + 1, delay },
+      "Retrying Mapas request",
+    );
+    await sleep(delay);
+  }
 }
 
-const failureText = (error: unknown): string => {
-  if (!(error instanceof Error)) return String(error);
-  const cause = error.cause;
-  const causeText =
-    cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
-  return causeText ? `${error.message}: ${causeText}` : error.message;
-};
-
 async function getJson(
-  fetcher: Fetcher,
+  fetcher: MapasFetcher,
   url: string,
-): Promise<{ status: number; body: string; metadata: string | null }> {
+): Promise<MapasFetchResponse> {
   try {
     return await fetcher(url);
   } catch (error) {
     if (error instanceof MapasClientError) throw error;
-    throw new MapasClientError(
-      `Mapas Culturais request failed for ${url}: ${failureText(error)}`,
-      0,
-    );
+    throw transportMapasError(error, url);
   }
 }
 
 async function listPages(
   baseUrl: string,
   params: Record<string, string>,
-  fetcher: Fetcher,
+  fetcher: MapasFetcher,
   maxPages: number,
-): Promise<{ records: MapasOpportunity[]; pagesRead: number; truncated: boolean }> {
+): Promise<{
+  records: MapasOpportunity[];
+  pagesRead: number;
+  truncated: boolean;
+}> {
   const root = baseUrl.replace(/\/$/, "");
   const records: MapasOpportunity[] = [];
   let pagesRead = 0;
@@ -139,10 +210,7 @@ async function listPages(
     const response = await getJson(fetcher, url);
     pagesRead += 1;
     if (response.status !== 200) {
-      throw new MapasClientError(
-        `Mapas Culturais listing failed (${response.status}) for ${url}`,
-        response.status,
-      );
+      throw httpMapasError(response.status, url, response.retryAfterMs ?? null);
     }
     const batch = asRecords(response.body, url);
     records.push(...batch);
@@ -161,9 +229,9 @@ export async function fetchAudiovisualOpportunities(
   installation: MapasInstallation,
   now: Date,
   lookbackDays: number,
-  options: { fetcher?: Fetcher; maxPages?: number } = {},
+  options: { fetcher?: MapasFetcher; maxPages?: number } = {},
 ): Promise<FetchOpportunitiesResult> {
-  const fetcher = options.fetcher ?? defaultFetch;
+  const fetcher = options.fetcher ?? defaultMapasFetch;
   const maxPages = options.maxPages ?? 20;
   const since = lookbackStart(now, lookbackDays);
   const baseParams = {
@@ -175,7 +243,7 @@ export async function fetchAudiovisualOpportunities(
   const datedRecords: MapasOpportunity[] = [];
   let pagesRead = 0;
   let truncated = false;
-  const keywordErrors: string[] = [];
+  const keywordErrors: unknown[] = [];
   for (const keyword of KEYWORDS) {
     try {
       const page = await listPages(
@@ -188,8 +256,22 @@ export async function fetchAudiovisualOpportunities(
       pagesRead += page.pagesRead;
       truncated = truncated || page.truncated;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      keywordErrors.push(message);
+      if (
+        error instanceof MapasClientError &&
+        [
+          "blocked",
+          "rate_limited",
+          "tls_expired",
+          "tls_name_mismatch",
+          "tls_self_signed",
+          "tls_untrusted_ca",
+          "tls_incomplete_chain",
+          "tls_pin_mismatch",
+        ].includes(error.kind)
+      ) {
+        throw error;
+      }
+      keywordErrors.push(error);
       logger.error(
         { err: error, installationId: installation.id, keyword },
         "Mapas Culturais keyword search failed",
@@ -197,7 +279,13 @@ export async function fetchAudiovisualOpportunities(
     }
   }
   if (datedRecords.length === 0 && keywordErrors.length === KEYWORDS.length) {
-    throw new MapasClientError(keywordErrors[0] ?? "Mapas Culturais keyword search failed", 0);
+    const first = keywordErrors[0];
+    if (first instanceof Error) throw first;
+    throw new MapasClientError(
+      "Mapas Culturais keyword search failed",
+      0,
+      "network",
+    );
   }
 
   let continuousWarning: string | null = null;
@@ -213,12 +301,18 @@ export async function fetchAudiovisualOpportunities(
     maxPages,
   ).catch((error: unknown) => {
     continuousWarning =
-      error instanceof Error ? error.message : "A listagem de fluxo contínuo falhou";
+      error instanceof Error
+        ? error.message
+        : "A listagem de fluxo contínuo falhou";
     logger.error(
       { err: error, installationId: installation.id },
       "Continuous-flow listing failed; dated opportunities are kept",
     );
-    return { records: [] as MapasOpportunity[], pagesRead: 0, truncated: false };
+    return {
+      records: [] as MapasOpportunity[],
+      pagesRead: 0,
+      truncated: false,
+    };
   });
 
   const seen = new Set<string>();
@@ -232,7 +326,13 @@ export async function fetchAudiovisualOpportunities(
   }
 
   const warnings = [
-    keywordErrors.length > 0 ? keywordErrors.join(" ") : null,
+    keywordErrors.length > 0
+      ? keywordErrors
+          .map((error) =>
+            error instanceof Error ? error.message : String(error),
+          )
+          .join(" ")
+      : null,
     continuousWarning,
     truncated || continuous.truncated
       ? `A listagem parou no limite de ${maxPages} páginas.`
@@ -251,4 +351,4 @@ export async function fetchAudiovisualOpportunities(
     vocabularyFallback: false,
     warning: warnings.length > 0 ? warnings.join(" ") : null,
   };
-};
+}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
-import { Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { Check, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import { isApiError, type CompanyProfile, type CompanyProfileInput, type CompanySize } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -11,7 +11,14 @@ import { formatDateTime } from '@/lib/format';
 import { UFS } from '@/lib/ufs';
 import { cn } from '@/lib/utils';
 import { PROFILE_LIMITS } from '@/services/ai-service';
-import { useCompanyProfile, useDeleteCompanyProfile, useSaveCompanyProfile } from '../hooks/use-company-profile';
+import { SmartKeywordCombobox } from './keyword-combobox';
+import {
+  useCompanyProfile,
+  useDeleteCompanyProfile,
+  useProfileCategories,
+  useProfileDescriptionSuggestions,
+  useSaveCompanyProfile,
+} from '../hooks/use-company-profile';
 
 const sizeOptions: { value: CompanySize; label: string; hint: string }[] = [
   { value: 'me_epp', label: 'ME ou EPP', hint: 'Microempresa ou empresa de pequeno porte (LC 123/2006).' },
@@ -23,6 +30,9 @@ type Draft = {
   description: string;
   offerings: string[];
   exclusions: string[];
+  selectedCategories: string[];
+  selectedKeywords: string[];
+  excludedKeywords: string[];
   national: boolean;
   states: string[];
   min: string;
@@ -30,12 +40,27 @@ type Draft = {
   size: CompanySize | null;
 };
 
-const emptyDraft: Draft = { description: '', offerings: [], exclusions: [], national: true, states: [], min: '', max: '', size: null };
+const emptyDraft: Draft = {
+  description: '',
+  offerings: [],
+  exclusions: [],
+  selectedCategories: [],
+  selectedKeywords: [],
+  excludedKeywords: [],
+  national: true,
+  states: [],
+  min: '',
+  max: '',
+  size: null,
+};
 
 const toDraft = (profile: CompanyProfile): Draft => ({
   description: profile.description,
   offerings: profile.offerings,
   exclusions: profile.exclusions,
+  selectedCategories: profile.selectedCategories ?? [],
+  selectedKeywords: profile.selectedKeywords ?? [],
+  excludedKeywords: profile.excludedKeywords ?? [],
   national: profile.coverage.scope === 'national',
   states: profile.coverage.scope === 'states' ? profile.coverage.states : [],
   min: profile.valueRange.min === null ? '' : String(profile.valueRange.min),
@@ -54,12 +79,7 @@ const reaisLabel = (value: string) => {
   return number === null ? '' : number.toLocaleString('pt-BR');
 };
 
-const fold = (text: string) =>
-  text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim();
+const fold = (text: string) => text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
 type Errors = Partial<Record<'description' | 'offerings' | 'exclusions' | 'states' | 'valueRange' | 'size' | 'form', string>>;
 
@@ -80,6 +100,9 @@ const toInput = (draft: Draft): CompanyProfileInput => ({
   description: draft.description.trim(),
   offerings: draft.offerings,
   exclusions: draft.exclusions,
+  selectedCategories: draft.selectedCategories,
+  selectedKeywords: draft.selectedKeywords,
+  excludedKeywords: draft.excludedKeywords,
   coverage: draft.national ? { scope: 'national' } : { scope: 'states', states: [...draft.states].sort() },
   valueRange: { min: parseReais(draft.min), max: parseReais(draft.max) },
   size: draft.size!,
@@ -88,13 +111,22 @@ const toInput = (draft: Draft): CompanyProfileInput => ({
 /** API `details[].field` ("coverage.states", "offerings[2]") → the field that shows the message. */
 function serverErrors(error: unknown): Errors {
   if (!isApiError(error) || error.code !== 'INVALID_PARAMETER' || error.details.length === 0) {
-    return { form: isApiError(error) && error.requestId ? `Não foi possível salvar o perfil. Tente de novo. (ref. ${error.requestId})` : 'Não foi possível salvar o perfil. Tente de novo.' };
+    return {
+      form:
+        isApiError(error) && error.requestId
+          ? `Não foi possível salvar o perfil. Tente de novo. (ref. ${error.requestId})`
+          : 'Não foi possível salvar o perfil. Tente de novo.',
+    };
   }
   const errors: Errors = {};
   for (const { field } of error.details) {
     if (field.startsWith('description')) errors.description = 'Revise a descrição.';
-    else if (field.startsWith('offerings')) errors.offerings = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
-    else if (field.startsWith('exclusions')) errors.exclusions = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
+    else if (field.startsWith('offerings'))
+      errors.offerings = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
+    else if (field.startsWith('exclusions'))
+      errors.exclusions = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
+    else if (field.startsWith('selectedCategories') || field.startsWith('selectedKeywords') || field.startsWith('excludedKeywords'))
+      errors.form = 'Revise os filtros inteligentes selecionados.';
     else if (field.startsWith('coverage')) errors.states = 'Revise a área de atuação.';
     else if (field.startsWith('valueRange')) errors.valueRange = 'Revise a faixa de valor.';
     else if (field.startsWith('size')) errors.size = 'Escolha o porte da empresa.';
@@ -145,7 +177,11 @@ function TermsField({
     }
     onChange(next);
     setText('');
-    setNote(skipped > 0 ? `${skipped === 1 ? '1 termo ficou de fora' : `${skipped} termos ficaram de fora`}: repetido, fora de ${PROFILE_LIMITS.termMin}–${PROFILE_LIMITS.termMax} caracteres ou acima de ${PROFILE_LIMITS.terms}.` : null);
+    setNote(
+      skipped > 0
+        ? `${skipped === 1 ? '1 termo ficou de fora' : `${skipped} termos ficaram de fora`}: repetido, fora de ${PROFILE_LIMITS.termMin}–${PROFILE_LIMITS.termMax} caracteres ou acima de ${PROFILE_LIMITS.terms}.`
+        : null,
+    );
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -272,10 +308,14 @@ export function CompanyProfileSection() {
   const profile = useCompanyProfile();
   const billing = useBilling();
   const save = useSaveCompanyProfile();
+  const categories = useProfileCategories();
   const saved = profile.data?.profile ?? null;
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [descriptionForSuggestions, setDescriptionForSuggestions] = useState('');
+  const [dismissedSuggestion, setDismissedSuggestion] = useState('');
+  const descriptionSuggestions = useProfileDescriptionSuggestions(descriptionForSuggestions);
   const ids = useId();
 
   // Load the stored profile into the form, and again after each save (new `version`). Keyed on the version, not the
@@ -286,6 +326,12 @@ export function CompanyProfileSection() {
     setErrors({});
     setSubmitted(false);
   }, [savedKey]);
+
+  useEffect(() => {
+    const description = draft.description.trim();
+    const timer = window.setTimeout(() => setDescriptionForSuggestions(description), 650);
+    return () => window.clearTimeout(timer);
+  }, [draft.description]);
 
   const set = (patch: Partial<Draft>) => {
     const next = { ...draft, ...patch };
@@ -312,19 +358,43 @@ export function CompanyProfileSection() {
   };
 
   const descriptionLength = draft.description.trim().length;
+  const suggestions = descriptionSuggestions.data;
+  const showSuggestions = Boolean(
+    suggestions &&
+    dismissedSuggestion !== descriptionForSuggestions &&
+    (suggestions.keywords.some(({ displayTerm }) => !draft.selectedKeywords.includes(displayTerm)) ||
+      suggestions.categories.some(({ slug }) => !draft.selectedCategories.includes(slug))),
+  );
+  const acceptSuggestions = () => {
+    if (!suggestions) return;
+    set({
+      selectedKeywords: [...new Set([...draft.selectedKeywords, ...suggestions.keywords.map(({ displayTerm }) => displayTerm)])].slice(0, PROFILE_LIMITS.terms),
+      selectedCategories: [...new Set([...draft.selectedCategories, ...suggestions.categories.map(({ slug }) => slug)])],
+    });
+    setDismissedSuggestion(descriptionForSuggestions);
+  };
 
   return (
-    <section id="perfil-empresa" aria-labelledby="settings-company" className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7" data-testid="section-company-profile">
+    <section
+      id="perfil-empresa"
+      aria-labelledby="settings-company"
+      className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7"
+      data-testid="section-company-profile"
+    >
       <h2 id="settings-company" className="type-section">
         Perfil da empresa
       </h2>
       <p className="mt-1 type-meta text-muted-foreground">
-        Usamos o perfil para indicar, na busca e no detalhe, quais editais combinam com a sua empresa. A descrição e os termos vão para o serviço de IA que faz a
-        avaliação; nome e e-mail não.
+        Usamos o perfil para indicar, na busca e no detalhe, quais editais combinam com a sua empresa. A descrição e os termos vão para o serviço de IA que faz
+        a avaliação; nome e e-mail não.
       </p>
 
       {billing.data && !billing.data.entitled && (
-        <p role="note" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground" data-testid="text-company-profile-no-access">
+        <p
+          role="note"
+          className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground"
+          data-testid="text-company-profile-no-access"
+        >
           A aderência aparece durante o teste ou com a assinatura. O perfil fica guardado.{' '}
           <Link href={BILLING_HREF} className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring">
             Ver assinatura
@@ -333,7 +403,10 @@ export function CompanyProfileSection() {
       )}
 
       {profile.isError ? (
-        <div role="alert" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground">
+        <div
+          role="alert"
+          className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground"
+        >
           Não foi possível carregar o perfil.
           <Button variant="outline" size="sm" onClick={() => profile.refetch()}>
             <RefreshCw size={14} aria-hidden="true" />
@@ -365,6 +438,127 @@ export function CompanyProfileSection() {
               </span>
             )}
           </label>
+
+          {descriptionSuggestions.isFetching && descriptionForSuggestions.length >= PROFILE_LIMITS.descriptionMin && (
+            <p role="status" className="type-meta text-muted-foreground">
+              Analisando a descrição com o vocabulário dos editais…
+            </p>
+          )}
+          {showSuggestions && suggestions && (
+            <section
+              aria-labelledby={`${ids}-automatic-suggestions`}
+              className="rounded-xl border border-primary/25 bg-primary-subtle/40 p-4"
+              data-testid="profile-description-suggestions"
+            >
+              <div className="flex items-start gap-2">
+                <Sparkles size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <h3 id={`${ids}-automatic-suggestions`} className="type-ui font-semibold">
+                    Sugestões a partir da sua descrição
+                  </h3>
+                  <p className="mt-1 type-meta text-muted-foreground">Calculadas na nossa base, sem chamada de IA.</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {suggestions.categories.map((category) => (
+                      <button
+                        key={category.slug}
+                        type="button"
+                        onClick={() => set({ selectedCategories: [...new Set([...draft.selectedCategories, category.slug])] })}
+                        className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
+                      >
+                        + {category.label}
+                      </button>
+                    ))}
+                    {suggestions.keywords.map((keyword) => (
+                      <button
+                        key={keyword.normalizedTerm}
+                        type="button"
+                        onClick={() => set({ selectedKeywords: [...new Set([...draft.selectedKeywords, keyword.displayTerm])].slice(0, PROFILE_LIMITS.terms) })}
+                        className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
+                      >
+                        + {keyword.displayTerm}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" onClick={acceptSuggestions}>
+                      <Check size={14} aria-hidden />
+                      Aceitar todas
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setDismissedSuggestion(descriptionForSuggestions)}>
+                      Recusar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          <fieldset>
+            <legend className="type-meta font-semibold text-muted-foreground">Categorias de interesse</legend>
+            <p className="mt-1 type-meta text-muted-foreground">
+              A mesma taxonomia usada para classificar os editais. O número mostra os editais abertos agora. Escolha até 20.
+            </p>
+            {categories.isPending ? (
+              <p className="mt-3 type-meta text-muted-foreground">Carregando categorias…</p>
+            ) : (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-testid="profile-category-list">
+                {(categories.data?.data ?? []).map((category) => {
+                  const checked = draft.selectedCategories.includes(category.slug);
+                  return (
+                    <label
+                      key={category.slug}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2',
+                        checked ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-surface hover:border-border-strong',
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2 type-ui">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!checked && draft.selectedCategories.length >= 20}
+                          onChange={() =>
+                            set({
+                              selectedCategories: checked
+                                ? draft.selectedCategories.filter((slug) => slug !== category.slug)
+                                : [...draft.selectedCategories, category.slug].slice(0, 20),
+                            })
+                          }
+                          className="size-4 accent-primary disabled:opacity-50"
+                        />
+                        <span>{category.label}</span>
+                      </span>
+                      <span className="shrink-0 type-data text-muted-foreground">{category.openTenderCount.toLocaleString('pt-BR')}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          <SmartKeywordCombobox
+            label="Palavras-chave inteligentes"
+            hint="Digite pelo menos 2 caracteres. As sugestões e relações vêm dos títulos, objetos e itens dos editais abertos."
+            placeholder="Ex.: som, ilumin, painel de led"
+            selected={draft.selectedKeywords}
+            onChange={(selectedKeywords) => set({ selectedKeywords })}
+            testId="smart-keywords"
+          />
+
+          <SmartKeywordCombobox
+            label="Palavras-chave a excluir"
+            hint="Editais que contenham estes termos não entram nas recomendações nem nos alertas do perfil."
+            placeholder="Ex.: dedetização"
+            selected={draft.excludedKeywords}
+            onChange={(excludedKeywords) => set({ excludedKeywords })}
+            testId="smart-exclusions"
+          />
+
+          {suggestions && (
+            <p role="status" className="rounded-lg border border-border bg-muted px-4 py-3 type-ui font-medium" data-testid="profile-open-tender-preview">
+              ≈ {suggestions.estimatedOpenTenderCount.toLocaleString('pt-BR')} editais abertos combinam com seu perfil
+            </p>
+          )}
 
           <TermsField
             id={`${ids}-offerings`}
@@ -424,7 +618,9 @@ export function CompanyProfileSection() {
                       key={uf}
                       className={cn(
                         'flex h-9 cursor-pointer items-center justify-center rounded-md border text-xs font-semibold transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
-                        on ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-surface text-foreground hover:border-border-strong',
+                        on
+                          ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
+                          : 'border-border bg-surface text-foreground hover:border-border-strong',
                       )}
                     >
                       <input
@@ -518,7 +714,11 @@ export function CompanyProfileSection() {
           </fieldset>
 
           {errors.form && (
-            <p role="alert" id={`${ids}-form`} className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground">
+            <p
+              role="alert"
+              id={`${ids}-form`}
+              className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle px-3 py-2 type-meta text-destructive-subtle-foreground"
+            >
               {errors.form}
             </p>
           )}

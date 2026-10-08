@@ -8,7 +8,11 @@ import {
   type CulturalInstallation,
 } from "./cultural-installations";
 import { fetchAudiovisualOpportunities } from "./mapas-client";
-import { refreshOpportunityStatuses, upsertOpportunities } from "./upsert-opportunities";
+import { publicInstallationFailure } from "./mapas-errors";
+import {
+  refreshOpportunityStatuses,
+  upsertOpportunities,
+} from "./upsert-opportunities";
 
 const SOURCE = "mapas-culturais";
 export const STALE_AFTER_MS = 30 * 60 * 1000;
@@ -27,7 +31,14 @@ export type InstallationCoverage = {
   name: string;
   kind: "mapas" | "gap";
   url: string | null;
-  outcome: "ok" | "gap" | "failed" | "vocabulary_fallback" | "pending";
+  outcome:
+    | "ok"
+    | "gap"
+    | "failed"
+    | "degraded"
+    | "blocked"
+    | "vocabulary_fallback"
+    | "pending";
   upserted: number;
   message: string | null;
 };
@@ -36,7 +47,9 @@ const positiveInt = (value: string | undefined, fallback: number): number => {
   if (value === undefined || value.trim() === "") return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new Error(`CULTURE_LOOKBACK_DAYS must be a positive integer, received "${value}"`);
+    throw new Error(
+      `CULTURE_LOOKBACK_DAYS must be a positive integer, received "${value}"`,
+    );
   }
   return parsed;
 };
@@ -50,7 +63,9 @@ const windowFor = (now: Date, days: number): { from: Date; to: Date } => {
   return { from: start, to: now };
 };
 
-const gapCoverage = (installation: CulturalInstallation): InstallationCoverage => ({
+const gapCoverage = (
+  installation: CulturalInstallation,
+): InstallationCoverage => ({
   id: installation.id,
   uf: installation.uf,
   name: installation.name,
@@ -83,10 +98,14 @@ const isCoverage = (value: unknown): value is InstallationCoverage => {
   return typeof row.id === "string" && typeof row.outcome === "string";
 };
 
-export const coverageFromDetails = (details: unknown): InstallationCoverage[] | null => {
-  if (!details || typeof details !== "object" || !("installations" in details)) return null;
+export const coverageFromDetails = (
+  details: unknown,
+): InstallationCoverage[] | null => {
+  if (!details || typeof details !== "object" || !("installations" in details))
+    return null;
   const installations = (details as { installations: unknown }).installations;
-  if (!Array.isArray(installations) || !installations.every(isCoverage)) return null;
+  if (!Array.isArray(installations) || !installations.every(isCoverage))
+    return null;
   return installations;
 };
 
@@ -112,7 +131,11 @@ async function execute(runId: string, now: Date): Promise<void> {
       }
 
       try {
-        const result = await fetchAudiovisualOpportunities(installation, now, days);
+        const result = await fetchAudiovisualOpportunities(
+          installation,
+          now,
+          days,
+        );
         const stored = await upsertOpportunities(result.drafts, now);
         pagesRead += result.pagesRead;
         upserted += stored;
@@ -127,19 +150,14 @@ async function execute(runId: string, now: Date): Promise<void> {
           url: installation.baseUrl,
           outcome: result.vocabularyFallback ? "vocabulary_fallback" : "ok",
           upserted: stored,
-          message: [vocabularyMessage, result.warning].filter(Boolean).join(" ") || null,
+          message:
+            [vocabularyMessage, result.warning].filter(Boolean).join(" ") ||
+            null,
         });
       } catch (error) {
         refreshErrors += 1;
-        const message = error instanceof Error ? error.message : String(error);
-        const publicMessage = message.includes("(403)")
-          ? "O site bloqueou a consulta (403)."
-          : message.includes("certificate")
-            ? "O certificado HTTPS da instalação não é confiável."
-            : message.includes("fetch failed")
-              ? "Não foi possível conectar na instalação."
-              : message;
-        failures.push(`${installation.name}: ${publicMessage}`);
+        const publicFailure = publicInstallationFailure(error, installation);
+        failures.push(`${installation.name}: ${publicFailure.message}`);
         logger.error(
           { err: error, installationId: installation.id },
           "Mapas Culturais installation failed; continuing",
@@ -150,9 +168,9 @@ async function execute(runId: string, now: Date): Promise<void> {
           name: installation.name,
           kind: "mapas",
           url: installation.baseUrl,
-          outcome: "failed",
+          outcome: publicFailure.outcome,
           upserted: 0,
-          message: publicMessage,
+          message: publicFailure.message,
         });
       }
 
@@ -234,7 +252,9 @@ export async function startCultureIngest(
   return { runId, status: "running" };
 }
 
-export async function abandonStaleCultureRuns(now = new Date()): Promise<number> {
+export async function abandonStaleCultureRuns(
+  now = new Date(),
+): Promise<number> {
   const staleBefore = new Date(now.getTime() - STALE_AFTER_MS);
   const abandoned = await db
     .update(ingestRunsTable)
@@ -288,14 +308,19 @@ export async function getLatestCultureIngest() {
 
   return {
     run: run ? serializeRun(run) : null,
-    coverage: run ? (coverageFromDetails(run.details) ?? pendingCoverage()) : pendingCoverage(),
+    coverage: run
+      ? (coverageFromDetails(run.details) ?? pendingCoverage())
+      : pendingCoverage(),
   };
 }
 
 const isCli = process.argv[1]?.includes("collect-opportunities");
 
 if (isCli) {
-  logger.info({ lookbackDays: cultureLookbackDays() }, "Starting cultural opportunities ingest");
+  logger.info(
+    { lookbackDays: cultureLookbackDays() },
+    "Starting cultural opportunities ingest",
+  );
   startCultureIngest()
     .then(async ({ runId }) => {
       const started = Date.now();
@@ -303,7 +328,10 @@ if (isCli) {
         const latest = await getLatestCultureIngest();
         if (latest.run?.id === runId && latest.run.status !== "running") {
           if (latest.run.status === "failed") {
-            logger.error({ run: latest.run }, "Cultural opportunities ingest failed");
+            logger.error(
+              { run: latest.run },
+              "Cultural opportunities ingest failed",
+            );
             process.exitCode = 1;
           } else {
             logger.info({ run: latest.run }, "Cultural opportunities stored");
@@ -312,7 +340,9 @@ if (isCli) {
         }
         await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
-      throw new Error(`Cultural opportunities ingest ${runId} did not finish within 6 hours`);
+      throw new Error(
+        `Cultural opportunities ingest ${runId} did not finish within 6 hours`,
+      );
     })
     .catch((error) => {
       logger.error({ err: error }, "Cultural opportunities ingest failed");
