@@ -41,11 +41,8 @@ import {
   renderNotificationEmail,
   type EmailNotificationSnapshot,
 } from "./email-template";
-import {
-  sendWithResend,
-  type EmailMessage,
-  type EmailSendResult,
-} from "./resend-client";
+import type { EmailMessage, EmailSendResult, SendEmail } from "./email-client";
+import { sendWithEmailProvider } from "./email-provider";
 
 type EmailMode = "digest" | "immediate";
 type DeliveryRow = typeof emailDeliveriesTable.$inferSelect;
@@ -74,11 +71,6 @@ export type EmailJobResult = {
   failed: number;
   skipped: number;
 };
-
-type SendEmail = (
-  message: EmailMessage,
-  idempotencyKey: string,
-) => Promise<EmailSendResult>;
 
 const emptyResult = (): EmailJobResult => ({
   queued: 0,
@@ -462,7 +454,7 @@ const queueGroups = async (
 
 export const runDailyEmailDigest = async (
   now = new Date(),
-  sendEmail: SendEmail = (message, key) => sendWithResend(message, key),
+  sendEmail: SendEmail = sendWithEmailProvider,
 ): Promise<EmailJobResult> => {
   const betaEmails = await activeBetaGrantEmails(now);
   const result = await queueGroups(
@@ -493,12 +485,12 @@ export const runImmediateEmailAlerts = async (
     "immediate",
     groupByUser(await immediateCandidates(now, options.windowMinutes ?? 10)),
     now,
-    options.sendEmail ?? ((message, key) => sendWithResend(message, key)),
+    options.sendEmail ?? sendWithEmailProvider,
   );
 
 export const retryEmailDeliveries = async (
   now = new Date(),
-  sendEmail: SendEmail = (message, key) => sendWithResend(message, key),
+  sendEmail: SendEmail = sendWithEmailProvider,
 ): Promise<EmailJobResult> => {
   const deliveries = await db
     .select()
