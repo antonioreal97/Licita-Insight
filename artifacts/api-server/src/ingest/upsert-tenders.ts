@@ -26,6 +26,7 @@ export type ExistingTender = {
   displayTitleSource: "rules" | "model" | null;
   displayTitleNorm: string;
   categories: { slug: string; label: string }[];
+  categorySource: "rules" | "student" | "teacher" | null;
 };
 
 const publicationChanged = (
@@ -63,6 +64,7 @@ export async function upsertPublications(
       displayTitleSource: tendersTable.displayTitleSource,
       displayTitleNorm: tendersTable.displayTitleNorm,
       categories: tendersTable.categories,
+      categorySource: tendersTable.categorySource,
     })
     .from(tendersTable)
     .where(inArray(tendersTable.pncpControlNumber, controlNumbers));
@@ -77,6 +79,9 @@ export async function upsertPublications(
     const displayTitle = existing?.displayTitleSource === "model"
       ? existing.displayTitle
       : draft.displayTitle;
+    const categories = existing && (existing.categorySource === "teacher" || existing.categories.length > 0)
+      ? existing.categories
+      : draft.categories;
     const search = buildSearchColumns({
       title: draft.title,
       displayTitle,
@@ -88,7 +93,7 @@ export async function upsertPublications(
       state: draft.state,
       modalityLabel: draft.modalityLabel,
       itemsNorm: existing?.itemsNorm ?? "",
-      categories: existing?.categories ?? draft.categories,
+      categories,
     });
     const timeline = mergeTimeline(existing ?? null, draft, now);
     const changed = publicationChanged(existing, draft);
@@ -123,6 +128,8 @@ export async function upsertPublications(
       sourceName: draft.sourceName,
       sourceUrl: draft.sourceUrl,
       categories: draft.categories,
+      categorySource: draft.categories.length > 0 ? "rules" as const : null,
+      categorizedAt: draft.categories.length > 0 ? now : null,
       searchText: search.searchText,
       titleNorm: draft.titleNorm,
       objectNorm: draft.objectNorm,
@@ -144,8 +151,26 @@ export async function upsertPublications(
           target: tendersTable.pncpControlNumber,
           set: {
             title: values.title,
-            // A changed official title sends student categories back to the classifier.
-            categorizedAt: sql`case when ${tendersTable.categorySource} = 'student' and ${tendersTable.title} is distinct from ${values.title} then null else ${tendersTable.categorizedAt} end`,
+            categories: sql`case
+              when ${tendersTable.categorySource} = 'teacher' or jsonb_array_length(${tendersTable.categories}) > 0
+                then ${tendersTable.categories}
+              else ${JSON.stringify(values.categories)}::jsonb
+            end`,
+            categorySource: sql`case
+              when ${tendersTable.categorySource} = 'teacher' or jsonb_array_length(${tendersTable.categories}) > 0
+                then ${tendersTable.categorySource}
+              when jsonb_array_length(${JSON.stringify(values.categories)}::jsonb) > 0 then 'rules'
+              else ${tendersTable.categorySource}
+            end`,
+            categorizedAt: sql`case
+              when ${tendersTable.categorySource} = 'teacher'
+                then ${tendersTable.categorizedAt}
+              when ${tendersTable.categorySource} = 'student' and ${tendersTable.title} is distinct from ${values.title}
+                then null
+              when jsonb_array_length(${tendersTable.categories}) > 0 then ${tendersTable.categorizedAt}
+              when jsonb_array_length(${JSON.stringify(values.categories)}::jsonb) > 0 then ${now}
+              else ${tendersTable.categorizedAt}
+            end`,
             displayTitle: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitle} else ${tendersTable.displayTitle} end`,
             displayTitleSource: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then 'rules' else ${tendersTable.displayTitleSource} end`,
             displayTitleVersion: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleVersion} else ${tendersTable.displayTitleVersion} end`,
@@ -191,7 +216,11 @@ export async function upsertPublications(
                   ),
                   ' '
                 )
-                from jsonb_array_elements(${tendersTable.categories}) as category
+                from jsonb_array_elements(case
+                  when ${tendersTable.categorySource} = 'teacher' or jsonb_array_length(${tendersTable.categories}) > 0
+                    then ${tendersTable.categories}
+                  else ${JSON.stringify(values.categories)}::jsonb
+                end) as category
               ), '')
             ))`,
             titleNorm: values.titleNorm,

@@ -105,6 +105,9 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     delete process.env.TITLE_REWRITE_DAILY_LIMIT;
     delete process.env.TITLE_TEACHER_OPENAI_ENABLED;
     delete process.env.TITLE_OPENAI_DAILY_LIMIT;
+    delete process.env.TITLE_OPENAI_BUDGET_USD;
+    delete process.env.TITLE_OPENAI_BUDGET_DAYS;
+    delete process.env.TITLE_BACKFILL_ENABLED;
   });
   after(async () => {
     await cleanup();
@@ -169,6 +172,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       [931003, "Aquisição de extintores para a câmara"],
       [931004, "Serviço de buffet para formatura"],
     ]);
+    await pool.query("update tenders set categorized_at = null where status = $1", [TEST_STATUS]);
     await pool.query(
       `update tenders set categories = '[{"slug":"outros","label":"Outros"}]'::jsonb, category_source = 'teacher',
          categorized_at = now() - interval '1 day'
@@ -312,7 +316,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     assert.equal((await openAiJobs(tenderId(935003))).length, 1, "novo");
     await upsertPublications([publication(935003, "Aquisição de pneus para caminhões")], now);
     assert.equal((await openAiJobs(tenderId(935003))).length, 1, "mesmo título não reenfileira");
-    // The backlog (already stored, unchanged) never goes to the paid teacher.
+    // Unchanged rows are picked up by the continuous backfill rather than the collector.
     await upsertPublications([publication(935001, "Aquisição de pneus para ambulâncias")], now);
     assert.deepEqual(await openAiJobs(tenderId(935001)), []);
     await upsertPublications([publication(935001, "Aquisição de pneus e câmaras para ambulâncias")], now);
@@ -320,11 +324,112 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
 
     process.env.TITLE_OPENAI_DAILY_LIMIT = "2";
     await upsertPublications([publication(935004, "Aquisição de pneus para motos")], now);
-    assert.deepEqual(await openAiJobs(tenderId(935004)), [], "teto diário da OpenAI");
-    const onDemandUnaffected = await pool.query<{ count: number }>(
+    assert.equal((await openAiJobs(tenderId(935004))).length, 1, "excedente permanece durável na fila");
+    const queued = await pool.query<{ count: number }>(
       "select count(*)::int as count from ai_jobs where kind = 'title_rewrite' and payload->>'provider' = 'openai'",
     );
-    assert.equal(onDemandUnaffected.rows[0]?.count, 2);
+    assert.equal(queued.rows[0]?.count, 3);
+
+    const { claimTitleRewriteJobs } = await import("../ai/ai-job-queue");
+    const quotaStart = new Date("2026-10-08T12:00:00-03:00");
+    await pool.query(
+      `update tenders set proposal_deadline = case id
+         when $1 then '2026-10-09T12:00:00Z'::timestamptz
+         when $2 then '2026-10-10T12:00:00Z'::timestamptz
+         else '2026-10-11T12:00:00Z'::timestamptz end
+       where id = any($3::text[])`,
+      [tenderId(935004), tenderId(935003), [tenderId(935001), tenderId(935003), tenderId(935004)]],
+    );
+    const firstDay = await claimTitleRewriteJobs("openai", 10, "title-carry-over-1", 60_000, 2, quotaStart);
+    assert.equal(firstDay.length, 2, "o teto é aplicado no consumo, não na criação");
+    assert.deepEqual(new Set(firstDay.map(({ tenderId }) => tenderId)), new Set([tenderId(935004), tenderId(935003)]));
+    const sameDay = await claimTitleRewriteJobs("openai", 10, "title-carry-over-2", 60_000, 2, quotaStart);
+    assert.equal(sameDay.length, 0);
+    await pool.query(
+      "update ai_jobs set status = 'succeeded', locked_by = null, locked_until = null where id = any($1::text[])",
+      [firstDay.map(({ id }) => id)],
+    );
+    const nextDay = await claimTitleRewriteJobs(
+      "openai", 10, "title-carry-over-3", 60_000, 2,
+      new Date(quotaStart.getTime() + 24 * 60 * 60 * 1_000),
+    );
+    assert.equal(nextDay.length, 1, "o excedente é retomado no dia seguinte");
+    assert.equal(nextDay[0]?.tenderId, tenderId(935001));
+    await pool.query(
+      "update ai_jobs set status = 'succeeded', locked_by = null, locked_until = null where id = any($1::text[])",
+      [nextDay.map(({ id }) => id)],
+    );
+  });
+
+  it("backfill OpenAI prioriza edital aberto sem categoria e não duplica jobs", async () => {
+    const [{ pool }, { enqueueTitleBackfillBatch }] = await Promise.all([
+      import("@workspace/db"),
+      import("./title-backfill"),
+    ]);
+    await pool.query("delete from ai_jobs where kind = 'title_rewrite' and payload->>'provider' = 'openai'");
+    const [withoutCategory, withCategory] = await insertTenders([
+      [935101, "Objeto administrativo sem palavras específicas"],
+      [935102, "Aquisição de pneus para ambulâncias"],
+    ], "open");
+    await pool.query(
+      `update tenders set display_title_source = case when id = any($1::text[]) then 'rules' else 'model' end
+       where organization_id = $2 and status = 'open'`,
+      [[withoutCategory, withCategory], `pncp-${ORG}`],
+    );
+    await pool.query(
+      "update tenders set categories = '[]'::jsonb, category_source = null where id = $1",
+      [withoutCategory],
+    );
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    process.env.TITLE_TEACHER_OPENAI_ENABLED = "true";
+
+    const first = await enqueueTitleBackfillBatch({ dailyCapacity: 10, batchSize: 1 });
+    assert.equal(first.created, 1, JSON.stringify(first));
+    const firstJob = (await pool.query<{ tender_id: string }>(
+      "select tender_id from ai_jobs where kind = 'title_rewrite' and payload->>'provider' = 'openai'",
+    )).rows[0];
+    assert.equal(firstJob?.tender_id, withoutCategory);
+
+    const second = await enqueueTitleBackfillBatch({ dailyCapacity: 10, batchSize: 2 });
+    assert.ok(second.created >= 1);
+    const counts = await pool.query<{ tender_id: string; count: number }>(
+      `select tender_id, count(*)::int as count from ai_jobs
+       where tender_id = any($1::text[]) and kind = 'title_rewrite'
+         and payload->>'provider' = 'openai' group by tender_id order by tender_id`,
+      [[withoutCategory, withCategory]],
+    );
+    assert.deepEqual(counts.rows.map(({ count }) => count), [1, 1]);
+  });
+
+  it("backfill único de regras categoriza vazios e preserva a propriedade teacher", async () => {
+    const [{ pool }, { categorizeTenderRulesBatch }] = await Promise.all([
+      import("@workspace/db"),
+      import("./rule-categorization"),
+    ]);
+    const [pending, teacherOwned] = await insertTenders([
+      [935201, "Aquisição de medicamentos e seringas"],
+      [935202, "Aquisição de medicamentos hospitalares"],
+    ], "open");
+    await pool.query(
+      `update tenders set categories = '[]'::jsonb, category_source = null where id = $1`,
+      [pending],
+    );
+    await pool.query(
+      `update tenders set categories = '[{"slug":"outros","label":"Outros"}]'::jsonb,
+         category_source = 'teacher' where id = $1`,
+      [teacherOwned],
+    );
+
+    const result = await categorizeTenderRulesBatch({ batch: 500 });
+    assert.ok(result.categorized >= 1);
+    const rows = await pool.query<{ id: string; category_source: string; categories: { slug: string }[] }>(
+      "select id, category_source, categories from tenders where id = any($1::text[]) order by id",
+      [[pending, teacherOwned]],
+    );
+    assert.deepEqual(rows.rows.map(({ category_source, categories }) => [category_source, categories[0]?.slug]), [
+      ["rules", "medicamentos-insumos-saude"],
+      ["teacher", "outros"],
+    ]);
   });
 
   it("o lote OpenAI faz uma chamada, grava o uso no ledger e no orçamento e substitui título model antigo", async () => {
@@ -390,7 +495,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     const after = await loadAiDailySpend(dateInSaoPaulo(new Date()));
     const expected = (1_200 * 0.15 + 80 * 0.6) / 1_000_000;
     assert.ok(Math.abs(after.title - before.title - expected) < 1e-7);
-    assert.ok(Math.abs(after.total - before.total - expected) < 1e-7);
+    assert.equal(after.total, before.total, "o professor não consome o orçamento geral de resumo/fit");
 
     // The local on-demand teacher never replaces a model title.
     const { client } = createFakeOllama();
@@ -416,7 +521,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     await pool.query("delete from ai_jobs where dedupe_key like 'claim-test:%'");
   });
 
-  it("com as flags desligadas nada é enfileirado nem classificado", async () => {
+  it("com as flags desligadas nada é enfileirado e só as regras locais categorizam", async () => {
     const [{ pool }, { scheduleTitleRewrites }, { classifyPendingInBackground }] = await Promise.all([
       import("@workspace/db"),
       import("./title-rewrite"),
@@ -432,8 +537,11 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const jobs = await pool.query("select 1 from ai_jobs where tender_id = $1", [pending]);
     assert.equal(jobs.rowCount, 0);
-    const row = await pool.query<{ categorized_at: Date | null }>("select categorized_at from tenders where id = $1", [pending]);
-    assert.equal(row.rows[0]?.categorized_at, null);
+    const row = await pool.query<{ categorized_at: Date | null; category_source: string }>(
+      "select categorized_at, category_source from tenders where id = $1", [pending],
+    );
+    assert.ok(row.rows[0]?.categorized_at instanceof Date);
+    assert.equal(row.rows[0]?.category_source, "rules");
   });
 
   it("com o Ollama fora do ar, busca e detalhe respondem 200 e nada quebra", async () => {
@@ -471,14 +579,17 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     }
 
     await assert.rejects(executeTitleRewriteJob(visible), (error) => error instanceof OllamaError && error.kind === "unavailable");
-    const row = (await pool.query<{ display_title_source: string; categorized_at: Date | null }>(
-      "select display_title_source, categorized_at from tenders where id = $1",
+    const row = (await pool.query<{ display_title_source: string; categorized_at: Date | null; category_source: string }>(
+      "select display_title_source, categorized_at, category_source from tenders where id = $1",
       [visible],
     )).rows[0];
     assert.equal(row?.display_title_source, "rules");
     await classifyPendingInBackground("test");
-    const after = await pool.query<{ categorized_at: Date | null }>("select categorized_at from tenders where id = $1", [visible]);
-    assert.equal(after.rows[0]?.categorized_at, null);
+    const after = await pool.query<{ categorized_at: Date | null; category_source: string }>(
+      "select categorized_at, category_source from tenders where id = $1", [visible],
+    );
+    assert.ok(after.rows[0]?.categorized_at instanceof Date);
+    assert.equal(after.rows[0]?.category_source, "rules");
   });
 
   it("amostra focada rotula os incertos das classes pedidas e ignora as demais", async () => {

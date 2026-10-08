@@ -23,9 +23,11 @@ O total e a tendência diária incluem ficha. O bloco `platform` isola `sheet`, 
 
 A projeção mensal é `custo do período / dias solicitados × 30`. Ela é uma extrapolação simples, não uma previsão, e não incorpora sazonalidade, mudança de preço do modelo nem dias sem operação.
 
-## Disjuntor diário
+## Disjuntores independentes
 
-`AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `ask_summary`, `fit`, `sheet`, `sheet_summary` e `title` no dia de `America/Sao_Paulo`, com cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso. A leitura combina os três contadores diários com `summary_estimated_cost_usd` das fichas cujo `summary_generated_at` pertence ao dia; `ai_sheet_daily_usage` permanece exclusivo das chamadas Jev que criam a ficha. Quando o disjuntor está aberto, os resumos não chamam a OpenAI e retornam `null`, e o worker deixa de reivindicar jobs `title_rewrite` do provedor `openai` (eles esperam na fila).
+`AI_DAILY_BUDGET_USD` (padrão `10`; `0` desliga) soma `ask`, `ask_summary`, `fit`, `sheet` e `sheet_summary` no dia de `America/Sao_Paulo`, com cache local de no máximo 30 segundos; `AI_DAILY_BUDGET_WARN_RATIO` (padrão `0.8`) define o aviso. O custo `title` continua visível no ledger e no campo de relatório próprio, mas não entra nesse total e nunca pausa resumo/fit.
+
+O professor OpenAI usa `TITLE_OPENAI_BUDGET_USD` (padrão `1`) numa janela móvel de `TITLE_OPENAI_BUDGET_DAYS` (padrão `3`) vezes 24 horas, somando `ai_title_usage.estimated_cost_usd`. Zero desliga apenas esse disjuntor. Ao atingir o teto, jobs `title_rewrite` pagos permanecem em `queued`; uma mudança entre `ok`, `paused` e `disabled` gera um único log. O estado é relido depois de cada lote pago para que a pausa aconteça no lote seguinte.
 
 Ao atingir o teto, somente o lote é pausado: jobs `fit` permanecem `queued` e o alerta de perfil registra `skipped_budget`. Perguntas e fichas continuam. A fila retoma automaticamente após a virada do dia ou aumento do teto.
 

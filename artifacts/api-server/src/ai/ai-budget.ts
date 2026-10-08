@@ -11,6 +11,17 @@ export type AiBudgetState = AiDailySpend & {
   level: AiBudgetLevel;
   paused: boolean;
 };
+export type TitleBudgetLevel = "disabled" | "ok" | "paused";
+export type TitleBudgetState = {
+  budgetUsd: number;
+  windowDays: number;
+  windowStartedAt: Date;
+  costUsd: number;
+  remainingUsd: number;
+  ratio: number;
+  level: TitleBudgetLevel;
+  paused: boolean;
+};
 
 const decimalEnv = (name: string, fallback: number, minimum: number, maximum = Infinity): number => {
   const raw = process.env[name]?.trim();
@@ -25,6 +36,20 @@ const decimalEnv = (name: string, fallback: number, minimum: number, maximum = I
 export const aiBudgetConfig = () => ({
   budgetUsd: decimalEnv("AI_DAILY_BUDGET_USD", 10, 0),
   warnRatio: decimalEnv("AI_DAILY_BUDGET_WARN_RATIO", 0.8, 0, 1),
+  cacheMs: 30_000,
+});
+
+const positiveIntegerEnv = (name: string, fallback: number): number => {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
+  return value;
+};
+
+export const titleBudgetConfig = () => ({
+  budgetUsd: decimalEnv("TITLE_OPENAI_BUDGET_USD", 1, 0),
+  windowDays: positiveIntegerEnv("TITLE_OPENAI_BUDGET_DAYS", 3),
   cacheMs: 30_000,
 });
 
@@ -60,6 +85,45 @@ export class AiBudgetGuard {
   }
 }
 
+export class TitleBudgetGuard {
+  private cached?: { state: TitleBudgetState; readAt: number };
+  private lastLevel?: TitleBudgetLevel;
+
+  constructor(
+    private readonly loadSpend: (windowStartedAt: Date) => Promise<number>,
+    private readonly now: () => Date = () => new Date(),
+    private readonly config: () => ReturnType<typeof titleBudgetConfig> = titleBudgetConfig,
+  ) {}
+
+  async read(force = false): Promise<TitleBudgetState> {
+    const now = this.now();
+    const config = this.config();
+    if (!force && this.cached && now.getTime() - this.cached.readAt < config.cacheMs) return this.cached.state;
+    const windowStartedAt = new Date(now.getTime() - config.windowDays * 24 * 60 * 60 * 1_000);
+    const costUsd = await this.loadSpend(windowStartedAt);
+    const ratio = config.budgetUsd === 0 ? 0 : costUsd / config.budgetUsd;
+    const level: TitleBudgetLevel = config.budgetUsd === 0 ? "disabled" : ratio >= 1 ? "paused" : "ok";
+    const state: TitleBudgetState = {
+      budgetUsd: config.budgetUsd,
+      windowDays: config.windowDays,
+      windowStartedAt,
+      costUsd,
+      remainingUsd: config.budgetUsd === 0 ? Infinity : Math.max(0, config.budgetUsd - costUsd),
+      ratio,
+      level,
+      paused: level === "paused",
+    };
+    this.cached = { state, readAt: now.getTime() };
+    if (level !== this.lastLevel) {
+      const details = { level, costUsd, budgetUsd: config.budgetUsd, windowDays: config.windowDays, ratio };
+      if (state.paused) logger.warn(details, "OpenAI title teacher budget state changed");
+      else logger.info(details, "OpenAI title teacher budget state changed");
+      this.lastLevel = level;
+    }
+    return state;
+  }
+}
+
 export async function loadAiDailySpend(day: string): Promise<AiDailySpend> {
   const { pool } = await import("@workspace/db");
   const result = await pool.query<{ ask: string; fit: string; sheet: string; sheet_summary: string; title: string }>(
@@ -78,10 +142,22 @@ export async function loadAiDailySpend(day: string): Promise<AiDailySpend> {
   const fit = Number(row.fit);
   const sheet = Number(row.sheet) + Number(row.sheet_summary);
   const title = Number(row.title);
-  return { ask, fit, sheet, title, total: ask + fit + sheet + title };
+  // The title teacher has its own rolling budget and must not pause summary/fit workloads.
+  return { ask, fit, sheet, title, total: ask + fit + sheet };
+}
+
+export async function loadTitleWindowSpend(windowStartedAt: Date): Promise<number> {
+  const { pool } = await import("@workspace/db");
+  const result = await pool.query<{ cost: string }>(
+    `select coalesce(sum(estimated_cost_usd), 0)::text as cost
+     from ai_title_usage where created_at >= $1`,
+    [windowStartedAt],
+  );
+  return Number(result.rows[0]?.cost ?? 0);
 }
 
 export const aiBudgetGuard = new AiBudgetGuard(loadAiDailySpend);
+export const titleBudgetGuard = new TitleBudgetGuard(loadTitleWindowSpend);
 
 export async function refreshAiBudgetState(force = false): Promise<AiBudgetState> {
   const state = await aiBudgetGuard.read(force);
@@ -91,4 +167,11 @@ export async function refreshAiBudgetState(force = false): Promise<AiBudgetState
 
 export async function isAiBatchBudgetPaused(): Promise<boolean> {
   return (await refreshAiBudgetState()).paused;
+}
+
+export const refreshTitleBudgetState = (force = false): Promise<TitleBudgetState> =>
+  titleBudgetGuard.read(force);
+
+export async function isTitleTeacherBudgetPaused(): Promise<boolean> {
+  return (await refreshTitleBudgetState()).paused;
 }
