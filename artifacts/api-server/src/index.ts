@@ -18,6 +18,7 @@ import {
   startDailyTransparencyCollect,
 } from "./ingest/daily-collect";
 import { startTenderDeadlineReconciliation } from "./ingest/reconcile-tender-deadlines";
+import { startPlatformBackfillScheduler } from "./ingest/platform-backfill";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 import {
@@ -81,6 +82,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyPncpCollect(),
   startDailyTransparencyCollect(),
   startTenderDeadlineReconciliation(),
+  startPlatformBackfillScheduler(),
   startDailyCultureCollect(),
   startDailyFundingCollect(),
   startDailyCategoryClassify(),

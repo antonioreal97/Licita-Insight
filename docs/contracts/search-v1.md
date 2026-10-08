@@ -361,9 +361,13 @@ A plataforma é derivada na ingestão do PNCP, só por regras, em
 A API não inventa sala: o card mostra "Disputa em" só para `kind: platform`; o detalhe mostra todos os
 casos, com a explicação de que a sala não foi identificada.
 
-Registros anteriores são preenchidos por
-`pnpm --filter @workspace/api-server run backfill:platform` (lotes por `id`, só onde `platform is null`;
-pode ser repetido). `PLATFORM_BACKFILL_BATCH_SIZE` ajusta o lote (padrão 1000, máximo 5000).
+Registros anteriores são preenchidos pelo job `tender_platform_backfill` da própria API (papéis que rodam
+jobs): ao subir e diariamente às 02:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory
+lock. Só roda enquanto existir edital com `platform is null`; percorre por `id` em lotes de 2.000 com pausa
+de 1 s, registra o progresso de cada lote no log e pode ser interrompido e retomado sem efeito duplicado.
+`PLATFORM_BACKFILL_BATCH_SIZE` ajusta o lote (1–5000) e `PLATFORM_BACKFILL_DAILY=false` desliga o
+agendamento. Para uso local, `pnpm --filter @workspace/api-server run backfill:platform` executa o mesmo
+percurso sem pausa.
 
 ### Filtro e facet
 

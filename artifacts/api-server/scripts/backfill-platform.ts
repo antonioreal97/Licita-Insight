@@ -1,24 +1,9 @@
 import { pool } from "@workspace/db";
-import { backfillTenderPlatformBatch } from "../src/ingest/platform-backfill";
-
-const rawBatch = Number(process.env.PLATFORM_BACKFILL_BATCH_SIZE ?? 1_000);
-if (!Number.isSafeInteger(rawBatch) || rawBatch < 1 || rawBatch > 5_000) {
-  throw new Error("PLATFORM_BACKFILL_BATCH_SIZE must be an integer between 1 and 5000");
-}
-
-let afterId: string | null = null;
-let scanned = 0;
-let updated = 0;
+import { backfillTenderPlatforms, platformBackfillBatchSize } from "../src/ingest/platform-backfill";
 
 try {
-  for (;;) {
-    const result = await backfillTenderPlatformBatch({ afterId, batch: rawBatch });
-    scanned += result.scanned;
-    updated += result.updated;
-    if (!result.nextCursor) break;
-    afterId = result.nextCursor;
-  }
-  console.log(JSON.stringify({ scanned, updated }, null, 2));
+  const result = await backfillTenderPlatforms({ batch: platformBackfillBatchSize(), pauseMs: 0 });
+  console.log(JSON.stringify(result, null, 2));
 } finally {
   await pool.end();
 }
