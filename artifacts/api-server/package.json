@@ -26,6 +26,7 @@
     "titles:embed-examples": "node --env-file-if-exists=../../.env --import tsx scripts/titles-embed-examples.ts",
     "titles:eval": "node --env-file-if-exists=../../.env --import tsx scripts/titles-eval.ts",
     "titles:classify": "node --env-file-if-exists=../../.env --import tsx scripts/titles-classify.ts",
+    "categorize:rules": "node --env-file-if-exists=../../.env --import tsx scripts/categorize-rules.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",

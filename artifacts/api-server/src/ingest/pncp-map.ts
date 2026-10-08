@@ -13,6 +13,7 @@ import {
   DISPLAY_TITLE_RULES_VERSION,
   normalizeTenderTitle,
 } from "./title-normalizer";
+import { categoriesFromOfficialTitle } from "../titles/category-rules";
 
 const MODALITIES: Record<number, Modality> = {
   1: "leilao",
@@ -303,6 +304,7 @@ export const mapPublication = (
   const ibge = asString(unidade?.codigoIbge);
   const tenderNumberShort = pncpTenderNumberShort(record);
   const objectSummary = summarizeOfficialObject(title);
+  const categories = categoriesFromOfficialTitle(title);
   const search = buildSearchColumns({
     title,
     displayTitle: normalizedTitle.title,
@@ -314,7 +316,7 @@ export const mapPublication = (
     state,
     modalityLabel,
     itemsNorm,
-    categories: [],
+    categories,
   });
 
   return {
@@ -348,7 +350,7 @@ export const mapPublication = (
     sourceId: PNCP_SOURCE_ID,
     sourceName: PNCP_SOURCE_NAME,
     sourceUrl: identity ? pncpPublicationUrl(identity) : null,
-    categories: [],
+    categories,
     ...search,
     timeline: [
       {

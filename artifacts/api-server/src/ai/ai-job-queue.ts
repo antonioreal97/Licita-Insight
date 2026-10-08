@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { incrementMetric, observeMetric } from "../metrics";
 
 export type AiJobKind = "index" | "document_ocr" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
@@ -104,6 +105,8 @@ export type EnqueueAiJobInput = {
   lane: AiJobLane;
   enforceIndexUserRate?: boolean;
   maxAttempts?: number;
+  /** Durable producer-owned queues (currently the paid title teacher) must never drop overflow. */
+  ignoreQueueDepth?: boolean;
 };
 
 export type EnqueueAiJobResult = {
@@ -135,14 +138,16 @@ export async function enqueueAiJob(input: EnqueueAiJobInput): Promise<EnqueueAiJ
         return { enqueued: false, reason: "user_rate_limited", jobId: null };
       }
     }
-    const depth = await client.query<{ count: string }>(
-      "select count(*)::text as count from ai_jobs where kind = $1 and status in ('queued', 'running')",
-      [input.kind],
-    );
-    if (Number(depth.rows[0]?.count ?? 0) >= config.maxDepth[input.kind]) {
-      await client.query("commit");
-      incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "queue_full" });
-      return { enqueued: false, reason: "queue_full", jobId: null };
+    if (!input.ignoreQueueDepth) {
+      const depth = await client.query<{ count: string }>(
+        "select count(*)::text as count from ai_jobs where kind = $1 and status in ('queued', 'running')",
+        [input.kind],
+      );
+      if (Number(depth.rows[0]?.count ?? 0) >= config.maxDepth[input.kind]) {
+        await client.query("commit");
+        incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "queue_full" });
+        return { enqueued: false, reason: "queue_full", jobId: null };
+      }
     }
     const id = randomUUID();
     await client.query(
@@ -155,6 +160,88 @@ export async function enqueueAiJob(input: EnqueueAiJobInput): Promise<EnqueueAiJ
     await client.query("select pg_notify('ai_jobs', $1)", [input.kind]);
     await client.query("commit");
     return { enqueued: true, reason: "created", jobId: id };
+  } catch (error) {
+    await client.query("rollback").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+const TITLE_PRIORITY_ORDER = `
+  case when t.status = 'open' then 0 else 1 end,
+  case when t.status = 'open' then t.proposal_deadline end asc nulls last,
+  t.published_at asc nulls last,
+  j.created_at,
+  j.id`;
+
+/** Remaining daily tender slots. Jobs already assigned to today keep their retry slot. */
+export async function openAiTitleDailyCapacity(dailyLimit: number, now = new Date()): Promise<number> {
+  const quotaDay = dateInSaoPaulo(now);
+  const used = (await pool.query<{ count: number }>(
+    `select count(*)::int as count from ai_jobs
+     where kind = 'title_rewrite' and payload->>'provider' = 'openai'
+       and payload->>'titleQuotaDay' = $1`,
+    [quotaDay],
+  )).rows[0]?.count ?? 0;
+  return Math.max(0, dailyLimit - used);
+}
+
+/**
+ * Claims paid title jobs under one DB lock so multiple workers cannot overshoot the
+ * daily tender cap. Ordering favors live deadlines, then publication FIFO.
+ */
+export async function claimTitleRewriteJobs(
+  provider: TitleProvider,
+  limit: number,
+  workerId: string,
+  visibilityMs = aiJobQueueConfig().visibilityMs,
+  dailyLimit = Number.MAX_SAFE_INTEGER,
+  now = new Date(),
+): Promise<AiJob[]> {
+  if (provider === "ollama") {
+    return claimAiJobs(["title_rewrite"], limit, workerId, visibilityMs, { titleProvider: provider });
+  }
+  if (limit < 1 || dailyLimit < 1) return [];
+  const quotaDay = dateInSaoPaulo(now);
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", ["licitai:title-openai-daily"]);
+    const used = Number((await client.query<{ count: string }>(
+      `select count(*)::text as count from ai_jobs
+       where kind = 'title_rewrite' and payload->>'provider' = 'openai'
+         and payload->>'titleQuotaDay' = $1`,
+      [quotaDay],
+    )).rows[0]?.count ?? 0);
+
+    const claim = async (sameDay: boolean, take: number): Promise<DatabaseRow[]> => {
+      if (take < 1) return [];
+      const result = await client.query<DatabaseRow>(
+        `with candidates as (
+           select j.id from ai_jobs j join tenders t on t.id = j.tender_id
+           where j.status = 'queued' and j.run_after <= now() and j.kind = 'title_rewrite'
+             and j.payload->>'provider' = 'openai'
+             and ${sameDay ? "j.payload->>'titleQuotaDay' = $4" : "j.payload->>'titleQuotaDay' is distinct from $4"}
+           order by ${TITLE_PRIORITY_ORDER}
+           for update of j skip locked
+           limit $1
+         )
+         update ai_jobs j set status = 'running', attempts = attempts + 1, locked_by = $2,
+           locked_until = now() + ($3::bigint * interval '1 millisecond'),
+           started_at = now(), finished_at = null,
+           payload = jsonb_set(j.payload, '{titleQuotaDay}', to_jsonb($4::text), true)
+         from candidates where j.id = candidates.id returning j.*`,
+        [take, workerId, visibilityMs, quotaDay],
+      );
+      return result.rows;
+    };
+
+    const retriedToday = await claim(true, limit);
+    const capacity = Math.max(0, dailyLimit - used);
+    const fresh = await claim(false, Math.min(limit - retriedToday.length, capacity));
+    await client.query("commit");
+    return [...retriedToday, ...fresh].map(jobFromRow);
   } catch (error) {
     await client.query("rollback").catch(() => undefined);
     throw error;
@@ -315,6 +402,7 @@ export function startAiJobWorker(options: {
   const titleBatchRunning: Record<TitleProvider, boolean> = { ollama: false, openai: false };
   let stopped = false;
   let recovering = false;
+  let nextTitleBackfillAt = 0;
   const active = new Set<Promise<void>>();
   const activeByKind: Record<AiJobKind, number> = {
     index: 0,
@@ -323,6 +411,20 @@ export function startAiJobWorker(options: {
     sheet: 0,
     sheet_summary: 0,
     title_rewrite: 0,
+  };
+
+  const maybeEnqueueTitleBackfill = async (): Promise<void> => {
+    const now = new Date();
+    if (now.getTime() < nextTitleBackfillAt) return;
+    const { enqueueTitleBackfillBatch, titleBackfillAllowedAt, titleBackfillConfig } = await import("../titles/title-backfill");
+    const backfill = titleBackfillConfig();
+    nextTitleBackfillAt = now.getTime() + backfill.intervalMs;
+    if (!backfill.enabled || !titleBackfillAllowedAt(now)) return;
+    const { titleRewriteDailyLimit } = await import("../titles/title-rewrite");
+    const capacity = await openAiTitleDailyCapacity(titleRewriteDailyLimit("openai"), now);
+    if (capacity < 1) return;
+    const result = await enqueueTitleBackfillBatch({ dailyCapacity: capacity, batchSize: backfill.batchSize });
+    if (result.created > 0) logger.info(result, "OpenAI title backfill batch enqueued");
   };
 
   const handle = (job: AiJob): void => {
@@ -376,6 +478,12 @@ export function startAiJobWorker(options: {
             await completeAiJob(job);
           }
         }
+        if (provider === "openai") {
+          const { refreshTitleBudgetState } = await import("./ai-budget");
+          await refreshTitleBudgetState(true).catch((error) => {
+            logger.warn({ err: error }, "Failed to refresh OpenAI title teacher budget after batch");
+          });
+        }
       })
       .catch(async (error) => {
         for (const job of jobs) await failAiJob(job, error);
@@ -398,7 +506,7 @@ export function startAiJobWorker(options: {
         recovering = false;
       });
     }
-    const { isAiBatchBudgetPaused } = await import("./ai-budget");
+    const { isAiBatchBudgetPaused, isTitleTeacherBudgetPaused } = await import("./ai-budget");
     const budgetPaused = await isAiBatchBudgetPaused();
     for (const kind of ["index", "document_ocr", "sheet", "sheet_summary", "fit"] as const) {
       if (kind === "fit" && budgetPaused) continue;
@@ -407,13 +515,23 @@ export function startAiJobWorker(options: {
       const claimed = await claimAiJobs([kind], available, workerId);
       claimed.forEach(handle);
     }
-    const { titleRewriteProviderEnabled } = await import("../titles/title-rewrite");
+    const { titleRewriteDailyLimit, titleRewriteProviderEnabled } = await import("../titles/title-rewrite");
     const { TEACHER_BATCH_SIZE } = await import("../titles/teacher");
+    const openAiTitlesEnabled = titleRewriteProviderEnabled("openai");
+    const titleBudgetPaused = openAiTitlesEnabled
+      ? await isTitleTeacherBudgetPaused()
+      : false;
+    if (openAiTitlesEnabled && !titleBudgetPaused) await maybeEnqueueTitleBackfill();
     for (const provider of ["ollama", "openai"] as const) {
       if (titleBatchRunning[provider] || !titleRewriteProviderEnabled(provider)) continue;
-      // The paid teacher stops with the daily AI budget; the local one costs nothing.
-      if (provider === "openai" && budgetPaused) continue;
-      const claimed = await claimAiJobs(["title_rewrite"], TEACHER_BATCH_SIZE, workerId, undefined, { titleProvider: provider });
+      if (provider === "openai" && titleBudgetPaused) continue;
+      const claimed = await claimTitleRewriteJobs(
+        provider,
+        TEACHER_BATCH_SIZE,
+        workerId,
+        config.visibilityMs,
+        titleRewriteDailyLimit(provider),
+      );
       if (claimed.length > 0) handleTitleBatch(provider, claimed);
     }
   };
