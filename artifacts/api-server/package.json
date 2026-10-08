@@ -12,6 +12,7 @@
     "collect:pncp": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-pncp.ts",
     "collect:transparency": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-transparency.ts",
     "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
+    "collect:funding": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-funding.ts",
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
     "calibrate:company-fit": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-company-fit.ts",
     "calibrate:tender-sheet": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-tender-sheet.ts",

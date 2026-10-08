@@ -7,18 +7,61 @@ import {
 } from "../ingest/opportunity-map";
 import { InvalidParameterError } from "./api-error";
 import { parseDateParameter } from "./sao-paulo-date";
+import type { OpportunityKind, OpportunitySource } from "@workspace/db";
+
+export const OPPORTUNITY_KINDS = [
+  "culture",
+  "funding",
+  "innovation",
+  "partnership",
+] as const satisfies readonly OpportunityKind[];
+export const OPPORTUNITY_SOURCES = [
+  "mapas",
+  "finep",
+  "cnpq",
+  "capes",
+] as const satisfies readonly OpportunitySource[];
 
 const UFS = [
-  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
-  "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
 ];
 
-const INSTALLATION_IDS = new Set(CULTURAL_INSTALLATIONS.map((installation) => installation.id));
+const INSTALLATION_IDS = new Set(
+  CULTURAL_INSTALLATIONS.map((installation) => installation.id),
+);
 
 export type OpportunityCriteria = {
   query: string | null;
   state: string[];
   installationId: string[];
+  kind: OpportunityKind[];
+  source: OpportunitySource[];
   status: OpportunityStatus[];
   program: OpportunityProgram[];
   deadlineFrom?: Date;
@@ -57,14 +100,19 @@ const parseDate = (field: string, value: unknown): Date | undefined => {
     return invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
   }
   const date = parseDateParameter(value);
-  if (!date) return invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
+  if (!date)
+    return invalid(field, "invalid_date", `${field} must be YYYY-MM-DD`);
   return date;
 };
 
 export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
-  const query = raw !== null && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const query =
+    raw !== null && typeof raw === "object"
+      ? (raw as Record<string, unknown>)
+      : {};
   const text = query.q;
-  if (text !== undefined && typeof text !== "string") invalid("q", "invalid_type", "q must be a string");
+  if (text !== undefined && typeof text !== "string")
+    invalid("q", "invalid_type", "q must be a string");
 
   const state = asList(query.state).map((item) => {
     if (typeof item !== "string" || !UFS.includes(item.toUpperCase())) {
@@ -75,34 +123,53 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
 
   const installationId = asList(query.installation).map((item): string => {
     if (typeof item !== "string" || !INSTALLATION_IDS.has(item)) {
-      invalid("installation", "invalid_enum", "installation is not a known source");
+      invalid(
+        "installation",
+        "invalid_enum",
+        "installation is not a known source",
+      );
     }
     return item as string;
   });
 
   const page = query.page === undefined ? 1 : Number(query.page);
   const pageSize = query.pageSize === undefined ? 20 : Number(query.pageSize);
-  if (!Number.isInteger(page) || page < 1) invalid("page", "out_of_range", "page must be an integer >= 1");
+  if (!Number.isInteger(page) || page < 1)
+    invalid("page", "out_of_range", "page must be an integer >= 1");
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
     invalid("pageSize", "out_of_range", "pageSize must be between 1 and 100");
   }
 
   let facets = true;
   if (query.facets === "false" || query.facets === false) facets = false;
-  else if (query.facets !== undefined && query.facets !== "true" && query.facets !== true) {
+  else if (
+    query.facets !== undefined &&
+    query.facets !== "true" &&
+    query.facets !== true
+  ) {
     invalid("facets", "invalid_type", "facets must be true or false");
   }
 
   const deadlineFrom = parseDate("deadlineFrom", query.deadlineFrom);
   const deadlineTo = parseDate("deadlineTo", query.deadlineTo);
-  if (deadlineFrom && deadlineTo && deadlineFrom.getTime() > deadlineTo.getTime()) {
-    invalid("deadlineFrom", "invalid_range", "deadlineFrom is after deadlineTo");
+  if (
+    deadlineFrom &&
+    deadlineTo &&
+    deadlineFrom.getTime() > deadlineTo.getTime()
+  ) {
+    invalid(
+      "deadlineFrom",
+      "invalid_range",
+      "deadlineFrom is after deadlineTo",
+    );
   }
 
   return {
     query: typeof text === "string" && text.trim() !== "" ? text.trim() : null,
     state,
     installationId,
+    kind: parseEnumList("kind", query.kind, OPPORTUNITY_KINDS),
+    source: parseEnumList("source", query.source, OPPORTUNITY_SOURCES),
     status: parseEnumList("status", query.status, OPPORTUNITY_STATUSES),
     program: parseEnumList("program", query.program, OPPORTUNITY_PROGRAMS),
     deadlineFrom,

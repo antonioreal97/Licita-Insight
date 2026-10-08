@@ -1,6 +1,14 @@
-import { and, asc, desc, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
-import { culturalOpportunitiesTable, db, ingestRunsTable } from "@workspace/db";
+import {
+  companyProfilesTable,
+  culturalOpportunitiesTable,
+  db,
+  ingestRunsTable,
+  type OpportunityDocument,
+  type OpportunityKind,
+  type OpportunitySource,
+} from "@workspace/db";
 import {
   installationById,
   CULTURAL_INSTALLATIONS,
@@ -20,8 +28,23 @@ import {
   onOrAfterSaoPauloDate,
   onOrBeforeSaoPauloDate,
 } from "./postgres-date-filter";
+import { scoreOpportunityForProfile } from "../recommendations/recommendation-service";
 
-const SOURCE = "mapas-culturais";
+const INGEST_SOURCE = "mapas-culturais";
+
+export const opportunityKindLabels: Record<OpportunityKind, string> = {
+  culture: "Cultura",
+  funding: "Fomento",
+  innovation: "Inovação",
+  partnership: "Parceria",
+};
+
+export const opportunitySourceLabels: Record<OpportunitySource, string> = {
+  mapas: "Mapas Culturais",
+  finep: "FINEP",
+  cnpq: "CNPq",
+  capes: "CAPES",
+};
 
 export const opportunityStatusLabels: Record<OpportunityStatus, string> = {
   open: "Inscrições abertas",
@@ -43,13 +66,20 @@ export type OpportunitySummary = {
   summary: string | null;
   organizationName: string;
   status: OpportunityStatus;
-  program: OpportunityProgram;
+  program: OpportunityProgram | null;
+  kind: OpportunityKind;
+  source: OpportunitySource;
+  sourceName: string;
+  audience: string | null;
+  amount: number | null;
+  documents: OpportunityDocument[];
   registrationFrom: string | null;
   registrationTo: string | null;
   state: string | null;
   installation: { id: string; name: string; uf: string };
   sourceUrl: string | null;
   updatedAt: string;
+  profileMatch: { score: number; reasons: string[] } | null;
 };
 
 export type FacetBucket = { value: string; label: string; count: number };
@@ -68,6 +98,8 @@ export type OpportunitySearchResponse = {
     state: FacetBucket[];
     installation: FacetBucket[];
     program: FacetBucket[];
+    kind: FacetBucket[];
+    source: FacetBucket[];
   } | null;
   meta: {
     query: string | null;
@@ -105,7 +137,7 @@ const iso = (value: Date | null): string | null =>
 
 const whereFor = (
   criteria: OpportunityCriteria,
-  skip?: "status" | "state" | "installation" | "program",
+  skip?: "status" | "state" | "installation" | "program" | "kind" | "source",
 ): SQL | undefined => {
   const filters: SQL[] = [];
   for (const token of queryTokens(criteria.query)) {
@@ -133,6 +165,12 @@ const whereFor = (
   if (skip !== "program" && criteria.program.length > 0) {
     filters.push(inArray(culturalOpportunitiesTable.program, criteria.program));
   }
+  if (skip !== "kind" && criteria.kind.length > 0) {
+    filters.push(inArray(culturalOpportunitiesTable.kind, criteria.kind));
+  }
+  if (skip !== "source" && criteria.source.length > 0) {
+    filters.push(inArray(culturalOpportunitiesTable.source, criteria.source));
+  }
   if (criteria.deadlineFrom) {
     filters.push(
       onOrAfterSaoPauloDate(
@@ -152,25 +190,48 @@ const whereFor = (
   return filters.length > 0 ? and(...filters) : undefined;
 };
 
-const toSummary = (row: OpportunityRow): OpportunitySummary => {
+type OpportunityProfile = typeof companyProfilesTable.$inferSelect;
+
+const toSummary = (
+  row: OpportunityRow,
+  profile: OpportunityProfile | null = null,
+): OpportunitySummary => {
   const installation = installationById(row.installationId);
+  const profileMatch = profile
+    ? scoreOpportunityForProfile(
+        {
+          searchText: row.searchText,
+          state: row.state,
+          amount: row.amount === null ? null : Number(row.amount),
+          audience: row.audience,
+        },
+        profile,
+      )
+    : null;
   return {
     id: row.id,
     title: row.title,
     summary: row.summary,
     organizationName: row.organizationName,
     status: row.status as OpportunityStatus,
-    program: row.program as OpportunityProgram,
+    program: row.program as OpportunityProgram | null,
+    kind: row.kind,
+    source: row.source,
+    sourceName: opportunitySourceLabels[row.source],
+    audience: row.audience,
+    amount: row.amount === null ? null : Number(row.amount),
+    documents: row.documents,
     registrationFrom: iso(row.registrationFrom),
     registrationTo: iso(row.registrationTo),
     state: row.state,
     installation: {
       id: row.installationId,
-      name: installation?.name ?? row.organizationName,
+      name: installation?.name ?? opportunitySourceLabels[row.source],
       uf: installation?.uf ?? row.state ?? "",
     },
     sourceUrl: row.sourceUrl,
     updatedAt: row.updatedAt.toISOString(),
+    profileMatch,
   };
 };
 
@@ -219,7 +280,7 @@ const latestCoverage = async (): Promise<InstallationCoverage[]> => {
   return coverageFromDetails(run?.details) ?? pendingCoverage();
 };
 
-const eqSource = () => sql`${ingestRunsTable.source} = ${SOURCE}`;
+const eqSource = () => sql`${ingestRunsTable.source} = ${INGEST_SOURCE}`;
 
 const coverageMeta = (coverage: InstallationCoverage[]) => ({
   installationIssues: coverage.flatMap((row) => {
@@ -244,6 +305,7 @@ const coverageMeta = (coverage: InstallationCoverage[]) => ({
 
 export async function searchOpportunities(
   criteria: OpportunityCriteria,
+  userId?: string,
 ): Promise<OpportunitySearchResponse> {
   const started = Date.now();
   const where = whereFor(criteria);
@@ -271,6 +333,13 @@ export async function searchOpportunities(
     })
     .from(culturalOpportunitiesTable);
   const coverage = await latestCoverage();
+  const [profile] = userId
+    ? await db
+        .select()
+        .from(companyProfilesTable)
+        .where(eq(companyProfilesTable.userId, userId))
+        .limit(1)
+    : [];
 
   const facets = criteria.facets
     ? {
@@ -296,11 +365,21 @@ export async function searchOpportunities(
           opportunityProgramLabels,
           whereFor(criteria, "program"),
         ),
+        kind: await labeledBuckets(
+          culturalOpportunitiesTable.kind,
+          opportunityKindLabels,
+          whereFor(criteria, "kind"),
+        ),
+        source: await labeledBuckets(
+          culturalOpportunitiesTable.source,
+          opportunitySourceLabels,
+          whereFor(criteria, "source"),
+        ),
       }
     : null;
 
   return {
-    data: rows.map(toSummary),
+    data: rows.map((row) => toSummary(row, profile ?? null)),
     pagination: {
       page: criteria.page,
       pageSize: criteria.pageSize,
@@ -322,11 +401,20 @@ export async function searchOpportunities(
 
 export async function findOpportunity(
   id: string,
+  userId?: string,
 ): Promise<OpportunitySummary | undefined> {
   const [row] = await db
     .select()
     .from(culturalOpportunitiesTable)
     .where(sql`${culturalOpportunitiesTable.id} = ${id}`)
     .limit(1);
-  return row ? toSummary(row) : undefined;
+  if (!row) return undefined;
+  const [profile] = userId
+    ? await db
+        .select()
+        .from(companyProfilesTable)
+        .where(eq(companyProfilesTable.userId, userId))
+        .limit(1)
+    : [];
+  return toSummary(row, profile ?? null);
 }

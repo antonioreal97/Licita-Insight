@@ -119,7 +119,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   );
   const interestsColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'recommendation_metrics_daily' and column_name = 'interests'", [schema]);
   if (interestsColumn.rowCount === 0) await pool.query(
-    readFileSync(new URL('../../../../lib/db/migrations/0031_recommendation_interests.sql', import.meta.url), 'utf8'),
+    readFileSync(new URL('../../../../lib/db/migrations/0032_recommendation_interests.sql', import.meta.url), 'utf8'),
   );
 
   const server: Server = app.listen(0, "127.0.0.1");

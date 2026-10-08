@@ -2534,7 +2534,7 @@ export const getSearchOpportunitiesUrl = (params?: SearchOpportunitiesParams,) =
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["state","installation","status","program"];
+    const explodeParameters = ["state","installation","status","program","kind","source"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
@@ -2554,7 +2554,7 @@ export const getSearchOpportunitiesUrl = (params?: SearchOpportunitiesParams,) =
 }
 
 /**
- * @summary Search cultural funding opportunities
+ * @summary Search culture, funding and innovation opportunities
  */
 export const searchOpportunities = async (params?: SearchOpportunitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySearchResponse> => {
 
@@ -2601,7 +2601,7 @@ export type SearchOpportunitiesQueryError = ErrorType<InvalidParameterResponse |
 
 
 /**
- * @summary Search cultural funding opportunities
+ * @summary Search culture, funding and innovation opportunities
  */
 
 export function useSearchOpportunities<TData = Awaited<ReturnType<typeof searchOpportunities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | SearchUnavailableResponse>>(
@@ -2631,7 +2631,7 @@ export const getGetOpportunityByIdUrl = (id: string,) => {
 }
 
 /**
- * @summary Get a cultural funding opportunity
+ * @summary Get an opportunity
  */
 export const getOpportunityById = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySummary> => {
 
@@ -2678,7 +2678,7 @@ export type GetOpportunityByIdQueryError = ErrorType<UnauthenticatedResponse | S
 
 
 /**
- * @summary Get a cultural funding opportunity
+ * @summary Get an opportunity
  */
 
 export function useGetOpportunityById<TData = Awaited<ReturnType<typeof getOpportunityById>>, TError = ErrorType<UnauthenticatedResponse | SubscriptionRequiredResponse | NotFoundResponse | SearchUnavailableResponse>>(
