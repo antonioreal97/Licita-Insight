@@ -24,7 +24,7 @@ test('agrupa formatos não compatíveis sem esconder os demais motivos', () => {
         { id: 'c', title: 'c.zip', url: 'https://example.test/c', reason: 'size_limit' },
       ],
     }),
-    'Nenhum de 3 documentos foi lido; 2 estão em formato não compatível; 1 excede o limite de tamanho',
+    'Nenhum dos 3 documentos foi lido; 2 estão em formato não compatível; 1 excede o limite de tamanho',
   );
 });
 
