@@ -10,7 +10,8 @@ COPY server.py /app/server.py
 
 ENV PORT=8080 \
     DOCUMENT_OCR_MAX_PAGES=40 \
-    DOCUMENT_OCR_PAGE_TIMEOUT_MS=30000
+    DOCUMENT_OCR_PAGE_TIMEOUT_MS=30000 \
+    OMP_THREAD_LIMIT=1
 
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 CMD ["python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
