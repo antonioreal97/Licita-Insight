@@ -24,6 +24,7 @@ import TenderDetailPage from '@/features/tenders/tender-detail-page';
 import TransparencyPage from '@/features/transparency/transparency-page';
 import UnsubscribePage from '@/features/unsubscribe/unsubscribe-page';
 import { CookieNotice } from '@/features/privacy/cookie-notice';
+import { PrivacyPage, TermsPage } from '@/features/legal/legal-content';
 import { GoogleAnalyticsPageViews } from '@/features/analytics/google-analytics-page-views';
 import { queryKeys } from '@/services/query-keys';
 import { toast } from '@/hooks/use-toast';
@@ -57,6 +58,8 @@ const routeTitles: Record<string, string> = {
   '/register': 'Criar conta · Pardal Digital',
   '/forgot-password': 'Recuperar acesso · Pardal Digital',
   '/descadastro': 'Descadastro de e-mails · Pardal Digital',
+  '/privacidade': 'Política de Privacidade · Pardal Digital',
+  '/termos': 'Termos de Uso · Pardal Digital',
   '/dashboard': 'Visão geral · Pardal Digital',
   '/search': 'Explorar editais · Pardal Digital',
   '/oportunidades': 'Chamadas culturais · Pardal Digital',
@@ -94,6 +97,8 @@ function Router() {
         <Route path="/register" component={LoginRedirect} />
         <Route path="/forgot-password" component={LoginRedirect} />
         <Route path="/descadastro" component={UnsubscribePage} />
+        <Route path="/privacidade" component={PrivacyPage} />
+        <Route path="/termos" component={TermsPage} />
         <Route path="/dashboard">
           {() => (
             <AppShell>

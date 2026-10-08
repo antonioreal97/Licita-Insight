@@ -4,6 +4,7 @@ import { CircleAlert, LockKeyhole } from 'lucide-react';
 import { BrandName } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
+import { LegalLinks } from '@/features/legal/legal-content';
 import { signInWithGoogle, useSession } from './hooks/use-session';
 
 const DEFAULT_RETURN_TO = '/dashboard';
@@ -148,6 +149,7 @@ export default function AuthPage() {
             <LockKeyhole size={12} aria-hidden className="mt-0.5 shrink-0" />
             Usamos seu nome, e-mail e foto do Google apenas para identificar sua conta.
           </p>
+          <LegalLinks className="mt-3 justify-center text-center type-meta" />
         </div>
       </main>
     </div>

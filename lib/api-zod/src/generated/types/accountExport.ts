@@ -5,6 +5,9 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { AccountExportAiDailyTender } from './accountExportAiDailyTender';
+import type { AccountExportAiDailyUsage } from './accountExportAiDailyUsage';
+import type { AccountExportAiJob } from './accountExportAiJob';
 import type { AccountExportAiQuestion } from './accountExportAiQuestion';
 import type { AccountExportCompanyFitsItem } from './accountExportCompanyFitsItem';
 import type { AccountExportEmailDelivery } from './accountExportEmailDelivery';
@@ -30,6 +33,9 @@ export interface AccountExport {
   notifications: AccountExportNotification[];
   emailDeliveries: AccountExportEmailDelivery[];
   aiQuestions: AccountExportAiQuestion[];
+  aiDailyUsage: AccountExportAiDailyUsage[];
+  aiDailyTenders: AccountExportAiDailyTender[];
+  aiJobs: AccountExportAiJob[];
   companyProfile: CompanyProfile | null;
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];

@@ -14,6 +14,7 @@ import { processes, QUOTA_RESET, tendersExhaustedMessage } from '../lib/ai-quota
 import { markQuestionTerms, questionStems } from '../lib/question-terms';
 import { AutomaticSummary } from './automatic-summary';
 import { DocumentReadingNotice } from './document-reading-notice';
+import { AskPrivacyNotice } from './ask-privacy-notice';
 
 /** Fill the field, never submit: the first question spends 1 of the day's processes. */
 const SUGGESTIONS = [
@@ -249,6 +250,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
       <p id={hintId} className="mt-2 type-meta text-muted-foreground" data-testid="text-ask-quota">
         {exhausted ? tendersExhaustedMessage(status.quota.limit) : quotaLabel(status.quota)}
       </p>
+      <AskPrivacyNotice />
 
       {status.unreadDocuments > 0 && (
         <p className="mt-2 flex gap-1.5 type-meta text-muted-foreground" data-testid="text-ask-partial">

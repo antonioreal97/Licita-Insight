@@ -1129,7 +1129,23 @@ export const exportAccountDataResponseSavedSearchesItemNewMatchesCountMin = 0;
 
 export const exportAccountDataResponseEmailDeliveriesItemAttemptsMin = 0;
 
+
+export const exportAccountDataResponseAiQuestionsItemPassagesItemRelevanceMin = 0;
+export const exportAccountDataResponseAiQuestionsItemPassagesItemRelevanceMax = 1;
+
+
 export const exportAccountDataResponseAiQuestionsItemInputTokensMin = 0;
+
+export const exportAccountDataResponseAiQuestionsItemSummaryInputTokensMin = 0;
+
+export const exportAccountDataResponseAiQuestionsItemSummaryOutputTokensMin = 0;
+
+export const exportAccountDataResponseAiDailyUsageItemUsedMin = 0;
+
+export const exportAccountDataResponseAiDailyUsageItemInputTokensMin = 0;
+
+export const exportAccountDataResponseAiJobsItemAttemptsMin = 0;
+
 
 export const exportAccountDataResponseCompanyProfileOneOneDescriptionMin = 20;
 export const exportAccountDataResponseCompanyProfileOneOneDescriptionMax = 600;
@@ -1190,7 +1206,8 @@ export const ExportAccountDataResponse = zod.object({
   "sessions": zod.array(zod.object({
   "createdAt": zod.coerce.date(),
   "lastSeenAt": zod.coerce.date(),
-  "expiresAt": zod.coerce.date()
+  "expiresAt": zod.coerce.date(),
+  "revokedAt": zod.coerce.date().nullable()
 })),
   "savedTenders": zod.array(zod.object({
   "stage": zod.enum(['analyzing', 'participating', 'submitted', 'awaiting_result', 'completed', 'dismissed']),
@@ -1258,6 +1275,8 @@ export const ExportAccountDataResponse = zod.object({
   "status": zod.enum(['queued', 'sent', 'failed', 'skipped']),
   "recipientEmail": zod.string().email(),
   "subject": zod.string(),
+  "htmlBody": zod.string(),
+  "textBody": zod.string(),
   "attempts": zod.number().int().min(exportAccountDataResponseEmailDeliveriesItemAttemptsMin),
   "lastError": zod.string().nullable(),
   "providerMessageId": zod.string().nullable(),
@@ -1270,10 +1289,57 @@ export const ExportAccountDataResponse = zod.object({
   "tenderId": zod.string(),
   "question": zod.string(),
   "status": zod.enum(['processing', 'answered', 'not_found', 'failed']),
+  "passages": zod.array(zod.object({
+  "documentId": zod.string(),
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string(),
+  "relevance": zod.number().min(exportAccountDataResponseAiQuestionsItemPassagesItemRelevanceMin).max(exportAccountDataResponseAiQuestionsItemPassagesItemRelevanceMax)
+})),
+  "summary": zod.union([zod.object({
+  "text": zod.string(),
+  "citations": zod.array(zod.number().int().min(1)),
+  "model": zod.string()
+}),zod.null()]),
+  "requestedModel": zod.string(),
   "model": zod.string().nullable(),
   "inputTokens": zod.number().int().min(exportAccountDataResponseAiQuestionsItemInputTokensMin),
   "estimatedCostUsd": zod.string(),
+  "summaryModel": zod.string().nullable(),
+  "summaryInputTokens": zod.number().int().min(exportAccountDataResponseAiQuestionsItemSummaryInputTokensMin),
+  "summaryOutputTokens": zod.number().int().min(exportAccountDataResponseAiQuestionsItemSummaryOutputTokensMin),
+  "summaryEstimatedCostUsd": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "aiDailyUsage": zod.array(zod.object({
+  "userId": zod.string(),
+  "quotaDay": zod.coerce.date(),
+  "used": zod.number().int().min(exportAccountDataResponseAiDailyUsageItemUsedMin),
+  "inputTokens": zod.number().int().min(exportAccountDataResponseAiDailyUsageItemInputTokensMin),
+  "estimatedCostUsd": zod.string(),
+  "updatedAt": zod.coerce.date()
+})),
+  "aiDailyTenders": zod.array(zod.object({
+  "userId": zod.string(),
+  "quotaDay": zod.coerce.date(),
+  "tenderId": zod.string(),
   "createdAt": zod.coerce.date()
+})),
+  "aiJobs": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "tenderId": zod.string(),
+  "lane": zod.enum(['interactive', 'batch']),
+  "status": zod.enum(['queued', 'running', 'succeeded', 'failed', 'dead']),
+  "attempts": zod.number().int().min(exportAccountDataResponseAiJobsItemAttemptsMin),
+  "maxAttempts": zod.number().int().min(1),
+  "runAfter": zod.coerce.date(),
+  "lastError": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "startedAt": zod.coerce.date().nullable(),
+  "finishedAt": zod.coerce.date().nullable()
 })),
   "companyProfile": zod.union([zod.object({
   "description": zod.string().min(exportAccountDataResponseCompanyProfileOneOneDescriptionMin).max(exportAccountDataResponseCompanyProfileOneOneDescriptionMax),

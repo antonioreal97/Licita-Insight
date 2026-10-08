@@ -14,6 +14,8 @@ export interface AccountExportEmailDelivery {
   status: AccountExportEmailDeliveryStatus;
   recipientEmail: string;
   subject: string;
+  htmlBody: string;
+  textBody: string;
   /** @minimum 0 */
   attempts: number;
   /** @nullable */
