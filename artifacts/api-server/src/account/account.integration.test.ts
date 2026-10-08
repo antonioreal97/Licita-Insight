@@ -37,6 +37,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     aiSheetDailyUsageTable,
     companyProfilesTable,
     companyTenderFitsTable,
+    profileKeywordVocabularyTable,
     db,
     culturalOpportunitiesTable,
     emailDeliveriesTable,
@@ -93,6 +94,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "ai_sheet_daily_usage",
     "company_profiles",
     "company_tender_fits",
+    "profile_keyword_vocabulary",
     "ai_fit_daily_usage",
     "recommendation_events",
     "recommendation_dismissals",
@@ -734,6 +736,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       description: "Fornecemos equipamentos de informática e suporte técnico corporativo.",
       offerings: ["computadores", "suporte técnico"],
       exclusions: [],
+      selectedCategories: ["ti-telecom"],
+      selectedKeywords: ["servidor rack"],
+      excludedKeywords: ["impressora"],
       coverage: { scope: "states", states: ["SP"] },
       valueRange: { min: null, max: 1000 },
       size: "other",
@@ -775,7 +780,18 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       authenticatedCookie,
     );
     assert.equal(saved.status, 200);
-    assert.equal(((await saved.json()) as { profile: { version: number } }).profile.version, 1);
+    const savedProfile = (await saved.json()) as {
+      profile: {
+        version: number;
+        selectedCategories: string[];
+        selectedKeywords: string[];
+        excludedKeywords: string[];
+      };
+    };
+    assert.equal(savedProfile.profile.version, 1);
+    assert.deepEqual(savedProfile.profile.selectedCategories, ["ti-telecom"]);
+    assert.deepEqual(savedProfile.profile.selectedKeywords, ["servidor rack"]);
+    assert.deepEqual(savedProfile.profile.excludedKeywords, ["impressora"]);
     const fit = await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, authenticatedCookie);
     assert.equal(fit.status, 200);
     const fitBody = (await fit.json()) as {
@@ -789,6 +805,16 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
     const session = await request("/v1/auth/session", {}, authenticatedCookie);
     const userId = ((await session.json()) as { user: { id: string } }).user.id;
+    const explicitInterest = await rebuildInterestProfile(userId);
+    assert.equal(
+      explicitInterest.categories.find(({ value }) => value === "ti-telecom")?.weight,
+      12,
+    );
+    assert.equal(
+      explicitInterest.terms.find(({ value }) => value === "servidor rack")?.weight,
+      12,
+    );
+    assert.ok(explicitInterest.exclusions.includes("impressora"));
     const [cachedBeforeTouch] = await db
       .select({
         id: companyTenderFitsTable.id,
@@ -860,6 +886,124 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.equal((await db.select().from(companyProfilesTable).where(eq(companyProfilesTable.userId, userId))).length, 0);
     assert.equal((await db.select().from(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId))).length, 0);
   });
+
+  await t.test(
+    "serves accent-insensitive keyword autocomplete, related terms, categories and description suggestions",
+    async () => {
+      assert.equal((await request("/v1/profile/categories")).status, 401);
+      await db
+        .insert(profileKeywordVocabularyTable)
+        .values([
+          {
+            normalizedTerm: "iluminacao",
+            displayTerm: "iluminação",
+            ngramSize: 1,
+            openTenderCount: 14,
+            predominantCategorySlug: "eventos-cultura",
+            predominantCategoryLabel: "Eventos, shows e cultura",
+            relatedTerms: [
+              {
+                normalizedTerm: "iluminacao cenica",
+                displayTerm: "iluminação cênica",
+                openTenderCount: 8,
+              },
+            ],
+          },
+          {
+            normalizedTerm: "iluminacao cenica",
+            displayTerm: "iluminação cênica",
+            ngramSize: 2,
+            openTenderCount: 8,
+            predominantCategorySlug: "eventos-cultura",
+            predominantCategoryLabel: "Eventos, shows e cultura",
+          },
+          {
+            normalizedTerm: "som",
+            displayTerm: "som",
+            ngramSize: 1,
+            openTenderCount: 20,
+            predominantCategorySlug: "eventos-cultura",
+            predominantCategoryLabel: "Eventos, shows e cultura",
+            relatedTerms: [
+              {
+                normalizedTerm: "caixa de som",
+                displayTerm: "caixa de som",
+                openTenderCount: 7,
+              },
+            ],
+          },
+          {
+            normalizedTerm: "caixa de som",
+            displayTerm: "caixa de som",
+            ngramSize: 3,
+            openTenderCount: 7,
+            predominantCategorySlug: "eventos-cultura",
+            predominantCategoryLabel: "Eventos, shows e cultura",
+          },
+        ])
+        .onConflictDoNothing();
+      const accented = await request(
+        "/v1/profile/keywords/suggest?q=iluminacao",
+        {},
+        authenticatedCookie,
+      );
+      assert.equal(accented.status, 200);
+      assert.equal(
+        ((await accented.json()) as { data: Array<{ displayTerm: string }> })
+          .data[0]?.displayTerm,
+        "iluminação",
+      );
+      const related = await request(
+        "/v1/profile/keywords/suggest?q=som",
+        {},
+        authenticatedCookie,
+      );
+      const relatedData = (
+        (await related.json()) as {
+          data: Array<{ displayTerm: string; related: boolean }>;
+        }
+      ).data;
+      assert.ok(
+        relatedData.some(
+          ({ displayTerm, related }) =>
+            displayTerm === "caixa de som" && related,
+        ),
+      );
+      const categories = await request(
+        "/v1/profile/categories",
+        {},
+        authenticatedCookie,
+      );
+      assert.equal(categories.status, 200);
+      assert.ok(
+        (
+          (await categories.json()) as { data: Array<{ slug: string }> }
+        ).data.some(({ slug }) => slug === "eventos-cultura"),
+      );
+      const fromDescription = await request(
+        "/v1/profile/keywords/from-description",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            description:
+              "Prestamos iluminação cênica e operação de som para eventos públicos.",
+          }),
+        },
+        authenticatedCookie,
+      );
+      assert.equal(fromDescription.status, 200);
+      const suggested = (await fromDescription.json()) as {
+        keywords: Array<{ normalizedTerm: string }>;
+        categories: Array<{ slug: string }>;
+      };
+      assert.ok(
+        suggested.keywords.some(
+          ({ normalizedTerm }) => normalizedTerm === "iluminacao cenica",
+        ),
+      );
+      assert.equal(suggested.categories[0]?.slug, "eventos-cultura");
+    },
+  );
 
   await t.test("preserves monitor state and isolates users", async () => {
     assert.equal(Number((await pool.query("SELECT count(*) AS count FROM notifications")).rows[0].count), 0);

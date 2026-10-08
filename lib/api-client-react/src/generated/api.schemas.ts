@@ -504,6 +504,24 @@ export interface CompanyProfileInput {
      * @items.maxLength 80
      */
   exclusions: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  selectedCategories: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  selectedKeywords: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  excludedKeywords: string[];
   coverage: CompanyCoverage;
   valueRange: CompanyValueRange;
   size: CompanySize;
@@ -779,6 +797,51 @@ export interface TenderSheet {
 
 export interface CompanyProfileResponse {
   profile: CompanyProfile | null;
+}
+
+export interface ProfileCategory {
+  slug: string;
+  label: string;
+  /** @minimum 0 */
+  openTenderCount: number;
+}
+
+export interface ProfileCategoriesResponse {
+  data: ProfileCategory[];
+}
+
+export type ProfileKeywordSuggestionPredominantCategory = {
+  slug: string;
+  label: string;
+} | null;
+
+export interface ProfileKeywordSuggestion {
+  normalizedTerm: string;
+  displayTerm: string;
+  /** @minimum 3 */
+  openTenderCount: number;
+  predominantCategory: ProfileKeywordSuggestionPredominantCategory;
+  related: boolean;
+}
+
+export interface ProfileKeywordSuggestionsResponse {
+  /** @maxItems 10 */
+  data: ProfileKeywordSuggestion[];
+}
+
+export interface ProfileDescriptionSuggestionRequest {
+  /**
+     * @minLength 20
+     * @maxLength 600
+     */
+  description: string;
+}
+
+export interface ProfileDescriptionSuggestions {
+  keywords: ProfileKeywordSuggestion[];
+  categories: ProfileCategory[];
+  /** @minimum 0 */
+  estimatedOpenTenderCount: number;
 }
 
 export interface FitEvidence {
@@ -1915,6 +1978,14 @@ export const SearchTransparencyContractsSort = {
   value_desc: 'value_desc',
   value_asc: 'value_asc',
 } as const;
+
+export type SuggestProfileKeywordsParams = {
+/**
+ * @minLength 2
+ * @maxLength 80
+ */
+q: string;
+};
 
 export type GetTenderFitsParams = {
 /**

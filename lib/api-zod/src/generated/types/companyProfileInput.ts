@@ -28,6 +28,24 @@ export interface CompanyProfileInput {
      * @items.maxLength 80
      */
   exclusions: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  selectedCategories: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  selectedKeywords: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 2
+     * @items.maxLength 80
+     */
+  excludedKeywords: string[];
   coverage: CompanyCoverage;
   valueRange: CompanyValueRange;
   size: CompanySize;

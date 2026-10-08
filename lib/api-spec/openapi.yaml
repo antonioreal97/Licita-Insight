@@ -360,6 +360,72 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/profile/categories:
+    get:
+      operationId: listProfileCategories
+      tags: [account]
+      summary: List the fixed tender taxonomy with current open-tender counts
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Categories ordered by the canonical taxonomy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCategoriesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/profile/keywords/suggest:
+    get:
+      operationId: suggestProfileKeywords
+      tags: [account]
+      summary: Autocomplete materialized terms from open tenders
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 80 }
+      responses:
+        "200":
+          description: At most ten prefix and co-occurrence suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileKeywordSuggestionsResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/profile/keywords/from-description:
+    post:
+      operationId: suggestProfileFiltersFromDescription
+      tags: [account]
+      summary: Suggest categories and materialized keywords from a company description
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileDescriptionSuggestionRequest"
+      responses:
+        "200":
+          description: Suggested filters and an approximate open-tender match count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileDescriptionSuggestions"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/me/fit:
     get:
       operationId: getTenderFits
@@ -2180,13 +2246,39 @@ components:
           maxItems: 20
           uniqueItems: true
           items: { type: string, minLength: 2, maxLength: 80 }
+        selectedCategories:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 80 }
+        selectedKeywords:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 2, maxLength: 80 }
+        excludedKeywords:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 2, maxLength: 80 }
         coverage:
           $ref: "#/components/schemas/CompanyCoverage"
         valueRange:
           $ref: "#/components/schemas/CompanyValueRange"
         size:
           $ref: "#/components/schemas/CompanySize"
-      required: [description, offerings, exclusions, coverage, valueRange, size]
+      required:
+        [
+          description,
+          offerings,
+          exclusions,
+          selectedCategories,
+          selectedKeywords,
+          excludedKeywords,
+          coverage,
+          valueRange,
+          size,
+        ]
     CompanyProfile:
       allOf:
         - $ref: "#/components/schemas/CompanyProfileInput"
@@ -2203,6 +2295,72 @@ components:
             - $ref: "#/components/schemas/CompanyProfile"
             - type: "null"
       required: [profile]
+    ProfileCategory:
+      type: object
+      properties:
+        slug: { type: string }
+        label: { type: string }
+        openTenderCount: { type: integer, minimum: 0 }
+      required: [slug, label, openTenderCount]
+    ProfileCategoriesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileCategory"
+      required: [data]
+    ProfileKeywordSuggestion:
+      type: object
+      properties:
+        normalizedTerm: { type: string }
+        displayTerm: { type: string }
+        openTenderCount: { type: integer, minimum: 3 }
+        predominantCategory:
+          anyOf:
+            - type: object
+              properties:
+                slug: { type: string }
+                label: { type: string }
+              required: [slug, label]
+            - type: "null"
+        related: { type: boolean }
+      required:
+        [
+          normalizedTerm,
+          displayTerm,
+          openTenderCount,
+          predominantCategory,
+          related,
+        ]
+    ProfileKeywordSuggestionsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/ProfileKeywordSuggestion"
+      required: [data]
+    ProfileDescriptionSuggestionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        description: { type: string, minLength: 20, maxLength: 600 }
+      required: [description]
+    ProfileDescriptionSuggestions:
+      type: object
+      properties:
+        keywords:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileKeywordSuggestion"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileCategory"
+        estimatedOpenTenderCount: { type: integer, minimum: 0 }
+      required: [keywords, categories, estimatedOpenTenderCount]
     FitEvidence:
       type: object
       properties:

@@ -47,18 +47,18 @@ Impressões são somadas na leitura da página; cliques e dismiss são somados e
 
 O perfil de interesse materializado mantém os 30 termos mais fortes e até 20 categorias, órgãos e modalidades, além de UFs e faixa de valor. Pesos-base:
 
-- perfil da empresa: oferta `6`, descrição `2`, UF de cobertura `5`;
+- perfil da empresa: palavra-chave escolhida `12`, categoria escolhida `12`, oferta livre `6`, descrição inferida `2`, UF de cobertura `5`;
 - monitorado: `10`; salvo: `6`;
 - busca salva: `3`;
 - busca opt-in: `1,5 × decaimento`; detalhe opt-in: `2 × decaimento`.
 
-Eventos usam meia-vida de 30 dias (`2^(-idade/30)`). Termos genéricos de contratação e stopwords portuguesas são eliminados. Monitorados valem mais do que salvos. O feedback preserva termos/categorias do edital para penalizar semelhantes mesmo depois da próxima atualização.
+Eventos usam meia-vida de 30 dias (`2^(-idade/30)`). Termos genéricos de contratação e stopwords portuguesas são eliminados. Sinais escolhidos explicitamente no perfil têm prioridade sobre termos inferidos da descrição e do histórico. Monitorados valem mais do que salvos. O feedback preserva termos/categorias do edital para penalizar semelhantes mesmo depois da próxima atualização.
 
 ## Candidatos e pontuação
 
 São candidatos somente editais `open`, com `proposal_deadline > now`, não salvos/monitorados e não descartados. O PostgreSQL usa `to_tsvector('portuguese', search_text)` + `websearch_to_tsquery`, categorias JSONB e UFs; no máximo 500 candidatos por usuário. Não há embedding, modelo local, GPU ou chamada de LLM nesse fluxo.
 
-Pontuação documentada (máximos aproximados): categoria `25`, termos/`ts_rank` `30`, UF/cobertura `14`, órgão `8`, faixa de valor `8`, prazo `6`, novidade `6`. Fora das UFs de cobertura recebe `-35`; fora da faixa, `-5`; categorias/termos parecidos com dismiss recebem penalidade leve de até `-7`. Qualquer ocorrência de exclusão do perfil elimina o candidato. No topo, entram no máximo dois itens do mesmo órgão e três da mesma categoria primária antes dos itens adiados.
+Pontuação documentada (máximos aproximados): categoria `25`, termos/`ts_rank` `30`, UF/cobertura `14`, órgão `8`, faixa de valor `8`, prazo `6`, novidade `6`. Fora das UFs de cobertura recebe `-35`; fora da faixa, `-5`; categorias/termos parecidos com dismiss recebem penalidade leve de até `-7`. Qualquer ocorrência de uma exclusão livre ou palavra-chave excluída explicitamente elimina o candidato. Os alertas de perfil reutilizam os filtros explícitos antes da avaliação: palavra-chave escolhida soma `0,20` e categoria escolhida soma `0,25` ao score normalizado, enquanto exclusões encerram o candidato sem chamada de modelo. No topo, entram no máximo dois itens do mesmo órgão e três da mesma categoria primária antes dos itens adiados.
 
 O resultado final (top 50, score e até três motivos legíveis) fica em `user_recommendations`. A leitura faz apenas join por rank. Salvar, monitorar, alterar perfil/busca salva e dar feedback agendam rebuild assíncrono com debounce. O job diário roda às 03:00 (`America/Sao_Paulo`), fora da coleta PNCP das 06:00, e também limpa eventos vencidos.
 

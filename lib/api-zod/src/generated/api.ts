@@ -700,6 +700,20 @@ export const getCompanyProfileResponseProfileOneOneExclusionsItemMax = 80;
 
 export const getCompanyProfileResponseProfileOneOneExclusionsMax = 20;
 
+export const getCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax = 80;
+
+export const getCompanyProfileResponseProfileOneOneSelectedCategoriesMax = 20;
+
+export const getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin = 2;
+export const getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax = 80;
+
+export const getCompanyProfileResponseProfileOneOneSelectedKeywordsMax = 20;
+
+export const getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin = 2;
+export const getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax = 80;
+
+export const getCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
+
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -717,6 +731,9 @@ export const GetCompanyProfileResponse = zod.object({
   "description": zod.string().min(getCompanyProfileResponseProfileOneOneDescriptionMin).max(getCompanyProfileResponseProfileOneOneDescriptionMax),
   "offerings": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneOfferingsItemMin).max(getCompanyProfileResponseProfileOneOneOfferingsItemMax)).min(1).max(getCompanyProfileResponseProfileOneOneOfferingsMax),
   "exclusions": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneExclusionsItemMin).max(getCompanyProfileResponseProfileOneOneExclusionsItemMax)).max(getCompanyProfileResponseProfileOneOneExclusionsMax),
+  "selectedCategories": zod.array(zod.string().min(1).max(getCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax)).max(getCompanyProfileResponseProfileOneOneSelectedCategoriesMax),
+  "selectedKeywords": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin).max(getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax)).max(getCompanyProfileResponseProfileOneOneSelectedKeywordsMax),
+  "excludedKeywords": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -751,6 +768,20 @@ export const putCompanyProfileBodyExclusionsItemMax = 80;
 
 export const putCompanyProfileBodyExclusionsMax = 20;
 
+export const putCompanyProfileBodySelectedCategoriesItemMax = 80;
+
+export const putCompanyProfileBodySelectedCategoriesMax = 20;
+
+export const putCompanyProfileBodySelectedKeywordsItemMin = 2;
+export const putCompanyProfileBodySelectedKeywordsItemMax = 80;
+
+export const putCompanyProfileBodySelectedKeywordsMax = 20;
+
+export const putCompanyProfileBodyExcludedKeywordsItemMin = 2;
+export const putCompanyProfileBodyExcludedKeywordsItemMax = 80;
+
+export const putCompanyProfileBodyExcludedKeywordsMax = 20;
+
 export const putCompanyProfileBodyCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileBodyCoverageTwoStatesItemMax = 2;
 
@@ -766,6 +797,9 @@ export const PutCompanyProfileBody = zod.object({
   "description": zod.string().min(putCompanyProfileBodyDescriptionMin).max(putCompanyProfileBodyDescriptionMax),
   "offerings": zod.array(zod.string().min(putCompanyProfileBodyOfferingsItemMin).max(putCompanyProfileBodyOfferingsItemMax)).min(1).max(putCompanyProfileBodyOfferingsMax),
   "exclusions": zod.array(zod.string().min(putCompanyProfileBodyExclusionsItemMin).max(putCompanyProfileBodyExclusionsItemMax)).max(putCompanyProfileBodyExclusionsMax),
+  "selectedCategories": zod.array(zod.string().min(1).max(putCompanyProfileBodySelectedCategoriesItemMax)).max(putCompanyProfileBodySelectedCategoriesMax),
+  "selectedKeywords": zod.array(zod.string().min(putCompanyProfileBodySelectedKeywordsItemMin).max(putCompanyProfileBodySelectedKeywordsItemMax)).max(putCompanyProfileBodySelectedKeywordsMax),
+  "excludedKeywords": zod.array(zod.string().min(putCompanyProfileBodyExcludedKeywordsItemMin).max(putCompanyProfileBodyExcludedKeywordsItemMax)).max(putCompanyProfileBodyExcludedKeywordsMax),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -792,6 +826,20 @@ export const putCompanyProfileResponseProfileOneOneExclusionsItemMax = 80;
 
 export const putCompanyProfileResponseProfileOneOneExclusionsMax = 20;
 
+export const putCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax = 80;
+
+export const putCompanyProfileResponseProfileOneOneSelectedCategoriesMax = 20;
+
+export const putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin = 2;
+export const putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax = 80;
+
+export const putCompanyProfileResponseProfileOneOneSelectedKeywordsMax = 20;
+
+export const putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin = 2;
+export const putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax = 80;
+
+export const putCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
+
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -809,6 +857,9 @@ export const PutCompanyProfileResponse = zod.object({
   "description": zod.string().min(putCompanyProfileResponseProfileOneOneDescriptionMin).max(putCompanyProfileResponseProfileOneOneDescriptionMax),
   "offerings": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneOfferingsItemMin).max(putCompanyProfileResponseProfileOneOneOfferingsItemMax)).min(1).max(putCompanyProfileResponseProfileOneOneOfferingsMax),
   "exclusions": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneExclusionsItemMin).max(putCompanyProfileResponseProfileOneOneExclusionsItemMax)).max(putCompanyProfileResponseProfileOneOneExclusionsMax),
+  "selectedCategories": zod.array(zod.string().min(1).max(putCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax)).max(putCompanyProfileResponseProfileOneOneSelectedCategoriesMax),
+  "selectedKeywords": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin).max(putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax)).max(putCompanyProfileResponseProfileOneOneSelectedKeywordsMax),
+  "excludedKeywords": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -831,6 +882,94 @@ export const PutCompanyProfileResponse = zod.object({
  * @summary Delete the company profile and its cached fit results
  */
 export const DeleteCompanyProfileResponse = zod.void()
+
+
+/**
+ * @summary List the fixed tender taxonomy with current open-tender counts
+ */
+export const listProfileCategoriesResponseDataItemOpenTenderCountMin = 0;
+
+
+
+export const ListProfileCategoriesResponse = zod.object({
+  "data": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "openTenderCount": zod.number().int().min(listProfileCategoriesResponseDataItemOpenTenderCountMin)
+}))
+})
+
+
+/**
+ * @summary Autocomplete materialized terms from open tenders
+ */
+export const suggestProfileKeywordsQueryQMin = 2;
+export const suggestProfileKeywordsQueryQMax = 80;
+
+
+
+export const SuggestProfileKeywordsQueryParams = zod.object({
+  "q": zod.coerce.string().min(suggestProfileKeywordsQueryQMin).max(suggestProfileKeywordsQueryQMax)
+})
+
+export const suggestProfileKeywordsResponseDataItemOpenTenderCountMin = 3;
+
+export const suggestProfileKeywordsResponseDataMax = 10;
+
+
+
+export const SuggestProfileKeywordsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "normalizedTerm": zod.string(),
+  "displayTerm": zod.string(),
+  "openTenderCount": zod.number().int().min(suggestProfileKeywordsResponseDataItemOpenTenderCountMin),
+  "predominantCategory": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+}),zod.null()]),
+  "related": zod.boolean()
+})).max(suggestProfileKeywordsResponseDataMax)
+})
+
+
+/**
+ * @summary Suggest categories and materialized keywords from a company description
+ */
+export const suggestProfileFiltersFromDescriptionBodyDescriptionMin = 20;
+export const suggestProfileFiltersFromDescriptionBodyDescriptionMax = 600;
+
+
+
+export const SuggestProfileFiltersFromDescriptionBody = zod.object({
+  "description": zod.string().min(suggestProfileFiltersFromDescriptionBodyDescriptionMin).max(suggestProfileFiltersFromDescriptionBodyDescriptionMax)
+})
+
+export const suggestProfileFiltersFromDescriptionResponseKeywordsItemOpenTenderCountMin = 3;
+
+export const suggestProfileFiltersFromDescriptionResponseCategoriesItemOpenTenderCountMin = 0;
+
+export const suggestProfileFiltersFromDescriptionResponseEstimatedOpenTenderCountMin = 0;
+
+
+
+export const SuggestProfileFiltersFromDescriptionResponse = zod.object({
+  "keywords": zod.array(zod.object({
+  "normalizedTerm": zod.string(),
+  "displayTerm": zod.string(),
+  "openTenderCount": zod.number().int().min(suggestProfileFiltersFromDescriptionResponseKeywordsItemOpenTenderCountMin),
+  "predominantCategory": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+}),zod.null()]),
+  "related": zod.boolean()
+})),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "openTenderCount": zod.number().int().min(suggestProfileFiltersFromDescriptionResponseCategoriesItemOpenTenderCountMin)
+})),
+  "estimatedOpenTenderCount": zod.number().int().min(suggestProfileFiltersFromDescriptionResponseEstimatedOpenTenderCountMin)
+})
 
 
 /**
@@ -1005,6 +1144,20 @@ export const exportAccountDataResponseCompanyProfileOneOneExclusionsItemMax = 80
 
 export const exportAccountDataResponseCompanyProfileOneOneExclusionsMax = 20;
 
+export const exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesItemMax = 80;
+
+export const exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesMax = 20;
+
+export const exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMax = 80;
+
+export const exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsMax = 20;
+
+export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMax = 80;
+
+export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax = 20;
+
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin = 2;
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -1126,6 +1279,9 @@ export const ExportAccountDataResponse = zod.object({
   "description": zod.string().min(exportAccountDataResponseCompanyProfileOneOneDescriptionMin).max(exportAccountDataResponseCompanyProfileOneOneDescriptionMax),
   "offerings": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneOfferingsItemMin).max(exportAccountDataResponseCompanyProfileOneOneOfferingsItemMax)).min(1).max(exportAccountDataResponseCompanyProfileOneOneOfferingsMax),
   "exclusions": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneExclusionsItemMin).max(exportAccountDataResponseCompanyProfileOneOneExclusionsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneExclusionsMax),
+  "selectedCategories": zod.array(zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesItemMax)).max(exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesMax),
+  "selectedKeywords": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMin).max(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsMax),
+  "excludedKeywords": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMin).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({

@@ -24,6 +24,7 @@ import { startAiJobWorker } from "./ai/ai-job-queue";
 import { startAiDocumentRetentionScheduler } from "./ai/ai-document-retention";
 import { startMetricsServer } from "./metrics";
 import { startRecommendationScheduler } from "./recommendations/recommendation-service";
+import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 
 const parsePort = (name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT", required: boolean): number | undefined => {
   const raw = process.env[name]?.trim();
@@ -63,6 +64,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyCultureCollect(),
   startDailyCategoryClassify(),
   startRecommendationScheduler(),
+  startProfileKeywordScheduler(),
 ];
 
 const start = async (): Promise<void> => {

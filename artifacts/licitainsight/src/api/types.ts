@@ -327,11 +327,7 @@ export type DownloadedFile = { blob: Blob; filename: string | null };
 // Participation — source of truth: docs/contracts/participation-v1.md. Everything here is the user's own declaration.
 export type ParticipationStage = 'analyzing' | 'participating' | 'submitted' | 'awaiting_result' | 'completed' | 'dismissed';
 
-export type ChecklistKey =
-  | QualificationType
-  | 'site_visit'
-  | 'samples'
-  | 'bid_guarantee';
+export type ChecklistKey = QualificationType | 'site_visit' | 'samples' | 'bid_guarantee';
 
 /** No entry for a key means `unknown`, never a validated document. */
 export type ChecklistState = 'have' | 'missing' | 'unknown';
@@ -471,10 +467,7 @@ export type RecommendationReason = {
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
 export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
-export type RecommendationEvent =
-  | { type: 'search'; query: string }
-  | { type: 'tender_view'; tenderId: string }
-  | { type: 'click'; tenderId?: string };
+export type RecommendationEvent = { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string };
 
 export type UnsubscribeScope = 'all' | 'digest' | 'immediate';
 
@@ -486,7 +479,13 @@ export type UnsubscribeResponse = { scope: UnsubscribeScope; email: EmailPrefere
 /** `expired`: the documents were dropped from the index 90 days after the proposal deadline (unless a user saved the tender). Saving reopens it. */
 export type TenderAskIndexStatus = 'not_started' | 'processing' | 'ocr_processing' | 'ready' | 'failed' | 'no_documents' | 'unsupported' | 'expired';
 
-export type TenderAskDocument = { id: string; title: string; pages: number | null; status: 'processing' | 'ocr_processing' | 'ready' | 'failed' | 'unsupported'; ocrLowConfidencePages: number[] };
+export type TenderAskDocument = {
+  id: string;
+  title: string;
+  pages: number | null;
+  status: 'processing' | 'ocr_processing' | 'ready' | 'failed' | 'unsupported';
+  ocrLowConfidencePages: number[];
+};
 
 export type DocumentReadingSummary = {
   read: number;
@@ -503,7 +502,13 @@ export type AiQuota = { used: number; limit: number; resetsAt: string; counted: 
 
 /** `GET /api/v1/tenders/:id/ask-status` (session). Signed-in users with access start the indexing by calling it. */
 /** `unreadDocuments`: documents that failed or could not be read. The index is `ready` with a partial reading, so answers may be incomplete. */
-export type TenderAskStatus = { index: TenderAskIndexStatus; documents: TenderAskDocument[]; unreadDocuments: number; documentReading: DocumentReadingSummary; quota: AiQuota };
+export type TenderAskStatus = {
+  index: TenderAskIndexStatus;
+  documents: TenderAskDocument[];
+  unreadDocuments: number;
+  documentReading: DocumentReadingSummary;
+  quota: AiQuota;
+};
 
 /** `relevance` is Jev's probability (0–1) that the passage answers the question; only passages above the threshold come back. */
 export type AskTenderPassage = { documentId: string; documentTitle: string; documentUrl: string; page: number; text: string; relevance: number };
@@ -572,6 +577,12 @@ export type CompanyProfileInput = {
   offerings: string[];
   /** 0–20 terms the company does not supply. */
   exclusions: string[];
+  /** Canonical taxonomy slugs explicitly chosen by the user. */
+  selectedCategories: string[];
+  /** Materialized vocabulary display terms explicitly chosen by the user. */
+  selectedKeywords: string[];
+  /** Materialized vocabulary terms that must remove candidates. */
+  excludedKeywords: string[];
   coverage: CompanyCoverage;
   /** Reais; either side may be open. */
   valueRange: { min: number | null; max: number | null };
@@ -582,6 +593,22 @@ export type CompanyProfile = CompanyProfileInput & { version: number; updatedAt:
 
 /** `GET/PUT /api/v1/me/company-profile` (session; editing does not need access, the fit does). */
 export type CompanyProfileResponse = { profile: CompanyProfile | null };
+
+export type ProfileCategory = { slug: string; label: string; openTenderCount: number };
+export type ProfileCategoriesResponse = { data: ProfileCategory[] };
+export type ProfileKeywordSuggestion = {
+  normalizedTerm: string;
+  displayTerm: string;
+  openTenderCount: number;
+  predominantCategory: { slug: string; label: string } | null;
+  related: boolean;
+};
+export type ProfileKeywordSuggestionsResponse = { data: ProfileKeywordSuggestion[] };
+export type ProfileDescriptionSuggestions = {
+  keywords: ProfileKeywordSuggestion[];
+  categories: ProfileCategory[];
+  estimatedOpenTenderCount: number;
+};
 
 export type FitEvidence = { documentTitle: string; documentUrl: string; page: number; text: string };
 

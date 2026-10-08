@@ -1,4 +1,14 @@
-import type { AskTenderResult, CompanyProfileInput, CompanyProfileResponse, TenderAskStatus, TenderFitsResponse, TenderSheet } from '../types';
+import type {
+  AskTenderResult,
+  CompanyProfileInput,
+  CompanyProfileResponse,
+  ProfileCategoriesResponse,
+  ProfileDescriptionSuggestions,
+  ProfileKeywordSuggestionsResponse,
+  TenderAskStatus,
+  TenderFitsResponse,
+  TenderSheet,
+} from '../types';
 
 /** "Perguntar ao edital" and aderência. Components go through the services and hooks, not this adapter. */
 export interface AiAdapter {
@@ -9,5 +19,8 @@ export interface AiAdapter {
   getCompanyProfile(signal?: AbortSignal): Promise<CompanyProfileResponse>;
   saveCompanyProfile(profile: CompanyProfileInput): Promise<CompanyProfileResponse>;
   deleteCompanyProfile(): Promise<void>;
+  listProfileCategories(signal?: AbortSignal): Promise<ProfileCategoriesResponse>;
+  suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
+  suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;
   getFits(tenderIds: string[], signal?: AbortSignal): Promise<TenderFitsResponse>;
 }

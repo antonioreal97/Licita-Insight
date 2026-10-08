@@ -33,6 +33,9 @@ export const queryKeys = {
     /** The sheet is public tender data, but only served with access: it lives under `me` so sign-out drops it. */
     tenderSheet: (tenderId: string) => ['me', 'tender-sheet', tenderId] as const,
     companyProfile: ['me', 'company-profile'] as const,
+    profileCategories: ['me', 'profile-categories'] as const,
+    profileKeywords: (query: string) => ['me', 'profile-keywords', query] as const,
+    profileDescription: (description: string) => ['me', 'profile-description', description] as const,
     /** Saving or deleting the profile invalidates every fit (`fit.all`). */
     fit: {
       all: ['me', 'fit'] as const,
