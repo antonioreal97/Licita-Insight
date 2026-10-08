@@ -1,0 +1,44 @@
+version: 2
+updates:
+  # Monorepo pnpm (API, frontend e libs): um único lockfile na raiz
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    groups:
+      # Atualizações menores e correções num único PR por semana
+      npm-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Versões major chegam como alerta de segurança; atualizar com planejamento
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Imagens base: Dockerfile e Dockerfile.prod (raiz) e serviço de OCR
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+      - "/ops/ocr"
+      - "/deploy/fly-db/backup"
+    schedule:
+      interval: "monthly"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(docker)"
+    labels:
+      - "dependencies"
+    groups:
+      docker-images:
+        patterns:
+          - "*"
