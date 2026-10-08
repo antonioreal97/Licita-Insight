@@ -7,6 +7,12 @@ services:
     # Usa a interface Tailscale do host Linux. Somente 80/443 sao publicos.
     network_mode: host
     mem_limit: 128m
+    # Retenção técnica limitada: no máximo 18 arquivos de 10 MiB por container.
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "18"
     environment:
       NGINX_LISTEN: "127.0.0.1:8080"
       NGINX_UPSTREAM: ${MACBOOK_TAILSCALE_IP:?Defina o IPv4 Tailscale do servidor}:${MACBOOK_BIND_PORT:-24252}
