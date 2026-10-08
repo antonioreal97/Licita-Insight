@@ -157,14 +157,100 @@ const itemText = (
   return details.join("\n");
 };
 
+/*
+ * HTML layout. E-mail clients ignore most CSS, so the markup uses nested tables and inline styles only.
+ * Colors are the light-theme values of the design-system tokens (artifacts/licitainsight/src/index.css),
+ * converted to hex because many clients do not support hsl(). Keep them in sync when the tokens change.
+ */
+const colors = {
+  canvas: "#F4F5EF", // --background
+  surface: "#FFFEFA", // --surface
+  ink: "#173944", // --foreground
+  muted: "#506B6D", // --muted-foreground
+  border: "#D5E2DC", // --border
+  link: "#226F7C", // --primary
+  tag: "#DBEBE6", // --primary-subtle
+  tagInk: "#185C68", // --primary-subtle-foreground
+  warning: "#FDF2D8", // --warning-subtle
+  warningInk: "#814508", // --warning-subtle-foreground
+  action: "#39F3F3", // --action
+  actionInk: "#123E49", // --action-foreground
+  brand: "#183E4E", // --sidebar (petroleum blue)
+  brandInk: "#E3EDE9", // --sidebar-foreground
+  brandMuted: "#B7D2BC", // --accent (sage)
+} as const;
+
+const sans = "'DM Sans',Arial,Helvetica,sans-serif";
+const mono = "'Space Mono',SFMono-Regular,Menlo,Consolas,monospace";
+
+type Tone = "default" | "warning";
+
+/** Small mono label above an item title: what kind of update this is. */
+const tagHtml = (label: string, tone: Tone = "default"): string => {
+  const [background, color] =
+    tone === "warning" ? [colors.warning, colors.warningInk] : [colors.tag, colors.tagInk];
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${background};color:${color};font-family:${mono};font-size:11px;line-height:16px;letter-spacing:0.04em;text-transform:uppercase">${escapeHtml(label)}</span>`;
+};
+
+const linkHtml = (href: string, label: string): string =>
+  `<a href="${escapeHtml(href)}" style="color:${colors.link};font-weight:600;text-decoration:underline">${escapeHtml(label)}</a>`;
+
+const metaHtml = (html: string): string =>
+  `<p style="margin:4px 0 0;font-size:14px;line-height:21px;color:${colors.muted}">${html}</p>`;
+
+const emphasisHtml = (html: string): string =>
+  `<p style="margin:8px 0 0;font-size:14px;line-height:21px;color:${colors.ink};font-weight:600">${html}</p>`;
+
+/**
+ * One row of the list. `body` is already-escaped HTML. `count` shows a big number on the right
+ * (results, matches) so the reader can scan the e-mail by size of the news.
+ */
+const itemBlock = (item: {
+  tag: string;
+  tone?: Tone;
+  title: string;
+  body: string;
+  cta: string;
+  count?: { value: number; label: string };
+  /** False for the first row when no section heading sits above it (the header already separates it). */
+  divider?: boolean;
+}): string => {
+  const countCell = item.count
+    ? `<td valign="top" align="right" width="72" style="padding-left:16px;font-family:${mono};color:${colors.ink}"><div style="font-size:28px;line-height:32px;font-weight:700">${item.count.value}</div><div style="font-size:11px;line-height:16px;color:${colors.muted};text-transform:uppercase;letter-spacing:0.04em">${escapeHtml(item.count.label)}</div></td>`
+    : "";
+  const rule = item.divider === false ? "" : `;border-top:1px solid ${colors.border}`;
+  return `<tr><td style="padding:20px 0${rule}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" style="font-family:${sans};color:${colors.ink}">${tagHtml(item.tag, item.tone)}<p style="margin:8px 0 0;font-size:17px;line-height:24px;font-weight:700;color:${colors.ink}">${item.title}</p>${item.body}<p style="margin:12px 0 0;font-size:14px;line-height:20px">${item.cta}</p></td>${countCell}</tr></table></td></tr>`;
+};
+
+const itemsTable = (rows: string): string =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>`;
+
+const sectionHeading = (title: string, note?: string): string =>
+  `<h3 style="margin:32px 0 12px;font-family:${mono};font-size:12px;line-height:16px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${colors.muted}">${escapeHtml(title)}</h3>${note ? `<p style="margin:-4px 0 16px;font-size:13px;line-height:19px;color:${colors.muted}">${escapeHtml(note)}</p>` : ""}`;
+
+const tenderTags: Record<string, { label: string; tone: Tone }> = {
+  tender_deadline_changed: { label: "Prazo alterado", tone: "warning" },
+  tender_status_changed: { label: "Status alterado", tone: "warning" },
+  tender_document_added: { label: "Novos documentos", tone: "default" },
+  tender_value_changed: { label: "Valor alterado", tone: "default" },
+};
+
 const itemHtml = (
   notification: EmailNotificationSnapshot,
   origin: string,
+  divider: boolean,
 ): string => {
-  const link = escapeHtml(notificationLink(notification, origin));
+  const link = notificationLink(notification, origin);
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
-    return `<li style="margin-bottom:20px"><strong>${escapeHtml(notification.savedSearchName ?? "Busca salva")}</strong><br>${quantity(matchCount, "novo resultado", "novos resultados")}<br><a href="${link}">Ver resultados</a></li>`;
+    return itemBlock({
+      tag: "Busca salva",
+      title: escapeHtml(notification.savedSearchName ?? "Busca salva"),
+      body: metaHtml(quantity(matchCount, "novo resultado", "novos resultados")),
+      cta: linkHtml(link, "Ver resultados"),
+      count: { value: matchCount, label: matchCount === 1 ? "novo" : "novos" },
+      divider,
+    });
   }
   if (notification.type === "profile_new_matches") {
     const matches = notification.profileMatches ?? [];
@@ -173,22 +259,46 @@ const itemHtml = (
       .slice(0, 5)
       .map(
         (match) =>
-          `<li><a href="${escapeHtml(`${origin}/tenders/${encodeURIComponent(match.id)}`)}">${escapeHtml(truncate(match.title))}</a> — ${escapeHtml(match.organizationName)}</li>`,
+          `<tr><td style="padding:10px 0 0;font-family:${sans}"><a href="${escapeHtml(`${origin}/tenders/${encodeURIComponent(match.id)}`)}" style="color:${colors.link};font-size:14px;line-height:20px;font-weight:600;text-decoration:none">${escapeHtml(truncate(match.title))}</a><br><span style="font-size:13px;line-height:19px;color:${colors.muted}">${escapeHtml(match.organizationName)}</span></td></tr>`,
       )
       .join("");
-    return `<li style="margin-bottom:20px"><strong>${quantity(matchCount, "novo edital com alta aderência", "novos editais com alta aderência")}</strong>${highlights ? `<ul>${highlights}</ul>` : ""}<a href="${link}">Ver oportunidades</a></li>`;
+    return itemBlock({
+      tag: "Aderência ao perfil",
+      title: matchCount === 1 ? "Novo edital com alta aderência" : "Novos editais com alta aderência",
+      body: highlights
+        ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px">${highlights}</table>`
+        : metaHtml(quantity(matchCount, "novo edital", "novos editais")),
+      cta: `<a href="${escapeHtml(link)}" style="color:${colors.link};font-weight:600;text-decoration:underline">Ver oportunidades</a>`,
+      count: { value: matchCount, label: matchCount === 1 ? "edital" : "editais" },
+      divider,
+    });
   }
   if (notification.type === "trial_ending") {
-    return `<li style="margin-bottom:20px"><strong>Seu teste está terminando</strong><br>${escapeHtml(changeDescription(notification.type, notification.change))}<br><a href="${link}">Ver assinatura</a></li>`;
+    return itemBlock({
+      tag: "Assinatura",
+      tone: "warning",
+      title: "Seu teste está terminando",
+      body: metaHtml(escapeHtml(changeDescription(notification.type, notification.change))),
+      cta: linkHtml(link, "Ver assinatura"),
+      divider,
+    });
   }
-  const deadline = notification.tenderProposalDeadline
-    ? dateTime(notification.tenderProposalDeadline)
-    : "Não informado";
-  const deadlineHtml =
+  const tag = tenderTags[notification.type] ?? { label: "Edital monitorado", tone: "default" as Tone };
+  const change = escapeHtml(changeDescription(notification.type, notification.change));
+  const deadline =
     notification.type === "tender_deadline_changed"
-      ? escapeHtml(changeDescription(notification.type, notification.change))
-      : `Prazo: ${escapeHtml(deadline)}<br>${escapeHtml(changeDescription(notification.type, notification.change))}`;
-  return `<li style="margin-bottom:20px"><strong>${escapeHtml(truncate(notification.tenderTitle ?? "Edital monitorado"))}</strong><br>Órgão: ${escapeHtml(notification.tenderOrganizationName ?? "Não informado")}<br>${deadlineHtml}<br><a href="${link}">Ver edital</a></li>`;
+      ? ""
+      : metaHtml(
+          `Prazo: <span style="font-family:${mono};color:${colors.ink}">${escapeHtml(notification.tenderProposalDeadline ? dateTime(notification.tenderProposalDeadline) : "Não informado")}</span>`,
+        );
+  return itemBlock({
+    tag: tag.label,
+    tone: tag.tone,
+    title: escapeHtml(truncate(notification.tenderTitle ?? "Edital monitorado")),
+    body: `${metaHtml(`Órgão: ${escapeHtml(notification.tenderOrganizationName ?? "Não informado")}`)}${emphasisHtml(change)}${deadline}`,
+    cta: linkHtml(link, "Ver edital"),
+    divider,
+  });
 };
 
 const stageLabels: Record<EmailDeadlineSnapshot["stage"], string> = {
@@ -247,14 +357,31 @@ const deadlinesSection = (
     ...(more ? ["", `${more}: ${savedUrl}`] : []),
   ].join("\n");
   const items = shown
-    .map(
-      (deadline) =>
-        `<li style="margin-bottom:20px"><strong>${escapeHtml(truncate(deadline.tenderTitle, 120))}</strong><br>Órgão: ${escapeHtml(deadline.tenderOrganizationName)}<br>Sua etapa: ${escapeHtml(stageLabels[deadline.stage])}<br>${escapeHtml(deadlineDescription(deadline, now))}<br><a href="${escapeHtml(tenderLink(deadline.tenderId, origin))}">Ver edital</a></li>`,
-    )
+    .map((deadline) => {
+      const soon = ["hoje", "amanhã"].includes(relativeDeadlineDay(nearestDeadline(deadline), now));
+      return itemBlock({
+        tag: `Sua etapa: ${stageLabels[deadline.stage]}`,
+        tone: soon ? "warning" : "default",
+        title: escapeHtml(truncate(deadline.tenderTitle, 120)),
+        body: `${metaHtml(`Órgão: ${escapeHtml(deadline.tenderOrganizationName)}`)}${emphasisHtml(escapeHtml(deadlineDescription(deadline, now)))}`,
+        cta: linkHtml(tenderLink(deadline.tenderId, origin), "Ver edital"),
+      });
+    })
     .join("");
-  const html = `<h3 style="font-size:17px">Seus prazos</h3><p style="font-size:13px;color:#596273">Até o fim do 3º dia a partir de hoje, no horário de Brasília. Prazos pessoais são os que você informou no Pardal Digital.</p><ul style="padding-left:20px">${items}</ul>${more ? `<p><a href="${escapeHtml(savedUrl)}">${escapeHtml(more)}</a></p>` : ""}`;
+  const html = `${sectionHeading(
+    "Seus prazos",
+    "Até o fim do 3º dia a partir de hoje, no horário de Brasília. Prazos pessoais são os que você informou no Pardal Digital.",
+  )}${itemsTable(items)}${more ? `<p style="margin:4px 0 0;font-size:14px;line-height:20px">${linkHtml(savedUrl, more)}</p>` : ""}`;
   return { text, html };
 };
+
+const longDate = (value: Date): string =>
+  new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(value);
 
 export const renderNotificationEmail = (input: {
   mode: "digest" | "immediate";
@@ -265,16 +392,18 @@ export const renderNotificationEmail = (input: {
   deadlines?: readonly EmailDeadlineSnapshot[];
   now?: Date;
 }) => {
+  const now = input.now ?? new Date();
   const unsubscribeApiUrl = `${input.origin}/api/v1/email/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const unsubscribePageUrl = `${input.origin}/descadastro?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const settingsUrl = `${input.origin}/settings#notificacoes`;
+  const dashboardUrl = `${input.origin}/dashboard`;
   const heading =
     input.mode === "digest"
       ? "Seu resumo diário de oportunidades"
       : "Alerta importante do Pardal Digital";
   const deadlines =
     input.mode === "digest"
-      ? deadlinesSection(input.deadlines ?? [], input.now ?? new Date(), input.origin)
+      ? deadlinesSection(input.deadlines ?? [], now, input.origin)
       : null;
   const deadlineCount = deadlines
     ? input.deadlines!.flatMap(({ personalDeadline, proposalDeadline }) => [personalDeadline, proposalDeadline]).filter(Boolean).length
@@ -289,7 +418,7 @@ export const renderNotificationEmail = (input: {
     .map((notification) => itemText(notification, input.origin))
     .join("\n\n");
   const itemsHtml = input.notifications
-    .map((notification) => itemHtml(notification, input.origin))
+    .map((notification, index) => itemHtml(notification, input.origin, deadlines !== null || index > 0))
     .join("");
   const updates = quantity(input.notifications.length, "atualização", "atualizações");
   const subject =
@@ -300,6 +429,14 @@ export const renderNotificationEmail = (input: {
         : input.notifications.length === 0
           ? `Pardal Digital: ${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`
           : `Pardal Digital: ${quantity(deadlineCount, "prazo", "prazos")} e ${updates} no seu resumo`;
+  const summary =
+    input.mode === "immediate"
+      ? `${updates} em um edital que você monitora.`
+      : [
+          ...(deadlineCount > 0 ? [`${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`] : []),
+          ...(input.notifications.length > 0 ? [updates] : []),
+        ].join(" e ") + ".";
+  const eyebrow = input.mode === "digest" ? `Resumo diário · ${longDate(now)}` : "Alerta imediato";
   const sectionsText = [
     ...(deadlines ? [deadlines.text] : []),
     ...(input.notifications.length > 0
@@ -309,11 +446,50 @@ export const renderNotificationEmail = (input: {
   const sectionsHtml = [
     ...(deadlines ? [deadlines.html] : []),
     ...(input.notifications.length > 0
-      ? [
-          `${deadlines ? '<h3 style="font-size:17px">Novidades</h3>' : ""}<ul style="padding-left:20px">${itemsHtml}</ul>`,
-        ]
+      ? [`${deadlines ? sectionHeading("Novidades") : ""}${itemsTable(itemsHtml)}`]
       : []),
   ].join("");
+  // One primary action per e-mail: the digest closes with a button to the app; an immediate alert already has its own link.
+  const primaryAction =
+    input.mode === "digest"
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px"><tr><td bgcolor="${colors.action}" style="border-radius:8px"><a href="${escapeHtml(dashboardUrl)}" style="display:inline-block;padding:12px 22px;font-family:${sans};font-size:15px;line-height:20px;font-weight:700;color:${colors.actionInk};text-decoration:none;border-radius:8px">Abrir o Pardal Digital</a></td></tr></table>`
+      : "";
+
+  const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>${escapeHtml(subject)}</title>
+<style>
+@media (max-width:620px){.pd-pad{padding-left:20px!important;padding-right:20px!important}.pd-outer{padding:0!important}}
+</style>
+</head>
+<body style="margin:0;padding:0;background:${colors.canvas};-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(summary)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${colors.canvas}" style="background:${colors.canvas}">
+<tr><td align="center" class="pd-outer" style="padding:32px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;font-family:${sans};color:${colors.ink}">
+<tr><td class="pd-pad" bgcolor="${colors.brand}" style="background:${colors.brand};padding:28px 32px;border-radius:12px 12px 0 0">
+<p style="margin:0;font-size:18px;line-height:24px;font-weight:700;letter-spacing:-0.01em;color:#FFFFFF">Pardal Digital</p>
+<p style="margin:20px 0 0;font-family:${mono};font-size:11px;line-height:16px;letter-spacing:0.08em;text-transform:uppercase;color:${colors.brandMuted}">${escapeHtml(eyebrow)}</p>
+<h1 style="margin:6px 0 0;font-size:24px;line-height:31px;font-weight:700;letter-spacing:-0.015em;color:#FFFFFF">${escapeHtml(heading)}</h1>
+<p style="margin:8px 0 0;font-size:15px;line-height:22px;color:${colors.brandInk}">${escapeHtml(summary)}</p>
+</td></tr>
+<tr><td class="pd-pad" bgcolor="${colors.surface}" style="background:${colors.surface};padding:8px 32px 32px;border:1px solid ${colors.border};border-top:0;border-radius:0 0 12px 12px">
+${sectionsHtml}${primaryAction}
+</td></tr>
+<tr><td class="pd-pad" style="padding:24px 32px 8px;font-size:12px;line-height:18px;color:${colors.muted}">
+<p style="margin:0">${escapeHtml(why)}</p>
+<p style="margin:10px 0 0"><a href="${escapeHtml(settingsUrl)}" style="color:${colors.link};text-decoration:underline">Gerenciar preferências</a> &nbsp;·&nbsp; <a href="${escapeHtml(unsubscribePageUrl)}" style="color:${colors.link};text-decoration:underline">Descadastrar de e-mails</a></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 
   return {
     subject,
@@ -327,7 +503,7 @@ export const renderNotificationEmail = (input: {
       `Preferências: ${settingsUrl}`,
       `Descadastrar: ${unsubscribePageUrl}`,
     ].join("\n"),
-    html: `<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.5"><main style="max-width:640px;margin:auto"><h1 style="font-size:24px">Pardal Digital</h1><h2 style="font-size:20px">${escapeHtml(heading)}</h2>${sectionsHtml}<hr><p style="font-size:13px;color:#596273">${escapeHtml(why)}<br><a href="${escapeHtml(settingsUrl)}">Gerenciar preferências</a> · <a href="${escapeHtml(unsubscribePageUrl)}">Descadastrar de e-mails</a></p></main></body></html>`,
+    html,
     headers: {
       "List-Unsubscribe": `<${unsubscribeApiUrl}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

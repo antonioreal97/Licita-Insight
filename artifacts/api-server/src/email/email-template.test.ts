@@ -189,7 +189,7 @@ describe("notification email template", () => {
     assert.match(rendered.html, /tender%2Ffit/);
     // The search page opens on open tenders without `status`; the profile matches can be in any status.
     assert.match(rendered.text, /^https:\/\/licitai\.example\/search\?status=all$/m);
-    assert.match(rendered.html, /<a href="https:\/\/licitai\.example\/search\?status=all">Ver oportunidades<\/a>/);
+    assert.match(rendered.html, /<a href="https:\/\/licitai\.example\/search\?status=all"[^>]*>Ver oportunidades<\/a>/);
   });
 });
 
@@ -293,7 +293,7 @@ describe("daily digest deadlines section", () => {
     ]);
     assert.match(
       personalFirst.html,
-      /Seu prazo \(informado por você\): Enviar certidões — 01\/10\/2026, 12:00 \(em 2 dias\) · Prazo oficial de proposta: 02\/10\/2026, 14:00 \(em 3 dias\)<br>/,
+      /Seu prazo \(informado por você\): Enviar certidões — 01\/10\/2026, 12:00 \(em 2 dias\) · Prazo oficial de proposta: 02\/10\/2026, 14:00 \(em 3 dias\)<\/p>/,
     );
   });
 
