@@ -11,7 +11,27 @@ import { clsx, type ClassValue } from 'clsx';
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
-      'font-size': [{ type: ['eyebrow', 'label', 'meta', 'ui', 'body', 'section', 'title', 'display-sm', 'display'] }],
+      'font-size': [
+        {
+          type: [
+            'eyebrow',
+            'label',
+            'meta',
+            'ui',
+            'body',
+            'section',
+            'title',
+            'display',
+            'titulo-1',
+            'titulo-2',
+            'titulo-3',
+            'corpo-grande',
+            'corpo',
+            'legenda',
+            'rotulo',
+          ],
+        },
+      ],
       z: [{ z: ['raised', 'sticky', 'overlay', 'nav', 'modal', 'popover', 'toast'] }],
     },
   },

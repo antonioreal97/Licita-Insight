@@ -1,5 +1,7 @@
 # Tokens
 
+> Superseded for colors, fonts, radius and shadows by the Pardal design system: [`docs/design-system.md`](../docs/design-system.md). The sections on z-index, motion, breakpoints and layout sizes still apply.
+
 Source of truth: `artifacts/licitainsight/src/index.css`.
 
 Theme colors are HSL triplets on `:root` and `.dark`; `@theme inline` exposes them as Tailwind colors. Use role classes such as `bg-primary`, `text-foreground` and `border-border`. In CSS, use `hsl(var(--primary) / .2)` when alpha is needed. Hex swatches below are visual references, not values to copy into feature code.

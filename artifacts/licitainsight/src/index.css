@@ -5,143 +5,205 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Pardal Digital design tokens.
- * Documentation: /design-system/tokens.md (repo root). Living reference: /design-system route.
+ * Self-hosted stand-ins (SIL OFL 1.1, licenses in public/fonts/): Quicksand for Qurova, Montserrat for Nexa.
+ * Variable woff2 from Fontsource, latin + latin-ext. Qurova/Nexa go here as new @font-face blocks (docs/design-system.md).
+ */
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/quicksand-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/quicksand-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/montserrat-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Pardal design system. Documentation: /docs/design-system.md (repo root); tokens: src/styles/tokens.json.
  *
  * Layers:
- *   1. Raw values live on :root / .dark as HSL triplets ("H S% L%") so they can take alpha: hsl(var(--x) / .5).
- *   2. @theme inline maps them to Tailwind colors, so `bg-status-open`, `text-foreground-subtle`, … exist.
- *   3. @theme (static) holds values that do not change per theme: type scale, tracking, easing, shadows, layout.
+ *   1. Pardal tokens on :root / .dark, with the token names from tokens.json: palette (--lima, --petroleo…),
+ *      semantic (--fundo, --texto, --destaque…), spacing (--espaco-*), radius (--raio-*) and type (--fonte-*, --titulo-1…).
+ *      .dark is the Petróleo theme; :root is Creme.
+ *   2. App roles (--background, --primary, --status-open…) point at the Pardal tokens, so shadcn and feature code
+ *      inherit the palette. Nothing outside the palette: states derive from it (see docs/design-system.md).
+ *   3. @theme inline maps the roles to Tailwind colors (`bg-primary`, `text-foreground-subtle`, `rounded-pill`…).
  *   4. @utility adds roles Tailwind has no namespace for: type-*, duration-*, z-*, focus-ring.
  */
 
 @theme inline {
+  /* ── Pardal palette and semantic tokens (bg-lima, text-texto, bg-superficie-inversa…) ── */
+  --color-lima: var(--lima);
+  --color-aqua: var(--aqua);
+  --color-salvia: var(--salvia);
+  --color-oliva: var(--oliva);
+  --color-petroleo: var(--petroleo);
+  --color-petroleo-profundo: var(--petroleo-profundo);
+  --color-creme: var(--creme);
+  --color-creme-claro: var(--creme-claro);
+  --color-nevoa: var(--nevoa);
+  --color-fundo: var(--fundo);
+  --color-fundo-alt: var(--fundo-alt);
+  --color-texto: var(--texto);
+  --color-marca: var(--marca);
+  --color-destaque: var(--destaque);
+  --color-texto-sobre-destaque: var(--texto-sobre-destaque);
+  --color-superficie-inversa: var(--superficie-inversa);
+  --color-texto-inverso: var(--texto-inverso);
+  --color-linha: var(--linha);
+  --color-foco: var(--foco);
+
   /* ── Surfaces & text ─────────────────────────────────────────── */
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-foreground-subtle: hsl(var(--foreground-subtle));
-  --color-hero-lead: hsl(var(--hero-lead));
-  --color-hero-highlight: hsl(var(--hero-highlight));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-hero-lead: var(--hero-lead);
+  --color-hero-highlight: var(--hero-highlight);
 
-  --color-surface: hsl(var(--surface));
-  --color-surface-sunken: hsl(var(--surface-sunken));
-  --color-surface-raised: hsl(var(--surface-raised));
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
 
-  --color-border: hsl(var(--border));
-  --color-border-subtle: hsl(var(--border-subtle));
-  --color-border-strong: hsl(var(--border-strong));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-scrim: hsl(var(--scrim));
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-scrim: var(--scrim);
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-card-border: hsl(var(--card-border));
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-card-border: var(--card-border);
 
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-popover-border: hsl(var(--popover-border));
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover-border: var(--popover-border);
 
   /* ── Brand / intent ──────────────────────────────────────────── */
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-primary-border: var(--primary-border);
-  --color-primary-hover: hsl(var(--primary-hover));
-  --color-primary-active: hsl(var(--primary-active));
-  --color-primary-subtle: hsl(var(--primary-subtle));
-  --color-primary-subtle-foreground: hsl(var(--primary-subtle-foreground));
-  --color-action: hsl(var(--action));
-  --color-action-hover: hsl(var(--action-hover));
-  --color-action-active: hsl(var(--action-active));
-  --color-action-foreground: hsl(var(--action-foreground));
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-active: var(--action-active);
+  --color-action-foreground: var(--action-foreground);
 
-  --color-inverse: hsl(var(--inverse));
-  --color-inverse-foreground: hsl(var(--inverse-foreground));
-  --color-inverse-hover: hsl(var(--inverse-hover));
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-inverse-hover: var(--inverse-hover);
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary-border: var(--secondary-border);
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-muted-border: var(--muted-border);
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-accent-border: var(--accent-border);
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive-border: var(--destructive-border);
-  --color-destructive-subtle: hsl(var(--destructive-subtle));
-  --color-destructive-subtle-foreground: hsl(var(--destructive-subtle-foreground));
-  --color-destructive-subtle-border: hsl(var(--destructive-subtle-border));
-  --color-warning: hsl(var(--warning));
-  --color-warning-subtle: hsl(var(--warning-subtle));
-  --color-warning-subtle-foreground: hsl(var(--warning-subtle-foreground));
-  --color-urgent-subtle: hsl(var(--destructive-subtle));
-  --color-urgent-subtle-foreground: hsl(var(--destructive-subtle-foreground));
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-destructive-subtle-foreground: var(--destructive-subtle-foreground);
+  --color-destructive-subtle-border: var(--destructive-subtle-border);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-subtle-foreground: var(--warning-subtle-foreground);
+  --color-urgent-subtle: var(--destructive-subtle);
+  --color-urgent-subtle-foreground: var(--destructive-subtle-foreground);
 
   /* ── Tender status (bg + fg pairs, AA in both themes) ────────── */
-  --color-status-open: hsl(var(--status-open));
-  --color-status-open-foreground: hsl(var(--status-open-foreground));
-  --color-status-under-review: hsl(var(--status-under-review));
-  --color-status-under-review-foreground: hsl(var(--status-under-review-foreground));
-  --color-status-closed: hsl(var(--status-closed));
-  --color-status-closed-foreground: hsl(var(--status-closed-foreground));
-  --color-status-suspended: hsl(var(--status-suspended));
-  --color-status-suspended-foreground: hsl(var(--status-suspended-foreground));
-  --color-status-cancelled: hsl(var(--status-cancelled));
-  --color-status-cancelled-foreground: hsl(var(--status-cancelled-foreground));
+  --color-status-open: var(--status-open);
+  --color-status-open-foreground: var(--status-open-foreground);
+  --color-status-under-review: var(--status-under-review);
+  --color-status-under-review-foreground: var(--status-under-review-foreground);
+  --color-status-closed: var(--status-closed);
+  --color-status-closed-foreground: var(--status-closed-foreground);
+  --color-status-suspended: var(--status-suspended);
+  --color-status-suspended-foreground: var(--status-suspended-foreground);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-foreground: var(--status-cancelled-foreground);
 
   /* ── Data viz ────────────────────────────────────────────────── */
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
-  /* ── Sidebar (deep petroleum blue in both themes) ─────────────── */
-  --color-sidebar: hsl(var(--sidebar));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-muted-foreground: hsl(var(--sidebar-muted-foreground));
-  --color-sidebar-subtle-foreground: hsl(var(--sidebar-subtle-foreground));
-  --color-sidebar-strong-foreground: hsl(var(--sidebar-strong-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  /* ── Sidebar (follows the page theme: fundo-alt) ─────────────── */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-sidebar-subtle-foreground: var(--sidebar-subtle-foreground);
+  --color-sidebar-strong-foreground: var(--sidebar-strong-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary-border: var(--sidebar-primary-border);
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-accent-border: var(--sidebar-accent-border);
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-sidebar-ring: var(--sidebar-ring);
 
   /* ── Fonts ───────────────────────────────────────────────────── */
-  --font-sans: var(--app-font-sans);
-  --font-serif: var(--app-font-serif);
-  --font-mono: var(--app-font-mono);
+  --font-sans: var(--fonte-texto);
+  --font-heading: var(--fonte-titulo);
+  --font-serif: var(--fonte-texto);
+  --font-mono: var(--fonte-texto);
 
-  /* ── Radius (base 8px) ───────────────────────────────────────── */
+  /* ── Radius: Tailwind names keep their roles, values come from the Pardal raio-* tokens ── */
   --radius-xs: 2px;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: var(--raio-sm); /* controls: fields, nav items */
+  --radius-xl: var(--raio-md); /* cards and color blocks */
+  --radius-2xl: var(--raio-lg); /* dialogs, sheets, large cut-out sections */
+  --radius-pill: var(--raio-pill); /* buttons and chips */
 }
 
 @theme {
   /* Type scale. Names stay t-shirt shaped so tailwind-merge (cn) keeps treating them as font sizes. */
-  --text-3xs: 0.625rem; /* 10px — mono labels, eyebrows */
+  --text-3xs: 0.625rem; /* 10px */
   --text-3xs--line-height: 0.875rem;
-  --text-2xs: 0.6875rem; /* 11px — meta, badges, helper text */
+  --text-2xs: 0.6875rem; /* 11px */
   --text-2xs--line-height: 1rem;
 
-  --tracking-display: -0.04em;
-  --tracking-heading: -0.02em;
-  --tracking-label: 0.04em;
-  --tracking-eyebrow: 0.14em;
+  --tracking-display: -0.01em;
+  --tracking-heading: 0em;
+  --tracking-label: 0.06em;
+  --tracking-eyebrow: 0.06em;
 
   /* Motion */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -150,14 +212,15 @@
   --default-transition-duration: 160ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Elevation — restrained. One hairline + one soft layer at most. */
-  --shadow-2xs: 0 1px 0 0 hsl(var(--shadow-color) / 0.04);
-  --shadow-xs: 0 1px 2px 0 hsl(var(--shadow-color) / 0.05);
-  --shadow-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.06), 0 1px 3px 0 hsl(var(--shadow-color) / 0.04);
-  --shadow-md: 0 2px 4px -1px hsl(var(--shadow-color) / 0.06), 0 4px 12px -2px hsl(var(--shadow-color) / 0.08);
-  --shadow-lg: 0 4px 8px -2px hsl(var(--shadow-color) / 0.06), 0 12px 32px -8px hsl(var(--shadow-color) / 0.14);
-  --shadow-xl: 0 8px 16px -4px hsl(var(--shadow-color) / 0.08), 0 24px 48px -12px hsl(var(--shadow-color) / 0.18);
-  --shadow-2xl: 0 32px 64px -16px hsl(var(--shadow-color) / 0.22);
+  /* Pardal has no shadows: colors are flat. Overlaps are told apart by the --border edge. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
 
   /* Layout. Breakpoints are Tailwind defaults (sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536). */
   --spacing-header: 76px;
@@ -168,133 +231,184 @@
   --container-prose: 68ch;
 }
 
-/* LIGHT MODE */
+/* CREME (light, default) */
 :root {
   color-scheme: light;
 
-  --button-outline: rgba(0, 0, 0, 0.1);
-  --badge-outline: rgba(0, 0, 0, 0.05);
+  /* ── Pardal palette (tokens.json → color.tokens) ──────────────── */
+  --lima: #d9f58b;
+  --lima-marca: #bfe17c; /* logo ink on dark backgrounds only */
+  --aqua: #9ed6d1;
+  --salvia: #b8cda5;
+  --oliva: #c0cc6f;
+  --petroleo: #164c49;
+  --petroleo-profundo: #00464e;
+  --creme: #efebe1;
+  --creme-claro: #f6f3ed;
+  --nevoa: #cbd0c8;
 
-  /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  /* ── Pardal semantic tokens, theme Creme ──────────────────────── */
+  --fundo: var(--creme-claro);
+  --fundo-alt: var(--creme);
+  --texto: var(--petroleo);
+  --marca: var(--petroleo);
+  --destaque: var(--lima);
+  --texto-sobre-destaque: var(--petroleo);
+  --superficie-inversa: var(--petroleo-profundo);
+  --texto-inverso: var(--creme-claro);
+  --linha: var(--nevoa);
+  --foco: var(--petroleo);
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.08);
+  /* ── Spacing, radius, type ────────────────────────────────────── */
+  --espaco-1: 8px;
+  --espaco-2: 16px;
+  --espaco-3: 32px;
+  --espaco-4: 64px;
 
-  /* Surfaces */
-  --background: 70 23% 95%;
-  --surface: 48 100% 99%;
-  --surface-sunken: 120 18% 92%;
-  --surface-raised: 48 100% 99%;
-  --card: var(--surface);
-  --card-foreground: 195 49% 18%;
-  --card-border: 152 18% 86%;
+  --raio-sm: 8px;
+  --raio-md: 14px;
+  --raio-lg: 24px;
+  --raio-pill: 999px;
+
+  /* Qurova and Nexa are licensed; Quicksand and Montserrat stand in until their files land in public/fonts/. */
+  --fonte-titulo: 'Qurova', 'Quicksand', system-ui, sans-serif;
+  --fonte-texto: 'Nexa', 'Montserrat', system-ui, sans-serif;
+
+  /* `font` shorthands, one per style in tokens.json (type.groups). Tracking lives next to them. */
+  --display: 500 64px/68px var(--fonte-titulo);
+  --display-tracking: -0.01em;
+  --titulo-1: 500 44px/52px var(--fonte-titulo);
+  --titulo-2: 500 32px/40px var(--fonte-titulo);
+  --titulo-3: 500 24px/32px var(--fonte-titulo);
+  --corpo-grande: 400 20px/30px var(--fonte-texto);
+  --corpo: 400 16px/26px var(--fonte-texto);
+  --legenda: 400 14px/20px var(--fonte-texto);
+  --rotulo: 400 13px/16px var(--fonte-texto);
+  --rotulo-tracking: 0.06em;
+
+  /* ── App roles → Pardal ────────────────────────────────────────── */
+  /* Overlays and quiet fills are the text ink at low alpha: no new hue, and they read on fundo and fundo-alt alike. */
+  --button-outline: color-mix(in srgb, var(--texto) 14%, transparent);
+  --badge-outline: color-mix(in srgb, var(--texto) 8%, transparent);
+  --elevate-1: color-mix(in srgb, var(--texto) 4%, transparent);
+  --elevate-2: color-mix(in srgb, var(--texto) 9%, transparent);
+
+  /* Surfaces: the page is fundo, cards and sections are fundo-alt, menus and dialogs sit on fundo. */
+  --background: var(--fundo);
+  --surface: var(--fundo-alt);
+  --surface-sunken: var(--fundo);
+  --surface-raised: var(--fundo);
+  --card: var(--fundo-alt);
+  --card-foreground: var(--texto);
+  --card-border: var(--linha);
   --popover: var(--surface-raised);
-  --popover-foreground: 195 49% 18%;
-  --popover-border: 152 18% 86%;
+  --popover-foreground: var(--texto);
+  --popover-border: var(--linha);
 
-  /* Text levels */
-  --foreground: 195 49% 18%;
-  --muted-foreground: 184 15% 37%;
-  --foreground-subtle: 180 11% 48%; /* icons, disabled, decoration only */
-  --hero-lead: 183 9% 48%; /* legible grey-green for large display text */
-  --hero-highlight: 196 100% 30%; /* vivid blue on warm paper */
+  /* Text: one ink (texto). Secondary text is the same ink mixed into fundo, still ≥ 4.5:1 on every surface. */
+  --foreground: var(--texto);
+  --muted-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo));
+  --foreground-subtle: color-mix(in srgb, var(--texto) 62%, var(--fundo)); /* icons, disabled, decoration only */
+  --hero-lead: var(--muted-foreground);
+  --hero-highlight: var(--texto);
 
-  /* Borders */
-  --border-subtle: 120 18% 92%;
-  --border: 152 18% 86%;
-  --border-strong: 174 16% 64%;
-  --input: 165 16% 71%;
-  --ring: 189 57% 31%;
+  /* Borders: linha for decorative dividers, texto for field edges (tokens.json → linha). */
+  --border-subtle: color-mix(in srgb, var(--linha) 60%, var(--fundo));
+  --border: var(--linha);
+  --border-strong: color-mix(in srgb, var(--texto) 45%, var(--fundo));
+  --input: var(--texto);
+  --ring: var(--foco);
 
   /* Scrim behind modals, sheets and the mobile nav. Always dark, so use it with alpha: bg-scrim/50 */
-  --scrim: 198 57% 8%;
+  --scrim: var(--petroleo-profundo);
 
-  /* Primary — accessible deep teal from the card reference */
-  --primary: 189 57% 31%;
-  --primary-foreground: 48 100% 99%;
-  --primary-hover: 192 60% 25%;
-  --primary-active: 191 65% 20%;
-  --primary-subtle: 164 27% 89%;
-  --primary-subtle-foreground: 189 63% 25%;
-  /* Exact #39F3F3 requested for action buttons; links keep the deeper --primary. */
-  --action: 180 88.52% 58.82%;
-  --action-hover: 180 71% 51%;
-  --action-active: 181 79% 44%;
-  --action-foreground: 193 60% 18%;
+  /* Primary: links and selected controls. Same ink as foco (petroleo here, lima in Petróleo). */
+  --primary: var(--foco);
+  --primary-foreground: var(--texto-inverso);
+  --primary-hover: var(--petroleo-profundo);
+  --primary-active: var(--petroleo-profundo);
+  --primary-subtle: var(--salvia);
+  --primary-subtle-foreground: var(--petroleo);
+  /* Action = destaque: the main button. At most one lima highlight per screen. */
+  --action: var(--destaque);
+  --action-hover: var(--oliva);
+  --action-active: var(--oliva);
+  --action-foreground: var(--texto-sobre-destaque);
 
-  /* Inverse — petroleum blue emphasis (Button variant "dark") */
-  --inverse: 194 49% 21%;
-  --inverse-foreground: 70 23% 95%;
-  --inverse-hover: 194 42% 27%;
+  /* Inverse = superficie-inversa (Button variant "dark", impact blocks). */
+  --inverse: var(--superficie-inversa);
+  --inverse-foreground: var(--texto-inverso);
+  --inverse-hover: var(--petroleo);
 
-  --secondary: 120 23% 91%;
-  --secondary-foreground: 186 37% 22%;
-  --muted: 120 23% 91%;
-  --accent: 131 23% 77%;
-  --accent-foreground: 189 47% 18%;
+  --secondary: var(--elevate-2);
+  --secondary-foreground: var(--texto);
+  --muted: var(--elevate-2);
+  --accent: var(--aqua);
+  --accent-foreground: var(--petroleo);
 
-  --destructive: 4 72% 48%;
-  --destructive-foreground: 0 0% 100%; /* 5.0:1 */
-  --destructive-subtle: 6 80% 96%;
-  --destructive-subtle-foreground: 4 66% 40%; /* 6.1:1 */
-  --destructive-subtle-border: 5 60% 86%;
-  /* Warning = "look at this soon" (deadlines ≤ 7 days, degraded service). Not an error. */
-  --warning: 36 92% 42%;
-  --warning-subtle: 42 92% 92%;
-  --warning-subtle-foreground: 30 88% 27%;
+  /* Error has no hue of its own in the palette: it inverts the surface (superficie-inversa) and always carries
+   * text and an icon. See docs/design-system.md → "Estados". */
+  --destructive: var(--superficie-inversa);
+  --destructive-foreground: var(--texto-inverso);
+  --destructive-subtle: var(--superficie-inversa);
+  --destructive-subtle-foreground: var(--texto-inverso);
+  --destructive-subtle-border: var(--superficie-inversa);
+  /* Warning = "look at this soon" (deadlines ≤ 7 days, degraded service): oliva fill with petroleo text. */
+  --warning: var(--texto);
+  --warning-subtle: var(--oliva);
+  --warning-subtle-foreground: var(--petroleo);
 
-  /* Tender status */
-  --status-open: 131 23% 89%;
-  --status-open-foreground: 164 54% 23%;
-  --status-under-review: 42 92% 90%;
-  --status-under-review-foreground: 30 88% 27%; /* 6.6:1 */
-  --status-closed: 120 18% 92%;
-  --status-closed-foreground: 184 15% 37%;
-  --status-suspended: 6 82% 94%;
-  --status-suspended-foreground: 4 64% 38%; /* 6.2:1 */
-  --status-cancelled: 70 16% 94%;
-  --status-cancelled-foreground: 184 15% 37%;
+  /* Tender status: palette fills with petroleo text (same pair in both themes), plus the label. */
+  --status-open: var(--salvia);
+  --status-open-foreground: var(--petroleo);
+  --status-under-review: var(--oliva);
+  --status-under-review-foreground: var(--petroleo);
+  --status-closed: var(--nevoa);
+  --status-closed-foreground: var(--petroleo);
+  --status-suspended: var(--superficie-inversa);
+  --status-suspended-foreground: var(--texto-inverso);
+  --status-cancelled: var(--muted);
+  --status-cancelled-foreground: var(--muted-foreground);
 
-  --chart-1: 189 57% 31%;
-  --chart-2: 131 23% 57%;
-  --chart-3: 197 52% 20%;
-  --chart-4: 178 40% 55%;
-  --chart-5: 165 16% 44%;
+  --chart-1: var(--petroleo);
+  --chart-2: var(--aqua);
+  --chart-3: var(--oliva);
+  --chart-4: var(--salvia);
+  --chart-5: var(--nevoa);
 
-  /* Sidebar — the dark card color from the reference */
-  --sidebar: 197 52% 20%;
-  --sidebar-foreground: 156 21% 91%;
-  --sidebar-muted-foreground: 174 17% 79%;
-  --sidebar-subtle-foreground: 182 18% 69%;
-  --sidebar-strong-foreground: 48 100% 99%;
-  --sidebar-border: 192 37% 29%;
-  --sidebar-primary: 178 40% 76%;
-  --sidebar-primary-foreground: 197 52% 20%;
-  --sidebar-accent: 192 43% 25%;
-  --sidebar-accent-foreground: 156 21% 91%;
-  --sidebar-ring: 178 40% 76%;
+  /* Sidebar: fundo-alt, so the logo matches the page theme (petroleo on Creme, lima on Petróleo). */
+  --sidebar: var(--fundo-alt);
+  --sidebar-foreground: var(--texto);
+  --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo-alt));
+  --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo-alt));
+  --sidebar-strong-foreground: var(--texto);
+  --sidebar-border: var(--linha);
+  --sidebar-primary: var(--salvia);
+  --sidebar-primary-foreground: var(--petroleo);
+  --sidebar-accent: var(--elevate-2);
+  --sidebar-accent-foreground: var(--texto);
+  --sidebar-ring: var(--foco);
 
-  --shadow-color: 197 52% 20%;
+  --sidebar-primary-border: var(--sidebar-primary);
+  --sidebar-accent-border: var(--sidebar-accent);
+  --primary-border: var(--primary);
+  --secondary-border: var(--secondary);
+  --muted-border: var(--muted);
+  --accent-border: var(--accent);
+  --destructive-border: var(--destructive);
 
-  --app-font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --app-font-serif: Georgia, serif;
-  --app-font-mono: 'Space Mono', ui-monospace, monospace;
-  --radius: 0.5rem; /* 8px */
+  --radius: var(--raio-sm);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  /* Type roles (consumed by the type-* utilities below) */
+  /* Dense app type roles (consumed by the type-* utilities below), in the Pardal families. */
   --type-eyebrow-size: 0.75rem;
   --type-label-size: 0.75rem;
   --type-meta-size: 0.75rem;
   --type-ui-size: 0.875rem;
   --type-body-size: 0.9375rem;
-  --type-section-size: 0.9375rem;
+  --type-section-size: 1rem;
   --type-title-size: 1.25rem;
-  --type-display-sm-size: 1.6875rem;
-  --type-display-size: 2.25rem;
 
   /* Motion */
   --duration-instant: 80ms;
@@ -312,145 +426,40 @@
   --z-popover: 50;
   --z-toast: 100;
 
-  /* Focus */
+  /* Focus: solid 2px foco ring, 2px away from the element. */
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
-
-  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
-
-  /* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* PETRÓLEO (dark). Palette fills (salvia, oliva, aqua, nevoa) keep petroleo text in both themes. */
 .dark {
   color-scheme: dark;
 
-  --button-outline: rgba(255, 255, 255, 0.1);
-  --badge-outline: rgba(255, 255, 255, 0.05);
+  --fundo: var(--petroleo-profundo);
+  --fundo-alt: var(--petroleo);
+  --texto: var(--creme-claro);
+  --marca: var(--lima-marca);
+  --superficie-inversa: var(--creme-claro);
+  --texto-inverso: var(--petroleo);
+  --linha: var(--salvia);
+  --foco: var(--lima);
 
-  --opaque-button-border-intensity: 9; /* In terms of percentages */
-
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
-
-  /* Surfaces */
-  --background: 198 57% 15%;
-  --surface: 195 48% 20%;
-  --surface-sunken: 195 52% 16%;
-  --surface-raised: 192 43% 24%;
-  --card: var(--surface);
-  --card-foreground: 137 23% 94%;
-  --card-border: 188 33% 30%;
-  --popover: var(--surface-raised);
-  --popover-foreground: 137 23% 94%;
-  --popover-border: 188 33% 30%;
-
-  /* Text levels */
-  --foreground: 137 23% 94%;
-  --muted-foreground: 178 22% 76%;
-  --foreground-subtle: 180 19% 64%; /* icons, disabled, decoration only */
-  --hero-lead: 181 18% 69%;
-  --hero-highlight: 180 88.52% 58.82%;
-
-  /* Borders */
-  --border-subtle: 195 43% 25%;
-  --border: 188 33% 30%;
-  --border-strong: 183 25% 43%;
-  /* Border around inputs: more contrast than --border on a --card background */
-  --input: 183 25% 43%;
-  --ring: 181 41% 69%;
-
-  --scrim: 198 57% 6%;
-
-  /* Primary */
-  --primary: 181 41% 69%;
-  --primary-foreground: 194 56% 16%;
-  --primary-hover: 178 46% 77%;
-  --primary-active: 181 36% 60%;
-  --primary-subtle: 188 39% 26%;
-  --primary-subtle-foreground: 178 46% 77%;
-  --action: 180 88.52% 58.82%;
-  --action-hover: 180 100% 71%;
-  --action-active: 180 71% 51%;
-  --action-foreground: 193 60% 18%;
-
-  /* Inverse — flips to a light surface so "dark" buttons keep maximum emphasis */
-  --inverse: 137 23% 94%;
-  --inverse-foreground: 198 57% 15%;
-  --inverse-hover: 155 23% 86%;
-
-  --secondary: 192 43% 24%;
-  --secondary-foreground: 137 23% 94%;
-  --muted: 192 43% 24%;
-  --accent: 131 23% 77%;
-  --accent-foreground: 189 47% 18%;
-
-  --destructive: 4 80% 66%;
-  --destructive-foreground: 216 34% 8%; /* 6.2:1 */
-  --destructive-subtle: 4 36% 15%;
-  --destructive-subtle-foreground: 6 86% 76%; /* 7.5:1 */
-  --destructive-subtle-border: 4 34% 26%;
-  --warning: 40 90% 60%;
-  --warning-subtle: 38 42% 16%;
-  --warning-subtle-foreground: 42 88% 66%;
-
-  /* Tender status */
-  --status-open: 131 23% 23%;
-  --status-open-foreground: 131 34% 75%;
-  --status-under-review: 36 46% 16%;
-  --status-under-review-foreground: 40 88% 66%; /* 8.1:1 */
-  --status-closed: 192 43% 24%;
-  --status-closed-foreground: 178 22% 76%;
-  --status-suspended: 4 42% 18%;
-  --status-suspended-foreground: 6 86% 76%; /* 6.9:1 */
-  --status-cancelled: 195 52% 16%;
-  --status-cancelled-foreground: 178 22% 76%;
-
-  --chart-1: 181 41% 69%;
-  --chart-2: 131 23% 77%;
-  --chart-3: 178 46% 77%;
-  --chart-4: 197 35% 54%;
-  --chart-5: 165 16% 64%;
-
-  --sidebar: 198 57% 12%;
-  --sidebar-foreground: 156 21% 91%;
-  --sidebar-muted-foreground: 174 17% 79%;
-  --sidebar-subtle-foreground: 182 18% 69%;
-  --sidebar-strong-foreground: 48 100% 99%;
-  --sidebar-border: 192 37% 23%;
-  --sidebar-primary: 181 41% 69%;
-  --sidebar-primary-foreground: 198 57% 12%;
-  --sidebar-accent: 192 43% 20%;
-  --sidebar-accent-foreground: 156 21% 91%;
-  --sidebar-ring: 181 41% 69%;
-
-  --shadow-color: 198 57% 6%;
+  /* Same formulas as :root, re-resolved against the Petróleo values. */
+  --button-outline: color-mix(in srgb, var(--texto) 18%, transparent);
+  --badge-outline: color-mix(in srgb, var(--texto) 10%, transparent);
+  --elevate-1: color-mix(in srgb, var(--texto) 6%, transparent);
+  --elevate-2: color-mix(in srgb, var(--texto) 12%, transparent);
+  --muted-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo));
+  --foreground-subtle: color-mix(in srgb, var(--texto) 64%, var(--fundo));
+  --border-subtle: color-mix(in srgb, var(--linha) 35%, var(--fundo));
+  --border-strong: color-mix(in srgb, var(--texto) 50%, var(--fundo));
+  --hero-highlight: var(--lima);
+  --primary-hover: var(--oliva);
+  --primary-active: var(--oliva);
+  --inverse-hover: var(--creme);
+  --warning: var(--oliva);
+  --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
+  --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
 }
 
 @layer base {
@@ -467,13 +476,22 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 
-  ::selection {
-    background: hsl(var(--primary) / 0.22);
+  /* Titles in Qurova (Quicksand stand-in), sentence case. Only type-rotulo is uppercase. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--fonte-titulo);
   }
 
-  /* One focus language for every interactive element. Components that draw their own ring opt out with outline-none. */
+  ::selection {
+    background: var(--destaque);
+    color: var(--texto-sobre-destaque);
+  }
+
+  /* One focus language for every interactive element: solid 2px foco ring, 2px away (tokens.json → foco). */
   :focus-visible {
-    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline: var(--focus-ring-width) solid var(--ring);
     outline-offset: var(--focus-ring-offset);
   }
 
@@ -481,7 +499,7 @@
   @media (prefers-reduced-transparency: reduce) {
     [class*='backdrop-blur'] {
       backdrop-filter: none !important;
-      background-color: hsl(var(--background)) !important;
+      background-color: var(--background) !important;
     }
   }
 
@@ -498,10 +516,39 @@
   }
 }
 
-/* ── Type roles ────────────────────────────────────────────────────
+/* ── Pardal type styles (tokens.json → type.groups) ─────────────── */
+@utility type-display {
+  font: var(--display);
+  letter-spacing: var(--display-tracking);
+}
+@utility type-titulo-1 {
+  font: var(--titulo-1);
+}
+@utility type-titulo-2 {
+  font: var(--titulo-2);
+}
+@utility type-titulo-3 {
+  font: var(--titulo-3);
+}
+@utility type-corpo-grande {
+  font: var(--corpo-grande);
+}
+@utility type-corpo {
+  font: var(--corpo);
+}
+@utility type-legenda {
+  font: var(--legenda);
+}
+@utility type-rotulo {
+  font: var(--rotulo);
+  letter-spacing: var(--rotulo-tracking);
+  text-transform: uppercase;
+}
+
+/* ── Dense app roles ───────────────────────────────────────────────
  * Named type-* (not text-*) so cn()/tailwind-merge never mistakes them for text colors.
+ * They set size and line height; family comes from body (texto) or from the title roles (titulo).
  */
-/* Section and field labels: hierarchy from weight, not from all-caps monospace. */
 @utility type-eyebrow {
   font-size: var(--type-eyebrow-size);
   font-weight: 600;
@@ -524,31 +571,19 @@
 }
 @utility type-body {
   font-size: var(--type-body-size);
-  line-height: 1.375rem;
+  line-height: 1.5rem;
 }
 @utility type-section {
+  font-family: var(--fonte-titulo);
   font-size: var(--type-section-size);
   line-height: 1.375rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
 }
 @utility type-title {
+  font-family: var(--fonte-titulo);
   font-size: var(--type-title-size);
   line-height: 1.75rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
-}
-@utility type-display-sm {
-  font-size: var(--type-display-sm-size);
-  line-height: 2.125rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-@utility type-display {
-  font-size: var(--type-display-size);
-  line-height: 2.625rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
 }
 /* Numbers keep their columns aligned with tabular figures, in the UI font. */
 @utility type-data {
@@ -599,7 +634,7 @@
 
 /* ── Focus ring (for custom controls that suppress the default outline) ── */
 @utility focus-ring {
-  outline: var(--focus-ring-width) solid hsl(var(--ring));
+  outline: var(--focus-ring-width) solid var(--ring);
   outline-offset: var(--focus-ring-offset);
 }
 
@@ -626,7 +661,7 @@
 @layer utilities {
   /* Legacy role classes — kept for existing feature code. Prefer type-* in new code. */
   .label {
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
     font-size: var(--type-label-size);
     font-weight: 500;
     letter-spacing: 0.01em;
@@ -639,47 +674,39 @@
   }
 
   .section-title {
+    font-family: var(--fonte-titulo);
     font-size: var(--type-section-size);
     font-weight: 600;
-    letter-spacing: -0.02em;
   }
 
   .field {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
     font-size: var(--type-meta-size);
     font-weight: 600;
   }
 
   .field :is(input, textarea) {
     height: 2.625rem;
-    border: 1px solid hsl(var(--input));
-    border-radius: var(--radius);
-    background: hsl(var(--background));
+    border: 1px solid var(--input);
+    border-radius: var(--raio-sm);
+    background: var(--background);
     padding: 0 0.75rem;
-    color: hsl(var(--foreground));
+    color: var(--foreground);
     font-size: var(--type-ui-size);
     font-weight: 400;
-    outline: none;
-    transition:
-      border-color var(--duration-fast) var(--ease-standard),
-      box-shadow var(--duration-fast) var(--ease-standard);
+    transition: border-color var(--duration-fast) var(--ease-standard);
   }
 
   .field :is(input, textarea)::placeholder {
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
   }
 
-  .field :is(input, textarea):hover:not(:disabled) {
-    border-color: hsl(var(--border-strong));
-  }
-
-  .field :is(input, textarea):focus,
   .field :is(input, textarea):focus-visible {
-    border-color: hsl(var(--ring));
-    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.2);
+    outline: var(--focus-ring-width) solid var(--ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .field :is(input, textarea):disabled {
@@ -688,7 +715,7 @@
   }
 
   .field :is(input, textarea)[aria-invalid='true'] {
-    border-color: hsl(var(--destructive));
+    border-color: var(--destructive);
   }
 
   .field textarea {
@@ -700,7 +727,7 @@
   }
 
   .dark .field :is(input, textarea) {
-    background: hsl(var(--card));
+    background: var(--card);
   }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */
@@ -711,7 +738,7 @@
   /* Placeholder styling for contentEditable div */
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
     pointer-events: none;
   }
 

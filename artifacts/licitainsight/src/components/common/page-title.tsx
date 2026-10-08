@@ -6,7 +6,7 @@ export function PageTitle({ eyebrow, title, description, action }: { eyebrow?: s
       {/* Wraps instead of stacking: a compact action shares the title row on phones, a wide one drops below. */}
       <div className="min-w-0">
         {eyebrow && <div className="mb-2 type-eyebrow text-primary">{eyebrow}</div>}
-        <h1 className="type-display-sm text-foreground">{title}</h1>
+        <h1 className="type-titulo-3 text-foreground">{title}</h1>
         {description && <p className="mt-2 hidden max-w-2xl type-body text-muted-foreground sm:block">{description}</p>}
       </div>
       {action}

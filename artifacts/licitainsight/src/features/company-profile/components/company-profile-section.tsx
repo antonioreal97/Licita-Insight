@@ -137,7 +137,7 @@ function serverErrors(error: unknown): Errors {
 
 const errorText = 'mt-1.5 type-meta font-normal text-destructive';
 const chipInput =
-  'h-[2.625rem] min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-[length:var(--type-ui-size)] font-normal text-foreground outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 aria-[invalid=true]:border-destructive dark:bg-card';
+  'h-[2.625rem] min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-[length:var(--type-ui-size)] font-normal text-foreground transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring aria-[invalid=true]:border-destructive dark:bg-card';
 
 function TermsField({
   id,

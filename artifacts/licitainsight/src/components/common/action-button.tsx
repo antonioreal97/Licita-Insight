@@ -20,7 +20,7 @@ export type ActionButtonProps = ComponentPropsWithRef<'button'> & {
 };
 
 const base =
-  'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded-lg font-semibold ' +
+  'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded-pill font-semibold ' +
   'transition-[background-color,border-color,color,box-shadow,scale] duration-fast ease-standard ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ' +
   'enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 aria-busy:cursor-progress ' +

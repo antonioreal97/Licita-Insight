@@ -1,7 +1,7 @@
 import { CircleAlert, CircleCheck, RefreshCw } from 'lucide-react';
 import { Link, useSearch } from 'wouter';
 import { isApiError, type EmailPreferences, type UnsubscribeScope } from '@/api';
-import { BrandName } from '@/components/brand-icon';
+import { BrandLogo } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { useUnsubscribe } from '@/features/settings/hooks/use-notification-preferences';
 
@@ -37,7 +37,7 @@ export default function UnsubscribePage() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <main id="conteudo" tabIndex={-1} data-testid="page-unsubscribe" className="mx-auto w-full max-w-[480px] px-4 py-12 outline-none sm:py-20">
         <Link href="/" className="mb-12 flex items-center gap-2.5">
-          <BrandName />
+          <BrandLogo className="h-12" />
         </Link>
         <div className="mb-3 type-eyebrow font-bold text-primary">e-mails</div>
         <h1 className="text-3xl font-semibold tracking-display">Descadastro de e-mails</h1>

@@ -78,7 +78,7 @@ const LONG_TITLE = 140;
 
 /** Primary-button look for the external source link (the product Button has no `asChild`; see design-system/components.md). */
 const sourceLinkClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-action font-semibold text-action-foreground shadow-xs ' +
+  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-pill bg-action font-semibold text-action-foreground shadow-xs ' +
   'transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
@@ -173,7 +173,7 @@ export default function TenderDetailPage() {
   const long = tender.title.length > LONG_TITLE;
   // Official text is never re-cased; an all-caps objeto just gets one step smaller so it reads less like shouting.
   const caps = isMostlyUppercase(tender.title);
-  const titleSize = long ? (caps ? 'type-section sm:type-title' : 'type-title') : caps ? 'type-title' : 'type-display-sm lg:type-display text-balance';
+  const titleSize = long ? (caps ? 'type-section sm:type-title' : 'type-title') : caps ? 'type-title' : 'type-titulo-3 lg:type-titulo-2 text-balance';
 
   const SaveIcon = saved ? BookmarkCheck : Bookmark;
   const saveIcon = (

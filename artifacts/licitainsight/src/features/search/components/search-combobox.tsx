@@ -179,7 +179,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
           onBlur={closeUnlessInside}
           onKeyDown={onKeyDown}
           placeholder="Ex.: tecnologia educacional, prefeitura de Recife…"
-          className="h-11 w-full rounded-lg border border-input bg-background pr-20 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground hover:border-border-strong focus:border-ring focus:ring-3 focus:ring-ring/20 sm:text-sm"
+          className="h-11 w-full rounded-lg border border-input bg-background pr-20 pl-10 text-base transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring sm:text-sm"
         />
         <span id={`${listboxId}-hint`} className="sr-only">
           Use as setas para navegar pelas sugestões e Enter para escolher. Atalho: barra (/) para focar a busca.

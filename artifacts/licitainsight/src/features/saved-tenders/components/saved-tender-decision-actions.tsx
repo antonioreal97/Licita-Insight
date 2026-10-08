@@ -17,6 +17,7 @@ export function SavedTenderDecisionActions({ monitored, pending, describedBy, on
     <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto" role="group" aria-label="Decidir sobre este edital">
       <Button
         type="button"
+        variant="dark"
         size="sm"
         disabled={pending}
         aria-describedby={describedBy}
