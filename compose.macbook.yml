@@ -102,7 +102,7 @@ services:
       - "8080"
 
   proxy:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     restart: unless-stopped
     mem_limit: 64m
     environment:

@@ -1,0 +1,118 @@
+map "$http_x_abriu_origin:${ORIGIN_SHARED_SECRET}" $abriu_origin_valid {
+  default 0;
+  "~^(.+):\1$" 1;
+}
+
+map $abriu_origin_valid $abriu_origin_valid_label {
+  default "nao";
+  1 "sim";
+}
+
+map "${ORIGIN_MODE}:$abriu_origin_valid" $abriu_origin_denied {
+  default 0;
+  "enforce:0" 1;
+}
+
+map "$abriu_origin_valid:$http_x_abriu_client_ip" $abriu_client_ip {
+  default $remote_addr;
+  "~^1:(?<forwarded_client_ip>.+)$" $forwarded_client_ip;
+}
+
+log_format abriu_json escape=json
+  '{"time":"$time_iso8601",'
+  '"status":$status,'
+  '"method":"$request_method",'
+  '"route":"$uri",'
+  '"client_ip":"$abriu_client_ip",'
+  '"origin_valid":"$abriu_origin_valid_label",'
+  '"request_time":$request_time,'
+  '"upstream_time":"$upstream_response_time"}';
+
+access_log /dev/stdout abriu_json;
+error_log /dev/stderr warn;
+
+server_tokens off;
+limit_req_status 429;
+limit_req_zone $abriu_client_ip zone=api_per_ip:10m rate=30r/s;
+limit_req_zone $abriu_client_ip zone=auth_per_ip:10m rate=5r/s;
+
+gzip on;
+gzip_vary on;
+gzip_min_length 256;
+gzip_types
+  application/javascript
+  application/json
+  application/problem+json
+  application/x-javascript
+  text/css
+  text/plain
+  text/xml;
+
+upstream abriu_app {
+  server ${NGINX_UPSTREAM};
+  keepalive 16;
+}
+
+server {
+  listen ${NGINX_LISTEN};
+  include /etc/nginx/abriu-server.conf;
+  client_max_body_size 2m;
+
+  proxy_http_version 1.1;
+  proxy_connect_timeout 10s;
+  proxy_send_timeout 180s;
+  proxy_read_timeout 180s;
+  proxy_set_header Connection "";
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $abriu_client_ip;
+  proxy_set_header X-Forwarded-For $abriu_client_ip;
+  proxy_set_header X-Forwarded-Proto https;
+  proxy_set_header X-Forwarded-Host $host;
+
+  location = /api/healthz {
+    proxy_pass http://abriu_app;
+  }
+
+  location = /api/readyz {
+    proxy_pass http://abriu_app;
+  }
+
+  location = /metrics {
+    return 404;
+  }
+
+  location ^~ /metrics/ {
+    return 404;
+  }
+
+  location = /api/v1/ingest {
+    return 404;
+  }
+
+  location ^~ /api/v1/ingest/ {
+    return 404;
+  }
+
+  location ^~ /api/v1/auth/ {
+    if ($abriu_origin_denied) {
+      return 403;
+    }
+    limit_req zone=auth_per_ip burst=10 nodelay;
+    proxy_pass http://abriu_app;
+  }
+
+  location ^~ /api/ {
+    if ($abriu_origin_denied) {
+      return 403;
+    }
+    limit_req zone=api_per_ip burst=60 nodelay;
+    proxy_pass http://abriu_app;
+  }
+
+  location / {
+    if ($abriu_origin_denied) {
+      return 403;
+    }
+    proxy_pass http://abriu_app;
+  }
+}

@@ -31,6 +31,14 @@ restrito em `/api/v1/auth/`, responde `429` em excesso, limita corpo a 2 MiB e
 usa timeouts de proxy de 180 s para cobrir o timeout longo da aplicacao
 (`LONG_REQUEST_TIMEOUT_MS`, 120 s por padrao).
 
+O proxy usa o DNS interno do Docker (`127.0.0.11`) com validade de 10 s e mantem
+o upstream `abriu_app` em uma zona compartilhada. Assim, quando o Compose recria
+o `app` com outro IP, o Nginx atualiza o destino sozinho, sem precisar ser
+reiniciado ou recarregado. A imagem fica fixada em `nginx:1.27.5-alpine`, pois o
+parametro `resolve` no `upstream` esta disponivel no Nginx open-source desde a
+versao 1.27.3. O runbook de deploy ainda executa `nginx -s reload` depois do
+build como redundancia operacional.
+
 ## 1. Preparar o clone
 
 ```sh
