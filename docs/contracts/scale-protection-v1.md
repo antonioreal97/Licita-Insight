@@ -12,17 +12,17 @@ Status: aditivo ao OpenAPI v1; não altera rotas nem formatos existentes.
 
 Cada requisição `/api` cai em exatamente um perfil de janela fixa, na ordem da tabela (o primeiro que casa vale). Cada perfil tem bucket próprio (`<perfil>:user:<id>` com sessão válida, senão `<perfil>:ip:<ip>`): estourar o limite de IA não bloqueia busca nem gravações.
 
-| Perfil (`profile` na métrica) | Rotas | Padrão | Chave |
-|---|---|---:|---|
-| — (isento) | `GET /api/healthz`, `GET /api/readyz`, `POST /api/v1/billing/asaas/webhook`, caminhos fora de `/api` (app estático) | sem janela | — |
-| `auth` | `GET /v1/auth/google/start`, `GET /v1/auth/google/callback`, `POST /v1/auth/dev-login` | 20/min | IP |
-| `ingest` | `/v1/ingest/*` (rotas operacionais protegidas por `Authorization: Bearer <INGEST_API_TOKEN>`) | 3/min | IP |
-| `ai` | `POST /v1/tenders/{id}/ask`, `GET /v1/tenders/{id}/ask-status`, `GET /v1/tenders/{id}/sheet`, `GET /v1/me/fit` | 60/min | usuário |
-| `billing` | `POST /v1/me/billing/checkout`, `POST /v1/me/billing/cancel` | 5/min | usuário |
-| `privacy` | `GET /v1/me/export`, `DELETE /v1/me` (um bucket para os dois) | 5/hora | usuário |
-| `public_write` | `POST /v1/email/unsubscribe` e qualquer POST/PUT/PATCH/DELETE sem sessão válida | 10/min | IP |
-| `write` | qualquer POST/PUT/PATCH/DELETE com sessão válida não coberto acima (`/v1/me/*`, logout) | 60/min | usuário |
-| `public` | leituras públicas (busca, sugestões, detalhe) e **qualquer outra rota `/api`** não mapeada, inclusive `GET /v1/auth/session`, `GET /v1/me/billing` e demais GETs de `/v1/me/*` | 60/min anônimo; 240/min usuário | IP ou usuário |
+| Perfil (`profile` na métrica) | Rotas                                                                                                                                                                          |                          Padrão | Chave         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------: | ------------- |
+| — (isento)                    | `GET /api/healthz`, `GET /api/readyz`, `POST /api/v1/billing/asaas/webhook`, caminhos fora de `/api` (app estático)                                                            |                      sem janela | —             |
+| `auth`                        | `GET /v1/auth/google/start`, `GET /v1/auth/google/callback`, `POST /v1/auth/dev-login`                                                                                         |                          20/min | IP            |
+| `ingest`                      | `/v1/ingest/*` (rotas operacionais protegidas por `Authorization: Bearer <INGEST_API_TOKEN>`)                                                                                  |                           3/min | IP            |
+| `ai`                          | `POST /v1/tenders/{id}/ask`, `GET /v1/tenders/{id}/ask-status`, `GET /v1/tenders/{id}/sheet`, `GET /v1/me/fit`                                                                 |                          60/min | usuário       |
+| `billing`                     | `POST /v1/me/billing/checkout`, `POST /v1/me/billing/cancel`                                                                                                                   |                           5/min | usuário       |
+| `privacy`                     | `GET /v1/me/export`, `DELETE /v1/me` (um bucket para os dois)                                                                                                                  |                          5/hora | usuário       |
+| `public_write`                | `POST /v1/email/unsubscribe` e qualquer POST/PUT/PATCH/DELETE sem sessão válida                                                                                                |                          10/min | IP            |
+| `write`                       | qualquer POST/PUT/PATCH/DELETE com sessão válida não coberto acima (`/v1/me/*`, logout)                                                                                        |                          60/min | usuário       |
+| `public`                      | leituras públicas (busca, sugestões, detalhe) e **qualquer outra rota `/api`** não mapeada, inclusive `GET /v1/auth/session`, `GET /v1/me/billing` e demais GETs de `/v1/me/*` | 60/min anônimo; 240/min usuário | IP ou usuário |
 
 Notas sobre os padrões:
 
@@ -67,41 +67,44 @@ Configuração recomendada da CDN:
 
 ## Variáveis e padrões
 
-| Variável | Padrão |
-|---|---:|
-| `DB_POOL_MAX` | 10 |
-| `DB_POOL_IDLE_TIMEOUT_MS` | 30000 |
-| `DB_CONNECTION_TIMEOUT_MS` | 2000 |
-| `DB_STATEMENT_TIMEOUT_MS` | 15000 |
-| `DB_APPLICATION_NAME` | `licitai-api` |
-| `RATE_LIMIT_ANON_PER_MINUTE` | 60 |
-| `RATE_LIMIT_USER_PER_MINUTE` | 240 |
-| `RATE_LIMIT_AUTH_PER_MINUTE` | 20 |
-| `RATE_LIMIT_INGEST_PER_MINUTE` | 3 |
-| `RATE_LIMIT_AI_PER_MINUTE` | 60 |
-| `RATE_LIMIT_WRITE_PER_MINUTE` | 60 |
-| `RATE_LIMIT_BILLING_PER_MINUTE` | 5 |
-| `RATE_LIMIT_PRIVACY_PER_HOUR` | 5 |
-| `RATE_LIMIT_PUBLIC_WRITE_PER_MINUTE` | 10 |
-| `RATE_LIMIT_PREAUTH_PER_MINUTE` | 600 |
-| `RATE_LIMIT_MAX_ENTRIES` | 100000 |
-| `MAX_INFLIGHT_PER_ANON` | 10 |
-| `MAX_INFLIGHT_PER_USER` | 20 |
-| `MAX_INFLIGHT_GLOBAL` | 200 |
-| `REQUEST_TIMEOUT_MS` | 30000 |
-| `LONG_REQUEST_TIMEOUT_MS` | 120000 |
-| `REQUEST_BODY_LIMIT` | `256kb` |
-| `HTTP_HEADERS_TIMEOUT_MS` | 15000 |
-| `HTTP_REQUEST_TIMEOUT_MS` | 30000 |
-| `HTTP_KEEP_ALIVE_TIMEOUT_MS` | 65000 |
-| `HTTP_MAX_REQUESTS_PER_SOCKET` | 1000 |
-| `HTTP_MAX_CONNECTIONS` | 1000 |
-| `SHUTDOWN_TIMEOUT_MS` | 15000 |
-| `GOOGLE_HTTP_TIMEOUT_MS` | 15000 |
-| `ASAAS_HTTP_TIMEOUT_MS` | 15000 |
-| `RESEND_HTTP_TIMEOUT_MS` | 15000 |
-| `BREVO_HTTP_TIMEOUT_MS` | 15000 |
-| `MAPAS_HTTP_TIMEOUT_MS` | 30000 |
-| `PNCP_HTTP_TIMEOUT_MS` | 60000 |
+| Variável                             |        Padrão |
+| ------------------------------------ | ------------: |
+| `DB_POOL_MAX`                        |            10 |
+| `DB_POOL_IDLE_TIMEOUT_MS`            |         30000 |
+| `DB_CONNECTION_TIMEOUT_MS`           |          2000 |
+| `DB_STATEMENT_TIMEOUT_MS`            |         15000 |
+| `DB_APPLICATION_NAME`                | `licitai-api` |
+| `RATE_LIMIT_ANON_PER_MINUTE`         |            60 |
+| `RATE_LIMIT_USER_PER_MINUTE`         |           240 |
+| `RATE_LIMIT_AUTH_PER_MINUTE`         |            20 |
+| `RATE_LIMIT_INGEST_PER_MINUTE`       |             3 |
+| `RATE_LIMIT_AI_PER_MINUTE`           |            60 |
+| `RATE_LIMIT_WRITE_PER_MINUTE`        |            60 |
+| `RATE_LIMIT_BILLING_PER_MINUTE`      |             5 |
+| `RATE_LIMIT_PRIVACY_PER_HOUR`        |             5 |
+| `RATE_LIMIT_PUBLIC_WRITE_PER_MINUTE` |            10 |
+| `RATE_LIMIT_PREAUTH_PER_MINUTE`      |           600 |
+| `RATE_LIMIT_MAX_ENTRIES`             |        100000 |
+| `MAX_INFLIGHT_PER_ANON`              |            10 |
+| `MAX_INFLIGHT_PER_USER`              |            20 |
+| `MAX_INFLIGHT_GLOBAL`                |           200 |
+| `REQUEST_TIMEOUT_MS`                 |         30000 |
+| `LONG_REQUEST_TIMEOUT_MS`            |        120000 |
+| `REQUEST_BODY_LIMIT`                 |       `256kb` |
+| `HTTP_HEADERS_TIMEOUT_MS`            |         15000 |
+| `HTTP_REQUEST_TIMEOUT_MS`            |         30000 |
+| `HTTP_KEEP_ALIVE_TIMEOUT_MS`         |         65000 |
+| `HTTP_MAX_REQUESTS_PER_SOCKET`       |          1000 |
+| `HTTP_MAX_CONNECTIONS`               |          1000 |
+| `SHUTDOWN_TIMEOUT_MS`                |         15000 |
+| `GOOGLE_HTTP_TIMEOUT_MS`             |         15000 |
+| `ASAAS_HTTP_TIMEOUT_MS`              |         15000 |
+| `RESEND_HTTP_TIMEOUT_MS`             |         15000 |
+| `BREVO_HTTP_TIMEOUT_MS`              |         15000 |
+| `MAPAS_HTTP_TIMEOUT_MS`              |         30000 |
+| `CULTURE_PAGE_DELAY_MS`              |           500 |
+| `CULTURE_HTTP_MAX_RETRIES`           |             2 |
+| `CULTURE_RETRY_BASE_MS`              |          1000 |
+| `PNCP_HTTP_TIMEOUT_MS`               |         60000 |
 
 `DB_STATEMENT_TIMEOUT_MS` deve permanecer menor que `REQUEST_TIMEOUT_MS`. Jobs longos podem sobrescrever o valor no ambiente do processo de worker/coleta.

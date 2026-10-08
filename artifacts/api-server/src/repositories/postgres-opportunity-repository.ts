@@ -1,13 +1,19 @@
 import { and, asc, desc, inArray, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { culturalOpportunitiesTable, db, ingestRunsTable } from "@workspace/db";
-import { installationById, CULTURAL_INSTALLATIONS } from "../ingest/cultural-installations";
+import {
+  installationById,
+  CULTURAL_INSTALLATIONS,
+} from "../ingest/cultural-installations";
 import {
   coverageFromDetails,
   pendingCoverage,
   type InstallationCoverage,
 } from "../ingest/collect-opportunities";
-import type { OpportunityProgram, OpportunityStatus } from "../ingest/opportunity-map";
+import type {
+  OpportunityProgram,
+  OpportunityStatus,
+} from "../ingest/opportunity-map";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
 import {
@@ -67,7 +73,11 @@ export type OpportunitySearchResponse = {
     query: string | null;
     tookMs: number;
     indexUpdatedAt: string | null;
-    installationIssues: { installationId: string; name: string; message: string }[];
+    installationIssues: {
+      installationId: string;
+      name: string;
+      message: string;
+    }[];
     gaps: { uf: string; name: string }[];
   };
 };
@@ -83,12 +93,15 @@ const like = (column: PgColumn, token: string): SQL =>
 const requireNumber = (value: unknown, field: string): number => {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number)) {
-    throw new Error(`Expected a number for ${field}, received ${String(value)}`);
+    throw new Error(
+      `Expected a number for ${field}, received ${String(value)}`,
+    );
   }
   return number;
 };
 
-const iso = (value: Date | null): string | null => (value ? value.toISOString() : null);
+const iso = (value: Date | null): string | null =>
+  value ? value.toISOString() : null;
 
 const whereFor = (
   criteria: OpportunityCriteria,
@@ -107,7 +120,12 @@ const whereFor = (
     );
   }
   if (skip !== "installation" && criteria.installationId.length > 0) {
-    filters.push(inArray(culturalOpportunitiesTable.installationId, criteria.installationId));
+    filters.push(
+      inArray(
+        culturalOpportunitiesTable.installationId,
+        criteria.installationId,
+      ),
+    );
   }
   if (skip !== "status" && criteria.status.length > 0) {
     filters.push(inArray(culturalOpportunitiesTable.status, criteria.status));
@@ -181,11 +199,13 @@ const labeledBuckets = async (
 
   return rows.flatMap((row) => {
     if (typeof row.value !== "string") return [];
-    return [{
-      value: row.value,
-      label: labels[row.value] ?? row.value,
-      count: requireNumber(row.count, "facet count"),
-    }];
+    return [
+      {
+        value: row.value,
+        label: labels[row.value] ?? row.value,
+        count: requireNumber(row.count, "facet count"),
+      },
+    ];
   });
 };
 
@@ -203,12 +223,19 @@ const eqSource = () => sql`${ingestRunsTable.source} = ${SOURCE}`;
 
 const coverageMeta = (coverage: InstallationCoverage[]) => ({
   installationIssues: coverage.flatMap((row) => {
-    if (row.outcome !== "failed" && row.outcome !== "vocabulary_fallback") return [];
-    return [{
-      installationId: row.id,
-      name: row.name,
-      message: row.message ?? "A instalação não respondeu.",
-    }];
+    if (
+      !["failed", "degraded", "blocked", "vocabulary_fallback"].includes(
+        row.outcome,
+      )
+    )
+      return [];
+    return [
+      {
+        installationId: row.id,
+        name: row.name,
+        message: row.message ?? "A instalação não respondeu.",
+      },
+    ];
   }),
   gaps: coverage
     .filter((row) => row.kind === "gap")
@@ -239,7 +266,9 @@ export async function searchOpportunities(
     .offset((criteria.page - 1) * criteria.pageSize);
 
   const [updated] = await db
-    .select({ indexUpdatedAt: sql<Date | null>`max(${culturalOpportunitiesTable.fetchedAt})` })
+    .select({
+      indexUpdatedAt: sql<Date | null>`max(${culturalOpportunitiesTable.fetchedAt})`,
+    })
     .from(culturalOpportunitiesTable);
   const coverage = await latestCoverage();
 
@@ -257,7 +286,9 @@ export async function searchOpportunities(
         ),
         installation: await labeledBuckets(
           culturalOpportunitiesTable.installationId,
-          Object.fromEntries(CULTURAL_INSTALLATIONS.map((row) => [row.id, row.name])),
+          Object.fromEntries(
+            CULTURAL_INSTALLATIONS.map((row) => [row.id, row.name]),
+          ),
           whereFor(criteria, "installation"),
         ),
         program: await labeledBuckets(
@@ -281,13 +312,17 @@ export async function searchOpportunities(
     meta: {
       query: criteria.query,
       tookMs: Date.now() - started,
-      indexUpdatedAt: updated?.indexUpdatedAt ? new Date(updated.indexUpdatedAt).toISOString() : null,
+      indexUpdatedAt: updated?.indexUpdatedAt
+        ? new Date(updated.indexUpdatedAt).toISOString()
+        : null,
       ...coverageMeta(coverage),
     },
   };
 }
 
-export async function findOpportunity(id: string): Promise<OpportunitySummary | undefined> {
+export async function findOpportunity(
+  id: string,
+): Promise<OpportunitySummary | undefined> {
   const [row] = await db
     .select()
     .from(culturalOpportunitiesTable)

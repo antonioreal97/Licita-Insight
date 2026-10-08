@@ -6,6 +6,11 @@ export type MapasInstallation = {
   name: string;
   kind: "mapas";
   baseUrl: string;
+  tlsDiagnosis?: {
+    observedOn: string;
+    expiresOn?: string;
+    alsoWrongName?: boolean;
+  };
 };
 
 export type GapInstallation = {
@@ -56,18 +61,37 @@ export const STATE_INSTALLATIONS: CulturalInstallation[] = [
   gap("AM", "Secretaria de Cultura do Amazonas"),
   mapas("AP", "Mapa Cultural do Amapá", "https://mapacultural.ap.gov.br"),
   gap("BA", "Secretaria de Cultura da Bahia"),
-  mapas("CE", "Mapa Cultural do Ceará", "https://mapacultural.secult.ce.gov.br"),
+  mapas(
+    "CE",
+    "Mapa Cultural do Ceará",
+    "https://mapacultural.secult.ce.gov.br",
+  ),
   gap("DF", "Secretaria de Cultura do Distrito Federal"),
-  mapas("ES", "Mapa da Cultura do Espírito Santo", "https://mapa.cultura.es.gov.br"),
+  mapas(
+    "ES",
+    "Mapa da Cultura do Espírito Santo",
+    "https://mapa.cultura.es.gov.br",
+  ),
   mapas("GO", "Mapa Goiano de Cultura", "https://mapagoiano.cultura.go.gov.br"),
   mapas("MA", "Mapa da Cultura do Maranhão", "https://mapadacultura.ma.gov.br"),
   gap("MG", "Secretaria de Cultura de Minas Gerais"),
   gap("MS", "Secretaria de Cultura de Mato Grosso do Sul"),
-  mapas("MT", "Mapas Culturais de Mato Grosso", "https://mapas.mt.gov.br"),
+  {
+    ...mapas("MT", "Mapas Culturais de Mato Grosso", "https://mapas.mt.gov.br"),
+    tlsDiagnosis: { observedOn: "2026-10-08", expiresOn: "2026-07-14" },
+  },
   mapas("PA", "Mapa Cultural do Pará", "https://mapacultural.pa.gov.br"),
   mapas("PB", "Mapa Cultural da Paraíba", "https://mapacultural.pb.gov.br"),
-  mapas("PE", "Mapa Cultural de Pernambuco", "https://www.mapacultural.pe.gov.br"),
-  mapas("PI", "Mapa da Cultura do Piauí", "https://www.mapadacultura.pi.gov.br"),
+  mapas(
+    "PE",
+    "Mapa Cultural de Pernambuco",
+    "https://www.mapacultural.pe.gov.br",
+  ),
+  mapas(
+    "PI",
+    "Mapa da Cultura do Piauí",
+    "https://www.mapadacultura.pi.gov.br",
+  ),
   gap("PR", "Secretaria de Cultura do Paraná"),
   gap("RJ", "Secretaria de Cultura do Rio de Janeiro"),
   gap("RN", "Secretaria de Cultura do Rio Grande do Norte"),
@@ -77,7 +101,14 @@ export const STATE_INSTALLATIONS: CulturalInstallation[] = [
   gap("SC", "Secretaria de Cultura de Santa Catarina"),
   mapas("SE", "Mapa Cultural de Sergipe", "https://mapacultural.se.gov.br"),
   gap("SP", "Secretaria de Cultura de São Paulo"),
-  mapas("TO", "Mapa da Cultura do Tocantins", "https://mapadacultura.secult.to.gov.br"),
+  {
+    ...mapas(
+      "TO",
+      "Mapa da Cultura do Tocantins",
+      "https://mapadacultura.secult.to.gov.br",
+    ),
+    tlsDiagnosis: { observedOn: "2026-10-08", alsoWrongName: true },
+  },
 ];
 
 export const CULTURAL_INSTALLATIONS: CulturalInstallation[] = [
@@ -87,7 +118,8 @@ export const CULTURAL_INSTALLATIONS: CulturalInstallation[] = [
 
 export const mapasInstallations = (): MapasInstallation[] =>
   CULTURAL_INSTALLATIONS.filter(
-    (installation): installation is MapasInstallation => installation.kind === "mapas",
+    (installation): installation is MapasInstallation =>
+      installation.kind === "mapas",
   );
 
 export const installationById = (
