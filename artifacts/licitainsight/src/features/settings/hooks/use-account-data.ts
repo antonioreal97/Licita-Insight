@@ -13,7 +13,7 @@ export function useExportAccountData() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename ?? 'abriu-la-dados.json';
+      link.download = filename ?? 'pardal-digital-dados.json';
       document.body.append(link);
       link.click();
       link.remove();
@@ -35,7 +35,7 @@ export function useDeleteAccount() {
       queryClient.removeQueries({ queryKey: queryKeys.me.all });
       queryClient.setQueryData(queryKeys.session, null);
       navigate('/');
-      toast({ title: 'Conta excluída', description: 'Seus dados pessoais foram apagados da Abriu lá.' });
+      toast({ title: 'Conta excluída', description: 'Seus dados pessoais foram apagados do Pardal Digital.' });
     },
     onError: (error) => console.error('[lgpd] Falha ao excluir a conta.', error),
   });

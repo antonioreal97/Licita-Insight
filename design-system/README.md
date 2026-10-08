@@ -1,4 +1,4 @@
-# Abriu lá — Design System
+# Pardal Digital — Design System
 
 A precision instrument for reading public procurement, not a government portal and not a SaaS template.
 Tokens live in `artifacts/licitainsight/src/index.css`. The living reference renders at `/design-system` in the app

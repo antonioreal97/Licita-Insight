@@ -111,7 +111,7 @@ router.get(
     const date = now.toISOString().slice(0, 10);
     res.set({
       "Cache-Control": "no-store",
-      "Content-Disposition": `attachment; filename="abriu-la-dados-${date}.json"`,
+      "Content-Disposition": `attachment; filename="pardal-digital-dados-${date}.json"`,
     });
     res.json(await exportAccountData(authContext(res).user.id, now));
   }),

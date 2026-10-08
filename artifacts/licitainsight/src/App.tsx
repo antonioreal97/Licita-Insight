@@ -51,20 +51,20 @@ queryClient.setQueryDefaults(queryKeys.session, { retry: retryTransient });
 
 // Static routes only. Pages with dynamic titles (tender detail, 404) set document.title themselves, so this never touches them.
 const routeTitles: Record<string, string> = {
-  '/': 'Abriu lá · Editais públicos do PNCP',
-  '/login': 'Entrar · Abriu lá',
-  '/register': 'Criar conta · Abriu lá',
-  '/forgot-password': 'Recuperar acesso · Abriu lá',
-  '/descadastro': 'Descadastro de e-mails · Abriu lá',
-  '/dashboard': 'Visão geral · Abriu lá',
-  '/search': 'Explorar editais · Abriu lá',
-  '/oportunidades': 'Chamadas culturais · Abriu lá',
-  '/transparencia': 'Transparência · Abriu lá',
-  '/saved-searches': 'Buscas salvas · Abriu lá',
-  '/saved-tenders': 'Editais salvos · Abriu lá',
-  '/monitoring': 'Monitoramento · Abriu lá',
-  '/settings': 'Configurações · Abriu lá',
-  '/design-system': 'Design system · Abriu lá',
+  '/': 'Pardal Digital · Editais públicos do PNCP',
+  '/login': 'Entrar · Pardal Digital',
+  '/register': 'Criar conta · Pardal Digital',
+  '/forgot-password': 'Recuperar acesso · Pardal Digital',
+  '/descadastro': 'Descadastro de e-mails · Pardal Digital',
+  '/dashboard': 'Visão geral · Pardal Digital',
+  '/search': 'Explorar editais · Pardal Digital',
+  '/oportunidades': 'Chamadas culturais · Pardal Digital',
+  '/transparencia': 'Transparência · Pardal Digital',
+  '/saved-searches': 'Buscas salvas · Pardal Digital',
+  '/saved-tenders': 'Editais salvos · Pardal Digital',
+  '/monitoring': 'Monitoramento · Pardal Digital',
+  '/settings': 'Configurações · Pardal Digital',
+  '/design-system': 'Design system · Pardal Digital',
 };
 
 function useRouteAnnouncement() {

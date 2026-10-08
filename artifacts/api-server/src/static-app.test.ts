@@ -39,10 +39,13 @@ test("serves the SPA without intercepting API, methods or path traversal", async
   const parent = await mkdtemp(path.join(tmpdir(), "licitai-static-"));
   const staticDir = path.join(parent, "public");
   await mkdir(path.join(staticDir, "assets"), { recursive: true });
-  await writeFile(path.join(staticDir, "index.html"), "<html>ABRIU LA SPA</html>");
+  await writeFile(
+    path.join(staticDir, "index.html"),
+    "<html>PARDAL DIGITAL SPA</html>",
+  );
   await writeFile(path.join(staticDir, "assets/index-AbCdEf12.js"), "ASSET");
-  // Copied from public/ as-is, no content hash: a new logo must reach returning visitors.
-  await writeFile(path.join(staticDir, "abriu-la-logo.png"), "LOGO");
+  // Copied from public/ as-is, no content hash: a new favicon must reach returning visitors.
+  await writeFile(path.join(staticDir, "favicon.svg"), "FAVICON");
   await writeFile(path.join(parent, "secret.txt"), "MUST NOT LEAK");
 
   const app = express();
@@ -59,12 +62,12 @@ test("serves the SPA without intercepting API, methods or path traversal", async
   try {
     const root = await rawRequest(address.port, "/");
     assert.equal(root.status, 200);
-    assert.match(root.body, /ABRIU LA SPA/);
+    assert.match(root.body, /PARDAL DIGITAL SPA/);
     assert.equal(root.cacheControl, "no-cache");
 
     const deepLink = await rawRequest(address.port, "/tenders/PNCP-123");
     assert.equal(deepLink.status, 200);
-    assert.match(deepLink.body, /ABRIU LA SPA/);
+    assert.match(deepLink.body, /PARDAL DIGITAL SPA/);
     assert.equal(deepLink.cacheControl, "no-cache");
 
     const asset = await rawRequest(address.port, "/assets/index-AbCdEf12.js");
@@ -72,10 +75,10 @@ test("serves the SPA without intercepting API, methods or path traversal", async
     assert.equal(asset.body, "ASSET");
     assert.equal(asset.cacheControl, "public, max-age=31536000, immutable");
 
-    const logo = await rawRequest(address.port, "/abriu-la-logo.png");
-    assert.equal(logo.status, 200);
-    assert.equal(logo.body, "LOGO");
-    assert.equal(logo.cacheControl, "no-cache");
+    const favicon = await rawRequest(address.port, "/favicon.svg");
+    assert.equal(favicon.status, 200);
+    assert.equal(favicon.body, "FAVICON");
+    assert.equal(favicon.cacheControl, "no-cache");
 
     const api = await rawRequest(address.port, "/api/x");
     assert.equal(api.status, 404);
@@ -83,9 +86,13 @@ test("serves the SPA without intercepting API, methods or path traversal", async
 
     const post = await rawRequest(address.port, "/tenders/PNCP-123", "POST");
     assert.equal(post.status, 404);
-    assert.doesNotMatch(post.body, /ABRIU LA SPA/);
+    assert.doesNotMatch(post.body, /PARDAL DIGITAL SPA/);
 
-    for (const traversal of ["/../secret.txt", "/%2e%2e/secret.txt", "/%2E%2E%2Fsecret.txt"]) {
+    for (const traversal of [
+      "/../secret.txt",
+      "/%2e%2e/secret.txt",
+      "/%2E%2E%2Fsecret.txt",
+    ]) {
       const response = await rawRequest(address.port, traversal);
       assert.doesNotMatch(response.body, /MUST NOT LEAK/);
     }

@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { User } from '@/api';
-import { BrandIcon } from '@/components/brand-icon';
+import { BrandName } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -97,23 +97,20 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
-        <BrandIcon className="size-9" />
-        {!collapsed && (
-          <div className="min-w-0">
-            <div className="font-semibold tracking-heading text-sidebar-strong-foreground">
-              Abriu <span className="text-sidebar-primary">lá</span>
-            </div>
-          </div>
+        {collapsed ? (
+          <span aria-label="Pardal Digital" className="w-full text-center font-semibold text-sidebar-primary">
+            P
+          </span>
+        ) : (
+          <BrandName className="min-w-0 text-sidebar-strong-foreground" accentClassName="text-sidebar-primary" />
         )}
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-6">
         {navGroups.map((group, index) => (
           <div key={group.label}>
-            {collapsed ? (
-              index > 0 && <div className="mx-3 my-4 h-px bg-sidebar-border" />
-            ) : (
-              group.title && <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.title}</div>
-            )}
+            {collapsed
+              ? index > 0 && <div className="mx-3 my-4 h-px bg-sidebar-border" />
+              : group.title && <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.title}</div>}
             <nav aria-label={group.label} className="space-y-1">
               {group.items.map(({ href, label, icon: Icon, testId }) => {
                 const locked = href === '/oportunidades' && opportunitiesLocked;
@@ -255,8 +252,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Menu size={20} strokeWidth={1.75} />
                 </button>
               </SheetTrigger>
-              <Link href="/dashboard" aria-label="Abriu lá — Visão geral" className="lg:hidden">
-                <BrandIcon className="size-7" />
+              <Link href="/dashboard" aria-label="Pardal Digital — Visão geral" className="lg:hidden">
+                <BrandName className="text-sm text-foreground" />
               </Link>
               <button
                 aria-label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}

@@ -1,4 +1,4 @@
-# Deploy do Abriu lá na Vercel
+# Deploy do Pardal Digital na Vercel
 
 O projeto `abriu-la` publica automaticamente a produção após merge em `main`. Pull requests recebem deployments de preview pelo GitHub. A configuração de instalação, build, saída estática, middleware e roteamento fica nos arquivos versionados da raiz (`vercel.json` e `middleware.js`), que prevalecem sobre as opções atuais do projeto Vercel. Essas opções do projeto permanecem como estão porque o servidor refaz deploys do deployment de produção atual quando o túnel muda.
 

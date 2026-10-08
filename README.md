@@ -1,4 +1,4 @@
-# Abriu lá
+# Pardal Digital
 
 Plataforma para pesquisar, avaliar e acompanhar licitações públicas brasileiras. Fluxo central: **pesquisar → filtrar → avaliar → salvar → monitorar**.
 
