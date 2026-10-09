@@ -8,31 +8,40 @@ const VIEWBOX_WIDTH = 312;
 const DEPTH = 16;
 const CONTENT_MAX = 1280;
 const CONTENT_PADDING = 32;
-// Half of the gap between two landing sections (`py-24` on both sides): the crossing happens inside that gap.
-const CROSS_BAND = 90;
+// Largest circle inside `corpo-cheio` (viewBox units). The approach zooms on its center; once it covers the viewport
+// diagonal, the screen is all body color.
+const BODY_INNER = { x: 779, y: 330, radius: 58 };
+// Scroll distances, as a fraction of the viewport height: the approach before the cover, then the bird fading out.
+const APPROACH = 0.35;
+const FADE = 0.08;
 
 // Logo ink per theme (`--petroleo`, `--lima-marca`); the extruded sides use a second palette color so depth reads.
 const inkFor = (dark: boolean) =>
   dark ? { face: 0xbfe17c, side: 0x9ed6d1 } : { face: 0x164c49, side: 0xb8cda5 };
 
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smoothstep = (edge0: number, edge1: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  const t = clamp01((x - edge0) / (edge1 - edge0));
   return t * t * (3 - 2 * t);
 };
 
-function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material) {
+function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material, fillMaterial: THREE.Material) {
   const { paths } = new SVGLoader().parse(silhouetteSvg);
   const extrude = { depth: DEPTH, bevelEnabled: true, bevelThickness: 1.5, bevelSize: 1, bevelSegments: 2, curveSegments: 6 };
-  const geometriesOf = (wing: boolean) =>
-    paths
-      .filter((p) => (p.userData?.node as Element | undefined)?.id.startsWith('asa-') === wing)
-      .flatMap((p) => p.toShapes())
-      .map((shape) => new THREE.ExtrudeGeometry(shape, extrude));
-  const bodyGeometries = geometriesOf(false);
-  const wingGeometries = geometriesOf(true);
-  if (bodyGeometries.length === 0 || wingGeometries.length === 0) {
-    throw new Error(`pardal-silhueta.svg sem corpo ou asa (corpo: ${bodyGeometries.length}, asa: ${wingGeometries.length})`);
+  const shapesOf = (id: (nodeId: string) => boolean) =>
+    paths.filter((p) => id((p.userData?.node as Element | undefined)?.id ?? '')).flatMap((p) => p.toShapes());
+  const bodyShapes = shapesOf((id) => id !== 'corpo-cheio' && !id.startsWith('asa-'));
+  const wingShapes = shapesOf((id) => id.startsWith('asa-'));
+  // The logo outline is open at the tail; `corpo-cheio` is the solid body that carries the next section's color.
+  const fillShapes = shapesOf((id) => id === 'corpo-cheio');
+  if (bodyShapes.length === 0 || wingShapes.length === 0 || fillShapes.length === 0) {
+    throw new Error(
+      `pardal-silhueta.svg incompleto (traços: ${bodyShapes.length}, asa: ${wingShapes.length}, corpo-cheio: ${fillShapes.length})`,
+    );
   }
+  const bodyGeometries = bodyShapes.map((shape) => new THREE.ExtrudeGeometry(shape, extrude));
+  const wingGeometries = wingShapes.map((shape) => new THREE.ExtrudeGeometry(shape, extrude));
+  const fillGeometries = fillShapes.map((shape) => new THREE.ShapeGeometry(shape, 6));
 
   const materials = [faceMaterial, sideMaterial];
   const bounds = new THREE.Box3();
@@ -46,14 +55,25 @@ function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material) {
   const content = new THREE.Group();
   content.scale.y = -1;
   content.position.set(-center.x, center.y, -DEPTH / 2);
-  bodyGeometries.forEach((g) => content.add(new THREE.Mesh(g, materials)));
+  // Strokes draw after the fill: while they fade out they still write depth and would otherwise punch holes in it.
+  const stroke = (g: THREE.BufferGeometry) => {
+    const mesh = new THREE.Mesh(g, materials);
+    mesh.renderOrder = 1;
+    return mesh;
+  };
+  bodyGeometries.forEach((g) => content.add(stroke(g)));
+  fillGeometries.forEach((g) => {
+    const fill = new THREE.Mesh(g, fillMaterial);
+    fill.position.z = DEPTH / 2;
+    content.add(fill);
+  });
 
   // The wing hinges on its top edge, so a rotation around x lifts it out of the logo plane.
   const hinge = new THREE.Vector3(wingBounds.getCenter(new THREE.Vector3()).x, wingBounds.min.y, 0);
   const wingPivot = new THREE.Group();
   wingPivot.position.copy(hinge);
   wingGeometries.forEach((g) => {
-    const mesh = new THREE.Mesh(g, materials);
+    const mesh = stroke(g);
     mesh.position.set(-hinge.x, -hinge.y, 0);
     wingPivot.add(mesh);
   });
@@ -61,15 +81,18 @@ function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material) {
 
   const bird = new THREE.Group();
   bird.add(content);
-  return { bird, wingPivot, geometries: [...bodyGeometries, ...wingGeometries] };
+  const zoomCenter = new THREE.Vector3(BODY_INNER.x - center.x, center.y - BODY_INNER.y, 0);
+  return { bird, wingPivot, zoomCenter, geometries: [...bodyGeometries, ...wingGeometries, ...fillGeometries] };
 }
 
 /**
- * Decorative 3D pardal that follows the landing scroll: it stays in a side gutter inside each section and crosses
- * to the other gutter in the gap between sections. Renders on demand (scroll, resize, theme), never in an idle loop.
- * With reduced motion it is drawn once, perched next to the hero headline, and scrolls away with the page.
+ * Decorative 3D pardal tied to the landing scroll. Near each section boundary it flies at the camera, its body filling
+ * with the next section's background, until that color covers the screen. Past the peak, a curtain in the same color
+ * hides the previous section down to the boundary and lifts with it, so the next section is revealed in place. On
+ * wide screens it rests in a side gutter between boundaries. Renders on demand (scroll, resize, theme), never in an
+ * idle loop. With reduced motion it is drawn once, perched next to the hero headline.
  */
-export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
+export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean; wide: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,23 +103,30 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
     const ink = inkFor(isDark());
     const faceMaterial = new THREE.MeshBasicMaterial({ color: ink.face, side: THREE.DoubleSide, transparent: true });
     const sideMaterial = new THREE.MeshBasicMaterial({ color: ink.side, side: THREE.DoubleSide, transparent: true });
-    const { bird, wingPivot, geometries } = buildBird(faceMaterial, sideMaterial);
+    const fillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0 });
+    const coverMaterial = new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false });
+    const coverGeometry = new THREE.PlaneGeometry(1, 1);
+    const { bird, wingPivot, zoomCenter, geometries } = buildBird(faceMaterial, sideMaterial, fillMaterial);
+    const disposeAll = () => {
+      [...geometries, coverGeometry].forEach((g) => g.dispose());
+      [faceMaterial, sideMaterial, fillMaterial, coverMaterial].forEach((m) => m.dispose());
+    };
 
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     } catch (error) {
       console.error('PardalFlight3D: WebGL indisponível, o pardal 3D não será exibido.', error);
-      geometries.forEach((g) => g.dispose());
-      faceMaterial.dispose();
-      sideMaterial.dispose();
+      disposeAll();
       return;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.add(bird);
+    const cover = new THREE.Mesh(coverGeometry, coverMaterial);
+    cover.renderOrder = -1;
+    scene.add(cover, bird);
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 10000);
 
     let width = 0;
@@ -112,40 +142,58 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
     };
     resize();
 
+    const main = document.getElementById('conteudo');
     const sections = () => Array.from(document.querySelectorAll<HTMLElement>('#conteudo > section'));
+    const surfaceOf = (section: HTMLElement) => {
+      const own = getComputedStyle(section).backgroundColor;
+      const transparent = own === 'transparent' || own === 'rgba(0, 0, 0, 0)';
+      return {
+        color: new THREE.Color(transparent && main?.parentElement ? getComputedStyle(main.parentElement).backgroundColor : own),
+        // Full-bleed inverse sections need the other theme's ink, or the logo vanishes on them.
+        inverse: section.classList.contains('bg-superficie-inversa'),
+      };
+    };
 
     const target = () => {
       const gutter = (width - Math.min(width, CONTENT_MAX)) / 2 + CONTENT_PADDING;
       const sideX = (i: number) => (i % 2 === 0 ? gutter / 2 : width - gutter / 2);
-      const anchorY = height * 0.38;
       const scrollOffset = reducedMotion ? window.scrollY : 0;
       const list = sections();
       const tops = list.map((s) => s.getBoundingClientRect().top + scrollOffset);
-      const current = list[tops.findLastIndex((top) => top <= anchorY)];
+      // The cover peaks when a boundary reaches the middle of the screen.
+      const distance = tops.map((top) => height / 2 - top);
+      const current = Math.max(0, distance.findLastIndex((d) => d >= 0));
+
       let x = sideX(0);
-      let y = anchorY;
-      let opacity = 1;
-      for (let k = 1; k < tops.length; k++) {
-        const t = smoothstep(-CROSS_BAND, CROSS_BAND, anchorY - tops[k]);
-        if (k === tops.length - 1) {
-          opacity = 1 - t;
-        } else {
-          x += (sideX(k) - x) * t;
+      for (let k = 1; k < list.length; k++) x += (sideX(k) - x) * smoothstep(-8, 8, distance[k]);
+      const size = Math.min(104, Math.max(56, gutter - 28));
+      const pastLast = list.length > 1 && distance[list.length - 1] >= 0;
+
+      // Each boundary adds 0→1 while the bird approaches and 1→2 while it fades, so one monotonic number (eased as a
+      // whole) never runs back through a cover between boundaries.
+      let progress = 0;
+      let curtain = -1;
+      if (!reducedMotion) {
+        for (let k = 1; k < list.length; k++) {
+          const d = distance[k] / height;
+          progress += d < 0 ? clamp01((d + APPROACH) / APPROACH) : 1 + clamp01(d / FADE);
+          if (d >= 0 && tops[k] > 0) curtain = k;
         }
-        y -= Math.sin(Math.PI * t) * 48;
       }
+
       return {
         x,
-        y,
-        opacity,
-        size: Math.min(104, Math.max(56, gutter - 28)),
+        y: height * 0.38,
+        size,
         facing: x < width / 2 ? 1 : -1,
-        // Over a full-bleed inverse section the theme ink would vanish, so the bird takes the other theme's ink.
-        inverse: current?.classList.contains('bg-superficie-inversa') ?? false,
+        inverse: list[current] ? surfaceOf(list[current]).inverse : false,
+        opacity: wide && !pastLast ? 1 : 0,
+        progress,
+        curtain: curtain > 0 ? { top: tops[curtain], color: surfaceOf(list[curtain]).color } : null,
       };
     };
 
-    let inverseInk = false;
+    let inverseInk: boolean | null = null;
     const paint = (inverse: boolean) => {
       inverseInk = inverse;
       const next = inkFor(isDark() !== inverse);
@@ -153,11 +201,57 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
       sideMaterial.color.setHex(next.side);
     };
 
-    const state = { x: 0, y: 0, opacity: 0, vx: 0, vy: 0, flapAmp: 0, flapPhase: 0 };
-    const place = (size: number, inverse: boolean) => {
-      if (inverse !== inverseInk) paint(inverse);
-      const scale = size / VIEWBOX_WIDTH;
-      bird.scale.setScalar(scale);
+    const state = { x: 0, y: 0, opacity: 0, vx: 0, vy: 0, flapAmp: 0, flapPhase: 0, progress: 0 };
+    type Goal = ReturnType<typeof target>;
+    // Which boundary the eased progress is crossing, and how far into it (0→1 approach, 1→2 fade).
+    const transition = () => {
+      const k = Math.floor(state.progress / 2) + 1;
+      return { section: sections()[k], local: state.progress - 2 * (k - 1) };
+    };
+
+    const place = (goal: Goal) => {
+      cover.visible = goal.curtain !== null;
+      if (goal.curtain) {
+        coverMaterial.color.copy(goal.curtain.color);
+        cover.scale.set(width, goal.curtain.top, 1);
+        cover.position.set(width / 2, -goal.curtain.top / 2, 0);
+      }
+
+      const { section, local } = transition();
+      if (local > 0.002 && local < 1.998 && section) {
+        // Flying at the camera: the body's inner circle travels to the middle of the screen while the bird grows
+        // exponentially. The logo strokes fade before the peak so only the next section's color is left on screen, and the
+        // cover completes before the boundary so the screen holds one solid color for a moment.
+        const a = clamp01(local / 0.9);
+        const surface = surfaceOf(section);
+        const startScale = goal.size / VIEWBOX_WIDTH;
+        const coverScale = (1.05 * Math.hypot(width, height)) / 2 / BODY_INNER.radius;
+        const startX = wide ? state.x : width * 0.5;
+        const startY = wide ? state.y : height * 0.85;
+        const glide = smoothstep(0, 1, a);
+        const fade = 1 - clamp01(local - 1);
+        if (inverseInk !== surface.inverse) paint(surface.inverse);
+        fillMaterial.color.copy(surface.color);
+        fillMaterial.opacity = smoothstep(0.1, 0.45, a) * fade;
+        const opacity = (wide ? 1 : smoothstep(0, 0.15, a)) * (1 - smoothstep(0.7, 0.97, a));
+        faceMaterial.opacity = opacity;
+        sideMaterial.opacity = opacity;
+        bird.scale.setScalar(startScale * Math.pow(coverScale / startScale, a * a * a));
+        bird.position.set(0, 0, 0);
+        bird.updateMatrix();
+        const zoomOffset = zoomCenter.clone().applyMatrix4(bird.matrix);
+        bird.position.set(
+          startX + (width / 2 - zoomOffset.x - startX) * glide,
+          -startY + (-height / 2 - zoomOffset.y + startY) * glide,
+          0,
+        );
+        bird.visible = true;
+        return;
+      }
+
+      if (inverseInk !== goal.inverse) paint(goal.inverse);
+      fillMaterial.opacity = 0;
+      bird.scale.setScalar(goal.size / VIEWBOX_WIDTH);
       bird.position.set(state.x, -state.y, 0);
       faceMaterial.opacity = state.opacity;
       sideMaterial.opacity = state.opacity;
@@ -171,31 +265,53 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
       last = now;
       const goal = target();
       const follow = 1 - Math.exp(-dt * 7);
-      const nextX = state.x + (goal.x - state.x) * follow;
-      const nextY = state.y + (goal.y - state.y) * follow;
+      const quick = 1 - Math.exp(-dt * 14);
+
+      // While the screen is covered, the gutter bird jumps to its new side unseen and fades back in afterwards.
+      const local = transition().local;
+      const approaching = local > 0.002 && local < 1.998;
+      const hidden = local > 0.9 && local < 2;
+      const nextX = hidden ? goal.x : state.x + (goal.x - state.x) * follow;
+      const nextY = hidden ? goal.y : state.y + (goal.y - state.y) * follow;
       state.vx = (nextX - state.x) / dt;
       state.vy = (nextY - state.y) / dt;
       state.x = nextX;
       state.y = nextY;
-      state.opacity += (goal.opacity - state.opacity) * follow;
+      state.opacity = hidden ? 0 : state.opacity + (goal.opacity - state.opacity) * follow;
+      const approachSpeed = Math.abs(goal.progress - state.progress) / dt;
+      state.progress += (goal.progress - state.progress) * quick;
 
-      const facing = Math.abs(state.vx) > 30 ? Math.sign(state.vx) : goal.facing;
-      bird.rotation.y += ((facing > 0 ? 0 : Math.PI) - bird.rotation.y) * follow;
-      bird.rotation.z += (THREE.MathUtils.clamp(-state.vy * 0.0012, -0.4, 0.4) * facing - bird.rotation.z) * follow;
-      bird.rotation.x += (THREE.MathUtils.clamp(state.vx * 0.0006, -0.5, 0.5) - bird.rotation.x) * follow;
+      // At cover scale any turn or tilt would sweep the body off screen, so the approach flies flat and keeps its side.
+      const facing = approaching
+        ? Math.cos(bird.rotation.y) >= 0
+          ? 1
+          : -1
+        : Math.abs(state.vx) > 30
+          ? Math.sign(state.vx)
+          : goal.facing;
+      const turn = (facing > 0 ? 0 : Math.PI) - bird.rotation.y;
+      if (approaching) {
+        bird.rotation.set(0, facing > 0 ? 0 : Math.PI, 0);
+      } else {
+        bird.rotation.y += turn * follow;
+        bird.rotation.z += (THREE.MathUtils.clamp(-state.vy * 0.0012, -0.4, 0.4) * facing - bird.rotation.z) * follow;
+        bird.rotation.x += (THREE.MathUtils.clamp(state.vx * 0.0006, -0.5, 0.5) - bird.rotation.x) * follow;
+      }
 
-      const speed = Math.hypot(state.vx, state.vy);
+      const speed = hidden ? 0 : Math.hypot(state.vx, state.vy) + approachSpeed * 400;
       state.flapAmp += (Math.min(0.9, speed / 500) - state.flapAmp) * follow;
       state.flapPhase += dt * 16;
       wingPivot.rotation.x = Math.sin(state.flapPhase) * state.flapAmp;
 
-      place(goal.size, goal.inverse);
+      place(goal);
       renderer.render(scene, camera);
-
       const settled =
         Math.abs(goal.x - state.x) < 0.3 &&
         Math.abs(goal.y - state.y) < 0.3 &&
         Math.abs(goal.opacity - state.opacity) < 0.01 &&
+        Math.abs(goal.progress - state.progress) < 0.001 &&
+        Math.abs(turn) < 0.01 &&
+        Math.abs(bird.rotation.x) + Math.abs(bird.rotation.z) < 0.01 &&
         state.flapAmp < 0.01;
       if (settled) {
         wingPivot.rotation.x = 0;
@@ -209,9 +325,9 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
 
     const drawStill = () => {
       const goal = target();
-      Object.assign(state, { x: goal.x, y: goal.y, opacity: goal.opacity });
+      Object.assign(state, { x: goal.x, y: goal.y, opacity: goal.opacity, progress: 0 });
       bird.rotation.set(0, goal.facing > 0 ? 0 : Math.PI, 0);
-      place(goal.size, goal.inverse);
+      place(goal);
       renderer.render(scene, camera);
     };
 
@@ -225,19 +341,18 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
       kick();
     };
     const themeObserver = new MutationObserver(() => {
-      paint(inverseInk);
+      if (inverseInk !== null) paint(inverseInk);
       kick();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     // Live data (facts, tender preview) changes section heights after the first paint.
     const layoutObserver = new ResizeObserver(kick);
-    const main = document.getElementById('conteudo');
     if (main) layoutObserver.observe(main);
     window.addEventListener('resize', onResize);
     if (!reducedMotion) window.addEventListener('scroll', kick, { passive: true });
 
     const start = target();
-    Object.assign(state, { x: start.x, y: start.y });
+    Object.assign(state, { x: start.x, y: start.y, progress: start.progress });
     bird.rotation.y = start.facing > 0 ? 0 : Math.PI;
     kick();
 
@@ -249,11 +364,9 @@ export function PardalFlight3D({ reducedMotion }: { reducedMotion: boolean }) {
       window.removeEventListener('scroll', kick);
       container.removeChild(renderer.domElement);
       renderer.dispose();
-      geometries.forEach((g) => g.dispose());
-      faceMaterial.dispose();
-      sideMaterial.dispose();
+      disposeAll();
     };
-  }, [reducedMotion]);
+  }, [reducedMotion, wide]);
 
   return (
     <div
