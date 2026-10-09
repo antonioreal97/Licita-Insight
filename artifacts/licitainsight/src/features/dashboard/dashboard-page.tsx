@@ -194,6 +194,7 @@ export default function DashboardPage() {
     [],
   );
   const catalog = useTenderSearch({ pageSize: 1, sort: 'published_desc', facets: false });
+  const newTenders = useTenderSearch({ pageSize: 1, sort: 'first_seen_desc', facets: false, newOnly: true });
   const recent = useTenderSearch({ pageSize: 1, sort: 'published_desc', facets: false, publishedFrom: weekAgo });
   const soon = useTenderSearch({
     pageSize: 1,
@@ -211,7 +212,10 @@ export default function DashboardPage() {
   const shown = personal && matches.length > 0 ? matches : candidates;
   const fitsPending = fits.isPending || candidates.some(tender => !fits.data?.results[tender.id] || fits.data.results[tender.id].status === 'pending');
   const metrics = (
-    <section aria-label="Métricas nacionais" data-testid="dashboard-national-metrics" className="grid grid-cols-3 gap-3 rounded-xl border border-border bg-card px-4 py-5 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
+    <section aria-label="Métricas nacionais" data-testid="dashboard-national-metrics" className="grid grid-cols-2 gap-5 rounded-xl border border-border bg-card px-4 py-5 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
+      <Link href="/search?newOnly=true&sort=first_seen_desc" data-testid="link-dashboard-new-tenders" className="rounded-sm focus-visible:focus-ring">
+        <MiniMetric label="Novos desde ontem" value={metricValue(newTenders.data?.pagination.total, newTenders.isPending, newTenders.isError)} detail="editais novos no Pardal" attention />
+      </Link>
       <MiniMetric label="Prazo nos próximos 7 dias" value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)} detail="editais em aberto" attention />
       <MiniMetric label="Publicados na semana" value={metricValue(recent.data?.pagination.total, recent.isPending, recent.isError)} detail="nos últimos 7 dias" />
       <MiniMetric label="Editais disponíveis" value={metricValue(catalog.data?.pagination.total, catalog.isPending, catalog.isError)} detail="de todo o Brasil" />

@@ -7,6 +7,7 @@ import type {
 } from "@workspace/api-zod";
 
 export type FacetGroup =
+  | "new"
   | "status"
   | "modality"
   | "state"
@@ -28,6 +29,7 @@ export interface SearchCriteria {
   sourceId: string[];
   category: string[];
   platform: string[];
+  newOnly: boolean;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: Date;

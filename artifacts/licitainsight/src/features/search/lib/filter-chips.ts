@@ -58,5 +58,8 @@ export function buildFilterChips(params: TenderSearchParams, { statusDefault = f
       remove: { publishedFrom: undefined, publishedTo: undefined },
     });
   }
+  if (params.newOnly) {
+    chips.push({ id: 'newOnly', group: 'Entrada no Pardal', label: 'Novos (24 h)', remove: { newOnly: undefined } });
+  }
   return chips;
 }

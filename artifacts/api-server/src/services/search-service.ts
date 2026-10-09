@@ -19,6 +19,7 @@ import {
   dateInSaoPaulo,
   dateParameterValue,
 } from "../lib/sao-paulo-date";
+import { isNewTender, type Clock } from "../domain/new-tender";
 
 export const statusLabels: Record<TenderStatus, string> = {
   open: "Aberto",
@@ -140,11 +141,19 @@ const applyFilters = (
   tenders: readonly TenderDetail[],
   criteria: SearchCriteria,
   skippedFacet?: FacetGroup,
+  now = new Date(),
 ): TenderDetail[] => {
   const tokens = queryTokens(criteria.query);
 
   return tenders.filter((tender) => {
     if (!matchesQuery(tender, tokens)) return false;
+    if (
+      skippedFacet !== "new" &&
+      criteria.newOnly &&
+      !isNewTender(tender.createdAt, now)
+    ) {
+      return false;
+    }
     if (
       skippedFacet !== "status" &&
       criteria.status.length > 0 &&
@@ -362,16 +371,18 @@ const includeSelectedOrganizations = (
 const createFacets = (
   tenders: readonly TenderDetail[],
   criteria: SearchCriteria,
+  now: Date,
 ): SearchFacets => {
-  const byStatus = applyFilters(tenders, criteria, "status");
-  const byModality = applyFilters(tenders, criteria, "modality");
-  const byState = applyFilters(tenders, criteria, "state");
-  const byCity = applyFilters(tenders, criteria, "city");
-  const bySource = applyFilters(tenders, criteria, "source");
-  const byCategory = applyFilters(tenders, criteria, "category");
-  const byOrganization = applyFilters(tenders, criteria, "organization");
-  const byPlatform = applyFilters(tenders, criteria, "platform");
-  const byValue = applyFilters(tenders, criteria, "valueRange")
+  const byStatus = applyFilters(tenders, criteria, "status", now);
+  const byModality = applyFilters(tenders, criteria, "modality", now);
+  const byState = applyFilters(tenders, criteria, "state", now);
+  const byCity = applyFilters(tenders, criteria, "city", now);
+  const bySource = applyFilters(tenders, criteria, "source", now);
+  const byCategory = applyFilters(tenders, criteria, "category", now);
+  const byOrganization = applyFilters(tenders, criteria, "organization", now);
+  const byPlatform = applyFilters(tenders, criteria, "platform", now);
+  const byNew = applyFilters(tenders, criteria, "new", now);
+  const byValue = applyFilters(tenders, criteria, "valueRange", now)
     .map((tender) => tender.estimatedValue)
     .filter((value): value is number => value !== null && value >= 0);
   const valueRange = numberRange(byValue);
@@ -457,6 +468,7 @@ const createFacets = (
       max: valueRange?.max ?? null,
       histogram: createValueHistogram(byValue),
     },
+    newCount: byNew.filter((tender) => isNewTender(tender.createdAt, now)).length,
   };
 };
 
@@ -485,6 +497,7 @@ export const toSummary = (
   tender: TenderDetail,
   criteria: SearchCriteria,
   tokens: string[],
+  now = new Date(),
 ): TenderSummary => {
   const {
     description: _description,
@@ -499,6 +512,8 @@ export const toSummary = (
   const usesRelevance = criteria.sort === "relevance" && tokens.length > 0;
   return {
     ...summary,
+    firstSeenAt: tender.createdAt,
+    isNew: isNewTender(tender.createdAt, now),
     relevance: {
       score: usesRelevance ? calculateScore(tender, tokens) : null,
       highlights: usesRelevance ? createHighlights(tender, criteria.query) : [],
@@ -534,14 +549,18 @@ export const normalizePageRelevance = (
 };
 
 export class SearchService {
-  constructor(private readonly repository: TenderRepository) {}
+  constructor(
+    private readonly repository: TenderRepository,
+    private readonly clock: Clock = () => new Date(),
+  ) {}
 
   search(criteria: SearchCriteria): SearchResponse {
     const startedAt = performance.now();
+    const now = this.clock();
     const tokens = queryTokens(criteria.query);
-    const filtered = applyFilters(this.repository.findAll(), criteria);
+    const filtered = applyFilters(this.repository.findAll(), criteria, undefined, now);
     const summaries = filtered.map((tender) =>
-      toSummary(tender, criteria, tokens),
+      toSummary(tender, criteria, tokens, now),
     );
 
     summaries.sort((left, right) => {
@@ -558,6 +577,8 @@ export class SearchService {
             right.publishedAt,
             "desc",
           );
+        case "first_seen_desc":
+          return right.firstSeenAt.getTime() - left.firstSeenAt.getTime();
         case "value_desc":
           return compareNullableNumbers(
             left.estimatedValue,
@@ -597,7 +618,7 @@ export class SearchService {
         totalIsEstimate: false,
       },
       facets: criteria.facets
-        ? createFacets(this.repository.findAll(), criteria)
+        ? createFacets(this.repository.findAll(), criteria, now)
         : null,
       meta: {
         query: criteria.query,

@@ -212,7 +212,7 @@ const evaluateSavedSearch = async (
     if (since >= completedAt) return;
     const { criteria } = canonicalSearchQuery(savedSearch.query);
     const filter = and(
-      searchWhereFor(criteria),
+      searchWhereFor(criteria, undefined, completedAt),
       gt(tendersTable.createdAt, since),
       lte(tendersTable.createdAt, completedAt),
     );

@@ -26,6 +26,7 @@ import {
   pncpTenderNumberShort,
   summarizeOfficialObject,
 } from "../ingest/pncp-map";
+import { isNewTender, newTenderCutoff } from "../domain/new-tender";
 import {
   onOrAfterSaoPauloDate,
   onOrBeforeSaoPauloDate,
@@ -94,6 +95,7 @@ const asModality = (value: string): Modality => {
 export const searchWhereFor = (
   criteria: SearchCriteria,
   skip?: FacetGroup,
+  now = new Date(),
 ): SQL | undefined => {
   const filters: SQL[] = [];
   const tokens = queryTokens(criteria.query);
@@ -141,6 +143,9 @@ export const searchWhereFor = (
   if (skip !== "platform" && criteria.platform.length > 0) {
     filters.push(inArray(tendersTable.platform, criteria.platform));
   }
+  if (skip !== "new" && criteria.newOnly) {
+    filters.push(sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`);
+  }
   if (skip !== "valueRange" && criteria.valueMin !== undefined) {
     filters.push(sql`${tendersTable.estimatedValue}::float8 >= ${criteria.valueMin}`);
   }
@@ -187,6 +192,8 @@ const orderBy = (criteria: SearchCriteria, tokens: string[]): SQL[] => {
       return [sql`${tendersTable.proposalDeadline} asc nulls last`, id];
     case "published_desc":
       return [published, id];
+    case "first_seen_desc":
+      return [desc(tendersTable.createdAt), id];
     case "value_desc":
       return [sql`${tendersTable.estimatedValue} desc nulls last`, id];
     case "value_asc":
@@ -235,7 +242,7 @@ const buckets = async (
   });
 };
 
-export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
+export const tenderRowToDetail = (row: TenderRow, now = new Date()): TenderDetail => {
   const items = row.items as TenderItemRecord[];
   const documents = row.documents as TenderDocumentRecord[];
   const timeline = row.timeline as TenderTimelineRecord[];
@@ -285,6 +292,8 @@ export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
     categories: row.categories,
     relevance: { score: null, highlights: [] },
     updatedAt: row.updatedAt,
+    firstSeenAt: row.createdAt,
+    isNew: isNewTender(row.createdAt, now),
     description: row.description,
     processNumber: row.processNumber,
     items: items.map((item) => ({
@@ -316,8 +325,9 @@ export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
 export class PostgresTenderRepository {
   async search(criteria: SearchCriteria): Promise<SearchResponse> {
     const startedAt = performance.now();
+    const now = new Date();
     const tokens = queryTokens(criteria.query);
-    const where = searchWhereFor(criteria);
+    const where = searchWhereFor(criteria, undefined, now);
     const total = await countRows(where);
     const rows = await db
       .select()
@@ -328,13 +338,13 @@ export class PostgresTenderRepository {
       .offset((criteria.page - 1) * criteria.pageSize);
 
     const [facets, indexUpdatedAt] = await Promise.all([
-      criteria.facets ? this.facets(criteria) : Promise.resolve(null),
+      criteria.facets ? this.facets(criteria, now) : Promise.resolve(null),
       this.indexUpdatedAt(),
     ]);
 
     return {
       data: normalizePageRelevance(
-        rows.map((row) => toSummary(tenderRowToDetail(row), criteria, tokens)),
+        rows.map((row) => toSummary(tenderRowToDetail(row, now), criteria, tokens)),
       ),
       pagination: {
         page: criteria.page,
@@ -445,7 +455,7 @@ export class PostgresTenderRepository {
     return row?.indexUpdatedAt ?? null;
   }
 
-  private async facets(criteria: SearchCriteria): Promise<SearchFacets> {
+  private async facets(criteria: SearchCriteria, now: Date): Promise<SearchFacets> {
     const [
       status,
       modality,
@@ -463,34 +473,39 @@ export class PostgresTenderRepository {
       organizationTotal,
       platformTotal,
       valueRows,
+      newCount,
     ] = await Promise.all([
-      buckets(tendersTable.status, sql<string>`${tendersTable.status}`, searchWhereFor(criteria, "status")),
-      buckets(tendersTable.modality, sql<string>`${tendersTable.modality}`, searchWhereFor(criteria, "modality")),
+      buckets(tendersTable.status, sql<string>`${tendersTable.status}`, searchWhereFor(criteria, "status", now)),
+      buckets(tendersTable.modality, sql<string>`${tendersTable.modality}`, searchWhereFor(criteria, "modality", now)),
       buckets(
         tendersTable.state,
         sql<string>`${tendersTable.state}`,
-        and(searchWhereFor(criteria, "state"), sql`${tendersTable.state} is not null`),
+        and(searchWhereFor(criteria, "state", now), sql`${tendersTable.state} is not null`),
       ),
-      buckets(tendersTable.sourceId, sql<string>`${tendersTable.sourceName}`, searchWhereFor(criteria, "source")),
-      this.cityFacet(criteria),
-      this.organizationFacet(criteria),
-      this.categoryFacet(criteria),
+      buckets(tendersTable.sourceId, sql<string>`${tendersTable.sourceName}`, searchWhereFor(criteria, "source", now)),
+      this.cityFacet(criteria, now),
+      this.organizationFacet(criteria, now),
+      this.categoryFacet(criteria, now),
       buckets(
         tendersTable.platform,
         sql<string>`coalesce(${tendersTable.platformLabel}, ${tendersTable.platform})`,
-        searchWhereFor(criteria, "platform"),
+        searchWhereFor(criteria, "platform", now),
       ),
-      countRows(searchWhereFor(criteria, "status")),
-      countRows(searchWhereFor(criteria, "modality")),
-      countRows(searchWhereFor(criteria, "state")),
-      countRows(searchWhereFor(criteria, "source")),
-      countRows(searchWhereFor(criteria, "category")),
-      countRows(searchWhereFor(criteria, "organization")),
-      countRows(searchWhereFor(criteria, "platform")),
+      countRows(searchWhereFor(criteria, "status", now)),
+      countRows(searchWhereFor(criteria, "modality", now)),
+      countRows(searchWhereFor(criteria, "state", now)),
+      countRows(searchWhereFor(criteria, "source", now)),
+      countRows(searchWhereFor(criteria, "category", now)),
+      countRows(searchWhereFor(criteria, "organization", now)),
+      countRows(searchWhereFor(criteria, "platform", now)),
       db
         .select({ value: tendersTable.estimatedValue })
         .from(tendersTable)
-        .where(searchWhereFor(criteria, "valueRange")),
+        .where(searchWhereFor(criteria, "valueRange", now)),
+      countRows(and(
+        searchWhereFor(criteria, "new", now),
+        sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
+      )),
     ]);
 
     const values = nonNegativeValues(
@@ -529,10 +544,11 @@ export class PostgresTenderRepository {
         max: range?.max ?? null,
         histogram: createValueHistogram(values),
       },
+      newCount,
     };
   }
 
-  private async cityFacet(criteria: SearchCriteria): Promise<FacetBucket[]> {
+  private async cityFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
     const rows = await db
       .select({
         value: tendersTable.cityIbgeCode,
@@ -543,7 +559,7 @@ export class PostgresTenderRepository {
       .from(tendersTable)
       .where(
         and(
-          searchWhereFor(criteria, "city"),
+          searchWhereFor(criteria, "city", now),
           sql`${tendersTable.cityIbgeCode} is not null`,
           sql`${tendersTable.city} is not null`,
           sql`${tendersTable.state} is not null`,
@@ -563,8 +579,8 @@ export class PostgresTenderRepository {
     });
   }
 
-  private async organizationFacet(criteria: SearchCriteria): Promise<FacetBucket[]> {
-    const where = searchWhereFor(criteria, "organization");
+  private async organizationFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
+    const where = searchWhereFor(criteria, "organization", now);
     const top = await db
       .select({
         value: tendersTable.organizationId,
@@ -604,8 +620,8 @@ export class PostgresTenderRepository {
     return result;
   }
 
-  private async categoryFacet(criteria: SearchCriteria): Promise<FacetBucket[]> {
-    const where = searchWhereFor(criteria, "category");
+  private async categoryFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
+    const where = searchWhereFor(criteria, "category", now);
     const result = await db.execute<{ value: string; label: string; count: number }>(sql`
       select cat->>'slug' as value,
              cat->>'label' as label,
@@ -636,6 +652,7 @@ const emptyCriteria = (): SearchCriteria => ({
   sourceId: [],
   category: [],
   platform: [],
+  newOnly: false,
   sort: "relevance",
   page: 1,
   pageSize: 20,

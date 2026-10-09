@@ -146,10 +146,11 @@ type Notification = {
   type: NotificationType;
   createdAt: string;
   readAt: string | null;
-  tender: { id: string; title: string; tenderNumberShort: string | null } | null; // tipos tender_*
+  tender: { id: string; title: string; tenderNumberShort: string | null; isNew: boolean } | null; // tipos tender_*
   change: { field: string; from: string | number | null; to: string | number | null } | null;
   savedSearch: { id: string; name: string; query: string } | null;                // saved_search_*
   matchCount: number | null;
+  newMatchCount: number | null;    // resultados vinculados que ainda estão na janela de novos
   tenderIds: string[];          // até 20 ids dos novos editais (saved_search_new_matches)
   profileMatches: Array<{ id: string; title: string; organizationName: string; proposalDeadline: string | null; level: 'high' }>;
 };

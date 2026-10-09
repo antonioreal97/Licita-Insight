@@ -10,6 +10,7 @@ import { formatPlace, highlightFor, shortTenderNumber } from '../lib/tender-disp
 import { DeadlineIndicator } from './deadline-indicator';
 import { HighlightedText } from './highlighted-text';
 import { MetaItem } from './meta-item';
+import { NewTenderBadge } from './new-tender-badge';
 import { PlatformBadge } from './platform-badge';
 import { RelevanceMeter } from './relevance-meter';
 import { SaveButton } from './save-button';
@@ -59,6 +60,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
       {/* Meta line */}
       <div className="col-start-1 row-start-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 type-meta text-muted-foreground">
         <StatusBadge status={tender.status} />
+        <NewTenderBadge isNew={tender.isNew} />
         <span title={tender.modalityLabel !== modality ? `Na fonte: ${tender.modalityLabel}` : undefined} className="font-semibold text-foreground/80">
           {modality}
         </span>

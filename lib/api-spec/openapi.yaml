@@ -75,6 +75,7 @@ paths:
         - $ref: "#/components/parameters/SourceFilter"
         - $ref: "#/components/parameters/CategoryFilter"
         - $ref: "#/components/parameters/PlatformFilter"
+        - $ref: "#/components/parameters/NewOnly"
         - $ref: "#/components/parameters/ValueMin"
         - $ref: "#/components/parameters/ValueMax"
         - $ref: "#/components/parameters/PublishedFrom"
@@ -1409,6 +1410,13 @@ components:
         items:
           type: string
           minLength: 1
+    NewOnly:
+      name: newOnly
+      in: query
+      description: Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).
+      schema:
+        type: boolean
+        default: false
     ValueMin:
       name: valueMin
       in: query
@@ -2635,7 +2643,7 @@ components:
         - other
     SortOption:
       type: string
-      enum: [relevance, deadline_asc, published_desc, value_desc, value_asc]
+      enum: [relevance, deadline_asc, published_desc, first_seen_desc, value_desc, value_asc]
     SearchMode:
       type: string
       enum: [keyword, semantic, hybrid]
@@ -2775,6 +2783,13 @@ components:
         updatedAt:
           type: string
           format: date-time
+        firstSeenAt:
+          type: string
+          format: date-time
+          description: Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.
+        isNew:
+          type: boolean
+          description: Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.
       required:
         - id
         - title
@@ -2797,6 +2812,8 @@ components:
         - categories
         - relevance
         - updatedAt
+        - firstSeenAt
+        - isNew
     RecommendationReason:
       type: object
       additionalProperties: false
@@ -3363,7 +3380,10 @@ components:
                 id: { type: string }
                 title: { type: string }
                 tenderNumberShort: { type: [string, "null"] }
-              required: [id, title, tenderNumberShort]
+                isNew:
+                  type: boolean
+                  description: Whether the linked tender is still inside the configured new-tender window.
+              required: [id, title, tenderNumberShort, isNew]
             - type: "null"
         change:
           anyOf:
@@ -3386,6 +3406,10 @@ components:
               required: [id, name, query]
             - type: "null"
         matchCount: { type: [integer, "null"] }
+        newMatchCount:
+          type: [integer, "null"]
+          minimum: 0
+          description: Number of linked notification results still inside the configured new-tender window.
         tenderIds:
           type: array
           maxItems: 20
@@ -3405,6 +3429,7 @@ components:
           change,
           savedSearch,
           matchCount,
+          newMatchCount,
           tenderIds,
           profileMatches,
         ]
@@ -3698,6 +3723,10 @@ components:
               items:
                 $ref: "#/components/schemas/ValueHistogramBucket"
           required: [min, max]
+        newCount:
+          type: integer
+          minimum: 0
+          description: Results first inserted within the configured new-tender window, applying all other filters.
       required:
         [
           status,
@@ -3708,6 +3737,7 @@ components:
           organization,
           platform,
           valueRange,
+          newCount,
         ]
     SearchResponse:
       type: object

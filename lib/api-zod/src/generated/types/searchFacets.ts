@@ -23,4 +23,9 @@ export interface SearchFacets {
   platform: FacetBucket[];
   groupTotals?: FacetGroupTotals;
   valueRange: SearchFacetsValueRange;
+  /**
+     * Results first inserted within the configured new-tender window, applying all other filters.
+     * @minimum 0
+     */
+  newCount: number;
 }

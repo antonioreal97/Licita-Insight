@@ -16,7 +16,7 @@ export type Modality =
   | 'dialogo_competitivo'
   | 'other';
 
-export type SortOption = 'relevance' | 'deadline_asc' | 'published_desc' | 'value_desc' | 'value_asc';
+export type SortOption = 'relevance' | 'deadline_asc' | 'published_desc' | 'first_seen_desc' | 'value_desc' | 'value_asc';
 
 export type SearchMode = 'keyword' | 'semantic' | 'hybrid';
 
@@ -31,6 +31,7 @@ export type TenderSearchParams = {
   sourceId?: string[];
   category?: string[];
   platform?: string[];
+  newOnly?: boolean;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: string;
@@ -58,6 +59,7 @@ export type SearchFacets = {
   /** Optional so servers before the platform column stay valid. */
   platform?: FacetBucket[];
   groupTotals?: Partial<Record<'status' | 'modality' | 'state' | 'source' | 'category' | 'organization' | 'platform', number>>;
+  newCount: number;
 };
 
 /**
@@ -100,6 +102,10 @@ export type TenderSummary = {
   categories: { slug: string; label: string }[];
   relevance: { score: number | null; highlights: Highlight[] };
   updatedAt: string;
+  /** When the tender first entered Pardal, independently of the PNCP publication date. */
+  firstSeenAt: string;
+  /** Calculated by the API server against the configured rolling window. */
+  isNew: boolean;
 };
 
 export type TenderItem = {
@@ -448,11 +454,12 @@ export type Notification = {
   createdAt: string;
   readAt: string | null;
   /** tender_* types. */
-  tender: { id: string; title: string; tenderNumberShort: string | null } | null;
+  tender: { id: string; title: string; tenderNumberShort: string | null; isNew: boolean } | null;
   change: { field: string; from: string | number | null; to: string | number | null } | null;
   /** saved_search_* types. */
   savedSearch: { id: string; name: string; query: string } | null;
   matchCount: number | null;
+  newMatchCount: number | null;
   /** Up to 20 ids of the new tenders (saved_search_new_matches). */
   tenderIds: string[];
   /** Up to five high-fit tender snapshots (profile_new_matches). */

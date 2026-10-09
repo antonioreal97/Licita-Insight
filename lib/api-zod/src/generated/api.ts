@@ -34,6 +34,7 @@ export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 
+export const searchTendersQueryNewOnlyDefault = false;
 export const searchTendersQueryValueMinMin = 0;
 
 export const searchTendersQueryValueMaxMin = 0;
@@ -57,13 +58,14 @@ export const SearchTendersQueryParams = zod.object({
   "sourceId": zod.array(zod.coerce.string().min(1)).optional(),
   "category": zod.array(zod.coerce.string().min(1)).optional(),
   "platform": zod.array(zod.coerce.string().min(1)).optional().describe('Normalized bidding platform slug (`TenderPlatform.slug`).'),
+  "newOnly": zod.coerce.boolean().default(searchTendersQueryNewOnlyDefault).describe('Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).'),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
   "publishedFrom": zod.date().optional().describe('Inclusive lower publication date in America/Sao_Paulo.'),
   "publishedTo": zod.date().optional().describe('Inclusive upper publication date in America/Sao_Paulo.'),
   "deadlineFrom": zod.date().optional().describe('Inclusive lower proposal deadline date in America/Sao_Paulo.'),
   "deadlineTo": zod.date().optional().describe('Inclusive upper proposal deadline date in America/Sao_Paulo.'),
-  "sort": zod.enum(['relevance', 'deadline_asc', 'published_desc', 'value_desc', 'value_asc']).optional(),
+  "sort": zod.enum(['relevance', 'deadline_asc', 'published_desc', 'first_seen_desc', 'value_desc', 'value_asc']).optional(),
   "page": zod.coerce.number().int().min(1).default(searchTendersQueryPageDefault),
   "pageSize": zod.coerce.number().int().min(1).max(searchTendersQueryPageSizeMax).default(searchTendersQueryPageSizeDefault),
   "facets": zod.coerce.boolean().default(searchTendersQueryFacetsDefault)
@@ -111,6 +113,8 @@ export const searchTendersResponseFacetsOneValueRangeHistogramItemToMin = 0;
 export const searchTendersResponseFacetsOneValueRangeHistogramItemCountMin = 0;
 
 export const searchTendersResponseFacetsOneValueRangeHistogramMax = 12;
+
+export const searchTendersResponseFacetsOneNewCountMin = 0;
 
 export const searchTendersResponseMetaTookMsMin = 0;
 
@@ -165,7 +169,9 @@ export const SearchTendersResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -232,7 +238,8 @@ export const SearchTendersResponse = zod.object({
   "to": zod.number().min(searchTendersResponseFacetsOneValueRangeHistogramItemToMin),
   "count": zod.number().int().min(searchTendersResponseFacetsOneValueRangeHistogramItemCountMin)
 })).max(searchTendersResponseFacetsOneValueRangeHistogramMax).optional()
-})
+}),
+  "newCount": zod.number().int().min(searchTendersResponseFacetsOneNewCountMin).describe('Results first inserted within the configured new-tender window, applying all other filters.')
 }),zod.null()]),
   "meta": zod.object({
   "query": zod.string().nullable(),
@@ -307,7 +314,9 @@ export const GetTenderByIdResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 }).and(zod.object({
   "description": zod.string().nullable(),
   "processNumber": zod.string().nullable(),
@@ -1792,7 +1801,9 @@ export const ListSavedTendersResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 }),
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
@@ -1925,7 +1936,9 @@ export const GetSavedTenderResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 }),
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
@@ -2042,7 +2055,9 @@ export const PutSavedTenderResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 }),
   "savedAt": zod.coerce.date(),
   "monitored": zod.boolean(),
@@ -2208,6 +2223,8 @@ export const ListNotificationsQueryParams = zod.object({
   "pageSize": zod.coerce.number().int().min(1).max(listNotificationsQueryPageSizeMax).default(listNotificationsQueryPageSizeDefault)
 })
 
+export const listNotificationsResponseDataItemNewMatchCountMin = 0;
+
 export const listNotificationsResponseDataItemTenderIdsMax = 20;
 
 export const listNotificationsResponseDataItemProfileMatchesMax = 5;
@@ -2225,7 +2242,8 @@ export const ListNotificationsResponse = zod.object({
   "tender": zod.union([zod.object({
   "id": zod.string(),
   "title": zod.string(),
-  "tenderNumberShort": zod.string().nullable()
+  "tenderNumberShort": zod.string().nullable(),
+  "isNew": zod.boolean().describe('Whether the linked tender is still inside the configured new-tender window.')
 }),zod.null()]),
   "change": zod.union([zod.object({
   "field": zod.string(),
@@ -2238,6 +2256,7 @@ export const ListNotificationsResponse = zod.object({
   "query": zod.string()
 }),zod.null()]),
   "matchCount": zod.number().int().nullable(),
+  "newMatchCount": zod.number().int().min(listNotificationsResponseDataItemNewMatchCountMin).nullable().describe('Number of linked notification results still inside the configured new-tender window.'),
   "tenderIds": zod.array(zod.string()).max(listNotificationsResponseDataItemTenderIdsMax),
   "profileMatches": zod.array(zod.object({
   "id": zod.string(),
@@ -2398,7 +2417,9 @@ export const ListRecommendationsResponse = zod.object({
   "fragments": zod.array(zod.string())
 }))
 }),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
 }),
   "score": zod.number(),
   "reasons": zod.array(zod.object({
