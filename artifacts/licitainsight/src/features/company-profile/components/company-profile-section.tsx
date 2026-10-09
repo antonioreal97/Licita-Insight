@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { Check, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
-import { isApiError, type CompanyProfile, type CompanyProfileInput, type CompanySize } from '@/api';
+import { isApiError, type CompanyMacroregion, type CompanyProfile, type CompanyProfileInput, type CompanySize, type MunicipalityReference } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useBilling } from '@/features/billing/hooks/use-billing';
@@ -14,9 +14,11 @@ import { PROFILE_LIMITS } from '@/services/ai-service';
 import { SmartKeywordCombobox } from './keyword-combobox';
 import {
   useCompanyProfile,
+  useCompanyRegionPreview,
   useDeleteCompanyProfile,
   useProfileCategories,
   useProfileDescriptionSuggestions,
+  useProfileMunicipalities,
   useProfilePlatforms,
   useSaveCompanyProfile,
 } from '../hooks/use-company-profile';
@@ -25,6 +27,14 @@ const sizeOptions: { value: CompanySize; label: string; hint: string }[] = [
   { value: 'me_epp', label: 'ME ou EPP', hint: 'Microempresa ou empresa de pequeno porte (LC 123/2006).' },
   { value: 'cooperative', label: 'Cooperativa', hint: '' },
   { value: 'other', label: 'Demais portes', hint: 'Avisamos quando o edital for exclusivo para ME/EPP, com o trecho que diz isso.' },
+];
+
+const macroregions: { value: CompanyMacroregion; label: string }[] = [
+  { value: 'north', label: 'Norte' },
+  { value: 'northeast', label: 'Nordeste' },
+  { value: 'central_west', label: 'Centro-Oeste' },
+  { value: 'southeast', label: 'Sudeste' },
+  { value: 'south', label: 'Sul' },
 ];
 
 type Draft = {
@@ -36,7 +46,13 @@ type Draft = {
   excludedKeywords: string[];
   registeredPlatforms: string[];
   national: boolean;
+  regions: CompanyMacroregion[];
   states: string[];
+  municipalities: MunicipalityReference[];
+  headquarters: MunicipalityReference | null;
+  radiusKm: 50 | 100 | 200 | 300 | 500;
+  coverageMode: 'strict' | 'prioritize';
+  acceptsRemote: boolean;
   min: string;
   max: string;
   size: CompanySize | null;
@@ -51,7 +67,13 @@ const emptyDraft: Draft = {
   excludedKeywords: [],
   registeredPlatforms: [],
   national: true,
+  regions: [],
   states: [],
+  municipalities: [],
+  headquarters: null,
+  radiusKm: 100,
+  coverageMode: 'strict',
+  acceptsRemote: false,
   min: '',
   max: '',
   size: null,
@@ -66,7 +88,13 @@ const toDraft = (profile: CompanyProfile): Draft => ({
   excludedKeywords: profile.excludedKeywords ?? [],
   registeredPlatforms: profile.registeredPlatforms ?? [],
   national: profile.coverage.scope === 'national',
-  states: profile.coverage.scope === 'states' ? profile.coverage.states : [],
+  regions: profile.coverage.scope === 'custom' ? profile.coverage.regions : [],
+  states: profile.coverage.scope === 'custom' ? profile.coverage.states : [],
+  municipalities: profile.coverage.scope === 'custom' ? profile.coverage.municipalities : [],
+  headquarters: profile.coverage.scope === 'custom' ? (profile.coverage.radius?.center ?? null) : null,
+  radiusKm: profile.coverage.scope === 'custom' ? (profile.coverage.radius?.km ?? 100) : 100,
+  coverageMode: profile.coverage.mode,
+  acceptsRemote: profile.coverage.acceptsRemote,
   min: profile.valueRange.min === null ? '' : String(profile.valueRange.min),
   max: profile.valueRange.max === null ? '' : String(profile.valueRange.max),
   size: profile.size,
@@ -92,7 +120,8 @@ function validate(draft: Draft): Errors {
   const length = draft.description.trim().length;
   if (length < PROFILE_LIMITS.descriptionMin) errors.description = `Escreva pelo menos ${PROFILE_LIMITS.descriptionMin} caracteres.`;
   if (draft.offerings.length === 0) errors.offerings = 'Adicione pelo menos um produto ou serviço.';
-  if (!draft.national && draft.states.length === 0) errors.states = 'Escolha pelo menos um estado ou marque Brasil inteiro.';
+  if (!draft.national && draft.states.length === 0 && draft.regions.length === 0 && draft.municipalities.length === 0 && !draft.headquarters)
+    errors.states = 'Escolha uma macrorregião, UF, município ou cidade-sede com raio.';
   const min = parseReais(draft.min);
   const max = parseReais(draft.max);
   if (min !== null && max !== null && min > max) errors.valueRange = 'O valor mínimo é maior que o máximo.';
@@ -108,7 +137,17 @@ const toInput = (draft: Draft): CompanyProfileInput => ({
   selectedKeywords: draft.selectedKeywords,
   excludedKeywords: draft.excludedKeywords,
   registeredPlatforms: draft.registeredPlatforms,
-  coverage: draft.national ? { scope: 'national' } : { scope: 'states', states: [...draft.states].sort() },
+  coverage: draft.national
+    ? { scope: 'national', mode: draft.coverageMode, acceptsRemote: draft.acceptsRemote }
+    : {
+        scope: 'custom',
+        mode: draft.coverageMode,
+        acceptsRemote: draft.acceptsRemote,
+        regions: [...draft.regions].sort(),
+        states: [...draft.states].sort(),
+        municipalities: draft.municipalities,
+        radius: draft.headquarters ? { center: draft.headquarters, km: draft.radiusKm } : null,
+      },
   valueRange: { min: parseReais(draft.min), max: parseReais(draft.max) },
   size: draft.size!,
 });
@@ -255,6 +294,75 @@ function TermsField({
   );
 }
 
+function MunicipalityAutocomplete({
+  label,
+  hint,
+  selected,
+  onSelect,
+  testId,
+}: {
+  label: string;
+  hint: string;
+  selected: MunicipalityReference[];
+  onSelect: (city: MunicipalityReference) => void;
+  testId: string;
+}) {
+  const [query, setQuery] = useState('');
+  const results = useProfileMunicipalities(query);
+  const suggestions = (results.data?.data ?? []).filter((city) => !selected.some(({ ibgeCode }) => ibgeCode === city.ibgeCode));
+  const listId = `${testId}-results`;
+  return (
+    <div>
+      <label htmlFor={testId} className="block type-meta font-semibold text-muted-foreground">
+        {label}
+      </label>
+      <p id={`${testId}-hint`} className="mt-1 type-meta text-muted-foreground">
+        {hint}
+      </p>
+      <div className="relative mt-2.5">
+        <input
+          id={testId}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={query.trim().length >= 2 && suggestions.length > 0}
+          aria-controls={listId}
+          aria-describedby={`${testId}-hint`}
+          autoComplete="off"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Digite o nome da cidade"
+          className={chipInput}
+          data-testid={testId}
+        />
+        {query.trim().length >= 2 && (
+          <ul id={listId} role="listbox" className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+            {results.isFetching ? (
+              <li className="px-3 py-2 type-meta text-muted-foreground">Buscando municípios…</li>
+            ) : suggestions.length === 0 ? (
+              <li className="px-3 py-2 type-meta text-muted-foreground">Nenhum município encontrado.</li>
+            ) : (
+              suggestions.map((city) => (
+                <li key={city.ibgeCode} role="option" aria-selected="false">
+                  <button
+                    type="button"
+                    className="w-full rounded-md px-3 py-2 text-left type-ui hover:bg-muted focus-visible:focus-ring"
+                    onClick={() => {
+                      onSelect(city);
+                      setQuery('');
+                    }}
+                  >
+                    {city.name} — {city.state}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DeleteProfileButton() {
   const [open, setOpen] = useState(false);
   const remove = useDeleteCompanyProfile();
@@ -317,6 +425,7 @@ export function CompanyProfileSection() {
   const categories = useProfileCategories();
   const platforms = useProfilePlatforms();
   const saved = profile.data?.profile ?? null;
+  const regionPreview = useCompanyRegionPreview(Boolean(saved));
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
@@ -362,9 +471,7 @@ export function CompanyProfileSection() {
         toast({
           title: 'Perfil salvo',
           description:
-            billing.data?.entitled && response.profile?.version !== saved?.version
-              ? 'Os selos de aderência serão recalculados em instantes.'
-              : undefined,
+            billing.data?.entitled && response.profile?.version !== saved?.version ? 'Os selos de aderência serão recalculados em instantes.' : undefined,
         }),
       onError: (error) => setErrors(serverErrors(error)),
     });
@@ -552,8 +659,8 @@ export function CompanyProfileSection() {
           <fieldset>
             <legend className="type-meta font-semibold text-muted-foreground">Sou cadastrado em (opcional)</legend>
             <p className="mt-1 type-meta text-muted-foreground">
-              Plataformas de disputa e SICAF. Editais nessas plataformas sobem nas recomendações, e avisamos quando a disputa for em
-              outra. Não muda os selos de aderência.
+              Plataformas de disputa e SICAF. Editais nessas plataformas sobem nas recomendações, e avisamos quando a disputa for em outra. Não muda os selos de
+              aderência.
             </p>
             {platforms.isPending ? (
               <p className="mt-3 type-meta text-muted-foreground">Carregando plataformas…</p>
@@ -645,9 +752,10 @@ export function CompanyProfileSection() {
             testId="terms-exclusions"
           />
 
-          <fieldset aria-describedby={errors.states ? `${ids}-states-error` : undefined}>
-            <legend className="type-meta font-semibold text-muted-foreground">Onde atua</legend>
-            <div className="mt-2.5 flex flex-wrap gap-x-6 gap-y-2 type-ui">
+          <fieldset aria-describedby={errors.states ? `${ids}-states-error` : undefined} className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+            <legend className="px-1 type-ui font-semibold text-foreground">Onde você atende</legend>
+            <p className="type-meta text-muted-foreground">Combine macrorregiões, UFs, municípios e um raio a partir da sua cidade-sede.</p>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 type-ui">
               <label className="inline-flex items-center gap-2">
                 <input
                   type="radio"
@@ -667,40 +775,211 @@ export function CompanyProfileSection() {
                   checked={!draft.national}
                   onChange={() => set({ national: false })}
                   className="h-4 w-4 accent-primary"
-                  data-testid="radio-coverage-states"
+                  data-testid="radio-coverage-custom"
                 />
-                Estados específicos
+                Definir minha região
               </label>
             </div>
+
             {!draft.national && (
-              <div className="mt-3 grid grid-cols-5 gap-1.5 sm:grid-cols-9" role="group" aria-label="Estados" data-testid="group-coverage-states">
-                {UFS.map((uf) => {
-                  const on = draft.states.includes(uf);
-                  return (
-                    <label
-                      key={uf}
-                      className={cn(
-                        'flex h-9 cursor-pointer items-center justify-center rounded-md border text-xs font-semibold transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
-                        on
-                          ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
-                          : 'border-border bg-surface text-foreground hover:border-border-strong',
-                      )}
+              <div className="mt-5 grid gap-5">
+                <div>
+                  <p className="type-meta font-semibold text-muted-foreground">Macrorregiões</p>
+                  <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Macrorregiões">
+                    {macroregions.map((region) => {
+                      const on = draft.regions.includes(region.value);
+                      return (
+                        <label
+                          key={region.value}
+                          className={cn(
+                            'cursor-pointer rounded-full border px-3 py-1.5 type-meta font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
+                            on
+                              ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
+                              : 'border-border bg-background hover:border-border-strong',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={on}
+                            onChange={() => set({ regions: on ? draft.regions.filter((item) => item !== region.value) : [...draft.regions, region.value] })}
+                          />
+                          {region.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="type-meta font-semibold text-muted-foreground">UFs</p>
+                  <div className="mt-2 grid grid-cols-5 gap-1.5 sm:grid-cols-9" role="group" aria-label="Estados" data-testid="group-coverage-states">
+                    {UFS.map((uf) => {
+                      const on = draft.states.includes(uf);
+                      return (
+                        <label
+                          key={uf}
+                          className={cn(
+                            'flex h-9 cursor-pointer items-center justify-center rounded-md border text-xs font-semibold transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
+                            on
+                              ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
+                              : 'border-border bg-background text-foreground hover:border-border-strong',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={on}
+                            onChange={() => set({ states: on ? draft.states.filter((item) => item !== uf) : [...draft.states, uf] })}
+                          />
+                          {uf}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <MunicipalityAutocomplete
+                    label="Municípios específicos"
+                    hint="Base oficial do IBGE, com UF para diferenciar cidades de mesmo nome."
+                    selected={draft.municipalities}
+                    onSelect={(city) => set({ municipalities: [...draft.municipalities, city] })}
+                    testId={`${ids}-municipality`}
+                  />
+                  {draft.municipalities.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Municípios selecionados">
+                      {draft.municipalities.map((city) => (
+                        <li
+                          key={city.ibgeCode}
+                          className="inline-flex items-center gap-1 rounded-full bg-secondary py-1 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground"
+                        >
+                          {city.name}-{city.state}
+                          <button
+                            type="button"
+                            aria-label={`Remover ${city.name}-${city.state}`}
+                            onClick={() => set({ municipalities: draft.municipalities.filter(({ ibgeCode }) => ibgeCode !== city.ibgeCode) })}
+                            className="grid size-5 place-items-center rounded-full hover:bg-foreground/10 focus-visible:focus-ring"
+                          >
+                            <X size={12} aria-hidden />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
+                  <MunicipalityAutocomplete
+                    label="Cidade-sede para o raio (opcional)"
+                    hint="Selecione a sede e depois a distância máxima."
+                    selected={draft.headquarters ? [draft.headquarters] : []}
+                    onSelect={(city) => set({ headquarters: city })}
+                    testId={`${ids}-headquarters`}
+                  />
+                  <label className="field">
+                    Raio máximo
+                    <select
+                      value={draft.radiusKm}
+                      disabled={!draft.headquarters}
+                      onChange={(event) => set({ radiusKm: Number(event.target.value) as Draft['radiusKm'] })}
+                      data-testid="select-coverage-radius"
                     >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={on}
-                        onChange={() => set({ states: on ? draft.states.filter((item) => item !== uf) : [...draft.states, uf] })}
-                      />
-                      {uf}
-                    </label>
-                  );
-                })}
+                      {[50, 100, 200, 300, 500].map((km) => (
+                        <option key={km} value={km}>
+                          {km} km
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {draft.headquarters && (
+                  <p className="flex flex-wrap items-center gap-2 type-meta text-muted-foreground">
+                    Raio a partir de{' '}
+                    <span className="font-semibold text-foreground">
+                      {draft.headquarters.name}-{draft.headquarters.state}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+                      onClick={() => set({ headquarters: null })}
+                    >
+                      Remover raio
+                    </button>
+                  </p>
+                )}
               </div>
             )}
+
+            <div className="mt-5 grid gap-3">
+              <fieldset>
+                <legend className="type-meta font-semibold text-muted-foreground">Como usar a região</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <label
+                    className={cn(
+                      'cursor-pointer rounded-lg border p-3',
+                      draft.coverageMode === 'strict' ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-background',
+                    )}
+                  >
+                    <span className="flex items-start gap-2 type-ui font-medium">
+                      <input
+                        type="radio"
+                        name={`${ids}-coverage-mode`}
+                        checked={draft.coverageMode === 'strict'}
+                        onChange={() => set({ coverageMode: 'strict' })}
+                        className="mt-0.5 size-4 accent-primary"
+                      />
+                      Somente na minha região
+                    </span>
+                    <span className="mt-1 block pl-6 type-meta text-muted-foreground">Editais fora dela não entram nas recomendações e alertas.</span>
+                  </label>
+                  <label
+                    className={cn(
+                      'cursor-pointer rounded-lg border p-3',
+                      draft.coverageMode === 'prioritize' ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-background',
+                    )}
+                  >
+                    <span className="flex items-start gap-2 type-ui font-medium">
+                      <input
+                        type="radio"
+                        name={`${ids}-coverage-mode`}
+                        checked={draft.coverageMode === 'prioritize'}
+                        onChange={() => set({ coverageMode: 'prioritize' })}
+                        className="mt-0.5 size-4 accent-primary"
+                      />
+                      Priorizar minha região
+                    </span>
+                    <span className="mt-1 block pl-6 type-meta text-muted-foreground">Outros podem aparecer identificados como “Fora da sua região”.</span>
+                  </label>
+                </div>
+              </fieldset>
+              <label className="flex items-start gap-2 rounded-lg border border-border bg-background p-3 type-ui">
+                <input
+                  type="checkbox"
+                  checked={draft.acceptsRemote}
+                  onChange={(event) => set({ acceptsRemote: event.target.checked })}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <span>
+                  <span className="font-medium">Aceito contratos executados à distância/remotos</span>
+                  <span className="mt-1 block type-meta text-muted-foreground">
+                    Considerado quando a categoria permite execução remota, como software ou consultoria.
+                  </span>
+                </span>
+              </label>
+            </div>
+
             {errors.states && (
               <p id={`${ids}-states-error`} className={errorText}>
                 {errors.states}
+              </p>
+            )}
+            {saved && (
+              <p role="status" className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 type-ui font-medium" data-testid="profile-region-preview">
+                {regionPreview.isPending
+                  ? 'Calculando editais abertos na sua região…'
+                  : `≈ ${(regionPreview.data?.count ?? 0).toLocaleString('pt-BR')} editais abertos na sua região`}
+                {dirty ? <span className="ml-1 type-meta font-normal text-muted-foreground">(salve para atualizar)</span> : null}
               </p>
             )}
           </fieldset>

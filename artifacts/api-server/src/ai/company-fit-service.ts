@@ -36,6 +36,10 @@ import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
 import { isAiBatchBudgetPaused } from "./ai-budget";
 import { recordSkippedJobRun } from "../jobs/job-lock";
+import {
+  matchServiceRegion,
+  municipalityReference,
+} from "../service-region/service-region";
 
 export { fitLevel, parseCompanyProfileInput } from "./company-fit-policy";
 export type { CompanyProfileInput, CompanySize } from "./company-fit-policy";
@@ -66,8 +70,36 @@ const toProfile = (
   registeredPlatforms: row.registeredPlatforms,
   coverage:
     row.coverageScope === "national"
-      ? { scope: "national" }
-      : { scope: "states", states: row.coverageStates },
+      ? {
+          scope: "national",
+          mode: row.coverageMode,
+          acceptsRemote: row.acceptsRemote,
+        }
+      : {
+          scope: "custom",
+          mode: row.coverageMode,
+          acceptsRemote: row.acceptsRemote,
+          regions: row.coverageRegions,
+          states: row.coverageStates,
+          municipalities: row.coverageMunicipalities.flatMap((code) => {
+            const city = municipalityReference(code);
+            return city ? [city] : [];
+          }),
+          radius:
+            row.headquartersMunicipalityIbge && row.coverageRadiusKm
+              ? (() => {
+                  const center = municipalityReference(
+                    row.headquartersMunicipalityIbge,
+                  );
+                  return center
+                    ? {
+                        center,
+                        km: row.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+                      }
+                    : null;
+                })()
+              : null,
+        },
   valueRange: {
     min: row.valueMin === null ? null : Number(row.valueMin),
     max: row.valueMax === null ? null : Number(row.valueMax),
@@ -82,7 +114,12 @@ const sameFitInput = (
   saved: CompanyProfile,
   input: CompanyProfileInput,
 ): boolean => {
-  const { version: _version, updatedAt: _updatedAt, registeredPlatforms: _saved, ...savedFit } = saved;
+  const {
+    version: _version,
+    updatedAt: _updatedAt,
+    registeredPlatforms: _saved,
+    ...savedFit
+  } = saved;
   const { registeredPlatforms: _input, ...inputFit } = input;
   return isDeepStrictEqual(savedFit, inputFit);
 };
@@ -135,7 +172,23 @@ export async function putCompanyProfile(
       registeredPlatforms: input.registeredPlatforms,
       coverageScope: input.coverage.scope,
       coverageStates:
-        input.coverage.scope === "states" ? input.coverage.states : [],
+        input.coverage.scope === "custom" ? input.coverage.states : [],
+      coverageRegions:
+        input.coverage.scope === "custom" ? input.coverage.regions : [],
+      coverageMunicipalities:
+        input.coverage.scope === "custom"
+          ? input.coverage.municipalities.map(({ ibgeCode }) => ibgeCode)
+          : [],
+      headquartersMunicipalityIbge:
+        input.coverage.scope === "custom"
+          ? (input.coverage.radius?.center.ibgeCode ?? null)
+          : null,
+      coverageRadiusKm:
+        input.coverage.scope === "custom"
+          ? (input.coverage.radius?.km ?? null)
+          : null,
+      coverageMode: input.coverage.mode,
+      acceptsRemote: input.coverage.acceptsRemote,
       valueMin:
         input.valueRange.min === null ? null : input.valueRange.min.toFixed(2),
       valueMax:
@@ -178,6 +231,7 @@ type TenderRow = Pick<
   | "organizationName"
   | "estimatedValue"
   | "state"
+  | "cityIbgeCode"
   | "items"
   | "categories"
   | "searchText"
@@ -248,11 +302,16 @@ function explicitFilter(
   if (excludedTerms.length > 0)
     return [{ kind: "exclusion", terms: excludedTerms.slice(0, 6) }];
   if (
-    profile.coverage.scope === "states" &&
-    (!tender.state ||
-      !profile.coverage.states.includes(tender.state.toUpperCase()))
+    profile.coverage.scope === "custom" &&
+    profile.coverage.mode === "strict"
   ) {
-    return [{ kind: "out_of_coverage", state: tender.state }];
+    const region = matchServiceRegion(profile.coverage, {
+      state: tender.state,
+      municipalityIbge: tender.cityIbgeCode,
+      categories: tender.categories,
+    });
+    if (!region.matches)
+      return [{ kind: "out_of_coverage", state: tender.state }];
   }
   if (tender.estimatedValue !== null) {
     const value = Number(tender.estimatedValue);
@@ -402,6 +461,18 @@ async function processFit(
     let inputTokens = semantic.inputTokens;
     let model = semantic.model;
     const reasons: FitReasonRecord[] = [];
+    const region =
+      profile.coverage.scope === "custom"
+        ? matchServiceRegion(profile.coverage, {
+            state: tender.state,
+            municipalityIbge: tender.cityIbgeCode,
+            categories: tender.categories,
+          })
+        : null;
+    if (region?.matches)
+      reasons.push({ kind: "service_region", text: region.reason });
+    else if (region && profile.coverage.mode === "prioritize")
+      reasons.push({ kind: "out_of_coverage", state: tender.state });
     if (offeringTerms.length > 0)
       reasons.push({
         kind: "offering_match",
@@ -433,13 +504,23 @@ async function processFit(
     const selectedCategoryMatch = tender.categories.some(({ slug }) =>
       profile.selectedCategories.includes(slug),
     );
+    const regionAdjustment =
+      profile.coverage.scope === "custom" &&
+      profile.coverage.mode === "prioritize"
+        ? region?.matches
+          ? region.remote
+            ? 0.15
+            : 0.25
+          : -0.25
+        : 0;
     const score = Math.max(
       0,
       Math.min(
         1,
-        semantic.fitScore / 3 +
+          semantic.fitScore / 3 +
           (selectedKeywordMatch ? 0.2 : 0) +
-          (selectedCategoryMatch ? 0.25 : 0),
+          (selectedCategoryMatch ? 0.25 : 0) +
+          regionAdjustment,
       ),
     );
     const level = fitLevel(
@@ -494,6 +575,7 @@ export async function executeCompanyFitJob(fitId: string): Promise<void> {
         organizationName: tendersTable.organizationName,
         estimatedValue: tendersTable.estimatedValue,
         state: tendersTable.state,
+        cityIbgeCode: tendersTable.cityIbgeCode,
         items: tendersTable.items,
         categories: tendersTable.categories,
         searchText: tendersTable.searchText,
@@ -753,6 +835,7 @@ export async function getTenderFits(
       organizationName: tendersTable.organizationName,
       estimatedValue: tendersTable.estimatedValue,
       state: tendersTable.state,
+      cityIbgeCode: tendersTable.cityIbgeCode,
       items: tendersTable.items,
       categories: tendersTable.categories,
       searchText: tendersTable.searchText,

@@ -24,6 +24,25 @@ export function useProfileCategories() {
   });
 }
 
+export function useProfileMunicipalities(query: string) {
+  const normalized = query.trim();
+  return useQuery({
+    queryKey: queryKeys.me.profileMunicipalities(normalized),
+    queryFn: ({ signal }) => aiService.listProfileMunicipalities(normalized, signal),
+    enabled: normalized.length >= 2,
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useCompanyRegionPreview(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.me.companyRegionPreview,
+    queryFn: ({ signal }) => aiService.getCompanyRegionPreview(signal),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
 export function useProfilePlatforms() {
   return useQuery({
     queryKey: queryKeys.me.profilePlatforms,
@@ -64,6 +83,7 @@ export function useSaveCompanyProfile() {
     mutationFn: (profile: CompanyProfileInput) => aiService.saveCompanyProfile(profile),
     onSuccess: (response) => {
       queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, response);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me.companyRegionPreview });
       void queryClient.invalidateQueries({ queryKey: queryKeys.me.fit.all });
     },
     onError: (error) => console.error('[perfil] Falha ao salvar o perfil da empresa.', error),
@@ -76,6 +96,7 @@ export function useDeleteCompanyProfile() {
     mutationFn: () => aiService.deleteCompanyProfile(),
     onSuccess: () => {
       queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, { profile: null });
+      queryClient.removeQueries({ queryKey: queryKeys.me.companyRegionPreview });
       queryClient.removeQueries({ queryKey: queryKeys.me.fit.all });
     },
     onError: (error) => console.error('[perfil] Falha ao apagar o perfil da empresa.', error),

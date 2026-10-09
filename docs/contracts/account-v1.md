@@ -27,42 +27,53 @@ forma pública consumida pelo frontend. Mesmas convenções de [`search-v1.md`](
 
 ## Novos códigos de erro
 
-| HTTP | code | Quando |
-|---|---|---|
-| 401 | `UNAUTHENTICATED` | sem sessão / sessão expirada / webhook Asaas com token inválido |
-| 402 | `SUBSCRIPTION_REQUIRED` | rota paga sem assinatura ativa |
-| 403 | `FORBIDDEN` | CSRF inválido, recurso de outro usuário |
-| 404 | `NOT_FOUND` | recurso ou edital inexistente |
-| 409 | `CONFLICT` | limite atingido (`details: [{ field: 'limit', issue: 'max_saved_tenders' }]`) ou assinatura já ativa / não cancelável |
-| 503 | `BILLING_UNAVAILABLE` | Asaas não configurado ou recusou a cobrança |
-| 400 | `INVALID_PARAMETER` | corpo inválido (inclui `query` de busca salva inválida) |
+| HTTP | code                    | Quando                                                                                                                |
+| ---- | ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 401  | `UNAUTHENTICATED`       | sem sessão / sessão expirada / webhook Asaas com token inválido                                                       |
+| 402  | `SUBSCRIPTION_REQUIRED` | rota paga sem assinatura ativa                                                                                        |
+| 403  | `FORBIDDEN`             | CSRF inválido, recurso de outro usuário                                                                               |
+| 404  | `NOT_FOUND`             | recurso ou edital inexistente                                                                                         |
+| 409  | `CONFLICT`              | limite atingido (`details: [{ field: 'limit', issue: 'max_saved_tenders' }]`) ou assinatura já ativa / não cancelável |
+| 503  | `BILLING_UNAVAILABLE`   | Asaas não configurado ou recusou a cobrança                                                                           |
+| 400  | `INVALID_PARAMETER`     | corpo inválido (inclui `query` de busca salva inválida)                                                               |
 
 ---
 
 ## 1. Autenticação (Google OAuth — authorization code + PKCE, no servidor)
 
 ### `GET /api/v1/auth/google/start?returnTo=/caminho`
+
 302 para o Google. `returnTo` aceita apenas caminhos relativos do app (começa com `/`, sem `//`);
 qualquer outro valor vira `/dashboard`. `state` + PKCE guardados em cookie temporário assinado.
 Se as credenciais Google não estiverem configuradas, responde 302 para
 `/login?error=oauth_unavailable` e registra aviso operacional, sem expor erro interno.
 
 ### `GET /api/v1/auth/google/callback`
+
 Troca o code, valida `state`/PKCE/`id_token`, cria ou atualiza o usuário (chave: `sub` do Google;
 e-mail precisa estar verificado), cria sessão, seta `licita_session` e **302 para `returnTo`**.
 Erro → 302 para `/login?error=<code>` com `code ∈ { access_denied, invalid_state, email_not_verified, oauth_failed }`.
 
 ### `GET /api/v1/auth/session`
+
 200 → `{ user: User }` · 401 `UNAUTHENTICATED` quando não há sessão.
 
 ```ts
-type User = { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string };
+type User = {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+};
 ```
 
 ### `POST /api/v1/auth/logout`
+
 204. Revoga a sessão no banco e limpa o cookie. Idempotente.
 
 ### (Somente desenvolvimento) `POST /api/v1/auth/dev-login` `{ email: string, name?: string }`
+
 Existe **apenas** quando `NODE_ENV !== 'production'` **e** `AUTH_DEV_LOGIN=true`; caso contrário a
 rota não é registrada (404). Serve para QA/testes automatizados sem conta Google. Retorna 204 + cookie.
 
@@ -78,16 +89,21 @@ além do GET individual. Os campos também fazem parte da exportação pessoal. 
 abaixo continuam aceitas; consulte a extensão para o contrato completo.
 
 ```ts
-type SavedTender = { tender: TenderSummary; savedAt: string; monitored: boolean; monitoredAt: string | null };
+type SavedTender = {
+  tender: TenderSummary;
+  savedAt: string;
+  monitored: boolean;
+  monitoredAt: string | null;
+};
 ```
 
-| Método | Caminho | Corpo / params | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/saved-tenders` | `page`, `pageSize` (1–100, def. 20), `monitored?: boolean` | `{ data: SavedTender[]; pagination }` ordenado por `savedAt desc` |
-| GET | `/api/v1/me/saved-tenders/ids` | — | `{ saved: string[]; monitored: string[] }` (para marcar botões na lista) |
-| PUT | `/api/v1/me/saved-tenders/{tenderId}` | `{ monitored?: boolean }` | 200 `SavedTender` — idempotente (salva ou atualiza) |
-| DELETE | `/api/v1/me/saved-tenders/{tenderId}` | — | 204 (idempotente) |
-| POST | `/api/v1/me/saved-tenders/import` | `{ ids: string[] }` (≤ 500) | `{ imported: number; alreadySaved: number; notFound: string[] }` |
+| Método | Caminho                               | Corpo / params                                             | Resposta                                                                 |
+| ------ | ------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| GET    | `/api/v1/me/saved-tenders`            | `page`, `pageSize` (1–100, def. 20), `monitored?: boolean` | `{ data: SavedTender[]; pagination }` ordenado por `savedAt desc`        |
+| GET    | `/api/v1/me/saved-tenders/ids`        | —                                                          | `{ saved: string[]; monitored: string[] }` (para marcar botões na lista) |
+| PUT    | `/api/v1/me/saved-tenders/{tenderId}` | `{ monitored?: boolean }`                                  | 200 `SavedTender` — idempotente (salva ou atualiza)                      |
+| DELETE | `/api/v1/me/saved-tenders/{tenderId}` | —                                                          | 204 (idempotente)                                                        |
+| POST   | `/api/v1/me/saved-tenders/import`     | `{ ids: string[] }` (≤ 500)                                | `{ imported: number; alreadySaved: number; notFound: string[] }`         |
 
 `import` migra, uma vez, os ids que o navegador guardou em `localStorage` antes do login.
 Limite: 500 editais salvos por usuário (409 `CONFLICT`).
@@ -101,24 +117,24 @@ e devolve a forma canônica que guardou.
 ```ts
 type SavedSearch = {
   id: string;
-  name: string;               // 1–80 chars
-  query: string;              // canônica
+  name: string; // 1–80 chars
+  query: string; // canônica
   alertsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   lastCheckedAt: string | null; // última avaliação pelo job de buscas salvas
-  newMatchesCount: number;      // editais novos desde a última visita (zerado por /seen)
+  newMatchesCount: number; // editais novos desde a última visita (zerado por /seen)
 };
 ```
 
-| Método | Caminho | Corpo | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/saved-searches` | — | `{ data: SavedSearch[] }` (`updatedAt desc`) |
-| POST | `/api/v1/me/saved-searches` | `{ name, query, alertsEnabled }` | 201 `SavedSearch` |
-| PATCH | `/api/v1/me/saved-searches/{id}` | `{ name?, query?, alertsEnabled? }` | 200 `SavedSearch` |
-| DELETE | `/api/v1/me/saved-searches/{id}` | — | 204 |
-| POST | `/api/v1/me/saved-searches/{id}/restore` | — | 200 `SavedSearch` restaurada, preservando o `id` |
-| POST | `/api/v1/me/saved-searches/{id}/seen` | — | 200 `SavedSearch` com `newMatchesCount = 0` |
+| Método | Caminho                                  | Corpo                               | Resposta                                         |
+| ------ | ---------------------------------------- | ----------------------------------- | ------------------------------------------------ |
+| GET    | `/api/v1/me/saved-searches`              | —                                   | `{ data: SavedSearch[] }` (`updatedAt desc`)     |
+| POST   | `/api/v1/me/saved-searches`              | `{ name, query, alertsEnabled }`    | 201 `SavedSearch`                                |
+| PATCH  | `/api/v1/me/saved-searches/{id}`         | `{ name?, query?, alertsEnabled? }` | 200 `SavedSearch`                                |
+| DELETE | `/api/v1/me/saved-searches/{id}`         | —                                   | 204                                              |
+| POST   | `/api/v1/me/saved-searches/{id}/restore` | —                                   | 200 `SavedSearch` restaurada, preservando o `id` |
+| POST   | `/api/v1/me/saved-searches/{id}/seen`    | —                                   | 200 `SavedSearch` com `newMatchesCount = 0`      |
 
 Limite: 50 buscas salvas por usuário (409 `CONFLICT`).
 Uma segunda busca ativa com a mesma query canônica responde 409 `CONFLICT` com
@@ -133,36 +149,52 @@ Geradas por processos da API, nunca pelo frontend.
 
 ```ts
 type NotificationType =
-  | 'tender_deadline_changed'   // proposalDeadline mudou
-  | 'tender_status_changed'     // status mudou
-  | 'tender_document_added'     // novo documento
-  | 'tender_value_changed'      // estimatedValue ou estimatedValueStatus mudou
-  | 'saved_search_new_matches'  // editais novos que batem com uma busca salva com alertas
-  | 'profile_new_matches'       // editais novos com alta aderência ao perfil da empresa
-  | 'trial_ending';             // teste termina em até 3 dias
+  | "tender_deadline_changed" // proposalDeadline mudou
+  | "tender_status_changed" // status mudou
+  | "tender_document_added" // novo documento
+  | "tender_value_changed" // estimatedValue ou estimatedValueStatus mudou
+  | "saved_search_new_matches" // editais novos que batem com uma busca salva com alertas
+  | "profile_new_matches" // editais novos com alta aderência ao perfil da empresa
+  | "trial_ending"; // teste termina em até 3 dias
 
 type Notification = {
   id: string;
   type: NotificationType;
   createdAt: string;
   readAt: string | null;
-  tender: { id: string; title: string; tenderNumberShort: string | null; isNew: boolean } | null; // tipos tender_*
-  change: { field: string; from: string | number | null; to: string | number | null } | null;
-  savedSearch: { id: string; name: string; query: string } | null;                // saved_search_*
+  tender: {
+    id: string;
+    title: string;
+    tenderNumberShort: string | null;
+    isNew: boolean;
+  } | null; // tipos tender_*
+  change: {
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  } | null;
+  savedSearch: { id: string; name: string; query: string } | null; // saved_search_*
   matchCount: number | null;
-  newMatchCount: number | null;    // resultados vinculados que ainda estão na janela de novos
-  tenderIds: string[];          // até 20 ids dos novos editais (saved_search_new_matches)
-  profileMatches: Array<{ id: string; title: string; organizationName: string; proposalDeadline: string | null; level: 'high' }>;
+  newMatchCount: number | null; // resultados vinculados que ainda estão na janela de novos
+  tenderIds: string[]; // até 20 ids dos novos editais (saved_search_new_matches)
+  profileMatches: Array<{
+    id: string;
+    title: string;
+    organizationName: string;
+    proposalDeadline: string | null;
+    level: "high";
+  }>;
 };
 ```
 
-| Método | Caminho | Params / corpo | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/notifications` | `unreadOnly?`, `page`, `pageSize` (1–50, def. 20) | `{ data: Notification[]; pagination; unreadCount: number }` (`createdAt desc`) |
-| GET | `/api/v1/me/notifications/unread-count` | — | `{ unreadCount: number }` — barato; frontend consulta a cada 60 s com a aba visível |
-| POST | `/api/v1/me/notifications/read` | `{ ids?: string[]; all?: boolean }` | `{ unreadCount: number }` |
+| Método | Caminho                                 | Params / corpo                                    | Resposta                                                                            |
+| ------ | --------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| GET    | `/api/v1/me/notifications`              | `unreadOnly?`, `page`, `pageSize` (1–50, def. 20) | `{ data: Notification[]; pagination; unreadCount: number }` (`createdAt desc`)      |
+| GET    | `/api/v1/me/notifications/unread-count` | —                                                 | `{ unreadCount: number }` — barato; frontend consulta a cada 60 s com a aba visível |
+| POST   | `/api/v1/me/notifications/read`         | `{ ids?: string[]; all?: boolean }`               | `{ unreadCount: number }`                                                           |
 
 Regras de geração:
+
 - **Editais monitorados:** ao fazer upsert/revisão de um edital, comparar com o estado anterior
   persistido; para cada campo alterado e cada usuário que monitora o edital, uma notificação.
   Não notificar na primeira ingestão do edital.
@@ -184,18 +216,18 @@ descadastro permanecem acessíveis sem assinatura ativa.
 
 ```ts
 type NotificationPreferences = {
-  email: { digest: 'daily' | 'off'; immediateCritical: boolean };
+  email: { digest: "daily" | "off"; immediateCritical: boolean };
   profileAlerts: boolean;
   emailAddress: string;
   updatedAt: string | null;
 };
 ```
 
-| Método | Caminho | Corpo | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/notification-preferences` | — | `NotificationPreferences` |
-| PUT | `/api/v1/me/notification-preferences` | `{ email?: { digest?: 'daily' \| 'off'; immediateCritical?: boolean }; profileAlerts?: boolean }` | `NotificationPreferences` |
-| POST | `/api/v1/email/unsubscribe` | `{ token, scope: 'all' \| 'digest' \| 'immediate' }` | `{ scope, email: { digest, immediateCritical } }` |
+| Método | Caminho                               | Corpo                                                                                             | Resposta                                          |
+| ------ | ------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| GET    | `/api/v1/me/notification-preferences` | —                                                                                                 | `NotificationPreferences`                         |
+| PUT    | `/api/v1/me/notification-preferences` | `{ email?: { digest?: 'daily' \| 'off'; immediateCritical?: boolean }; profileAlerts?: boolean }` | `NotificationPreferences`                         |
+| POST   | `/api/v1/email/unsubscribe`           | `{ token, scope: 'all' \| 'digest' \| 'immediate' }`                                              | `{ scope, email: { digest, immediateCritical } }` |
 
 - `GET` e `PUT` exigem sessão; `PUT` exige CSRF. Ambos ficam fora do gate de assinatura.
 - `PUT` é parcial, mas precisa informar ao menos uma propriedade de `email` ou `profileAlerts`; corpo vazio responde
@@ -258,6 +290,39 @@ type CompanyProfileSmartFilters = {
 
 Clientes anteriores podem omitir as três propriedades; a API as trata como listas vazias. Os novos clientes sempre as enviam. Cada lista aceita no máximo 20 valores únicos; categorias fora da lista canônica respondem `400 INVALID_PARAMETER`.
 
+### Região de atuação
+
+`coverage` passou a representar a região combinável e o comportamento de recomendação:
+
+```ts
+type MunicipalityReference = { ibgeCode: string; name: string; state: string };
+type CompanyCoverage =
+  | { scope: "national"; mode: "strict" | "prioritize"; acceptsRemote: boolean }
+  | {
+      scope: "custom";
+      mode: "strict" | "prioritize";
+      acceptsRemote: boolean;
+      regions: Array<
+        "north" | "northeast" | "central_west" | "southeast" | "south"
+      >;
+      states: string[];
+      municipalities: MunicipalityReference[];
+      radius: {
+        center: MunicipalityReference;
+        km: 50 | 100 | 200 | 300 | 500;
+      } | null;
+    };
+```
+
+O servidor valida nomes e UFs a partir do `ibgeCode`; valores enviados pelo cliente não substituem o catálogo oficial embarcado. O formato histórico `{scope:'states',states:[...]}` continua aceito no `PUT` e é convertido para `custom`, sem perda de `coverage_states`. `strict` remove editais fora da área das recomendações, alertas e do atalho de busca; `prioritize` mantém esses editais com peso menor e motivo “Fora da sua região”. `acceptsRemote` inclui categorias detectáveis como remotas.
+
+| Método | Caminho                                     | Entrada                               | Resposta                                     |
+| ------ | ------------------------------------------- | ------------------------------------- | -------------------------------------------- |
+| GET    | `/api/v1/profile/municipalities?q=&state=`  | nome com 2–80 caracteres; UF opcional | `{data: MunicipalityReference[]}` (máx. 20)  |
+| GET    | `/api/v1/me/company-profile/region-preview` | —                                     | `{count}` de editais abertos na região salva |
+
+O catálogo e as coordenadas de sede vêm do produto oficial “Localidades do Brasil” do IBGE e ficam no repositório; não há consulta externa em runtime. Fonte e termos de uso estão em [`docs/data/ibge-municipalities.md`](../data/ibge-municipalities.md).
+
 | Método | Caminho                                     | Entrada                               | Resposta                                         |
 | ------ | ------------------------------------------- | ------------------------------------- | ------------------------------------------------ |
 | GET    | `/api/v1/profile/categories`                | —                                     | `{data: Array<{slug,label,openTenderCount}>}`    |
@@ -270,9 +335,9 @@ O `PUT` também aceita `registeredPlatforms: string[]` (opcional; omitido = `[]`
 
 A lista não entra no cálculo de aderência: quando só ela muda, o `PUT` atualiza `updatedAt` e mantém `version`, sem descartar os selos já calculados nem gerar novas chamadas de IA. Ela serve para desempate nas recomendações ([`recommendations-v1.md`](./recommendations-v1.md)) e para o aviso "Você ainda não é cadastrado nesta plataforma", mostrado só quando o perfil declara ao menos uma plataforma e a disputa é em uma sala conhecida fora da lista.
 
-| Método | Caminho                       | Entrada | Resposta                                                                                                  |
-| ------ | ----------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/v1/profile/platforms`   | —       | `{data: Array<{slug,label,url,kind:'platform'\|'registry',openTenderCount:number\|null}>}` (SICAF com `null`) |
+| Método | Caminho                     | Entrada | Resposta                                                                                                      |
+| ------ | --------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/profile/platforms` | —       | `{data: Array<{slug,label,url,kind:'platform'\|'registry',openTenderCount:number\|null}>}` (SICAF com `null`) |
 
 As rotas desta seção exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). O POST apenas calcula sugestões e não altera estado, portanto não exige assinatura.
 
@@ -293,7 +358,7 @@ da origem é `subscription > coupon > trial > dev > beta` (em produção `dev` n
 
 ```ts
 type BillingResponse = {
-  status: 'none' | 'pending' | 'active' | 'past_due' | 'canceled';
+  status: "none" | "pending" | "active" | "past_due" | "canceled";
   entitled: boolean;
   source: 'subscription' | 'coupon' | 'trial' | 'beta' | 'dev' | null;
   trialEndsAt: string | null;
@@ -353,24 +418,84 @@ filename="pardal-digital-dados-YYYY-MM-DD.json"` e `Cache-Control: no-store`.
 ```ts
 type AccountExport = {
   exportedAt: string;
-  user: { id: string; email: string; name: string | null; avatarUrl: string | null; trialEndsAt: string; emailDigest: 'daily' | 'off'; emailImmediateCritical: boolean; emailPreferencesUpdatedAt: string | null; createdAt: string; updatedAt: string };
-  sessions: Array<{ createdAt: string; lastSeenAt: string; expiresAt: string; revokedAt: string | null }>;
-  savedTenders: Array<{ tenderId: string; savedAt: string; monitored: boolean; monitoredAt: string | null }>;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    avatarUrl: string | null;
+    trialEndsAt: string;
+    emailDigest: "daily" | "off";
+    emailImmediateCritical: boolean;
+    emailPreferencesUpdatedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  sessions: Array<{
+    createdAt: string;
+    lastSeenAt: string;
+    expiresAt: string;
+    revokedAt: string | null;
+  }>;
+  savedTenders: Array<{
+    tenderId: string;
+    savedAt: string;
+    monitored: boolean;
+    monitoredAt: string | null;
+  }>;
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
   notifications: Array<Record<string, unknown>>;
-  emailDeliveries: Array<{ id: string; mode: 'digest' | 'immediate'; status: 'queued' | 'sent' | 'failed' | 'skipped'; recipientEmail: string; subject: string; htmlBody: string; textBody: string; attempts: number; lastError: string | null; providerMessageId: string | null; createdAt: string; updatedAt: string; sentAt: string | null }>;
-  aiQuestions: Array<{ question: string; passages: unknown[]; summary: Record<string, unknown> | null; requestedModel: string; model: string | null; createdAt: string; updatedAt: string }>;
+  emailDeliveries: Array<{
+    id: string;
+    mode: "digest" | "immediate";
+    status: "queued" | "sent" | "failed" | "skipped";
+    recipientEmail: string;
+    subject: string;
+    htmlBody: string;
+    textBody: string;
+    attempts: number;
+    lastError: string | null;
+    providerMessageId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    sentAt: string | null;
+  }>;
+  aiQuestions: Array<{
+    question: string;
+    passages: unknown[];
+    summary: Record<string, unknown> | null;
+    requestedModel: string;
+    model: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   aiDailyUsage: Array<Record<string, unknown>>;
   aiDailyTenders: Array<Record<string, unknown>>;
-  aiJobs: Array<{ id: string; kind: string; tenderId: string; lane: 'interactive' | 'batch'; status: string; attempts: number; createdAt: string }>;
+  aiJobs: Array<{
+    id: string;
+    kind: string;
+    tenderId: string;
+    lane: "interactive" | "batch";
+    status: string;
+    attempts: number;
+    createdAt: string;
+  }>;
   companyProfile: Record<string, unknown> | null;
   companyFits: Array<Record<string, unknown>>;
   fitUsage: Array<Record<string, unknown>>;
-  recommendationEvents: Array<{ type: 'search' | 'tender_view'; normalizedTerms: string[]; tenderId: string | null; occurredAt: string }>;
+  recommendationEvents: Array<{
+    type: "search" | "tender_view";
+    normalizedTerms: string[];
+    tenderId: string | null;
+    occurredAt: string;
+  }>;
   recommendationDismissals: Array<Record<string, unknown>>;
   recommendationInterestProfile: Record<string, unknown> | null;
   recommendations: Array<Record<string, unknown>>;
-  subscription: { status: string; currentPeriodEnd: string | null; updatedAt: string } | null;
+  subscription: {
+    status: string;
+    currentPeriodEnd: string | null;
+    updatedAt: string;
+  } | null;
 };
 ```
 

@@ -253,6 +253,13 @@
       "when": 1791482404000,
       "tag": "0035_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791482405000,
+      "tag": "0036_service_region",
+      "breakpoints": true
     }
   ]
 }

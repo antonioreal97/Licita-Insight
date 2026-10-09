@@ -138,7 +138,7 @@ test("plataforma: ingest, backfill idempotente, filtro com contagem e perfil", {
       selectedKeywords: [],
       excludedKeywords: [],
       registeredPlatforms: ["sicaf"],
-      coverage: { scope: "national" as const },
+      coverage: { scope: "national" as const, mode: "strict" as const, acceptsRemote: false },
       valueRange: { min: null, max: null },
       size: "other" as const,
     };

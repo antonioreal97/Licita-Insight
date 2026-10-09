@@ -32,6 +32,7 @@ export type TenderSearchParams = {
   category?: string[];
   platform?: string[];
   newOnly?: boolean;
+  myRegion?: boolean;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: string;
@@ -607,7 +608,20 @@ export type RegistrationRequirement = {
 
 export type CompanySize = 'me_epp' | 'cooperative' | 'other';
 
-export type CompanyCoverage = { scope: 'national' } | { scope: 'states'; states: string[] };
+export type MunicipalityReference = { ibgeCode: string; name: string; state: string };
+export type CompanyMacroregion = 'north' | 'northeast' | 'central_west' | 'southeast' | 'south';
+export type CompanyCoverageMode = 'strict' | 'prioritize';
+export type CompanyCoverage =
+  | { scope: 'national'; mode: CompanyCoverageMode; acceptsRemote: boolean }
+  | {
+      scope: 'custom';
+      mode: CompanyCoverageMode;
+      acceptsRemote: boolean;
+      regions: CompanyMacroregion[];
+      states: string[];
+      municipalities: MunicipalityReference[];
+      radius: { center: MunicipalityReference; km: 50 | 100 | 200 | 300 | 500 } | null;
+    };
 
 export type CompanyProfileInput = {
   /** 20–600 chars: what the company supplies. */
@@ -637,6 +651,8 @@ export type CompanyProfileResponse = { profile: CompanyProfile | null };
 
 export type ProfileCategory = { slug: string; label: string; openTenderCount: number };
 export type ProfileCategoriesResponse = { data: ProfileCategory[] };
+export type ProfileMunicipalitiesResponse = { data: MunicipalityReference[] };
+export type CompanyRegionPreviewResponse = { count: number };
 /** `openTenderCount` is null for SICAF, a registry rather than a bidding room. */
 export type ProfilePlatform = {
   slug: string;
@@ -665,6 +681,7 @@ export type FitEvidence = { documentTitle: string; documentUrl: string; page: nu
 export type FitReason =
   | { kind: 'offering_match'; terms: string[] }
   | { kind: 'exclusion'; terms: string[] }
+  | { kind: 'service_region'; text: string }
   | { kind: 'out_of_coverage'; state: string | null }
   | { kind: 'out_of_value_range'; estimatedValue: number }
   | { kind: 'value_not_published' }

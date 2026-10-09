@@ -16,7 +16,10 @@ import {
 import { usersTable } from "./accounts";
 import { tendersTable } from "./tenders";
 
-export type CompanyCoverageScope = "national" | "states";
+export type CompanyCoverageScope = "national" | "states" | "custom";
+export type CompanyCoverageMode = "strict" | "prioritize";
+export type CompanyMacroregion =
+  "north" | "northeast" | "central_west" | "southeast" | "south";
 export type CompanySize = "me_epp" | "cooperative" | "other";
 
 export type FitEvidenceRecord = {
@@ -30,6 +33,7 @@ export type FitReasonRecord =
   | { kind: "offering_match"; terms: string[] }
   | { kind: "no_offering_term" }
   | { kind: "exclusion"; terms: string[] }
+  | { kind: "service_region"; text: string }
   | { kind: "out_of_coverage"; state: string | null }
   | { kind: "out_of_value_range"; estimatedValue: number }
   | { kind: "value_not_published" }
@@ -72,6 +76,21 @@ export const companyProfilesTable = pgTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    coverageRegions: jsonb("coverage_regions")
+      .$type<CompanyMacroregion[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    coverageMunicipalities: jsonb("coverage_municipalities")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    headquartersMunicipalityIbge: text("headquarters_municipality_ibge"),
+    coverageRadiusKm: integer("coverage_radius_km"),
+    coverageMode: text("coverage_mode")
+      .$type<CompanyCoverageMode>()
+      .notNull()
+      .default("strict"),
+    acceptsRemote: boolean("accepts_remote").notNull().default(false),
     valueMin: numeric("value_min", { precision: 18, scale: 2 }),
     valueMax: numeric("value_max", { precision: 18, scale: 2 }),
     size: text("size").notNull(),
@@ -89,7 +108,15 @@ export const companyProfilesTable = pgTable(
   (table) => [
     check(
       "company_profiles_coverage_scope_check",
-      sql`${table.coverageScope} in ('national', 'states')`,
+      sql`${table.coverageScope} in ('national', 'states', 'custom')`,
+    ),
+    check(
+      "company_profiles_coverage_mode_check",
+      sql`${table.coverageMode} in ('strict', 'prioritize')`,
+    ),
+    check(
+      "company_profiles_coverage_radius_check",
+      sql`${table.coverageRadiusKm} is null or ${table.coverageRadiusKm} in (50, 100, 200, 300, 500)`,
     ),
     check(
       "company_profiles_size_check",
