@@ -256,6 +256,27 @@ que Docker Desktop inicie no login. `docker compose down` sem `-v` preserva o ba
 **nunca use `down -v` no MacBook com dados**. Mantenha backups periodicos com
 `pg_dump -Fc` em destino privado fora do clone e teste uma restauracao isolada.
 
+## Observabilidade com Grafana e Prometheus
+
+O compose `ops/macbook/dashboard/compose.yml` usa a mesma rede interna `licita-macbook_default` e sobe Grafana,
+Prometheus, node-exporter e cAdvisor. O Prometheus coleta a cada 15 s, retém no máximo 15 dias/2 GB e acessa a API em
+`app:9091/metrics`; `METRICS_PORT=9091` fica somente em `expose`, sem bind no host. O proxy continua bloqueando
+`/metrics` com `404`. Consulte [o README do dashboard](../../ops/macbook/dashboard/README.md) para credenciais,
+painéis, limites de recursos e operação.
+
+Depois de subir ou atualizar a stack principal, aplique separadamente o compose do dashboard:
+
+```sh
+docker compose -f compose.macbook.yml up -d --build
+docker compose -f ops/macbook/dashboard/compose.yml config -q
+docker compose -f ops/macbook/dashboard/compose.yml up -d
+docker compose -f ops/macbook/dashboard/compose.yml ps
+```
+
+Nenhuma porta de Prometheus, node-exporter, cAdvisor ou métricas da API é publicada. Apenas o Grafana mantém os binds
+restritos a loopback/Tailscale definidos no compose. Para desligar a observabilidade sem apagar históricos:
+`docker compose -f ops/macbook/dashboard/compose.yml stop`. Nunca use `down -v` no servidor.
+
 ## Frontend na Vercel e sincronização ngrok -> Vercel
 
 O frontend público fica no projeto Vercel `abriu-la` (https://abriu-la.vercel.app). Um Routing Middleware

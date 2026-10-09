@@ -7,13 +7,16 @@ from pathlib import Path
 from panels import PANELS
 
 HERE = Path(__file__).resolve().parent
-DATASOURCE = {"type": "grafana-postgresql-datasource", "uid": "licita-pg"}
+SQL_DATASOURCE = {"type": "grafana-postgresql-datasource", "uid": "licita-pg"}
+PROMETHEUS_DATASOURCE = {"type": "prometheus", "uid": "licita-prometheus"}
 WIDTH = {"stat": 6, "timeseries": 12, "table": 12}
 HEIGHT = {"stat": 5, "timeseries": 9, "table": 9}
 FULL_WIDTH_TABLES = {"Usuários recentes", "Última execução por fonte", "Cota de processos por usuário e dia (30 dias)"}
 
 
-def panel(panel_id: int, title: str, kind: str, sql: str, options: dict, x: int, y: int, w: int, h: int) -> dict:
+def panel(panel_id: int, title: str, kind: str, query, options: dict, x: int, y: int, w: int, h: int) -> dict:
+    is_prometheus = options.get("datasource") == "prometheus"
+    datasource = PROMETHEUS_DATASOURCE if is_prometheus else SQL_DATASOURCE
     field_defaults: dict = {"unit": options.get("unit", "none")}
     if "decimals" in options:
         field_defaults["decimals"] = options["decimals"]
@@ -21,18 +24,30 @@ def panel(panel_id: int, title: str, kind: str, sql: str, options: dict, x: int,
         "id": panel_id,
         "type": kind,
         "title": title,
-        "datasource": DATASOURCE,
+        "datasource": datasource,
         "gridPos": {"x": x, "y": y, "w": w, "h": h},
-        "targets": [{
+        "fieldConfig": {"defaults": field_defaults, "overrides": []},
+    }
+    if is_prometheus:
+        queries = query if isinstance(query, list) else [{"expr": query, "legend": options.get("legend", "")}]
+        result["targets"] = [{
+            "refId": chr(ord("A") + index),
+            "datasource": datasource,
+            "editorMode": "code",
+            "expr": item["expr"].strip(),
+            "legendFormat": item.get("legend", ""),
+            "range": kind != "stat",
+            "instant": kind == "stat",
+        } for index, item in enumerate(queries)]
+    else:
+        result["targets"] = [{
             "refId": "A",
-            "datasource": DATASOURCE,
+            "datasource": datasource,
             "editorMode": "code",
             "rawQuery": True,
             "format": "table",
-            "rawSql": sql.strip(),
-        }],
-        "fieldConfig": {"defaults": field_defaults, "overrides": []},
-    }
+            "rawSql": query.strip(),
+        }]
     if kind == "stat":
         result["options"] = {
             "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
@@ -51,9 +66,12 @@ def panel(panel_id: int, title: str, kind: str, sql: str, options: dict, x: int,
         }
         result["options"] = {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": True},
                              "tooltip": {"mode": "multi", "sort": "none"}}
-        result["description"] = "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
+        if not is_prometheus:
+            result["description"] = "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
     else:
         result["options"] = {"showHeader": True, "cellHeight": "sm"}
+    if "description" in options:
+        result["description"] = options["description"]
     return result
 
 
@@ -72,26 +90,55 @@ def build() -> dict:
         y += 1
         x = 0
         row_height = 0
-        for _, title, kind, sql, options in (p for p in PANELS if p[0] == section):
-            w = 24 if title in FULL_WIDTH_TABLES else WIDTH[kind]
+        for _, title, kind, query, options in (p for p in PANELS if p[0] == section):
+            w = options.get("width", 24 if title in FULL_WIDTH_TABLES else WIDTH[kind])
             h = HEIGHT[kind]
             if x + w > 24:
                 x, y, row_height = 0, y + row_height, 0
-            panels.append(panel(next_id, title, kind, sql, options, x, y, w, h))
+            panels.append(panel(next_id, title, kind, query, options, x, y, w, h))
             next_id += 1
             x += w
             row_height = max(row_height, h)
         y += row_height
     return {
         "uid": "abriu-la-admin",
-        "title": "Abriu lá — Admin",
-        "tags": ["abriu-la"],
+        "title": "Pardal Digital — Admin",
+        "tags": ["pardal-digital", "abriu-la"],
         "timezone": "America/Sao_Paulo",
         "editable": False,
         "graphTooltip": 1,
-        "refresh": "5m",
-        "time": {"from": "now-30d", "to": "now"},
-        "timepicker": {"hidden": True},
+        "refresh": "15s",
+        "time": {"from": "now-6h", "to": "now"},
+        "timepicker": {"hidden": False},
+        "templating": {"list": [
+            {
+                "name": "container",
+                "label": "Containers",
+                "type": "custom",
+                "query": "app,postgres,proxy,ocr,grafana,prometheus",
+                "options": [],
+                "multi": True,
+                "includeAll": True,
+                "allValue": "app|postgres|proxy|ocr|grafana|prometheus",
+                "current": {"text": ["All"], "value": ["$__all"]},
+            },
+            {
+                "name": "daily_process_limit",
+                "label": "Limite diário de processos",
+                "type": "textbox",
+                "query": "10",
+                "options": [],
+                "current": {"text": "10", "value": "10"},
+            },
+            {
+                "name": "monthly_brl",
+                "label": "Mensalidade (R$)",
+                "type": "textbox",
+                "query": "49.90",
+                "options": [],
+                "current": {"text": "49.90", "value": "49.90"},
+            },
+        ]},
         "schemaVersion": 39,
         "version": 1,
         "panels": panels,

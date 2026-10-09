@@ -1,5 +1,5 @@
 [Unit]
-Description=Publica o Grafana do Abriu la depois que o Tailscale estiver pronto
+Description=Publica o Grafana do Pardal Digital depois que o Tailscale estiver pronto
 
 [Service]
 WorkingDirectory=%h/Documentos/LICITA/Licita-Insight
