@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
 
 // three.js só é baixado quando o globo 3D é exibido.
@@ -41,6 +41,7 @@ import { formatCurrency, formatCurrencyPrecise, formatDateTime, formatNumber } f
 import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { LegalLinks } from '@/features/legal/legal-content';
+import { PardalClip } from '@/features/landing/components/pardal-clip';
 import {
   Accordion,
   AccordionContent,
@@ -57,6 +58,37 @@ const secondaryCta =
   'inline-flex items-center justify-center gap-2 rounded-pill border border-border bg-surface px-7 py-4 text-sm font-semibold tracking-wide text-foreground transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring';
 const eyebrow = 'type-eyebrow font-bold text-primary tracking-eyebrow uppercase';
 const sectionTitle = 'mt-4 text-3xl font-semibold leading-[1.05] tracking-display sm:text-4xl lg:text-[46px]';
+
+// Same as the globe: three.js only downloads when the flying pardal is shown.
+const PardalFlight3D = lazy(() =>
+  import('@/features/landing/components/pardal-flight-3d').then((m) => ({ default: m.PardalFlight3D })),
+);
+
+// Below this width the side gutters of `max-w-7xl` are too narrow for the bird to fly without covering text.
+const PARDAL_FLIGHT_MEDIA = '(min-width: 1360px)';
+const REDUCED_MOTION_MEDIA = '(prefers-reduced-motion: reduce)';
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
+function PardalFlight() {
+  const wide = useMediaQuery(PARDAL_FLIGHT_MEDIA);
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
+  if (!wide) return null;
+  return (
+    <Suspense fallback={null}>
+      <PardalFlight3D reducedMotion={reducedMotion} />
+    </Suspense>
+  );
+}
 
 // Owner decision: 7-day trial. The API (`/billing/plan`) wins when it answers; 7 only while it loads or if it fails.
 const useTrialDays = () => usePublicPlan().data?.trialDays ?? 7;
@@ -519,6 +551,7 @@ function ServicesSection() {
 
 /** The signature dark surface: verifiable citations and audit-grade AI. */
 function EvidenceSection() {
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   const pillars = [
     {
       title: 'Visita técnica & Vistoria prévia',
@@ -574,6 +607,8 @@ function EvidenceSection() {
                 <span>Leitura profunda em PDFs e documentos compactados (.ZIP)</span>
               </li>
             </ul>
+
+            <PardalClip clip="pardal-raio-x" reducedMotion={reducedMotion} className="mt-8 max-w-sm" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -960,6 +995,7 @@ function FaqSection() {
 }
 
 function FinalCta() {
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   return (
     <section aria-labelledby="cta-titulo" className="px-5 pb-24 sm:px-8 sm:pb-28">
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-3xl bg-superficie-inversa px-8 py-16 sm:px-14 lg:flex-row lg:items-center">
@@ -974,7 +1010,10 @@ function FinalCta() {
             Cadastre-se com o Google em menos de 1 minuto, explore os editais em aberto e teste todos os recursos sem custo inicial.
           </p>
         </div>
-        <StartCta testId="link-final-start" className="w-full justify-center sm:w-auto" />
+        <div className="flex w-full flex-col items-start gap-6 sm:w-auto lg:items-center">
+          <PardalClip clip="pardal-assinatura" reducedMotion={reducedMotion} className="w-40 sm:w-48" />
+          <StartCta testId="link-final-start" className="w-full justify-center sm:w-auto" />
+        </div>
       </div>
     </section>
   );
@@ -983,7 +1022,8 @@ function FinalCta() {
 // Marketing page. Hero sizes sit above the product type scale on purpose; every color is a design system token.
 export default function LandingPage() {
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground">
+    <div className="relative min-h-[100dvh] bg-background text-foreground">
+      <PardalFlight />
       <header className="sticky top-0 z-sticky border-b border-border-subtle bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
