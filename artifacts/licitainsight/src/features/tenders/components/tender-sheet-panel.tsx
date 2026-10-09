@@ -38,7 +38,7 @@ function QualificationRow({ type, items, sourceNumbers, prep }: { type: Qualific
             aria-expanded={open}
             aria-controls={passagesId}
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+            className="inline-flex items-center gap-1 rounded-lg type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
             data-testid="button-qualification-toggle"
           >
             {open ? 'Ocultar' : single ? 'Ver trecho' : 'Ver trechos'}
@@ -114,7 +114,7 @@ function FieldRow({ field, sourceNumber, prep }: { field: SheetField; sourceNumb
           <>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               {categorical && answer ? (
-                <span className="rounded-sm bg-secondary px-1.5 py-0.5 text-xs font-semibold text-secondary-foreground" data-testid="sheet-answer">
+                <span className="rounded-lg bg-secondary px-1.5 py-0.5 text-xs font-semibold text-secondary-foreground" data-testid="sheet-answer">
                   {answer}
                 </span>
               ) : !categorical ? (
@@ -131,7 +131,7 @@ function FieldRow({ field, sourceNumber, prep }: { field: SheetField; sourceNumb
                 aria-expanded={open}
                 aria-controls={passageId}
                 onClick={() => setOpen((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+                className="inline-flex items-center gap-1 rounded-lg type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
                 data-testid="button-sheet-toggle"
               >
                 {open ? 'Ocultar trecho' : categorical ? 'Ver trecho' : 'Ver tudo'}
@@ -175,7 +175,7 @@ function RegistrationRequirementAlert({ requirement }: { requirement: Registrati
             aria-expanded={open}
             aria-controls={passageId}
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex items-center gap-1 rounded-sm font-semibold transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+            className="inline-flex items-center gap-1 rounded-lg font-semibold transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
             data-testid="button-registration-requirement-toggle"
           >
             {open ? 'Ocultar trecho' : 'Ver trecho'}

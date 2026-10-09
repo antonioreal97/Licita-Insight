@@ -171,7 +171,7 @@ export default function SearchPage() {
             type="button"
             aria-pressed={params.myRegion === true}
             onClick={() => update({ myRegion: params.myRegion ? undefined : true })}
-            className={`rounded-full border px-3 py-1.5 type-meta font-semibold transition-colors duration-fast focus-visible:focus-ring ${
+            className={`rounded-pill border px-3 py-1.5 type-meta font-semibold transition-colors duration-fast focus-visible:focus-ring ${
               params.myRegion
                 ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
                 : 'border-border bg-surface text-foreground hover:border-border-strong'
@@ -220,7 +220,7 @@ export default function SearchPage() {
                       type="button"
                       onClick={clearFilters}
                       data-testid="button-sidebar-clear"
-                      className="rounded-sm px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+                      className="rounded-lg px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
                     >
                       Limpar ({activeFilters})
                     </button>
@@ -233,7 +233,7 @@ export default function SearchPage() {
                     title={desktopFiltersCollapsed ? 'Expandir filtros' : 'Recolher filtros'}
                     data-testid="button-collapse-filters"
                     onClick={() => setDesktopFiltersCollapsed((collapsed) => !collapsed)}
-                    className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground focus-visible:focus-ring"
+                    className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground focus-visible:focus-ring"
                   >
                     {desktopFiltersCollapsed ? <PanelLeftOpen size={17} aria-hidden /> : <PanelLeftClose size={17} aria-hidden />}
                   </button>
@@ -263,7 +263,7 @@ export default function SearchPage() {
                 <SlidersHorizontal size={14} aria-hidden />
                 Filtros
                 {activeFilters > 0 && (
-                  <span className="rounded-full bg-primary px-1.5 py-0.5 type-data text-3xs leading-none font-bold text-primary-foreground">
+                  <span className="rounded-pill bg-primary px-1.5 py-0.5 type-data text-xs leading-none font-bold text-primary-foreground">
                     {activeFilters}
                   </span>
                 )}
@@ -325,7 +325,7 @@ export default function SearchPage() {
                       disabled={search.isError}
                       data-testid={`button-view-${value}`}
                       onClick={() => setView(value)}
-                      className={`grid h-8 w-8 place-items-center rounded-md transition-[background-color,color,box-shadow] duration-fast ease-standard focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50 ${view === value ? 'bg-surface text-foreground shadow-2xs' : 'text-muted-foreground enabled:hover:text-foreground'}`}
+                      className={`grid h-8 w-8 place-items-center rounded-lg transition-[background-color,color,box-shadow] duration-fast ease-standard focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50 ${view === value ? 'bg-surface text-foreground ' : 'text-muted-foreground enabled:hover:text-foreground'}`}
                     >
                       <Icon size={15} aria-hidden />
                     </button>

@@ -1,18 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Lock } from 'lucide-react';
-import { Button } from '@/components/common/action-button';
+import { Button, buttonClass } from '@/components/common/action-button';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { signInWithGoogle } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { cn } from '@/lib/utils';
 import { useOpportunityAccess } from '../hooks/use-opportunities';
 
-/** A link styled as the primary `Button` (the product Button has no `asChild`). */
-export const linkButtonClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-pill bg-action px-4 py-2 font-semibold text-action-foreground shadow-xs ' +
-  'transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Why the user can't see cultural calls. No preview of real or invented calls: the panel only explains and offers the next step. */
 export function AccessPanel({ reason }: { reason: 'anonymous' | 'no-access' }) {
@@ -45,7 +40,7 @@ export function AccessPanel({ reason }: { reason: 'anonymous' | 'no-access' }) {
           <p className="mx-auto mt-3 max-w-md type-meta text-muted-foreground">O teste vale uma vez por conta Google.</p>
         </>
       ) : (
-        <Link href="/settings?billing=required#assinatura" data-testid="link-gate-subscribe" className={cn(linkButtonClass, 'mt-5 type-ui')}>
+        <Link href="/settings?billing=required#assinatura" data-testid="link-gate-subscribe" className={cn(buttonClass(), 'mt-5')}>
           Ver assinatura
           <ArrowRight size={15} aria-hidden />
         </Link>

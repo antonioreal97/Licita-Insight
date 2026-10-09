@@ -17,7 +17,7 @@ export function PlatformBadge({ platform, registeredPlatforms, variant = 'row', 
   if (!platform || (variant === 'row' && platform.kind !== 'platform')) return null;
   const { label, hint } = platformDescription(platform);
   const missing = missingRegistration(platform, registeredPlatforms);
-  const text = variant === 'row' ? 'text-3xs' : 'type-meta';
+  const text = variant === 'row' ? 'text-xs' : 'type-meta';
   return (
     <span data-testid="badge-platform" data-kind={platform.kind} className={cn('relative z-raised inline-flex flex-wrap items-center gap-1.5', className)}>
       <span title={hint ?? undefined} className={cn('inline-flex items-center gap-1 font-medium text-foreground/80', text)}>
@@ -42,7 +42,7 @@ export function PlatformBadge({ platform, registeredPlatforms, variant = 'row', 
       {missing && (
         <span
           data-testid="badge-platform-not-registered"
-          className={cn('inline-flex items-center gap-1 rounded-sm bg-warning-subtle px-1.5 py-px font-semibold text-warning-subtle-foreground ring-1 ring-inset ring-warning/40', text)}
+          className={cn('inline-flex items-center gap-1 rounded-lg bg-warning-subtle px-1.5 py-px font-semibold text-warning-subtle-foreground ring-1 ring-inset ring-warning/40', text)}
         >
           <TriangleAlert size={variant === 'row' ? 11 : 12} aria-hidden="true" />
           {NOT_REGISTERED_TEXT}

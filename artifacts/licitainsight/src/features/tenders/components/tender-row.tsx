@@ -65,7 +65,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
           {modality}
         </span>
         {number && (
-          <span title={tender.tenderNumber ?? undefined} className="min-w-0 truncate type-data text-3xs">
+          <span title={tender.tenderNumber ?? undefined} className="min-w-0 truncate type-data text-xs">
             {number}
           </span>
         )}
@@ -116,7 +116,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
         {!compact && tender.categories.length > 0 && (
           <ul aria-label="Categorias" className="relative z-raised mt-2.5 flex w-fit max-w-full flex-wrap gap-1.5">
             {tender.categories.map((category) => (
-              <li key={category.slug} className="rounded-sm px-1.5 py-px text-3xs font-medium text-muted-foreground ring-1 ring-inset ring-border-subtle">
+              <li key={category.slug} className="rounded-lg px-1.5 py-px text-xs font-medium text-muted-foreground ring-1 ring-inset ring-border-subtle">
                 {category.label}
               </li>
             ))}

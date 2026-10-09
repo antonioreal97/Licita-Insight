@@ -2,9 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, BookmarkPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { isApiError, type SavedSearch } from '@/api';
-import { Button } from '@/components/common/action-button';
+import { Button, buttonClass } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState } from '@/components/common/query-states';
+import { EmptyState } from '@/components/common/empty-state';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { ToastAction } from '@/components/ui/toast';
@@ -14,9 +15,6 @@ import { savedQueryHref } from '@/features/search/lib/search-defaults';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { searchParamsFromUrl } from '@/services/search-service';
 import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
-
-const primaryLinkClass =
-  'inline-flex h-9 shrink-0 items-center gap-2 rounded-pill bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring';
 
 function errorDescription(error: unknown) {
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas.';
@@ -37,12 +35,12 @@ function ListSkeleton() {
       {Array.from({ length: 3 }, (_, index) => (
         <div key={index} aria-hidden className="flex items-start justify-between gap-4 border-b border-border-subtle px-4 py-4 last:border-0 sm:px-5">
           <div className="min-w-0 flex-1">
-            <div className="h-4 w-1/3 animate-pulse rounded-sm bg-muted" />
+            <div className="h-4 w-1/3 animate-pulse rounded-lg bg-muted" />
             <div className="mt-2.5 flex gap-1.5">
-              <div className="h-5 w-24 animate-pulse rounded-full bg-muted" />
-              <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
+              <div className="h-5 w-24 animate-pulse rounded-pill bg-muted" />
+              <div className="h-5 w-20 animate-pulse rounded-pill bg-muted" />
             </div>
-            <div className="mt-2.5 h-3 w-40 animate-pulse rounded-sm bg-muted" />
+            <div className="mt-2.5 h-3 w-40 animate-pulse rounded-lg bg-muted" />
           </div>
           <div className="h-9 w-28 animate-pulse rounded-lg bg-muted" />
         </div>
@@ -102,7 +100,7 @@ export default function SavedSearchesPage() {
         title="Buscas salvas"
         description="Consultas que você escolheu acompanhar. Com alertas ligados, avisamos aqui no app quando a coleta diária traz editais novos."
         action={
-          <Link href="/search" data-testid="button-new-saved-search" className={`${primaryLinkClass} self-start sm:self-auto`}>
+          <Link href="/search" data-testid="button-new-saved-search" className={`${buttonClass()} self-start sm:self-auto`}>
             <Plus size={15} aria-hidden="true" />
             Nova busca
           </Link>
@@ -113,16 +111,18 @@ export default function SavedSearchesPage() {
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : count === 0 ? (
-        <div className="rounded-xl border border-dashed border-border-strong bg-card px-6 py-14 text-center" data-testid="empty-saved-searches">
-          <BookmarkPlus size={18} aria-hidden className="mx-auto text-foreground-subtle" />
-          <h2 className="mt-3 type-ui font-semibold text-foreground">Nenhuma busca salva</h2>
-          <p className="mx-auto mt-1 max-w-sm type-meta text-muted-foreground">
-            Faça uma busca, aplique os filtros que importam e use “Salvar busca” para receber alertas de editais novos.
-          </p>
-          <Link href="/search" data-testid="link-empty-saved-searches-search" className={`${primaryLinkClass} mt-4`}>
-            Explorar editais
-          </Link>
-        </div>
+        <EmptyState
+          icon={BookmarkPlus}
+          title="Nenhuma busca salva"
+          testId="empty-saved-searches"
+          action={
+            <Link href="/search" data-testid="link-empty-saved-searches-search" className={buttonClass()}>
+              Explorar editais
+            </Link>
+          }
+        >
+          Faça uma busca, aplique os filtros que importam e use “Salvar busca” para receber alertas de editais novos.
+        </EmptyState>
       ) : (
         <>
           <p aria-live="polite" className="mb-3 type-meta text-muted-foreground" data-testid="text-saved-searches-count">
@@ -277,7 +277,7 @@ function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch
             </h2>
             {search.newMatchesCount > 0 && (
               <span
-                className="shrink-0 rounded-full bg-accent px-2 py-px type-data text-2xs font-bold text-accent-foreground"
+                className="shrink-0 rounded-pill bg-accent px-2 py-px type-data text-xs font-bold text-accent-foreground"
                 data-testid={`badge-new-${search.id}`}
               >
                 {formatNumber(search.newMatchesCount)} {search.newMatchesCount === 1 ? 'novo' : 'novos'}
@@ -292,7 +292,7 @@ function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch
                 update.reset();
                 setEditing(true);
               }}
-              className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
+              className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
             >
               <Pencil size={13} aria-hidden />
             </button>

@@ -110,7 +110,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                       {modality}
                     </span>
                     {number && (
-                      <span title={t.tenderNumber ?? undefined} className="min-w-0 truncate type-data text-3xs">
+                      <span title={t.tenderNumber ?? undefined} className="min-w-0 truncate type-data text-xs">
                         {number}
                       </span>
                     )}
@@ -138,7 +138,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                   <span className="block type-data font-bold text-foreground">{state ?? '—'}</span>
                   <span
                     title={city ?? 'Município não informado'}
-                    className={cn('block truncate type-meta', city ? 'text-muted-foreground' : 'italic text-muted-foreground/80')}
+                    className={cn('block truncate type-meta', city ? 'text-muted-foreground' : 'italic text-muted-foreground')}
                   >
                     {city ?? 'não informado'}
                   </span>

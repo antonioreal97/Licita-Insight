@@ -12,7 +12,7 @@ export function HighlightedText({ fragment, fallback }: { fragment?: string; fal
       {parts.map((part, index) => {
         const match = /^<mark>(.*)<\/mark>$/.exec(part);
         return match ? (
-          <mark key={index} className="rounded-sm bg-primary/15 px-0.5 text-inherit">
+          <mark key={index} className="rounded-lg bg-primary/15 px-0.5 text-inherit">
             {decode(match[1])}
           </mark>
         ) : (

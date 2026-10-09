@@ -25,11 +25,11 @@ The button sets no default `type`, same as before. Pass `type="submit"` or `type
 
 | Variant       | Use                                                                       | Rest                                                    | Hover                                       | Active                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------- | --------------------------------------- |
-| `primary`     | The single main action of an area                                         | `bg-action text-action-foreground`, `shadow-xs`          | `bg-action-hover`                           | `bg-action-active`, scale .98           |
-| `outline`     | Secondary actions, toolbars                                               | `bg-surface`, `border-border`, `shadow-2xs`             | `bg-surface-sunken`, `border-border-strong` | scale .98                               |
+| `primary`     | The single main action of an area                                         | `bg-action text-action-foreground`                       | `bg-action-hover`                           | `bg-action-active`, scale .98           |
+| `outline`     | Secondary actions, toolbars                                               | `bg-surface`, `border-border`                           | `bg-surface-sunken`, `border-border-strong` | scale .98                               |
 | `dark`        | High-emphasis neutral: petroleum blue in light, flips to light in dark | `bg-inverse`                                            | `bg-inverse-hover`                          | scale .98                               |
 | `ghost`       | Tertiary, inline, icon-adjacent                                           | transparent, `text-muted-foreground`                    | `bg-muted`, `text-foreground`               | scale .98                               |
-| `destructive` | Irreversible or destructive actions (delete, revoke)                      | `bg-destructive`, `text-destructive-foreground`, `shadow-xs` | `bg-destructive/90`                         | `bg-destructive`, scale .98             |
+| `destructive` | Irreversible or destructive actions (delete, revoke)                      | `bg-destructive`, `text-destructive-foreground`         | `bg-destructive/90`                         | `bg-destructive`, scale .98             |
 
 `aria-pressed="true"` gives `outline` a `primary-subtle` fill and `ghost` a `muted` fill, for toggles such as "Salvar" and "Monitorar".
 
@@ -41,11 +41,11 @@ The button sets no default `type`, same as before. Pass `type="submit"` or `type
 
 Icons are sized by the caller (`<Icon size={15} />`). The button does not resize them.
 
-### Decision: `common/action-button` versus `ui/button`
+### One button
 
-- **`@/components/common/action-button` → `Button` is the product button.** Feature code must use it. Its API is frozen: `variant`, children, and every button prop. `size` and `loading` are optional additions.
-- **`@/components/ui/button` (shadcn) stays as an internal primitive.** It is imported by `ui/pagination`, `ui/alert-dialog`, `ui/calendar`, `ui/carousel`, `ui/sidebar` and `ui/input-group`, and keeps shadcn's `variant`/`size`/`asChild` API so upstream shadcn updates remain copy-pasteable. Its focus ring now matches the DS. Do not import it from `features/*`.
-- If a feature needs `asChild` (a link styled as a button), use `<a className=…>` with the same token classes for now, and open a DS request to add `asChild` to the product Button. Do not reach for `ui/button`.
+- **`@/components/common/action-button` → `Button` is the only button.** There is no `components/ui/button`: it and the unused shadcn composites that imported it were removed.
+- A link that looks like a button (`<a>`, wouter `Link`) takes `buttonClass(variant, size)` from the same file, so the look never forks: `<Link href="/search" className={buttonClass()}>`. Do not copy the button classes by hand.
+- Hover uses `not-disabled:`, which matches links too (links are never `:enabled`).
 
 ## StatusBadge
 
@@ -55,7 +55,7 @@ import { StatusBadge } from "@/features/tenders/components/status-badge";
 ```
 
 - Props: `{ status: TenderStatus }`. The label comes from `statusLabels` (PT-BR). `data-testid="status-<status>"`.
-- Pill: `rounded-full px-2.5 py-1 text-2xs font-semibold`, a 6px dot and the label. It does not wrap or shrink.
+- Pill: `rounded-full px-2.5 py-1 text-xs font-semibold`, a 6px dot and the label. It does not wrap or shrink.
 - Tones come from the `--status-*` tokens (see tokens.md, all ≥5.3:1). `cancelled` has a hollow dot and a strike-through label. `closed` and `cancelled` are neutral because they need no action.
 - It is not interactive. If it needs to filter, wrap it in a button. Do not add hover to the badge.
 

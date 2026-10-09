@@ -2,13 +2,12 @@ import { useId, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { ArrowDown, ArrowRight, Info, Loader2, Scale } from 'lucide-react';
 import type { CompanyProfile, FitReason, SheetFieldId, TenderDetail, TenderSheet } from '@/api';
-import { Button } from '@/components/common/action-button';
+import { Button, buttonClass } from '@/components/common/action-button';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { FitBadge, PROFILE_HREF, reasonText } from '@/features/company-profile/components/fit-badge';
 import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
-import { linkButtonClass } from '@/features/opportunities/components/access-gate';
 import { DeadlineIndicator } from '@/features/tenders/components/deadline-indicator';
 import { SourceLink } from '@/features/tenders/components/source-link';
 import { ValueDisplay } from '@/features/tenders/components/value-display';
@@ -22,7 +21,7 @@ import { ProvenanceLabel } from './provenance-label';
 
 const linkClass = 'font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring';
 const noteBox = 'flex gap-2.5 rounded-lg border border-border bg-muted px-4 py-3 type-meta text-foreground';
-const lineSkeleton = <div aria-busy="true" aria-label="Carregando" className="h-5 w-2/3 animate-pulse rounded-sm bg-muted" />;
+const lineSkeleton = <div aria-busy="true" aria-label="Carregando" className="h-5 w-2/3 animate-pulse rounded-lg bg-muted" />;
 
 /** Rules a bidder weighs first. Only a found passage with a categorical answer shows here; the rest stays in the ficha. */
 const DECISION_FIELDS: SheetFieldId[] = ['me_epp', 'consortium', 'site_visit', 'samples', 'bid_guarantee'];
@@ -139,7 +138,7 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
     } else {
       body = (
         <>
-          <FitBadge fit={{ ...fit, reasons: [] }} className="text-2xs" />
+          <FitBadge fit={{ ...fit, reasons: [] }} className="text-xs" />
           {fitReasons.length > 0 && (
             <ul className="space-y-1.5">
               {fitReasons.map((reason, index) => (
@@ -192,7 +191,7 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
           <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-muted-foreground" />
           Ficha, aderência e checklist fazem parte da assinatura.
         </span>
-        <Link href={BILLING_HREF} className={cn(linkButtonClass, 'h-8 px-3 py-0 type-ui')} data-testid="link-decision-subscribe">
+        <Link href={BILLING_HREF} className={buttonClass('primary', 'sm')} data-testid="link-decision-subscribe">
           Ver assinatura
           <ArrowRight size={14} aria-hidden="true" />
         </Link>

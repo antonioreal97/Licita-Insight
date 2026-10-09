@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { ArrowUpRight, FileCheck2, Search } from 'lucide-react';
 import type { TransparencyContract, TransparencyContractSearchParams } from '@/api';
+import { Button } from '@/components/common/action-button';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -90,7 +91,7 @@ export default function TransparencyPage() {
           <form onSubmit={onSearch} role="search" className="flex gap-2">
             <label htmlFor="transparency-query" className="sr-only">Buscar contratos</label>
             <Input id="transparency-query" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={160} placeholder="Fornecedor, órgão, objeto ou número" />
-            <button type="submit" aria-label="Buscar contratos" className="grid size-9 shrink-0 place-items-center rounded-pill bg-action text-action-foreground hover:bg-action-hover"><Search size={17} aria-hidden /></button>
+            <Button type="submit" aria-label="Buscar contratos" className="size-9 px-0"><Search size={17} aria-hidden /></Button>
           </form>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="type-meta text-muted-foreground">{contracts.data ? `${contracts.data.pagination.total.toLocaleString('pt-BR')} contratos encontrados` : 'Consultando contratos'}</p>
@@ -111,7 +112,7 @@ export default function TransparencyPage() {
           {contracts.isPending ? <div className="mt-4"><RowsSkeleton /></div> : contracts.isError ? <div className="mt-4"><ErrorState error={contracts.error} onRetry={() => void contracts.refetch()} /></div> : (
             <>
               {contracts.data.data.length > 0 ? (
-                <ul className="mt-4 overflow-hidden rounded-md border border-border bg-card">{contracts.data.data.map((contract) => <ContractRow key={contract.id} contract={contract} />)}</ul>
+                <ul className="mt-4 overflow-hidden rounded-lg border border-border bg-card">{contracts.data.data.map((contract) => <ContractRow key={contract.id} contract={contract} />)}</ul>
               ) : (
                 <div className="mt-4 border-y border-border py-12 text-center">
                   <p className="font-semibold">{awaitingFirstCollection ? 'Primeira coleta ainda não concluída' : 'Nenhum contrato na cobertura consultada'}</p>

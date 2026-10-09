@@ -23,7 +23,7 @@ import { useMarkNotificationsRead, useNotifications, useUnreadCount } from './ho
 
 const PAGE_SIZE = 20;
 
-const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-sm';
+const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-lg';
 
 /** Returns to the last page when the current one empties (after marking read or stopping monitoring). */
 function useClampPage(page: number, totalPages: number | undefined, setPage: (page: number) => void) {
@@ -78,8 +78,8 @@ function NotificationsSection() {
               data-testid={option.value ? 'filter-notifications-unread' : 'filter-notifications-all'}
               onClick={() => filter(option.value)}
               className={cn(
-                'h-7 rounded-md px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring',
-                unreadOnly === option.value && 'bg-surface text-foreground shadow-2xs',
+                'h-7 rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring',
+                unreadOnly === option.value && 'bg-surface text-foreground ',
               )}
             >
               {option.label}
@@ -200,7 +200,7 @@ export default function MonitoringPage() {
   const unread = useUnreadCount();
   const monitoredTotal = useSavedTendersList({ monitored: true, page: 1, pageSize: PAGE_SIZE }).data?.pagination.total;
   const count = (value: number | undefined) =>
-    value ? <span className="ml-1.5 rounded-full bg-accent px-1.5 type-data text-2xs font-bold text-accent-foreground">{formatNumber(value)}</span> : null;
+    value ? <span className="ml-1.5 rounded-pill bg-accent px-1.5 type-data text-xs font-bold text-accent-foreground">{formatNumber(value)}</span> : null;
 
   return (
     <>
@@ -216,7 +216,7 @@ export default function MonitoringPage() {
           </TabsTrigger>
           <TabsTrigger value="monitored" data-testid="tab-monitored" className="type-ui">
             Editais monitorados
-            {monitoredTotal ? <span className="ml-1.5 type-data text-2xs text-muted-foreground">{formatNumber(monitoredTotal)}</span> : null}
+            {monitoredTotal ? <span className="ml-1.5 type-data text-xs text-muted-foreground">{formatNumber(monitoredTotal)}</span> : null}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="notifications" className="mt-0">

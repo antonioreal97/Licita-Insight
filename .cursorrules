@@ -17,7 +17,7 @@ Visão geral e setup: `README.md`. Brief original (intenção): `docs/product-br
 - Tipo `Tender*` no contrato de busca (`src/api/types.ts`, espelha `docs/contracts/search-v1.md`). Os editais vêm da API.
 - Tokens: `src/index.css`; documentação em `design-system/` (raiz).
 - Movimento da landing: composições HyperFrames em `artifacts/licitainsight/motion/<nome>/index.html`, renderizadas com `pnpm --filter @workspace/licitainsight run motion:render` (macOS) para `public/motion/`; editar o HTML e re-renderizar, nunca editar o vídeo. Exceção só da landing em [`design-system/motion.md`](design-system/motion.md).
-- `Button` de produto: `src/components/common/action-button.tsx`. `src/components/ui/*` é kit shadcn interno; não usar `ui/button` nas telas.
+- `Button` único: `src/components/common/action-button.tsx`; link com cara de botão usa `buttonClass(variant, size)` do mesmo arquivo. Não existe `ui/button`; `src/components/ui/*` é o kit shadcn interno (só o que as telas usam).
 
 API (`artifacts/api-server`) lê os editais no Postgres. A UI chama essa API; não há adapter de fixtures.
 

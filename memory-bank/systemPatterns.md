@@ -33,7 +33,7 @@ Código em `artifacts/licitainsight/src/`, organizado por feature. Mapa completo
 - `api/` — tipos do contrato (`types.ts`), `ApiError` e o adapter HTTP. `services/` — `search-service` (normalização, URL ⇄ params) e `query-keys`.
 - `components/common/` — `Button` de produto (`action-button.tsx`), `PageTitle`, estados de carregamento/erro.
 - `components/app-shell.tsx` — sidebar, topbar, tema, persona de demonstração.
-- `components/ui/*` — kit shadcn/Radix. É primitivo interno: telas de produto usam o `Button` de `components/common/action-button.tsx`, nunca `ui/button` direto.
+- `components/ui/*` — kit shadcn/Radix, só com os componentes usados pelas telas. Não há `ui/button`: o único botão é o de `components/common/action-button.tsx`, e links com cara de botão usam `buttonClass()`.
 
 Camadas obrigatórias: componente → hook → service → adapter → API. Componente não importa adapter.
 

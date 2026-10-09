@@ -83,7 +83,7 @@ function ParticipationForm({ current, saving, onSave }: { current: SavedTender; 
         </span>
       </label>
       <div className="flex flex-wrap gap-2 sm:col-span-2">
-        <Button type="submit" disabled={!dirty} loading={saving} className="h-11 sm:h-9" data-testid="button-save-participation">
+        <Button type="submit" variant="dark" disabled={!dirty} loading={saving} className="h-11 sm:h-9" data-testid="button-save-participation">
           Salvar
         </Button>
         {dirty && (
@@ -107,7 +107,7 @@ function History({ history }: { history: SavedTender['history'] }) {
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-1 rounded-sm type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+        className="inline-flex items-center gap-1 rounded-lg type-meta font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
         data-testid="button-stage-history"
       >
         {open ? 'Ocultar histórico' : `Ver histórico (${history.length} mudanças)`}

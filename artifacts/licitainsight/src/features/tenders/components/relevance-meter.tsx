@@ -30,7 +30,7 @@ export function RelevanceMeter({ score, varies, className }: Props) {
         {[1, 2, 3, 4, 5].map((step) => (
           <span
             key={step}
-            className={cn('w-1 rounded-xs', step > filled ? 'bg-border' : best ? 'bg-primary' : 'bg-foreground/70')}
+            className={cn('w-1 rounded-lg', step > filled ? 'bg-border' : best ? 'bg-primary' : 'bg-foreground/70')}
             style={{ height: `${4 + step * 2}px` }}
           />
         ))}

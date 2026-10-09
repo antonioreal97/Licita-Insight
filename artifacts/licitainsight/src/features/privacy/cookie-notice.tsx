@@ -14,7 +14,7 @@ export function CookieNotice() {
         aria-labelledby="cookie-notice-title"
         aria-describedby="cookie-notice-body"
         data-testid="cookie-notice"
-        className="mx-auto flex max-w-3xl flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-lg sm:flex-row sm:items-end sm:p-5"
+        className="mx-auto flex max-w-3xl flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-end sm:p-5"
       >
         <div className="min-w-0">
           <h2 id="cookie-notice-title" className="type-section text-foreground">

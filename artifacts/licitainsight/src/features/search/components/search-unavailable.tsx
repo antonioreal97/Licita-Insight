@@ -28,7 +28,7 @@ export function SearchUnavailable({ onRetry, retrying, requestId }: { onRetry: (
       role="alert"
       data-testid="state-unavailable"
       // Degraded, not an error: neutral surface, a short warning rule on top, warning only on the icon.
-      className="rounded-xl border border-border bg-surface px-5 py-12 text-center before:mx-auto before:mb-6 before:block before:h-0.5 before:w-12 before:rounded-full before:bg-warning sm:px-6"
+      className="rounded-xl border border-border bg-surface px-5 py-12 text-center before:mx-auto before:mb-6 before:block before:h-0.5 before:w-12 before:rounded-pill before:bg-warning sm:px-6"
     >
       <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-warning-subtle text-warning-subtle-foreground">
         <CloudOff size={19} aria-hidden />
@@ -55,7 +55,7 @@ export function SearchUnavailable({ onRetry, retrying, requestId }: { onRetry: (
           Ver editais salvos
         </Link>
       </div>
-      {requestId && <div className="mt-3 type-data text-3xs text-muted-foreground">ref. {requestId}</div>}
+      {requestId && <div className="mt-3 type-data text-xs text-muted-foreground">ref. {requestId}</div>}
     </div>
   );
 }

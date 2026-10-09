@@ -36,11 +36,11 @@ function Section({ title, badge, children, defaultOpen = true }: { title: string
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
-          className="flex min-h-8 w-full items-center gap-2 rounded-sm text-left type-label text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
+          className="flex min-h-8 w-full items-center gap-2 rounded-lg text-left type-label text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring"
         >
           <span className="flex-1">{title}</span>
           {badge ? (
-            <span className="rounded-full bg-primary px-1.5 py-0.5 type-data text-3xs leading-none font-bold text-primary-foreground">{badge}</span>
+            <span className="rounded-pill bg-primary px-1.5 py-0.5 type-data text-xs leading-none font-bold text-primary-foreground">{badge}</span>
           ) : null}
           <ChevronDown size={15} className={`transition-transform duration-fast ease-standard ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
@@ -121,7 +121,7 @@ function FacetGroup({
               <li key={option.value}>
                 <label
                   htmlFor={id}
-                  className={`flex ${row} cursor-pointer items-center gap-2.5 rounded-md px-1.5 type-ui transition-colors duration-fast ease-standard hover:bg-surface-sunken ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
+                  className={`flex ${row} cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui transition-colors duration-fast ease-standard hover:bg-surface-sunken ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
                 >
                   <Checkbox
                     id={id}
@@ -133,7 +133,7 @@ function FacetGroup({
                   <span className="min-w-0 flex-1 truncate" title={option.label}>
                     {option.label}
                   </span>
-                  <span className="shrink-0 type-data text-2xs text-muted-foreground">{countsKnown ? formatNumber(option.count) : '—'}</span>
+                  <span className="shrink-0 type-data text-xs text-muted-foreground">{countsKnown ? formatNumber(option.count) : '—'}</span>
                 </label>
               </li>
             );
@@ -146,7 +146,7 @@ function FacetGroup({
           aria-expanded={expanded}
           aria-controls={groupId}
           onClick={() => setExpanded(!expanded)}
-          className={`mt-1 rounded-sm px-1.5 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'}`}
+          className={`mt-1 rounded-lg px-1.5 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'}`}
         >
           {expanded ? 'Ver menos' : `Ver mais (${hiddenCount})`}
         </button>
@@ -288,7 +288,7 @@ function DeadlineRange({ params, onChange, density }: Pick<PanelProps, 'params' 
               aria-pressed={active}
               data-testid={`button-deadline-${days}`}
               onClick={() => onChange(active ? { deadlineFrom: undefined, deadlineTo: undefined } : { deadlineFrom: today, deadlineTo: end })}
-              className={`rounded-full border px-2.5 type-meta font-semibold transition-colors duration-fast ease-standard focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'} ${active ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:bg-surface-sunken hover:text-foreground'}`}
+              className={`rounded-pill border px-2.5 type-meta font-semibold transition-colors duration-fast ease-standard focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'} ${active ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:bg-surface-sunken hover:text-foreground'}`}
             >
               Próx. {label}
             </button>
@@ -333,11 +333,11 @@ function PanelSkeleton() {
     <div aria-hidden className="space-y-6 py-4">
       {Array.from({ length: 4 }, (_, group) => (
         <div key={group} className="space-y-2">
-          <div className="h-3 w-20 animate-pulse rounded-sm bg-muted" />
+          <div className="h-3 w-20 animate-pulse rounded-lg bg-muted" />
           {Array.from({ length: 4 }, (_, row) => (
             <div key={row} className="flex items-center gap-2">
-              <div className="h-4 w-4 animate-pulse rounded-sm bg-muted" />
-              <div className="h-3 flex-1 animate-pulse rounded-sm bg-muted" />
+              <div className="h-4 w-4 animate-pulse rounded-lg bg-muted" />
+              <div className="h-3 flex-1 animate-pulse rounded-lg bg-muted" />
             </div>
           ))}
         </div>
@@ -352,7 +352,7 @@ function NewOnlyFilter({ params, facets, onChange, density }: Pick<PanelProps, '
     <Section title="Entrada no Pardal" badge={params.newOnly ? 1 : 0}>
       <label
         htmlFor={id}
-        className={`flex ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'} cursor-pointer items-center gap-2.5 rounded-md px-1.5 type-ui text-foreground transition-colors duration-fast ease-standard hover:bg-surface-sunken`}
+        className={`flex ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'} cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui text-foreground transition-colors duration-fast ease-standard hover:bg-surface-sunken`}
       >
         <Checkbox
           id={id}
@@ -362,7 +362,7 @@ function NewOnlyFilter({ params, facets, onChange, density }: Pick<PanelProps, '
           className="border-input data-[state=checked]:border-primary"
         />
         <span className="min-w-0 flex-1">Novos (24 h)</span>
-        <span className="shrink-0 type-data text-2xs text-muted-foreground">{facets ? formatNumber(facets.newCount) : '—'}</span>
+        <span className="shrink-0 type-data text-xs text-muted-foreground">{facets ? formatNumber(facets.newCount) : '—'}</span>
       </label>
     </Section>
   );

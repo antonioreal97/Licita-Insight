@@ -83,7 +83,7 @@ function Passage({ passage, stems, id }: { passage: AskTenderPassage; stems: Set
       <blockquote className="border-l-2 border-primary/50 pl-3 type-body break-words text-foreground/90">
         {markQuestionTerms(passage.text, stems).map((part, index) =>
           part.match ? (
-            <mark key={index} className="rounded-sm bg-primary/15 px-0.5 text-inherit">
+            <mark key={index} className="rounded-lg bg-primary/15 px-0.5 text-inherit">
               {part.text}
             </mark>
           ) : (
@@ -270,7 +270,7 @@ function AskForm({ tenderId, status }: { tenderId: string; status: TenderAskStat
                   setDraft(suggestion);
                   inputRef.current?.focus();
                 }}
-                className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
+                className="rounded-pill border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
               >
                 {suggestion}
               </button>
