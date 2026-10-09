@@ -4,22 +4,59 @@ import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 import silhouetteSvg from '../../../../public/brand/pardal-silhueta.svg?raw';
 import { cn } from '@/lib/utils';
 import { createPardalScrollMemory, PARDAL_MOMENT_ATTRIBUTE, resolvePardalScroll, type PardalScrollMemory } from './pardal-flight-scroll';
+import {
+  advanceWingPhase,
+  mirrorWingPose,
+  REST_BEAT_HZ,
+  resolveFlight,
+  resolveFlightPoint,
+  resolveRestDrive,
+  resolveWingBeat,
+  resolveWingPose,
+  type PardalFlight,
+  type WingBeat,
+  type WingPose,
+} from './pardal-flight-wings';
 
 /**
  * Para criar um momento de aproximação, adicione `data-pardal-momento` à `<section>` de destino em
  * `landing-page.tsx`; remova o atributo para a fronteira voltar ao scroll normal. A marcação é opt-in e o momento
  * acompanha a posição da fronteira tanto na descida quanto na subida.
+ *
+ * As asas vêm do próprio logo: o grupo `asa` do SVG (`asa-curva` + `asa-pena`) é a asa de perto e uma cópia espelhada
+ * no plano do corpo é a de longe. Dobradas, as duas coincidem e o desenho é o logo oficial. A matemática da batida e
+ * da trajetória fica em `pardal-flight-wings.ts`.
  */
 
 const VIEWBOX_WIDTH = 312;
+const VIEWBOX_HEIGHT = 200;
 const DEPTH = 16;
 const CONTENT_MAX = 1280;
 const CONTENT_PADDING = 32;
 // Largest circle inside `corpo-cheio` (viewBox units). The approach zooms on its center; once it covers the viewport
 // diagonal, the screen is all body color.
 const BODY_INNER = { x: 779, y: 330, radius: 58 };
+// The logo wing in viewBox units: its root is the shoulder, at the front of `asa-curva`, and its span runs back to
+// the middle of the two tips (`asa-curva` and `asa-pena`).
+const WING_ROOT = { x: 806, y: 314 };
+const WING_TIP = { x: 660, y: 364 };
+// Attitude while the bird heads for the viewer: beak turned to the camera, back slightly tipped into view.
+const HEADING_YAW = THREE.MathUtils.degToRad(42);
+const HEADING_TILT = THREE.MathUtils.degToRad(10);
+// Each beat rocks the body and lifts it by a share of its own height.
+const BEAT_ROCK = THREE.MathUtils.degToRad(5);
+const BEAT_BOB = 0.07;
+// The approach runs along the section boundary, in the empty band made by the padding of the two sections.
+const BAND_OFFSET = 28;
+const BAND_MARGIN = 48;
+// Page scroll speed (px/s) at which the resting bird's slow beat is fully on.
+const FLUTTER_SCROLL_SPEED = 900;
 // Logo ink per theme (`--petroleo`, `--lima-marca`); the extruded sides use a second palette color so depth reads.
 const inkFor = (dark: boolean) => (dark ? { face: 0xbfe17c, side: 0x9ed6d1 } : { face: 0x164c49, side: 0xb8cda5 });
+
+const AXIS_X = new THREE.Vector3(1, 0, 0);
+const AXIS_Z = new THREE.Vector3(0, 0, 1);
+const FOLDED: WingPose = { sweep: 0, flap: 0, twist: 0, lift: 0 };
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smoothstep = (edge0: number, edge1: number, x: number) => {
@@ -55,7 +92,8 @@ function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material, f
   const content = new THREE.Group();
   content.scale.y = -1;
   content.position.set(-center.x, center.y, -DEPTH / 2);
-  // Strokes draw after the fill: while they fade out they still write depth and would otherwise punch holes in it.
+  // Draw order: far wing, body fill, then the strokes and the near wing. The fill ignores depth, so it covers the far
+  // wing like a solid body would and the strokes fading out on top of it never punch holes in it.
   const stroke = (g: THREE.BufferGeometry) => {
     const mesh = new THREE.Mesh(g, materials);
     mesh.renderOrder = 1;
@@ -65,31 +103,52 @@ function buildBird(faceMaterial: THREE.Material, sideMaterial: THREE.Material, f
   fillGeometries.forEach((g) => {
     const fill = new THREE.Mesh(g, fillMaterial);
     fill.position.z = DEPTH / 2;
+    fill.renderOrder = 0.5;
     content.add(fill);
   });
 
-  // The wing hinges on its top edge, so a rotation around x lifts it out of the logo plane.
-  const hinge = new THREE.Vector3(wingBounds.getCenter(new THREE.Vector3()).x, wingBounds.min.y, 0);
-  const wingPivot = new THREE.Group();
-  wingPivot.position.copy(hinge);
-  wingGeometries.forEach((g) => {
-    const mesh = stroke(g);
-    mesh.position.set(-hinge.x, -hinge.y, 0);
-    wingPivot.add(mesh);
+  // Both wings pivot on the shoulder, in the middle plane of the body. `side` is the face of the logo each one opens
+  // to; folded, the two are the same drawing.
+  const root = new THREE.Vector3(WING_ROOT.x, WING_ROOT.y, DEPTH / 2);
+  const span = new THREE.Vector3(WING_TIP.x - WING_ROOT.x, WING_TIP.y - WING_ROOT.y, 0).normalize();
+  // In the logo plane, square to the span: turning around it swings the wing out of the plane.
+  const hinge = new THREE.Vector3(-span.y, span.x, 0);
+  const wings = ([1, -1] as const).map((side) => {
+    const pivot = new THREE.Group();
+    pivot.position.copy(root);
+    const meshes = wingGeometries.map((g) => {
+      const mesh = stroke(g);
+      mesh.position.copy(root).negate();
+      pivot.add(mesh);
+      return mesh;
+    });
+    content.add(pivot);
+    return { pivot, meshes, side };
   });
-  content.add(wingPivot);
+  const turn = new THREE.Quaternion();
+  const poseWings = (pose: WingPose) =>
+    wings.forEach(({ pivot, side }) => {
+      const { lift, flap, sweep, twist } = mirrorWingPose(pose, side);
+      pivot.quaternion
+        .setFromAxisAngle(AXIS_Z, lift)
+        .multiply(turn.setFromAxisAngle(AXIS_X, flap))
+        .multiply(turn.setFromAxisAngle(hinge, sweep))
+        .multiply(turn.setFromAxisAngle(span, twist));
+    });
 
   const bird = new THREE.Group();
   bird.add(content);
   const zoomCenter = new THREE.Vector3(BODY_INNER.x - center.x, center.y - BODY_INNER.y, 0);
-  return { bird, wingPivot, zoomCenter, geometries: [...bodyGeometries, ...wingGeometries, ...fillGeometries] };
+  return { bird, wings, poseWings, zoomCenter, geometries: [...bodyGeometries, ...wingGeometries, ...fillGeometries] };
 }
 
 /**
- * Decorative 3D pardal tied to the landing scroll. At opted-in moments it flies at the camera, its body filling with
- * the destination section's background, until that color covers the screen. On wide screens it rests in a side
- * gutter between moments. Renders on demand (scroll, resize, theme), never in an idle loop. With reduced motion it is
- * drawn once, perched next to the hero headline, without flight or curtain.
+ * Decorative 3D pardal tied to the landing scroll. At opted-in moments it flaps its way from the back of the scene to
+ * the camera, opens its wings to glide when it gets near, and its body fills with the destination section's background
+ * until that color covers the screen. The flight follows the scroll position in both directions; only the wing beat
+ * runs on time, and only while a flight is on screen. On wide screens it rests in a side gutter between moments, wings
+ * folded while the page is still. Renders on demand (scroll, resize, theme), never in an idle loop. With reduced motion
+ * it is drawn once, perched next to the hero headline, without flight, wing beat or curtain.
  */
 export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean; wide: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,10 +162,10 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     const ink = inkFor(isDark());
     const faceMaterial = new THREE.MeshBasicMaterial({ color: ink.face, side: THREE.DoubleSide, transparent: true });
     const sideMaterial = new THREE.MeshBasicMaterial({ color: ink.side, side: THREE.DoubleSide, transparent: true });
-    const fillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0 });
+    const fillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
     const coverMaterial = new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false });
     const coverGeometry = new THREE.PlaneGeometry(1, 1);
-    const { bird, wingPivot, zoomCenter, geometries } = buildBird(faceMaterial, sideMaterial, fillMaterial);
+    const { bird, wings, poseWings, zoomCenter, geometries } = buildBird(faceMaterial, sideMaterial, fillMaterial);
     const disposeAll = () => {
       [...geometries, coverGeometry].forEach((g) => g.dispose());
       [faceMaterial, sideMaterial, fillMaterial, coverMaterial].forEach((m) => m.dispose());
@@ -209,10 +268,22 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       sideMaterial.color.setHex(next.side);
     };
 
-    const state = { x: 0, y: 0, opacity: 0, vx: 0, vy: 0, flapAmp: 0, flapPhase: 0, progress: 0 };
+    const state = {
+      x: 0,
+      y: 0,
+      opacity: 0,
+      vx: 0,
+      vy: 0,
+      progress: 0,
+      section: null as HTMLElement | null,
+      beatPhase: 0,
+      flutter: 0,
+      scrollY: window.scrollY,
+    };
     type Goal = ReturnType<typeof target>;
+    const approaching = () => state.section !== null && state.progress > 0.002 && state.progress < 1.998;
 
-    const place = (goal: Goal) => {
+    const place = (goal: Goal, flight: PardalFlight | null, beat: WingBeat) => {
       cover.visible = goal.curtain !== null;
       if (goal.curtain) {
         coverMaterial.color.copy(goal.curtain.color);
@@ -220,31 +291,34 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         cover.position.set(width / 2, -goal.curtain.top / 2, 0);
       }
 
-      const section = goal.activeSection;
-      const local = state.progress;
-      if (local > 0.002 && local < 1.998 && section) {
-        // Flying at the camera: the body's inner circle travels to the middle of the screen while the bird grows
-        // exponentially. The logo strokes fade before the peak so only the next section's color is left on screen, and the
-        // cover completes before the boundary so the screen holds one solid color for a moment.
-        const a = clamp01(local / 0.9);
+      const section = state.section;
+      if (flight && section) {
+        // Flying at the camera: the bird dives to the band at the boundary, runs along it to the middle of the screen
+        // and grows exponentially until the body's inner circle covers the viewport. The logo strokes fade before the
+        // peak so only the next section's color is left on screen, and the cover completes before the boundary so the
+        // screen holds one solid color for a moment.
         const surface = surfaceOf(section);
         const startScale = goal.size / VIEWBOX_WIDTH;
         const coverScale = (1.05 * Math.hypot(width, height)) / 2 / BODY_INNER.radius;
-        const startX = wide ? goal.x : width * 0.5;
-        const startY = wide ? goal.y : height * 0.85;
-        const glide = smoothstep(0, 1, a);
-        const fade = 1 - clamp01(local - 1);
+        const scale = startScale * Math.pow(coverScale / startScale, flight.depth);
         if (inverseInk !== surface.inverse) paint(surface.inverse);
         fillMaterial.color.copy(surface.color);
-        fillMaterial.opacity = smoothstep(0.1, 0.45, a) * fade;
-        const opacity = (wide ? 1 : smoothstep(0, 0.15, a)) * (1 - smoothstep(0.7, 0.97, a));
+        fillMaterial.opacity = flight.fill;
+        const opacity = (wide ? 1 : smoothstep(0, 0.15, flight.approach)) * flight.ink;
         faceMaterial.opacity = opacity;
         sideMaterial.opacity = opacity;
-        bird.scale.setScalar(startScale * Math.pow(coverScale / startScale, a * a * a));
+        bird.scale.setScalar(scale);
         bird.position.set(0, 0, 0);
         bird.updateMatrix();
         const zoomOffset = zoomCenter.clone().applyMatrix4(bird.matrix);
-        bird.position.set(startX + (width / 2 - zoomOffset.x - startX) * glide, -startY + (-height / 2 - zoomOffset.y + startY) * glide, 0);
+        const bandY = Math.min(height - BAND_MARGIN, section.getBoundingClientRect().top + BAND_OFFSET);
+        const point = resolveFlightPoint(flight, {
+          start: wide ? { x: goal.x, y: goal.y } : { x: width / 2, y: bandY },
+          end: { x: width / 2 - zoomOffset.x, y: height / 2 + zoomOffset.y },
+          bandY,
+        });
+        const bob = BEAT_BOB * VIEWBOX_HEIGHT * scale * beat.heave * flight.spread * (1 - flight.glide);
+        bird.position.set(point.x, bob - point.y, 0);
         bird.visible = true;
         return;
       }
@@ -266,12 +340,24 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       const goal = target();
       const follow = 1 - Math.exp(-dt * 7);
 
-      // While the screen is covered, the gutter bird jumps to its new side unseen and fades back in afterwards.
-      const previousProgress = state.progress;
-      state.progress = goal.progress;
+      // A wheel step jumps a third of a moment at once: the flight eases to the scroll position instead of teleporting,
+      // and finishes its way out when the moment ends mid-air.
+      const live = goal.activeSection;
+      if (live && live !== state.section) {
+        state.section = live;
+        state.progress = goal.progress < 1 ? 0 : 2;
+      }
+      const aim = live ? goal.progress : state.progress < 1 ? 0 : 2;
+      state.progress += (aim - state.progress) * (1 - Math.exp(-dt * 10));
+      if (!live && Math.abs(aim - state.progress) < 0.002) {
+        state.section = null;
+        state.progress = 0;
+      }
       const local = state.progress;
-      const approaching = goal.activeSection !== null && local > 0.002 && local < 1.998;
-      const hidden = goal.activeSection !== null && local > 0.9;
+      const flight = approaching() ? resolveFlight(local) : null;
+
+      // While the screen is covered, the gutter bird jumps to its new side unseen and fades back in afterwards.
+      const hidden = state.section !== null && local > 0.9;
       const nextX = hidden ? goal.x : state.x + (goal.x - state.x) * follow;
       const nextY = hidden ? goal.y : state.y + (goal.y - state.y) * follow;
       const targetOpacity = hidden ? 0 : goal.opacity;
@@ -280,37 +366,51 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       state.x = nextX;
       state.y = nextY;
       state.opacity += (targetOpacity - state.opacity) * follow;
-      const approachSpeed = Math.abs(goal.progress - previousProgress) / dt;
 
-      // At cover scale any turn or tilt would sweep the body off screen, so the approach flies flat and keeps its side.
-      const facing = !approaching && Math.abs(state.vx) > 30 ? Math.sign(state.vx) : goal.facing;
+      // Wing beat: timed by the flight while approaching; at rest, a slow shallow beat only while the page scrolls.
+      const scrollSpeed = Math.abs(window.scrollY - state.scrollY) / dt;
+      state.scrollY = window.scrollY;
+      const flutterAim = flight || state.opacity < 0.5 ? 0 : Math.min(1, scrollSpeed / FLUTTER_SCROLL_SPEED);
+      state.flutter += (flutterAim - state.flutter) * (1 - Math.exp(-dt * (flutterAim > state.flutter ? 8 : 2.5)));
+      const rest = resolveRestDrive(state.flutter);
+      state.beatPhase = advanceWingPhase(state.beatPhase, flight ? flight.beatHz : REST_BEAT_HZ, dt);
+      const beat = resolveWingBeat(state.beatPhase);
+      poseWings(resolveWingPose(flight ? { ...flight, flick: rest.flick } : rest, beat));
+
+      const facing = !flight && Math.abs(state.vx) > 30 ? Math.sign(state.vx) : goal.facing;
       const turn = (facing > 0 ? 0 : Math.PI) - bird.rotation.y;
-      if (approaching) {
-        bird.rotation.set(0, facing > 0 ? 0 : Math.PI, 0);
+      if (flight) {
+        // At cover scale any turn or tilt would sweep the body off screen, so the heading is back to flat by then.
+        bird.rotation.set(
+          HEADING_TILT * flight.heading,
+          (facing > 0 ? 0 : Math.PI) - facing * HEADING_YAW * flight.heading,
+          BEAT_ROCK * beat.heave * flight.spread * (1 - flight.glide),
+        );
       } else {
         bird.rotation.y += turn * follow;
         bird.rotation.z += (THREE.MathUtils.clamp(-state.vy * 0.0012, -0.4, 0.4) * facing - bird.rotation.z) * follow;
         bird.rotation.x += (THREE.MathUtils.clamp(state.vx * 0.0006, -0.5, 0.5) - bird.rotation.x) * follow;
       }
+      // The wing on the far side of the body draws first, so the body fill covers it.
+      const front = Math.cos(bird.rotation.y) > 0 ? 1 : -1;
+      wings.forEach(({ meshes, side }) => meshes.forEach((mesh) => (mesh.renderOrder = side === front ? 1 : 0)));
 
-      const speed = hidden ? 0 : Math.hypot(state.vx, state.vy) + approachSpeed * 400;
-      state.flapAmp += (Math.min(0.9, speed / 500) - state.flapAmp) * follow;
-      state.flapPhase += dt * 16;
-      wingPivot.rotation.x = Math.sin(state.flapPhase) * state.flapAmp;
-
-      place(goal);
+      place(goal, flight, beat);
       renderer.render(scene, camera);
+      const flying = flight?.flying ?? false;
       const settled =
+        !flying &&
         Math.abs(goal.x - state.x) < 0.3 &&
         Math.abs(goal.y - state.y) < 0.3 &&
         Math.abs(targetOpacity - state.opacity) < 0.01 &&
-        Math.abs(goal.progress - state.progress) < 0.001 &&
-        Math.abs(turn) < 0.01 &&
-        Math.abs(bird.rotation.x) + Math.abs(bird.rotation.z) < 0.01 &&
-        state.flapAmp < 0.01;
+        Math.abs(aim - state.progress) < 0.001 &&
+        (approaching() || (Math.abs(turn) < 0.01 && Math.abs(bird.rotation.x) + Math.abs(bird.rotation.z) < 0.01)) &&
+        state.flutter < 0.01;
       if (settled) {
-        wingPivot.rotation.x = 0;
-        renderer.render(scene, camera);
+        if (!approaching()) {
+          poseWings(FOLDED);
+          renderer.render(scene, camera);
+        }
         frame = 0;
         last = 0;
         return;
@@ -320,9 +420,10 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
 
     const drawStill = () => {
       const goal = target();
-      Object.assign(state, { x: goal.x, y: goal.y, opacity: goal.opacity, progress: 0 });
+      Object.assign(state, { x: goal.x, y: goal.y, opacity: goal.opacity, progress: 0, section: null });
       bird.rotation.set(0, goal.facing > 0 ? 0 : Math.PI, 0);
-      place(goal);
+      poseWings(FOLDED);
+      place(goal, null, resolveWingBeat(0));
       renderer.render(scene, camera);
     };
 
@@ -347,7 +448,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     if (!reducedMotion) window.addEventListener('scroll', kick, { passive: true });
 
     const start = target();
-    Object.assign(state, { x: start.x, y: start.y, progress: start.progress });
+    Object.assign(state, { x: start.x, y: start.y, progress: start.progress, section: start.activeSection });
     bird.rotation.y = start.facing > 0 ? 0 : Math.PI;
     kick();
 
