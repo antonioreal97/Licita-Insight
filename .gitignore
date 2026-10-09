@@ -58,3 +58,4 @@ Thumbs.db
 
 # Prévias e saídas locais geradas por ferramentas
 Claude outputs/
+__pycache__/
