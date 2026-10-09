@@ -34,7 +34,8 @@ type Recommendation = {
       | "search"
       | "location"
       | "organization"
-      | "value";
+      | "value"
+      | "platform";
     text: string;
   }>;
   generatedAt: string;
@@ -51,6 +52,7 @@ O perfil de interesse materializado mantém os 30 termos mais fortes e até 20 c
 - monitorado: `10`; salvo: `6`;
 - busca salva: `3`;
 - busca opt-in: `1,5 × decaimento`; detalhe opt-in: `2 × decaimento`.
+- plataforma cadastrada (`registeredPlatforms` do perfil): `+6` e motivo `platform`, só como desempate — vale apenas para candidatos que já têm outro motivo; sozinha nunca recomenda um edital.
 
 Eventos usam meia-vida de 30 dias (`2^(-idade/30)`). Termos genéricos de contratação e stopwords portuguesas são eliminados. Sinais escolhidos explicitamente no perfil têm prioridade sobre termos inferidos da descrição e do histórico. Monitorados valem mais do que salvos. O feedback preserva termos/categorias do edital para penalizar semelhantes mesmo depois da próxima atualização.
 

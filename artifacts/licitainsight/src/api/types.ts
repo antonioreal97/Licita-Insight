@@ -30,6 +30,7 @@ export type TenderSearchParams = {
   organizationId?: string[];
   sourceId?: string[];
   category?: string[];
+  platform?: string[];
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: string;
@@ -54,7 +55,20 @@ export type SearchFacets = {
   valueRange: { min: number | null; max: number | null; histogram?: { from: number; to: number; count: number }[] };
   // v1.1 (optional so older servers stay valid)
   city?: FacetBucket[];
-  groupTotals?: Record<'status' | 'modality' | 'state' | 'source' | 'category' | 'organization', number>;
+  /** Optional so servers before the platform column stay valid. */
+  platform?: FacetBucket[];
+  groupTotals?: Partial<Record<'status' | 'modality' | 'state' | 'source' | 'category' | 'organization' | 'platform', number>>;
+};
+
+/**
+ * Where the dispute happens, normalized from the PNCP publishing system. Only `platform` is a known
+ * bidding room; `source_system` is management software that published the tender, not the room.
+ */
+export type TenderPlatform = {
+  slug: string;
+  label: string;
+  kind: 'platform' | 'source_system' | 'other' | 'unknown';
+  url: string | null;
 };
 
 export type Highlight = { field: 'title' | 'objectSummary' | 'items'; fragments: string[] };
@@ -81,6 +95,8 @@ export type TenderSummary = {
   proposalDeadline: string | null;
   location: { state: string | null; city: string | null; cityIbgeCode: string | null };
   source: { id: string; name: string; url: string | null };
+  /** Null until the tender is ingested or backfilled with the platform column. */
+  platform?: TenderPlatform | null;
   categories: { slug: string; label: string }[];
   relevance: { score: number | null; highlights: Highlight[] };
   updatedAt: string;
@@ -462,7 +478,7 @@ export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferenc
 
 export type RecommendationPreferences = { personalizationEnabled: boolean; updatedAt: string | null };
 export type RecommendationReason = {
-  kind: 'profile' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value';
+  kind: 'profile' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value' | 'platform';
   text: string;
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
@@ -563,6 +579,19 @@ export type TenderSheet = {
   documentReading: DocumentReadingSummary;
   model: string | null;
   generatedAt: string | null;
+  /** Prior registration clause found by rules in the edital text; absent on older servers. */
+  registrationRequirement?: RegistrationRequirement | null;
+};
+
+export type RegistrationRequirement = {
+  /** Systems named in the clause; empty when the edital only says "plataforma". */
+  systems: { slug: string; label: string }[];
+  businessDaysBefore: number | null;
+  /** Proposal deadline the count starts from (YYYY-MM-DD). */
+  referenceDate: string | null;
+  /** Counting weekends and national holidays only (YYYY-MM-DD). */
+  deadline: string | null;
+  evidence: SheetEvidence;
 };
 
 // Aderência (CODEX_HANDOFF-013, proposal): company profile × tender. Rules run in code; Jev only judges the semantic match.
@@ -584,6 +613,8 @@ export type CompanyProfileInput = {
   selectedKeywords: string[];
   /** Materialized vocabulary terms that must remove candidates. */
   excludedKeywords: string[];
+  /** Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Does not affect the fit. */
+  registeredPlatforms: string[];
   coverage: CompanyCoverage;
   /** Reais; either side may be open. */
   valueRange: { min: number | null; max: number | null };
@@ -597,6 +628,15 @@ export type CompanyProfileResponse = { profile: CompanyProfile | null };
 
 export type ProfileCategory = { slug: string; label: string; openTenderCount: number };
 export type ProfileCategoriesResponse = { data: ProfileCategory[] };
+/** `openTenderCount` is null for SICAF, a registry rather than a bidding room. */
+export type ProfilePlatform = {
+  slug: string;
+  label: string;
+  url: string | null;
+  kind: 'platform' | 'registry';
+  openTenderCount: number | null;
+};
+export type ProfilePlatformsResponse = { data: ProfilePlatform[] };
 export type ProfileKeywordSuggestion = {
   normalizedTerm: string;
   displayTerm: string;

@@ -232,6 +232,13 @@
       "when": 1791482401000,
       "tag": "0032_recommendation_interests",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791482402000,
+      "tag": "0033_tender_platform",
+      "breakpoints": true
     }
   ]
 }

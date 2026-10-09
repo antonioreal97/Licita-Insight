@@ -24,7 +24,8 @@ export type RecommendationReason = {
     | "search"
     | "location"
     | "organization"
-    | "value";
+    | "value"
+    | "platform";
   text: string;
 };
 
@@ -45,6 +46,8 @@ export type RecommendationInterestProfile = {
   coverageStates: string[];
   exclusions: string[];
   companySize: "me_epp" | "cooperative" | "other" | null;
+  /** Absent in profiles rebuilt before platforms existed. */
+  registeredPlatforms?: string[];
   signalCount: number;
 };
 

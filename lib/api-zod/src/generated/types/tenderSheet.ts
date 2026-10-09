@@ -7,6 +7,7 @@
  */
 import type { DocumentReadingSummary } from './documentReadingSummary';
 import type { QualificationItem } from './qualificationItem';
+import type { RegistrationRequirement } from './registrationRequirement';
 import type { SheetField } from './sheetField';
 import type { TenderAskIndexStatus } from './tenderAskIndexStatus';
 
@@ -22,4 +23,5 @@ export interface TenderSheet {
   model: string | null;
   /** @nullable */
   generatedAt: Date | null;
+  registrationRequirement: RegistrationRequirement | null;
 }

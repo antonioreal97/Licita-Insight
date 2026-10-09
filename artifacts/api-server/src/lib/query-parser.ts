@@ -14,6 +14,7 @@ const arrayFields = [
   "organizationId",
   "sourceId",
   "category",
+  "platform",
 ] as const;
 
 const dateFields = [
@@ -102,6 +103,7 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
     organizationId: result.data.organizationId ?? [],
     sourceId: result.data.sourceId ?? [],
     category: result.data.category ?? [],
+    platform: result.data.platform ?? [],
     valueMin: result.data.valueMin,
     valueMax: result.data.valueMax,
     publishedFrom: result.data.publishedFrom,

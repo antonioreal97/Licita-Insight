@@ -10,6 +10,7 @@ const repeated = new Set([
   "organizationId",
   "sourceId",
   "category",
+  "platform",
 ]);
 
 const allowed = new Set([
@@ -71,6 +72,7 @@ export const canonicalSearchQuery = (
   appendValues(canonical, "organizationId", criteria.organizationId);
   appendValues(canonical, "sourceId", criteria.sourceId);
   appendValues(canonical, "category", criteria.category);
+  appendValues(canonical, "platform", criteria.platform);
   if (criteria.valueMin !== undefined)
     canonical.set("valueMin", String(criteria.valueMin));
   if (criteria.valueMax !== undefined)

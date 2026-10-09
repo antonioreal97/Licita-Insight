@@ -20,6 +20,7 @@ export const aiService = {
   saveCompanyProfile: (profile: CompanyProfileInput) => aiAdapter.saveCompanyProfile(profile),
   deleteCompanyProfile: () => aiAdapter.deleteCompanyProfile(),
   listProfileCategories: (signal?: AbortSignal) => aiAdapter.listProfileCategories(signal),
+  listProfilePlatforms: (signal?: AbortSignal) => aiAdapter.listProfilePlatforms(signal),
   suggestProfileKeywords: (query: string, signal?: AbortSignal) => aiAdapter.suggestProfileKeywords(query, signal),
   suggestProfileFiltersFromDescription: (description: string, signal?: AbortSignal) => aiAdapter.suggestProfileFiltersFromDescription(description, signal),
   /** Sorted and de-duplicated so the cache key does not depend on list order. */

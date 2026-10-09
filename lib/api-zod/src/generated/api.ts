@@ -33,6 +33,7 @@ export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 
+
 export const searchTendersQueryValueMinMin = 0;
 
 export const searchTendersQueryValueMaxMin = 0;
@@ -55,6 +56,7 @@ export const SearchTendersQueryParams = zod.object({
   "organizationId": zod.array(zod.coerce.string().min(1)).optional(),
   "sourceId": zod.array(zod.coerce.string().min(1)).optional(),
   "category": zod.array(zod.coerce.string().min(1)).optional(),
+  "platform": zod.array(zod.coerce.string().min(1)).optional().describe('Normalized bidding platform slug (`TenderPlatform.slug`).'),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
   "publishedFrom": zod.date().optional().describe('Inclusive lower publication date in America/Sao_Paulo.'),
@@ -86,6 +88,8 @@ export const searchTendersResponseFacetsOneCategoryItemCountMin = 0;
 
 export const searchTendersResponseFacetsOneOrganizationItemCountMin = 0;
 
+export const searchTendersResponseFacetsOnePlatformItemCountMin = 0;
+
 export const searchTendersResponseFacetsOneGroupTotalsStatusMin = 0;
 
 export const searchTendersResponseFacetsOneGroupTotalsModalityMin = 0;
@@ -97,6 +101,8 @@ export const searchTendersResponseFacetsOneGroupTotalsSourceMin = 0;
 export const searchTendersResponseFacetsOneGroupTotalsCategoryMin = 0;
 
 export const searchTendersResponseFacetsOneGroupTotalsOrganizationMin = 0;
+
+export const searchTendersResponseFacetsOneGroupTotalsPlatformMin = 0;
 
 export const searchTendersResponseFacetsOneValueRangeHistogramItemFromMin = 0;
 
@@ -142,6 +148,12 @@ export const SearchTendersResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -198,13 +210,19 @@ export const SearchTendersResponse = zod.object({
   "label": zod.string(),
   "count": zod.number().int().min(searchTendersResponseFacetsOneOrganizationItemCountMin)
 })).describe('Top 20 plus every organization selected in the request.'),
+  "platform": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchTendersResponseFacetsOnePlatformItemCountMin)
+})).describe('Normalized bidding platform (`TenderPlatform.slug`) with its label.'),
   "groupTotals": zod.object({
   "status": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsStatusMin),
   "modality": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsModalityMin),
   "state": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsStateMin),
   "source": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsSourceMin),
   "category": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsCategoryMin),
-  "organization": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsOrganizationMin)
+  "organization": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsOrganizationMin),
+  "platform": zod.number().int().min(searchTendersResponseFacetsOneGroupTotalsPlatformMin)
 }).optional(),
   "valueRange": zod.object({
   "min": zod.number().nullable(),
@@ -272,6 +290,12 @@ export const GetTenderByIdResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -644,6 +668,8 @@ export const getTenderSheetResponseDocumentReadingTotalMin = 0;
 
 
 
+
+
 export const GetTenderSheetResponse = zod.object({
   "status": zod.enum(['not_started', 'processing', 'ocr_processing', 'ready', 'failed', 'no_documents', 'unsupported', 'expired']),
   "fields": zod.array(zod.object({
@@ -680,7 +706,22 @@ export const GetTenderSheetResponse = zod.object({
 }))
 }),
   "model": zod.string().nullable(),
-  "generatedAt": zod.coerce.date().nullable()
+  "generatedAt": zod.coerce.date().nullable(),
+  "registrationRequirement": zod.union([zod.object({
+  "systems": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "businessDaysBefore": zod.number().int().min(1).nullable(),
+  "referenceDate": zod.coerce.date().nullable(),
+  "deadline": zod.coerce.date().nullable(),
+  "evidence": zod.object({
+  "documentTitle": zod.string(),
+  "documentUrl": zod.string().url(),
+  "page": zod.number().int().min(1),
+  "text": zod.string()
+})
+}).describe('Prior registration clause found by rules in the indexed edital text (no AI call). The deadline counts back from the proposal deadline skipping weekends and national holidays only.'),zod.null()])
 })
 
 
@@ -714,6 +755,8 @@ export const getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax = 80;
 
 export const getCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
 
+export const getCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax = 80;
+
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -734,6 +777,7 @@ export const GetCompanyProfileResponse = zod.object({
   "selectedCategories": zod.array(zod.string().min(1).max(getCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax)).max(getCompanyProfileResponseProfileOneOneSelectedCategoriesMax),
   "selectedKeywords": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin).max(getCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax)).max(getCompanyProfileResponseProfileOneOneSelectedKeywordsMax),
   "excludedKeywords": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
+  "registeredPlatforms": zod.array(zod.string().min(1).max(getCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -782,6 +826,8 @@ export const putCompanyProfileBodyExcludedKeywordsItemMax = 80;
 
 export const putCompanyProfileBodyExcludedKeywordsMax = 20;
 
+export const putCompanyProfileBodyRegisteredPlatformsItemMax = 80;
+
 export const putCompanyProfileBodyCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileBodyCoverageTwoStatesItemMax = 2;
 
@@ -800,6 +846,7 @@ export const PutCompanyProfileBody = zod.object({
   "selectedCategories": zod.array(zod.string().min(1).max(putCompanyProfileBodySelectedCategoriesItemMax)).max(putCompanyProfileBodySelectedCategoriesMax),
   "selectedKeywords": zod.array(zod.string().min(putCompanyProfileBodySelectedKeywordsItemMin).max(putCompanyProfileBodySelectedKeywordsItemMax)).max(putCompanyProfileBodySelectedKeywordsMax),
   "excludedKeywords": zod.array(zod.string().min(putCompanyProfileBodyExcludedKeywordsItemMin).max(putCompanyProfileBodyExcludedKeywordsItemMax)).max(putCompanyProfileBodyExcludedKeywordsMax),
+  "registeredPlatforms": zod.array(zod.string().min(1).max(putCompanyProfileBodyRegisteredPlatformsItemMax)).optional().describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -840,6 +887,8 @@ export const putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax = 80;
 
 export const putCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
 
+export const putCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax = 80;
+
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -860,6 +909,7 @@ export const PutCompanyProfileResponse = zod.object({
   "selectedCategories": zod.array(zod.string().min(1).max(putCompanyProfileResponseProfileOneOneSelectedCategoriesItemMax)).max(putCompanyProfileResponseProfileOneOneSelectedCategoriesMax),
   "selectedKeywords": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMin).max(putCompanyProfileResponseProfileOneOneSelectedKeywordsItemMax)).max(putCompanyProfileResponseProfileOneOneSelectedKeywordsMax),
   "excludedKeywords": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
+  "registeredPlatforms": zod.array(zod.string().min(1).max(putCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -896,6 +946,24 @@ export const ListProfileCategoriesResponse = zod.object({
   "slug": zod.string(),
   "label": zod.string(),
   "openTenderCount": zod.number().int().min(listProfileCategoriesResponseDataItemOpenTenderCountMin)
+}))
+})
+
+
+/**
+ * @summary List the bidding rooms and SICAF a company can declare it is registered in
+ */
+export const listProfilePlatformsResponseDataItemOpenTenderCountMin = 0;
+
+
+
+export const ListProfilePlatformsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "url": zod.string().url().nullable(),
+  "kind": zod.enum(['platform', 'registry']),
+  "openTenderCount": zod.number().int().min(listProfilePlatformsResponseDataItemOpenTenderCountMin).nullable().describe('Open tenders disputed in the room; null for SICAF (registry, not a room).')
 }))
 })
 
@@ -1174,6 +1242,8 @@ export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMa
 
 export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax = 20;
 
+export const exportAccountDataResponseCompanyProfileOneOneRegisteredPlatformsItemMax = 80;
+
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin = 2;
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax = 2;
 
@@ -1348,6 +1418,7 @@ export const ExportAccountDataResponse = zod.object({
   "selectedCategories": zod.array(zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesItemMax)).max(exportAccountDataResponseCompanyProfileOneOneSelectedCategoriesMax),
   "selectedKeywords": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMin).max(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneSelectedKeywordsMax),
   "excludedKeywords": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMin).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax),
+  "registeredPlatforms": zod.array(zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
   "scope": zod.enum(['national'])
 }),zod.object({
@@ -1704,6 +1775,12 @@ export const ListSavedTendersResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -1831,6 +1908,12 @@ export const GetSavedTenderResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -1942,6 +2025,12 @@ export const PutSavedTenderResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -2292,6 +2381,12 @@ export const ListRecommendationsResponse = zod.object({
   "name": zod.string(),
   "url": zod.string().url().nullable()
 }),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
   "categories": zod.array(zod.object({
   "slug": zod.string(),
   "label": zod.string()
@@ -2307,7 +2402,7 @@ export const ListRecommendationsResponse = zod.object({
 }),
   "score": zod.number(),
   "reasons": zod.array(zod.object({
-  "kind": zod.enum(['profile', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value']),
+  "kind": zod.enum(['profile', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value', 'platform']),
   "text": zod.string()
 })).min(1).max(listRecommendationsResponseDataItemReasonsMax),
   "generatedAt": zod.coerce.date()

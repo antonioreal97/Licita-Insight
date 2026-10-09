@@ -641,6 +641,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       documentReading: { read: 0, total: 0, unread: [] },
       model: null,
       generatedAt: null,
+      registrationRequirement: null,
     });
     assert.equal(
       (

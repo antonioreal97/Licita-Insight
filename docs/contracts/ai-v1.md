@@ -87,6 +87,7 @@ type TenderSheet = {
     | "expired";
   fields: SheetField[];
   qualificationChecklist: QualificationItem[];
+  registrationRequirement: RegistrationRequirement | null;
   summary: { text: string; citations: number[]; model: string } | null;
   unreadDocuments: number;
   documentReading: {
@@ -152,6 +153,20 @@ Categorias válidas em `answer`: `consortium` (`allowed | forbidden`), `subcontr
 Ausência de trecho nunca é convertida em resposta negativa: resulta em `not_found`, com `answer`, `confidence` e `evidence` nulos. Em especial, garantias só recebem `not_required` quando o trecho diz explicitamente que não serão exigidas. Choice `not_defined` ou confiança abaixo de `AI_SHEET_ANSWER_THRESHOLD` mantém `status: found` e o trecho oficial, mas retorna `answer: null`.
 
 Falhas transitórias de download (timeout, HTTP 429 e HTTP 5xx) são reagendadas após 5 minutos, 30 minutos, 2 horas e, daí em diante, uma vez por dia, até o teto configurado. HTTP 404, URL/arquivo inválido e limites de tamanho são definitivos. Uma recuperação incrementa `indexVersion`, invalida perguntas e fichas em cache e preserva os trechos dos demais documentos. Se a reextração falhar, uma extração anterior que ainda seja legível não é removida.
+
+`registrationRequirement` é aditivo e calculado a cada leitura, só por regras (sem chamada de IA), sobre as páginas já indexadas do edital que mencionam credenciamento ou cadastro:
+
+```ts
+type RegistrationRequirement = {
+  systems: { slug: string; label: string }[]; // ex.: SICAF, Licitanet; vazio quando o texto diz só "plataforma"/"sistema"
+  businessDaysBefore: number | null; // "até o terceiro dia útil anterior" → 3
+  referenceDate: string | null; // YYYY-MM-DD: proposalDeadline em America/Sao_Paulo
+  deadline: string | null; // referenceDate menos businessDaysBefore dias úteis
+  evidence: { documentTitle: string; documentUrl: string; page: number; text: string };
+};
+```
+
+A cláusula precisa combinar verbo de credenciamento/cadastro com um sistema nomeado ou, sem nome, com um prazo em dias úteis; trechos sobre impugnação, esclarecimento ou recurso não contam. Os dias úteis excluem fins de semana e feriados nacionais fixos (01/01, 21/04, 01/05, 07/09, 12/10, 02/11, 15/11, 20/11, 25/12) e a Sexta-feira Santa; feriados estaduais e municipais não entram, e a UI avisa isso. Sem `proposalDeadline`, `referenceDate` e `deadline` são `null`. Fora de `ready` ou sem cláusula, o campo é `null`.
 
 A ficha, incluindo `qualificationChecklist`, é cache público global por `(tender, indexVersion, model, promptVersion)` e não contém nem envia dados de usuário ao Jev. A versão de prompt da ficha continua `3`; ligar ou trocar o modelo OpenAI invalida somente o resumo e não recalcula os campos. A criação consome o teto global diário, separado da cota de perguntas; hits de cache não consomem o teto.
 

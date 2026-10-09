@@ -31,6 +31,7 @@ const summaryWithScore = (score: number | null): TenderSummary => ({
   proposalDeadline: null,
   location: { state: null, city: null, cityIbgeCode: null },
   source: { id: "fixture", name: "TEST DATA", url: null },
+  platform: null,
   categories: [],
   relevance: { score, highlights: [] },
   updatedAt: new Date("2026-09-22T12:00:00Z"),

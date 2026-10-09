@@ -622,6 +622,12 @@ export interface CompanyProfileInput {
      * @items.maxLength 80
      */
   excludedKeywords: string[];
+  /**
+     * Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  registeredPlatforms?: string[];
   coverage: CompanyCoverage;
   valueRange: CompanyValueRange;
   size: CompanySize;
@@ -631,7 +637,11 @@ export type CompanyProfile = CompanyProfileInput & {
   /** @minimum 1 */
   version: number;
   updatedAt: string;
-};
+} & Required<Pick<CompanyProfileInput & {
+  /** @minimum 1 */
+  version: number;
+  updatedAt: string;
+}, 'registeredPlatforms'>>;
 
 export type AccountExportRecommendationEventType = typeof AccountExportRecommendationEventType[keyof typeof AccountExportRecommendationEventType];
 
@@ -870,6 +880,28 @@ export interface QualificationItem {
   confidence: number;
 }
 
+export type RegistrationRequirementSystemsItem = {
+  slug: string;
+  label: string;
+};
+
+/**
+ * Prior registration clause found by rules in the indexed edital text (no AI call). The deadline counts back from the proposal deadline skipping weekends and national holidays only.
+ */
+export interface RegistrationRequirement {
+  systems: RegistrationRequirementSystemsItem[];
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  businessDaysBefore: number | null;
+  /** @nullable */
+  referenceDate: string | null;
+  /** @nullable */
+  deadline: string | null;
+  evidence: SheetEvidence;
+}
+
 export interface TenderSheet {
   status: TenderAskIndexStatus;
   /** @maxItems 13 */
@@ -882,6 +914,7 @@ export interface TenderSheet {
   model: string | null;
   /** @nullable */
   generatedAt: string | null;
+  registrationRequirement: RegistrationRequirement | null;
 }
 
 export interface CompanyProfileResponse {
@@ -897,6 +930,32 @@ export interface ProfileCategory {
 
 export interface ProfileCategoriesResponse {
   data: ProfileCategory[];
+}
+
+export type ProfilePlatformKind = typeof ProfilePlatformKind[keyof typeof ProfilePlatformKind];
+
+
+export const ProfilePlatformKind = {
+  platform: 'platform',
+  registry: 'registry',
+} as const;
+
+export interface ProfilePlatform {
+  slug: string;
+  label: string;
+  /** @nullable */
+  url: string | null;
+  kind: ProfilePlatformKind;
+  /**
+     * Open tenders disputed in the room; null for SICAF (registry, not a room).
+     * @minimum 0
+     * @nullable
+     */
+  openTenderCount: number | null;
+}
+
+export interface ProfilePlatformsResponse {
+  data: ProfilePlatform[];
 }
 
 export type ProfileKeywordSuggestionPredominantCategory = {
@@ -1089,6 +1148,27 @@ export interface Source {
   url: string | null;
 }
 
+export type TenderPlatformKind = typeof TenderPlatformKind[keyof typeof TenderPlatformKind];
+
+
+export const TenderPlatformKind = {
+  platform: 'platform',
+  source_system: 'source_system',
+  other: 'other',
+  unknown: 'unknown',
+} as const;
+
+/**
+ * Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.
+ */
+export interface TenderPlatform {
+  slug: string;
+  label: string;
+  kind: TenderPlatformKind;
+  /** @nullable */
+  url: string | null;
+}
+
 export interface Category {
   slug: string;
   label: string;
@@ -1161,6 +1241,8 @@ export interface TenderSummary {
   proposalDeadline: string | null;
   location: Location;
   source: Source;
+  /** Null until the tender is ingested or backfilled with the platform column. */
+  platform: TenderPlatform | null;
   categories: Category[];
   relevance: Relevance;
   updatedAt: string;
@@ -1178,6 +1260,7 @@ export const RecommendationReasonKind = {
   location: 'location',
   organization: 'organization',
   value: 'value',
+  platform: 'platform',
 } as const;
 
 export interface RecommendationReason {
@@ -1765,6 +1848,8 @@ export interface FacetGroupTotals {
   category: number;
   /** @minimum 0 */
   organization: number;
+  /** @minimum 0 */
+  platform: number;
 }
 
 export type SearchFacetsValueRange = {
@@ -1786,6 +1871,8 @@ export interface SearchFacets {
   category: FacetBucket[];
   /** Top 20 plus every organization selected in the request. */
   organization: FacetBucket[];
+  /** Normalized bidding platform (`TenderPlatform.slug`) with its label. */
+  platform: FacetBucket[];
   groupTotals?: FacetGroupTotals;
   valueRange: SearchFacetsValueRange;
 }
@@ -1965,6 +2052,11 @@ export type SourceFilterParameter = string[];
 
 export type CategoryFilterParameter = string[];
 
+/**
+ * Normalized bidding platform slug (`TenderPlatform.slug`).
+ */
+export type PlatformFilterParameter = string[];
+
 export type ValueMinParameter = number;
 
 export type ValueMaxParameter = number;
@@ -2039,6 +2131,11 @@ sourceId?: SourceFilterParameter;
  * @items.minLength 1
  */
 category?: CategoryFilterParameter;
+/**
+ * Normalized bidding platform slug (`TenderPlatform.slug`).
+ * @items.minLength 1
+ */
+platform?: PlatformFilterParameter;
 /**
  * @minimum 0
  */

@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { TenderSearchParams } from '@/api/types';
+import type { SearchFacets, TenderSearchParams } from '@/api/types';
+import { searchParamsFromUrl } from '@/services/search-service';
 import { SearchModeControl } from '../components/search-mode-control';
+import { rememberFacetLabels } from './facet-config';
 import { buildFilterChips } from './filter-chips';
 import { readRememberedSearch, rememberSearch } from './search-navigation-state';
 import { savedQueryHref, searchDefaultsToUrl, withoutFilters, withSearchDefaults } from './search-defaults';
@@ -87,4 +89,19 @@ test('estado da busca permanece na navegação da aba até voltar ao padrão', (
 
   rememberSearch('', storage);
   assert.equal(readRememberedSearch(storage), '');
+});
+
+test('filtro de plataforma vem da URL, vira chip com o nome da faceta e sai em "limpar filtros"', () => {
+  const params = searchParamsFromUrl('platform=licitanet&platform=bll');
+  assert.deepEqual(params.platform, ['bll', 'licitanet']);
+  rememberFacetLabels({ platform: [{ value: 'licitanet', label: 'Licitanet', count: 12 }] } as SearchFacets);
+  const chips = buildFilterChips(params).filter((chip) => chip.group === 'Plataforma de disputa');
+  assert.deepEqual(
+    chips.map((chip) => [chip.label, chip.remove]),
+    [
+      ['bll', { platform: ['licitanet'] }],
+      ['Licitanet', { platform: ['bll'] }],
+    ],
+  );
+  assert.equal(withoutFilters(params).platform, undefined);
 });

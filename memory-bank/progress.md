@@ -115,6 +115,12 @@ Deriva de [activeContext](activeContext.md).
 - Frontend em https://abriu-la.vercel.app com `/api/*` encaminhado ao servidor por middleware (ver activeContext).
 - Falta: callback do Google cadastrado, domínio ngrok fixo/sincronização, tampa sem suspensão, backup diário.
 
+## Em PR — plataforma de disputa (`feat/tender-platform`)
+
+- `tenders.platform`/`platform_label` normalizados na ingestão a partir de `usuarioNome` e links (regras em `artifacts/api-server/src/catalog/tender-platforms.ts`). Software de gestão vira "Sistema de origem: X", nunca "Disputa em". Contrato em [`docs/contracts/search-v1.md`](../docs/contracts/search-v1.md).
+- Filtro/facet `platform` na busca; badge "Disputa em" no card e no detalhe; perfil "Sou cadastrado em" (`registeredPlatforms`, não muda `version` nem a aderência); aviso de credenciamento prévio na ficha, por regex e dias úteis com feriados nacionais ([`docs/contracts/ai-v1.md`](../docs/contracts/ai-v1.md)).
+- Produção: a migração `0033_tender_platform` precisa ser aplicada manualmente antes do deploy; o job `tender_platform_backfill` da API preenche os antigos sozinho (ao subir e às 02:00, só enquanto houver `platform` nulo). Amostra de 8 out 2026 (104.748 abertos): 36,4% em sala conhecida, 39,9% sistema de origem, 23,7% outro sistema.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).

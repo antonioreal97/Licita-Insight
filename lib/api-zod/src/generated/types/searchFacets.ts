@@ -19,6 +19,8 @@ export interface SearchFacets {
   category: FacetBucket[];
   /** Top 20 plus every organization selected in the request. */
   organization: FacetBucket[];
+  /** Normalized bidding platform (`TenderPlatform.slug`) with its label. */
+  platform: FacetBucket[];
   groupTotals?: FacetGroupTotals;
   valueRange: SearchFacetsValueRange;
 }

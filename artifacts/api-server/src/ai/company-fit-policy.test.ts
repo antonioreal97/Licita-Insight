@@ -12,6 +12,7 @@ const valid = () => ({
   selectedCategories: ["ti-telecom"],
   selectedKeywords: ["servidor rack"],
   excludedKeywords: ["impressora"],
+  registeredPlatforms: ["licitanet", "sicaf"],
   coverage: { scope: "states", states: ["sp", "DF"] },
   valueRange: { min: 1000, max: 500000 },
   size: "other",
@@ -41,11 +42,26 @@ test("mantém compatibilidade com clientes anteriores e valida a taxonomia", () 
   delete legacy.selectedCategories;
   delete legacy.selectedKeywords;
   delete legacy.excludedKeywords;
+  delete legacy.registeredPlatforms;
   const parsed = parseCompanyProfileInput(legacy);
   assert.deepEqual(parsed.selectedCategories, []);
   assert.deepEqual(parsed.selectedKeywords, []);
   assert.deepEqual(parsed.excludedKeywords, []);
+  assert.deepEqual(parsed.registeredPlatforms, []);
   assert.throws(() => parseCompanyProfileInput({ ...valid(), selectedCategories: ["inventada"] }), InvalidParameterError);
+});
+
+test("aceita só plataformas conhecidas e SICAF em 'Sou cadastrado em'", () => {
+  const invalid = (registeredPlatforms: unknown, field: string, issue: string) =>
+    assert.throws(
+      () => parseCompanyProfileInput({ ...valid(), registeredPlatforms }),
+      (error) =>
+        error instanceof InvalidParameterError &&
+        error.details?.some((detail) => detail.field === field && detail.issue === issue) === true,
+    );
+  invalid(["origem-ipm-sistemas"], "registeredPlatforms.0", "invalid_value");
+  invalid(["bll", "bll"], "registeredPlatforms", "duplicate");
+  invalid("licitanet", "registeredPlatforms", "invalid_type");
 });
 
 test("rejeita cobertura, faixa e limites inválidos", () => {
