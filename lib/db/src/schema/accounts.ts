@@ -333,3 +333,46 @@ export const subscriptionsTable = pgTable(
     index("subscriptions_asaas_customer_idx").on(table.asaasCustomerId),
   ],
 );
+
+/** Owner-issued access coupons. Only a SHA-256 digest is persisted; the code is returned once at creation. */
+export const couponCodesTable = pgTable(
+  "coupon_codes",
+  {
+    id: text("id").primaryKey(),
+    codeHash: text("code_hash").notNull(),
+    codeLast4: text("code_last4").notNull(),
+    durationDays: integer("duration_days").notNull(),
+    maxRedemptions: integer("max_redemptions").notNull().default(1),
+    redeemedCount: integer("redeemed_count").notNull().default(0),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("coupon_codes_hash_uidx").on(table.codeHash),
+    check("coupon_codes_duration_days_check", sql`${table.durationDays} in (7, 30)`),
+    check("coupon_codes_max_redemptions_check", sql`${table.maxRedemptions} > 0`),
+    check("coupon_codes_redeemed_count_check", sql`${table.redeemedCount} >= 0`),
+    check("coupon_codes_redeemed_limit_check", sql`${table.redeemedCount} <= ${table.maxRedemptions}`),
+    check("coupon_codes_window_check", sql`${table.expiresAt} is null or ${table.startsAt} is null or ${table.expiresAt} > ${table.startsAt}`),
+  ],
+);
+
+export const couponRedemptionsTable = pgTable(
+  "coupon_redemptions",
+  {
+    couponId: text("coupon_id")
+      .notNull()
+      .references(() => couponCodesTable.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+    accessUntil: timestamp("access_until", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.couponId, table.userId] }),
+    index("coupon_redemptions_user_access_idx").on(table.userId, table.accessUntil),
+  ],
+);

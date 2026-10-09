@@ -1460,7 +1460,13 @@ export const ExportAccountDataResponse = zod.object({
   "status": zod.string(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
   "updatedAt": zod.coerce.date()
-}),zod.null()])
+}),zod.null()]),
+  "couponRedemptions": zod.array(zod.object({
+  "couponId": zod.string().uuid(),
+  "redeemedAt": zod.coerce.date(),
+  "accessUntil": zod.coerce.date(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)])
+}))
 })
 
 
@@ -1470,9 +1476,10 @@ export const ExportAccountDataResponse = zod.object({
 export const GetBillingResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('coupon'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
+  "couponAccessUntil": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
   "monthlyBrl": zod.number().nullable()
 })
@@ -1485,6 +1492,65 @@ export const GetBillingPlanResponse = zod.object({
   "monthlyBrl": zod.number().nullable(),
   "trialDays": zod.literal(7),
   "currency": zod.enum(['BRL'])
+})
+
+
+/**
+ * @summary Issue an owner-managed access coupon
+ */
+export const createBillingCouponHeaderXCouponAdminTokenMin = 16;
+
+
+
+export const CreateBillingCouponHeader = zod.object({
+  "x-coupon-admin-token": zod.string().min(createBillingCouponHeaderXCouponAdminTokenMin)
+})
+
+export const createBillingCouponBodyCodeMin = 4;
+export const createBillingCouponBodyCodeMax = 64;
+
+
+export const createBillingCouponBodyCodeRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9_-]{3,63}$');
+export const createBillingCouponBodyMaxRedemptionsDefault = 1;
+export const createBillingCouponBodyMaxRedemptionsMax = 1000000;
+
+
+
+export const CreateBillingCouponBody = zod.object({
+  "code": zod.string().min(createBillingCouponBodyCodeMin).max(createBillingCouponBodyCodeMax).regex(createBillingCouponBodyCodeRegExp).optional(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "maxRedemptions": zod.number().int().min(1).max(createBillingCouponBodyMaxRedemptionsMax).default(createBillingCouponBodyMaxRedemptionsDefault),
+  "startsAt": zod.coerce.date().nullish(),
+  "expiresAt": zod.coerce.date().nullish()
+})
+
+export const CreateBillingCouponResponse = zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "maxRedemptions": zod.number().int(),
+  "redeemedCount": zod.number().int(),
+  "startsAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const redeemBillingCouponBodyCodeMin = 4;
+export const redeemBillingCouponBodyCodeMax = 64;
+
+
+
+export const RedeemBillingCouponBody = zod.object({
+  "code": zod.string().min(redeemBillingCouponBodyCodeMin).max(redeemBillingCouponBodyCodeMax)
+})
+
+export const RedeemBillingCouponResponse = zod.object({
+  "accessUntil": zod.coerce.date(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "alreadyRedeemed": zod.boolean()
 })
 
 
@@ -1502,9 +1568,10 @@ export const StartBillingCheckoutResponse = zod.object({
 export const CancelBillingSubscriptionResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('coupon'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
+  "couponAccessUntil": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
   "monthlyBrl": zod.number().nullable()
 })

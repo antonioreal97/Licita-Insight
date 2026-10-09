@@ -22,6 +22,7 @@ import {
   type SubscriptionStatus,
 } from "./billing-access";
 import { userHasBetaGrant } from "./beta-grants";
+import { activeCouponAccessUntil } from "./coupons";
 import { webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
 import { TRIAL_DAYS } from "./trial-access";
 
@@ -38,6 +39,7 @@ export type BillingView = {
   source: EntitlementSource;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
+  couponAccessUntil: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
 };
@@ -45,11 +47,12 @@ export type BillingView = {
 type SubscriptionRow = typeof subscriptionsTable.$inferSelect;
 
 export async function getBilling(userId: string): Promise<BillingView> {
-  const [row, trialEndsAt] = await Promise.all([
+  const [row, trialEndsAt, couponAccessUntil] = await Promise.all([
     findByUser(userId),
     findTrialEndsAt(userId),
+    activeCouponAccessUntil(userId),
   ]);
-  return toView(row, trialEndsAt, await userHasBetaGrant(userId, new Date()));
+  return toView(row, trialEndsAt, await userHasBetaGrant(userId, new Date()), couponAccessUntil);
 }
 
 export const getBillingPlan = () => ({
@@ -116,9 +119,10 @@ export async function startCheckout(userId: string): Promise<{ url: string }> {
 }
 
 export async function cancelSubscription(userId: string): Promise<BillingView> {
-  const [row, trialEndsAt] = await Promise.all([
+  const [row, trialEndsAt, couponAccessUntil] = await Promise.all([
     findByUser(userId),
     findTrialEndsAt(userId),
+    activeCouponAccessUntil(userId),
   ]);
   if (!row || (row.status !== "active" && row.status !== "past_due")) {
     throw new ConflictError("There is no subscription to cancel", [
@@ -141,6 +145,7 @@ export async function cancelSubscription(userId: string): Promise<BillingView> {
     saved ?? { ...row, status: "canceled", updatedAt },
     trialEndsAt,
     await userHasBetaGrant(userId, updatedAt),
+    couponAccessUntil,
   );
 }
 
@@ -299,12 +304,15 @@ function toView(
   row: SubscriptionRow | null | undefined,
   trialEndsAt: Date | null,
   betaGrant = false,
+  couponAccessUntil: Date | null = null,
 ): BillingView {
   const now = new Date();
   const status = isStatus(row?.status) ? row.status : "none";
   let source = entitlementSource(
     { status: row?.status ?? null, currentPeriodEnd: row?.currentPeriodEnd ?? null, trialEndsAt },
     now,
+    process.env,
+    couponAccessUntil,
   );
   if (source === null && betaGrant) source = "beta";
   return {
@@ -313,6 +321,7 @@ function toView(
     source,
     trialEndsAt: trialEndsAt?.toISOString() ?? null,
     currentPeriodEnd: row?.currentPeriodEnd?.toISOString() ?? null,
+    couponAccessUntil: couponAccessUntil?.toISOString() ?? null,
     canCancel: status === "active" || status === "past_due",
     monthlyBrl: monthlyAmountBrl(),
   };

@@ -644,6 +644,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BillingPlanResponse"
+  /v1/billing/coupons:
+    post:
+      operationId: createBillingCoupon
+      tags: [account]
+      summary: Issue an owner-managed access coupon
+      parameters:
+        - name: x-coupon-admin-token
+          in: header
+          required: true
+          schema: { type: string, minLength: 16 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCouponRequest"
+      responses:
+        "201":
+          description: Coupon created; plaintext code is returned once
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/me/billing/coupon:
+    post:
+      operationId: redeemBillingCoupon
+      tags: [account]
+      summary: Redeem an access coupon for the authenticated account
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemCouponRequest"
+      responses:
+        "200":
+          description: Coupon access granted; repeated redemption is idempotent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponRedemptionResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/me/billing/checkout:
     post:
       operationId: startBillingCheckout
@@ -1618,7 +1672,7 @@ components:
       enum: [none, pending, active, past_due, canceled]
     BillingEntitlementSource:
       type: [string, "null"]
-      enum: [subscription, trial, beta, dev, null]
+      enum: [subscription, coupon, trial, beta, dev, null]
     BillingResponse:
       type: object
       properties:
@@ -1629,6 +1683,7 @@ components:
           $ref: "#/components/schemas/BillingEntitlementSource"
         trialEndsAt: { type: [string, "null"], format: date-time }
         currentPeriodEnd: { type: [string, "null"], format: date-time }
+        couponAccessUntil: { type: [string, "null"], format: date-time }
         canCancel: { type: boolean }
         monthlyBrl: { type: [number, "null"] }
       required:
@@ -1640,7 +1695,42 @@ components:
           currentPeriodEnd,
           canCancel,
           monthlyBrl,
+          couponAccessUntil,
         ]
+    CreateCouponRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { type: string, minLength: 4, maxLength: 64, pattern: "^[A-Za-z0-9][A-Za-z0-9_-]{3,63}$" }
+        durationDays: { type: integer, enum: [7, 30] }
+        maxRedemptions: { type: integer, minimum: 1, maximum: 1000000, default: 1 }
+        startsAt: { type: [string, "null"], format: date-time }
+        expiresAt: { type: [string, "null"], format: date-time }
+      required: [durationDays]
+    RedeemCouponRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        code: { type: string, minLength: 4, maxLength: 64 }
+      required: [code]
+    CouponResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        durationDays: { type: integer, enum: [7, 30] }
+        maxRedemptions: { type: integer }
+        redeemedCount: { type: integer }
+        startsAt: { type: [string, "null"], format: date-time }
+        expiresAt: { type: [string, "null"], format: date-time }
+      required: [id, code, durationDays, maxRedemptions, redeemedCount, startsAt, expiresAt]
+    CouponRedemptionResponse:
+      type: object
+      properties:
+        accessUntil: { type: string, format: date-time }
+        durationDays: { type: integer, enum: [7, 30] }
+        alreadyRedeemed: { type: boolean }
+      required: [accessUntil, durationDays, alreadyRedeemed]
     BillingPlanResponse:
       type: object
       properties:
@@ -2018,6 +2108,14 @@ components:
         startedAt: { type: [string, "null"], format: date-time }
         finishedAt: { type: [string, "null"], format: date-time }
       required: [id, kind, tenderId, lane, status, attempts, maxAttempts, runAfter, lastError, createdAt, startedAt, finishedAt]
+    AccountExportCouponRedemption:
+      type: object
+      properties:
+        couponId: { type: string, format: uuid }
+        redeemedAt: { type: string, format: date-time }
+        accessUntil: { type: string, format: date-time }
+        durationDays: { type: integer, enum: [7, 30] }
+      required: [couponId, redeemedAt, accessUntil, durationDays]
     AccountExport:
       type: object
       properties:
@@ -2093,6 +2191,10 @@ components:
           anyOf:
             - $ref: "#/components/schemas/AccountExportSubscription"
             - type: "null"
+        couponRedemptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportCouponRedemption"
       required:
         [
           exportedAt,
@@ -2114,6 +2216,7 @@ components:
           recommendationInterestProfile,
           recommendations,
           subscription,
+          couponRedemptions,
         ]
     AccountExportRecommendationEvent:
       type: object

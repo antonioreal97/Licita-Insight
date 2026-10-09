@@ -48,6 +48,9 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   await pool.query(
     readFileSync(new URL("../../../../lib/db/migrations/0018_beta_access.sql", import.meta.url), "utf8"),
   );
+  await pool.query(
+    readFileSync(new URL("../../../../lib/db/migrations/0035_coupons.sql", import.meta.url), "utf8"),
+  );
   const participationColumn = await pool.query(
     "select 1 from information_schema.columns where table_schema = $1 and table_name = 'saved_tenders' and column_name = 'stage'",
     [schema],

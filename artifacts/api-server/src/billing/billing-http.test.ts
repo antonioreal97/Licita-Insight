@@ -46,6 +46,24 @@ describe("Asaas webhook HTTP", () => {
     });
     assert.equal(ignored.status, 200);
     assert.deepEqual(await ignored.json(), { received: true });
+
+    const adminMissing = await fetch(`${baseUrl}/api/v1/billing/coupons`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ durationDays: 7 }),
+    });
+    assert.equal(adminMissing.status, 403);
+
+    const redeemMissing = await fetch(`${baseUrl}/api/v1/me/billing/coupon`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "origin": process.env.PUBLIC_APP_ORIGIN,
+        "x-requested-with": "licita-insight",
+      },
+      body: JSON.stringify({ code: "SETE-DIAS" }),
+    });
+    assert.equal(redeemMissing.status, 401);
   });
 
   after(async () => {

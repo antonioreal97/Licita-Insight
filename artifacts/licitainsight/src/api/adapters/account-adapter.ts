@@ -1,6 +1,7 @@
 import type {
   BillingCheckoutResponse,
   BillingResponse,
+  CouponRedemptionResponse,
   CreateSavedSearchBody,
   DownloadedFile,
   ImportSavedTendersResponse,
@@ -45,6 +46,7 @@ export interface AccountAdapter {
   getBilling(signal?: AbortSignal): Promise<BillingResponse>;
   startCheckout(): Promise<BillingCheckoutResponse>;
   cancelBilling(): Promise<BillingResponse>;
+  redeemBillingCoupon(code: string): Promise<CouponRedemptionResponse>;
   /** Public, no session: price and trial length for landing/login/settings. */
   getPublicPlan(signal?: AbortSignal): Promise<PublicPlan>;
 

@@ -34,6 +34,9 @@ import type {
   CompanyProfileInput,
   CompanyProfileResponse,
   ConflictResponse,
+  CouponRedemptionResponse,
+  CouponResponse,
+  CreateCouponRequest,
   CreateSavedSearchRequest,
   DeleteAccountRequest,
   DevLoginRequest,
@@ -68,6 +71,7 @@ import type {
   RecommendationPreferences,
   RecommendationsResponse,
   RecordRecommendationEvent202,
+  RedeemCouponRequest,
   SavedSearch,
   SavedSearchList,
   SavedTender,
@@ -2385,6 +2389,182 @@ export function useGetBillingPlan<TData = Awaited<ReturnType<typeof getBillingPl
 
 
 
+
+export const getCreateBillingCouponUrl = () => {
+
+
+
+
+  return `/api/v1/billing/coupons`
+}
+
+/**
+ * @summary Issue an owner-managed access coupon
+ */
+export const createBillingCoupon = async (createCouponRequest: CreateCouponRequest, options?: Parameters<typeof customFetch>[1]): Promise<CouponResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CouponResponse>(getCreateBillingCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createCouponRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateBillingCouponMutationKey = () => ['createBillingCoupon'] as const;
+
+export const getCreateBillingCouponMutationOptions = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext> => {
+
+const mutationKey = getCreateBillingCouponMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBillingCoupon>>, CreateBillingCouponMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBillingCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBillingCouponMutationResult = NonNullable<Awaited<ReturnType<typeof createBillingCoupon>>>
+    export type CreateBillingCouponMutationBody = BodyType<CreateCouponRequest>
+    export type CreateBillingCouponMutationError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>
+    export type CreateBillingCouponMutationVariables = {data: BodyType<CreateCouponRequest>}
+
+    /**
+ * @summary Issue an owner-managed access coupon
+ */
+export const useCreateBillingCoupon = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBillingCoupon>>,
+        TError,
+        CreateBillingCouponMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateBillingCouponMutationOptions(options));
+    }
+
+export const getRedeemBillingCouponUrl = () => {
+
+
+
+
+  return `/api/v1/me/billing/coupon`
+}
+
+/**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const redeemBillingCoupon = async (redeemCouponRequest: RedeemCouponRequest, options?: Parameters<typeof customFetch>[1]): Promise<CouponRedemptionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CouponRedemptionResponse>(getRedeemBillingCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(redeemCouponRequest)
+  }
+);}
+
+
+
+
+
+export const getRedeemBillingCouponMutationKey = () => ['redeemBillingCoupon'] as const;
+
+export const getRedeemBillingCouponMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext> => {
+
+const mutationKey = getRedeemBillingCouponMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof redeemBillingCoupon>>, RedeemBillingCouponMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  redeemBillingCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RedeemBillingCouponMutationResult = NonNullable<Awaited<ReturnType<typeof redeemBillingCoupon>>>
+    export type RedeemBillingCouponMutationBody = BodyType<RedeemCouponRequest>
+    export type RedeemBillingCouponMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type RedeemBillingCouponMutationVariables = {data: BodyType<RedeemCouponRequest>}
+
+    /**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const useRedeemBillingCoupon = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof redeemBillingCoupon>>,
+        TError,
+        RedeemBillingCouponMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRedeemBillingCouponMutationOptions(options));
+    }
 
 export const getStartBillingCheckoutUrl = () => {
 

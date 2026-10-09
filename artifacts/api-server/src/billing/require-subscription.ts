@@ -5,6 +5,7 @@ import { authContext } from "../auth/http";
 import { SubscriptionRequiredError } from "../lib/api-error";
 import { isEntitled } from "./billing-access";
 import { userHasBetaGrant } from "./beta-grants";
+import { activeCouponAccessUntil } from "./coupons";
 
 export const requireSubscription: RequestHandler = async (_req, res, next) => {
   try {
@@ -27,7 +28,7 @@ export const requireSubscription: RequestHandler = async (_req, res, next) => {
       .where(eq(usersTable.id, userId))
       .limit(1);
     const now = new Date();
-    if (!isEntitled(row ?? null, now) && !(await userHasBetaGrant(userId, now))) {
+    if (!isEntitled(row ?? null, now, process.env, await activeCouponAccessUntil(userId, now)) && !(await userHasBetaGrant(userId, now))) {
       throw new SubscriptionRequiredError();
     }
     next();

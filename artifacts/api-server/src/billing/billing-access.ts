@@ -13,7 +13,7 @@ export type SubscriptionSnapshot = {
   trialEndsAt?: Date | null;
 };
 
-export type EntitlementSource = "subscription" | "trial" | "beta" | "dev" | null;
+export type EntitlementSource = "subscription" | "coupon" | "trial" | "beta" | "dev" | null;
 
 export function devEntitlementEnabled(
   env: NodeJS.ProcessEnv = process.env,
@@ -26,16 +26,19 @@ export function isEntitled(
   row: SubscriptionSnapshot | null,
   now: Date,
   env: NodeJS.ProcessEnv = process.env,
+  couponAccessUntil: Date | null = null,
 ): boolean {
-  return entitlementSource(row, now, env) !== null;
+  return entitlementSource(row, now, env, couponAccessUntil) !== null;
 }
 
 export function entitlementSource(
   row: SubscriptionSnapshot | null,
   now: Date,
   env: NodeJS.ProcessEnv = process.env,
+  couponAccessUntil: Date | null = null,
 ): EntitlementSource {
   if (hasSubscriptionEntitlement(row, now)) return "subscription";
+  if (couponAccessUntil && couponAccessUntil > now) return "coupon";
   if (row?.trialEndsAt && row.trialEndsAt > now) return "trial";
   return devEntitlementEnabled(env) ? "dev" : null;
 }

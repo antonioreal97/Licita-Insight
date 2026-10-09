@@ -51,6 +51,7 @@ export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typ
 
 export const BillingEntitlementSource = {
   subscription: 'subscription',
+  coupon: 'coupon',
   trial: 'trial',
   beta: 'beta',
   dev: 'dev',
@@ -64,9 +65,80 @@ export interface BillingResponse {
   trialEndsAt: string | null;
   /** @nullable */
   currentPeriodEnd: string | null;
+  /** @nullable */
+  couponAccessUntil: string | null;
   canCancel: boolean;
   /** @nullable */
   monthlyBrl: number | null;
+}
+
+export type CreateCouponRequestDurationDays = typeof CreateCouponRequestDurationDays[keyof typeof CreateCouponRequestDurationDays];
+
+
+export const CreateCouponRequestDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CreateCouponRequest {
+  /**
+     * @minLength 4
+     * @maxLength 64
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9_-]{3,63}$
+     */
+  code?: string;
+  durationDays: CreateCouponRequestDurationDays;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  maxRedemptions?: number;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+}
+
+export interface RedeemCouponRequest {
+  /**
+     * @minLength 4
+     * @maxLength 64
+     */
+  code: string;
+}
+
+export type CouponResponseDurationDays = typeof CouponResponseDurationDays[keyof typeof CouponResponseDurationDays];
+
+
+export const CouponResponseDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CouponResponse {
+  id: string;
+  code: string;
+  durationDays: CouponResponseDurationDays;
+  maxRedemptions: number;
+  redeemedCount: number;
+  /** @nullable */
+  startsAt: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export type CouponRedemptionResponseDurationDays = typeof CouponRedemptionResponseDurationDays[keyof typeof CouponRedemptionResponseDurationDays];
+
+
+export const CouponRedemptionResponseDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CouponRedemptionResponse {
+  accessUntil: string;
+  durationDays: CouponRedemptionResponseDurationDays;
+  alreadyRedeemed: boolean;
 }
 
 export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
@@ -540,6 +612,21 @@ export interface AccountExportAiJob {
   finishedAt: string | null;
 }
 
+export type AccountExportCouponRedemptionDurationDays = typeof AccountExportCouponRedemptionDurationDays[keyof typeof AccountExportCouponRedemptionDurationDays];
+
+
+export const AccountExportCouponRedemptionDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface AccountExportCouponRedemption {
+  couponId: string;
+  redeemedAt: string;
+  accessUntil: string;
+  durationDays: AccountExportCouponRedemptionDurationDays;
+}
+
 export type AccountExportCompanyFitsItem = { [key: string]: unknown };
 
 export type AccountExportFitUsageItem = { [key: string]: unknown };
@@ -681,6 +768,7 @@ export interface AccountExport {
   recommendationInterestProfile: AccountExportRecommendationInterestProfile;
   recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
+  couponRedemptions: AccountExportCouponRedemption[];
 }
 
 export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof TenderAskIndexStatus];

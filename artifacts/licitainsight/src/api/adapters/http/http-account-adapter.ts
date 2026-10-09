@@ -2,6 +2,7 @@ import type { AccountAdapter } from '../account-adapter';
 import type {
   BillingCheckoutResponse,
   BillingResponse,
+  CouponRedemptionResponse,
   ImportSavedTendersResponse,
   NotificationPreferences,
   RecommendationEvent,
@@ -34,6 +35,7 @@ export const httpAccountAdapter: AccountAdapter = {
   getBilling: (signal) => getJson<BillingResponse>('/v1/me/billing', {}, signal),
   startCheckout: () => sendJson<BillingCheckoutResponse>('POST', '/v1/me/billing/checkout'),
   cancelBilling: () => sendJson<BillingResponse>('POST', '/v1/me/billing/cancel'),
+  redeemBillingCoupon: (code) => sendJson<CouponRedemptionResponse>('POST', '/v1/me/billing/coupon', { code }),
   getPublicPlan: (signal) => getJson<PublicPlan>('/v1/billing/plan', {}, signal),
 
   listSavedTenders: (params, signal) => getJson<SavedTendersResponse>('/v1/me/saved-tenders', params, signal),

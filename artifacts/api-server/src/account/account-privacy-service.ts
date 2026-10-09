@@ -6,6 +6,8 @@ import {
   aiFitDailyUsageTable,
   aiJobsTable,
   betaAccessGrantsTable,
+  couponCodesTable,
+  couponRedemptionsTable,
   companyProfilesTable,
   companyTenderFitsTable,
   db,
@@ -37,6 +39,7 @@ export const ACCOUNT_EXPORT_TABLES = {
   notifications: "notifications",
   email_deliveries: "emailDeliveries",
   subscriptions: "subscription",
+  coupon_redemptions: "couponRedemptions",
   ai_daily_usage: "aiDailyUsage",
   ai_daily_tenders: "aiDailyTenders",
   ai_ask_requests: "aiQuestions",
@@ -51,7 +54,7 @@ export const ACCOUNT_EXPORT_TABLES = {
 } as const;
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
     await Promise.all([
       db
         .select({
@@ -141,6 +144,16 @@ export async function exportAccountData(userId: string, now = new Date()) {
         .from(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId))
         .limit(1),
+      db
+        .select({
+          couponId: couponRedemptionsTable.couponId,
+          redeemedAt: couponRedemptionsTable.redeemedAt,
+          accessUntil: couponRedemptionsTable.accessUntil,
+          durationDays: couponCodesTable.durationDays,
+        })
+        .from(couponRedemptionsTable)
+        .innerJoin(couponCodesTable, eq(couponCodesTable.id, couponRedemptionsTable.couponId))
+        .where(eq(couponRedemptionsTable.userId, userId)),
       db
         .select({
           id: emailDeliveriesTable.id,
@@ -240,6 +253,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
     recommendationInterestProfile: recommendationInterest[0] ?? null,
     recommendations,
     subscription: subscriptions[0] ?? null,
+    couponRedemptions,
   };
 }
 
