@@ -7,8 +7,8 @@ import { createPardalScrollMemory, PARDAL_MOMENT_ATTRIBUTE, resolvePardalScroll,
 
 /**
  * Para criar um momento de aproximação, adicione `data-pardal-momento` à `<section>` de destino em
- * `landing-page.tsx`; remova o atributo para a fronteira voltar ao scroll normal. A marcação é opt-in e cada
- * momento é consumido uma única vez por montagem da página.
+ * `landing-page.tsx`; remova o atributo para a fronteira voltar ao scroll normal. A marcação é opt-in e o momento
+ * acompanha a posição da fronteira tanto na descida quanto na subida.
  */
 
 const VIEWBOX_WIDTH = 312;
@@ -230,8 +230,8 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         const surface = surfaceOf(section);
         const startScale = goal.size / VIEWBOX_WIDTH;
         const coverScale = (1.05 * Math.hypot(width, height)) / 2 / BODY_INNER.radius;
-        const startX = wide ? state.x : width * 0.5;
-        const startY = wide ? state.y : height * 0.85;
+        const startX = wide ? goal.x : width * 0.5;
+        const startY = wide ? goal.y : height * 0.85;
         const glide = smoothstep(0, 1, a);
         const fade = 1 - clamp01(local - 1);
         if (inverseInk !== surface.inverse) paint(surface.inverse);
@@ -265,24 +265,25 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       last = now;
       const goal = target();
       const follow = 1 - Math.exp(-dt * 7);
-      const quick = 1 - Math.exp(-dt * 14);
 
       // While the screen is covered, the gutter bird jumps to its new side unseen and fades back in afterwards.
+      const previousProgress = state.progress;
+      state.progress = goal.progress;
       const local = state.progress;
       const approaching = goal.activeSection !== null && local > 0.002 && local < 1.998;
-      const hidden = goal.activeSection !== null && local > 0.9 && local < 2;
+      const hidden = goal.activeSection !== null && local > 0.9;
       const nextX = hidden ? goal.x : state.x + (goal.x - state.x) * follow;
       const nextY = hidden ? goal.y : state.y + (goal.y - state.y) * follow;
+      const targetOpacity = hidden ? 0 : goal.opacity;
       state.vx = (nextX - state.x) / dt;
       state.vy = (nextY - state.y) / dt;
       state.x = nextX;
       state.y = nextY;
-      state.opacity = hidden ? 0 : state.opacity + (goal.opacity - state.opacity) * follow;
-      const approachSpeed = Math.abs(goal.progress - state.progress) / dt;
-      state.progress += (goal.progress - state.progress) * quick;
+      state.opacity += (targetOpacity - state.opacity) * follow;
+      const approachSpeed = Math.abs(goal.progress - previousProgress) / dt;
 
       // At cover scale any turn or tilt would sweep the body off screen, so the approach flies flat and keeps its side.
-      const facing = approaching ? (Math.cos(bird.rotation.y) >= 0 ? 1 : -1) : Math.abs(state.vx) > 30 ? Math.sign(state.vx) : goal.facing;
+      const facing = !approaching && Math.abs(state.vx) > 30 ? Math.sign(state.vx) : goal.facing;
       const turn = (facing > 0 ? 0 : Math.PI) - bird.rotation.y;
       if (approaching) {
         bird.rotation.set(0, facing > 0 ? 0 : Math.PI, 0);
@@ -302,7 +303,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       const settled =
         Math.abs(goal.x - state.x) < 0.3 &&
         Math.abs(goal.y - state.y) < 0.3 &&
-        Math.abs(goal.opacity - state.opacity) < 0.01 &&
+        Math.abs(targetOpacity - state.opacity) < 0.01 &&
         Math.abs(goal.progress - state.progress) < 0.001 &&
         Math.abs(turn) < 0.01 &&
         Math.abs(bird.rotation.x) + Math.abs(bird.rotation.z) < 0.01 &&

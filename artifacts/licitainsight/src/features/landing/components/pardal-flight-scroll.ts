@@ -10,8 +10,6 @@ export type PardalScrollMemory = {
   activeKey: string | null;
   lastScrollY: number;
   restingSide: number;
-  switchedKeys: readonly string[];
-  visitedKeys: readonly string[];
 };
 
 export type PardalScrollResult = {
@@ -40,49 +38,29 @@ export function selectPardalMomentBoundaries(sections: readonly PardalScrollSect
 }
 
 export function createPardalScrollMemory(scrollY: number): PardalScrollMemory {
-  return { activeKey: null, lastScrollY: scrollY, restingSide: 0, switchedKeys: [], visitedKeys: [] };
+  return { activeKey: null, lastScrollY: scrollY, restingSide: 0 };
 }
 
 /**
- * Pure scroll state machine. A moment is consumed as soon as its trigger line is crossed while scrolling down;
- * cancelling it by scrolling up therefore cannot replay it during the same page load.
+ * Pure, position-driven scroll state. Keeping progress tied to a boundary's viewport position makes every moment
+ * scrub identically in both directions and guarantees that returning to the same scroll position restores the same
+ * visual state.
  */
 export function resolvePardalScroll(input: ResolvePardalScrollInput, memory: PardalScrollMemory): PardalScrollResult {
   const { reducedMotion, scrollY, sections, viewportHeight } = input;
   const moments = selectPardalMomentBoundaries(sections);
-  const movingDown = scrollY > memory.lastScrollY;
-  const movingUp = scrollY < memory.lastScrollY;
   const triggerTop = viewportHeight * (0.5 + APPROACH);
-  const visited = new Set(memory.visitedKeys);
-  const switched = new Set(memory.switchedKeys);
-  let restingSide = memory.restingSide;
-  let activeKey = reducedMotion || movingUp ? null : memory.activeKey;
-
-  if (movingDown) {
-    const scrollDelta = scrollY - memory.lastScrollY;
-    for (const moment of moments) {
-      if (visited.has(moment.key)) continue;
-      const previousTop = moment.top + scrollDelta;
-      if (previousTop > triggerTop && moment.top <= triggerTop) {
-        visited.add(moment.key);
-        if (!reducedMotion && activeKey === null && moment.top > 0) activeKey = moment.key;
-      }
-    }
-  }
-
-  const active = moments.find((moment) => moment.key === activeKey);
-  if (!active || active.top <= 0) activeKey = null;
+  const active = reducedMotion ? undefined : moments.findLast((moment) => moment.top >= 0 && moment.top <= triggerTop);
+  const activeKey = active?.key ?? null;
+  // The side changes while the bird covers the viewport, then changes back at the same boundary when scrolling up.
+  const restingSide = reducedMotion ? 0 : moments.filter((moment) => moment.top <= viewportHeight / 2).length % 2;
 
   let localProgress = 0;
   let curtainKey: string | null = null;
-  if (activeKey && active) {
+  if (active) {
     const distance = (viewportHeight / 2 - active.top) / viewportHeight;
     localProgress = distance < 0 ? clamp01((distance + APPROACH) / APPROACH) : 1 + clamp01(distance / FADE);
-    if (localProgress >= 1 && active.top > 0) curtainKey = activeKey;
-    if (localProgress >= 1 && !switched.has(activeKey)) {
-      switched.add(activeKey);
-      restingSide = (restingSide + 1) % 2;
-    }
+    if (localProgress >= 1) curtainKey = activeKey;
   }
 
   return {
@@ -93,8 +71,6 @@ export function resolvePardalScroll(input: ResolvePardalScrollInput, memory: Par
       activeKey,
       lastScrollY: scrollY,
       restingSide,
-      switchedKeys: [...switched],
-      visitedKeys: [...visited],
     },
     restingSide,
   };
