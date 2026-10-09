@@ -37,7 +37,12 @@ describe("notification email template", () => {
     );
     assert.doesNotMatch(rendered.text, /Prazo: 25\/09\/2026/);
     assert.match(rendered.text, /\/tenders\/tender%2F1/);
-    assert.doesNotMatch(rendered.html, /<img/i);
+    // The only image is the static logo, with the same URL for every recipient (no tracking pixel).
+    assert.equal(rendered.html.match(/<img/gi)?.length, 1);
+    assert.match(
+      rendered.html,
+      /<img src="https:\/\/licitai\.example\/brand\/email\/pardal-logo-lima-2x\.png" width="160" height="136" alt="Pardal Digital" style="display:block;/,
+    );
     assert.equal(
       rendered.headers["List-Unsubscribe-Post"],
       "List-Unsubscribe=One-Click",
