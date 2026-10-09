@@ -76,6 +76,21 @@ A paleta não tem vermelho nem âmbar. Nenhuma cor de fora foi criada; os estado
 Se o produto precisar de um erro que se distinga só pela cor, isso pede uma cor nova na paleta: decisão da marca,
 não do código.
 
+## Escala do mapa de editais por UF
+
+O coropleto da página inicial usa `--mapa-1` a `--mapa-5`: a tinta de `--foco` (petróleo no Creme, lima no
+Petróleo) misturada ao `--fundo` em 20%, 40%, 60%, 80% e 100%. Mais editais é sempre mais tinta, então a escala
+escurece no Creme e clareia no Petróleo. `--mapa-vazio` (`--fundo-alt`) marca a UF sem edital aberto.
+
+- Por que não `creme` → `salvia` → `oliva` → `lima`: `salvia` e `oliva` têm praticamente a mesma luminância (0,57 e
+  0,56), e `lima` a do `creme` (0,82 e 0,83). No tema Creme a faixa mais alta ficaria igual à mais baixa em tons de cinza e para quem não
+  distingue verde de amarelo. A mistura de uma tinta só não cria matiz e mantém uma direção única.
+- Divisas entre UFs em `--fundo`, litoral em `--texto`. A UF sob o cursor ou com foco ganha um anel duplo
+  (`--fundo` por fora, `--foco` por dentro), que aparece sobre qualquer preenchimento.
+- O mapa não tem rótulos: o texto ficaria abaixo de 4,5:1 nas faixas do meio. Os números estão no painel acima do
+  mapa, no ranking e na tabela.
+- `src/styles/contrast.test.ts` confere, nos dois temas, que cada degrau se afasta do fundo mais que o anterior.
+
 ## Tipografia
 
 - Pilhas: `--fonte-titulo: "Qurova", "Quicksand", system-ui, sans-serif` e

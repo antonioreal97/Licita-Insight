@@ -156,4 +156,5 @@ export const searchService = {
   search: (params: TenderSearchParams, signal?: AbortSignal) => searchAdapter.searchTenders(normalizeSearchParams(params), signal),
   getTender: (id: string, signal?: AbortSignal) => searchAdapter.getTender(id, signal),
   suggest: (q: string, limit?: number, signal?: AbortSignal) => searchAdapter.getSuggestions(q.trim(), limit, signal),
+  openTendersByState: (signal?: AbortSignal) => searchAdapter.getOpenTendersByState(signal),
 };
