@@ -64,7 +64,8 @@ const PardalFlight3D = lazy(() =>
   import('@/features/landing/components/pardal-flight-3d').then((m) => ({ default: m.PardalFlight3D })),
 );
 
-// Below this width the side gutters of `max-w-7xl` are too narrow for the bird to fly without covering text.
+// Below this width the side gutters of `max-w-7xl` are too narrow for the bird to rest in without covering text;
+// it then shows only during the cover transition between sections.
 const PARDAL_FLIGHT_MEDIA = '(min-width: 1360px)';
 const REDUCED_MOTION_MEDIA = '(prefers-reduced-motion: reduce)';
 
@@ -82,10 +83,11 @@ function useMediaQuery(query: string) {
 function PardalFlight() {
   const wide = useMediaQuery(PARDAL_FLIGHT_MEDIA);
   const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
-  if (!wide) return null;
+  // Reduced motion keeps only the perched gutter bird, which needs a wide screen.
+  if (reducedMotion && !wide) return null;
   return (
     <Suspense fallback={null}>
-      <PardalFlight3D reducedMotion={reducedMotion} />
+      <PardalFlight3D reducedMotion={reducedMotion} wide={wide} />
     </Suspense>
   );
 }

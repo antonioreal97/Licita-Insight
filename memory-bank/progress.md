@@ -121,12 +121,17 @@ Deriva de [activeContext](activeContext.md).
 - Filtro/facet `platform` na busca; badge "Disputa em" no card e no detalhe; perfil "Sou cadastrado em" (`registeredPlatforms`, não muda `version` nem a aderência); aviso de credenciamento prévio na ficha, por regex e dias úteis com feriados nacionais ([`docs/contracts/ai-v1.md`](../docs/contracts/ai-v1.md)).
 - Produção: a migração `0033_tender_platform` precisa ser aplicada manualmente antes do deploy; o job `tender_platform_backfill` da API preenche os antigos sozinho (ao subir e às 02:00, só enquanto houver `platform` nulo). Amostra de 8 out 2026 (104.748 abertos): 36,4% em sala conhecida, 39,9% sistema de origem, 23,7% outro sistema.
 
-## Na branch — pardal em movimento na landing (`feat/pardal-motion`, 09 out 2026)
+## Pardal em movimento na landing (PR #69 mergeado; aproximação na branch `feat/pardal-aproximacao`, 09 out 2026)
 
 - Pardal 3D (Three.js, `pardal-flight-3d.tsx`) extrudado de `public/brand/pardal-silhueta.svg` (os 4 paths do logo:
-  corpo, olho e asa em dois paths, que bate). Voa nas margens laterais e cruza no vão entre seções, só a partir de
-  1360 px; render sob demanda; tinta invertida sobre `bg-superficie-inversa`. Carrega sob demanda
-  (`React.lazy`), como o globo.
+  corpo, olho e asa em dois paths, que bate). Render sob demanda; tinta invertida sobre `bg-superficie-inversa`.
+  Carrega sob demanda (`React.lazy`), como o globo.
+- Aproximação (branch nova): perto de cada fronteira o pássaro voa em direção à câmera e o corpo se enche com o
+  fundo da próxima seção até cobrir a tela; depois uma cortina da mesma cor sobe com a borda da seção e revela a
+  próxima. Em todas as larguras; repouso nas margens só a partir de 1360 px. Com movimento reduzido não há
+  transição. O contorno `corpo` do logo é aberto na cauda, então o SVG ganhou `corpo-cheio` (`fill="none"`, não
+  muda o desenho): silhueta sólida gerada uma vez por fechamento morfológico do contorno. O zoom pivota no centro
+  do maior círculo inscrito nela (`BODY_INNER` no componente); se o SVG mudar, regenerar os dois.
 - Dois clipes HyperFrames (`motion/pardal-assinatura`, `motion/pardal-raio-x`) renderizados por
   `pnpm --filter @workspace/licitainsight run motion:render` em `public/motion/` (WebM alfa + HEVC alfa + pôster PNG),
   tocados uma vez na seção "IA com fonte" e na chamada final (`pardal-clip.tsx`).

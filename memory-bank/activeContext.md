@@ -66,6 +66,11 @@ Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira s
 
 Landing com o pardal em movimento (09 out 2026, branch `feat/pardal-motion`, sem deploy):
 pardal 3D ligado à rolagem e dois clipes pré-renderizados com o CLI do HyperFrames (`hyperframes@0.8.140`, via
+
+Landing com o pardal em movimento (09 out 2026; PR #69 mergeado, sem deploy). Em seguida, branch
+`feat/pardal-aproximacao`: o pássaro se aproxima da câmera a cada fronteira e troca a cor da tela para a da próxima
+seção (todas as larguras).
+Base do PR #69: pardal 3D ligado à rolagem e dois clipes pré-renderizados com o CLI do HyperFrames (`hyperframes@0.8.140`, via
 `pnpm dlx`, nunca instalado como dependência para não puxar Puppeteer/Chrome no Docker e na Vercel). Re-render só
 no macOS (HEVC com alfa via VideoToolbox). Detalhes em [progress](progress.md) e
 [`design-system/motion.md`](../design-system/motion.md).
