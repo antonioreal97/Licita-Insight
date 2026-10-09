@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   Moon,
-  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -72,7 +71,6 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
     items: [
       { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
       // Internal reference page: never shown to customers.
-      ...(import.meta.env.DEV ? [{ href: '/design-system', label: 'Design system', icon: Palette, testId: 'link-nav-design-system' }] : []),
     ],
   },
 ];
