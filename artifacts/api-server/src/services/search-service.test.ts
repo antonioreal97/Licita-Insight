@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { TenderSummary } from "@workspace/api-zod";
+import type { TenderDetail, TenderSummary } from "@workspace/api-zod";
+import type { SearchCriteria, TenderRepository } from "../domain/search";
 import {
   createHighlights,
   createValueHistogram,
@@ -9,7 +10,10 @@ import {
   nonNegativeValues,
   numberRange,
   statusLabels,
+  SearchService,
 } from "./search-service";
+
+const firstSeenAt = new Date("2026-09-22T12:00:00Z");
 
 const summaryWithScore = (score: number | null): TenderSummary => ({
   id: `fixture-${String(score)}`,
@@ -35,6 +39,41 @@ const summaryWithScore = (score: number | null): TenderSummary => ({
   categories: [],
   relevance: { score, highlights: [] },
   updatedAt: new Date("2026-09-22T12:00:00Z"),
+  firstSeenAt,
+  isNew: false,
+});
+
+const detail = (id: string, createdAt: Date): TenderDetail => ({
+  ...summaryWithScore(null),
+  id,
+  firstSeenAt: createdAt,
+  isNew: false,
+  description: null,
+  processNumber: null,
+  items: [],
+  documents: [],
+  timeline: [],
+  createdAt,
+  detailsFetchedAt: null,
+});
+
+const criteria = (patch: Partial<SearchCriteria> = {}): SearchCriteria => ({
+  query: null,
+  mode: "keyword",
+  status: [],
+  modality: [],
+  state: [],
+  city: [],
+  organizationId: [],
+  sourceId: [],
+  category: [],
+  platform: [],
+  newOnly: false,
+  sort: "relevance",
+  page: 1,
+  pageSize: 20,
+  facets: true,
+  ...patch,
 });
 
 describe("search response semantics", () => {
@@ -124,5 +163,26 @@ describe("search response semantics", () => {
       field: "title",
       fragments: ["Aquisição de <mark>veículos</mark> leves"],
     }]);
+  });
+
+  it("filters and counts new tenders using the injected server clock", () => {
+    const now = new Date("2026-10-08T15:00:00.000Z");
+    const tenders = [
+      detail("new", new Date(now.getTime() - 23 * 60 * 60 * 1_000)),
+      detail("old", new Date(now.getTime() - 25 * 60 * 60 * 1_000)),
+    ];
+    const repository: TenderRepository = {
+      findAll: () => tenders,
+      findById: (id) => tenders.find((tender) => tender.id === id),
+      getIndexUpdatedAt: () => now,
+    };
+    const result = new SearchService(repository, () => now).search(
+      criteria({ newOnly: true, sort: "first_seen_desc" }),
+    );
+
+    assert.deepEqual(result.data.map(({ id }) => id), ["new"]);
+    assert.equal(result.data[0]?.isNew, true);
+    assert.equal(result.facets?.newCount, 1);
+    assert.equal(result.pagination.total, 1);
   });
 });

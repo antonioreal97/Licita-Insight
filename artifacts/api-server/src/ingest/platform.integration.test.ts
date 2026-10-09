@@ -107,6 +107,7 @@ test("plataforma: ingest, backfill idempotente, filtro com contagem e perfil", {
       sourceId: [],
       category: [],
       platform: ["bll", "licitanet"],
+      newOnly: false,
       sort: "relevance" as const,
       page: 1,
       pageSize: 20,

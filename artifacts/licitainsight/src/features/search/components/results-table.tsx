@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { DeadlineIndicator } from '@/features/tenders/components/deadline-indicator';
 import { HighlightedText } from '@/features/tenders/components/highlighted-text';
 import { RelevanceMeter } from '@/features/tenders/components/relevance-meter';
+import { NewTenderBadge } from '@/features/tenders/components/new-tender-badge';
 import { SaveButton } from '@/features/tenders/components/save-button';
 import { StatusBadge } from '@/features/tenders/components/status-badge';
 import { ValueDisplay } from '@/features/tenders/components/value-display';
@@ -101,6 +102,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                     <HighlightedText fragment={highlightFor(t, 'title')} fallback={t.title} />
                   </Link>
                   <div className="mt-0.5 flex min-w-0 items-center gap-1.5 type-meta text-muted-foreground">
+                    <NewTenderBadge isNew={t.isNew} />
                     <span
                       title={t.modalityLabel !== modality ? `Na fonte: ${t.modalityLabel}` : undefined}
                       className="shrink-0 font-semibold text-foreground/80"

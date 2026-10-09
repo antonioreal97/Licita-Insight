@@ -100,6 +100,7 @@ export * from './location';
 export * from './markNotificationsReadRequest';
 export * from './modality';
 export * from './modalityFilterParameter';
+export * from './newOnlyParameter';
 export * from './notFoundResponse';
 export * from './notification';
 export * from './notificationChange';

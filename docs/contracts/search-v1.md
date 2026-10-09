@@ -50,7 +50,7 @@ fixa apenas a **forma pública** que o frontend consome. Mudanças de forma deve
 type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled';
 type Modality = 'pregao_eletronico' | 'pregao_presencial' | 'concorrencia' | 'concorrencia_eletronica'
   | 'dispensa' | 'inexigibilidade' | 'credenciamento' | 'leilao' | 'dialogo_competitivo' | 'other';
-type SortOption = 'relevance' | 'deadline_asc' | 'published_desc' | 'value_desc' | 'value_asc';
+type SortOption = 'relevance' | 'deadline_asc' | 'published_desc' | 'first_seen_desc' | 'value_desc' | 'value_asc';
 type SearchMode = 'keyword' | 'semantic' | 'hybrid';
 ```
 
@@ -76,6 +76,7 @@ type SearchMode = 'keyword' | 'semantic' | 'hybrid';
 | `organizationId` | string[] | — | OR |
 | `sourceId` | string[] | — | OR |
 | `category` | string[] | — | slugs de categoria |
+| `newOnly` | boolean | `false` | somente editais inseridos pela primeira vez no Pardal dentro de `NEW_TENDER_WINDOW_HOURS` (24 h por padrão) |
 | `valueMin` / `valueMax` | number | — | sobre `estimatedValue`; registros com valor `null` são excluídos quando um dos dois é enviado |
 | `publishedFrom` / `publishedTo` | date | — | sobre `publishedAt`, inclusivo, horário de Brasília |
 | `deadlineFrom` / `deadlineTo` | date | — | sobre `proposalDeadline`, inclusivo, horário de Brasília |
@@ -102,6 +103,7 @@ contagens das outras opções do mesmo grupo.
     category: FacetBucket[];
     organization: FacetBucket[];   // top 20
     valueRange: { min: number | null; max: number | null };
+    newCount: number;              // novos no período, aplicando os demais filtros
   } | null;                        // null quando facets=false
   meta: {
     query: string | null;
@@ -139,6 +141,8 @@ type TenderSummary = {
     // fragments usam <mark>…</mark>; nenhuma outra tag HTML é permitida
   };
   updatedAt: string;
+  firstSeenAt: string;               // primeira inserção no Pardal; não é a publicação no PNCP
+  isNew: boolean;                    // calculado com o relógio do servidor
 };
 ```
 

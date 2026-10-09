@@ -42,6 +42,7 @@ import { AskTenderPanel } from './components/ask-tender-panel';
 import { TenderSheetPanel } from './components/tender-sheet-panel';
 import { DeadlineIndicator } from './components/deadline-indicator';
 import { MetaItem } from './components/meta-item';
+import { NewTenderBadge } from './components/new-tender-badge';
 import { PlatformBadge } from './components/platform-badge';
 import { StatusBadge } from './components/status-badge';
 import { ValueDisplay } from './components/value-display';
@@ -214,6 +215,7 @@ export default function TenderDetailPage() {
         <div className="min-w-0 max-w-prose">
           <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 type-meta text-muted-foreground">
             <StatusBadge status={tender.status} />
+            <NewTenderBadge isNew={tender.isNew} />
             <span title={tender.modalityLabel !== modality ? `Na fonte: ${tender.modalityLabel}` : undefined} className="font-semibold text-foreground/80">
               {modality}
             </span>

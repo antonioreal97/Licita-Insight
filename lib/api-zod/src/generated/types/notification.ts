@@ -22,6 +22,12 @@ export interface Notification {
   savedSearch: NotificationSavedSearch;
   /** @nullable */
   matchCount: number | null;
+  /**
+     * Number of linked notification results still inside the configured new-tender window.
+     * @minimum 0
+     * @nullable
+     */
+  newMatchCount: number | null;
   /** @maxItems 20 */
   tenderIds: string[];
   /** @maxItems 5 */

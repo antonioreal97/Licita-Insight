@@ -1114,6 +1114,7 @@ export const SortOption = {
   relevance: 'relevance',
   deadline_asc: 'deadline_asc',
   published_desc: 'published_desc',
+  first_seen_desc: 'first_seen_desc',
   value_desc: 'value_desc',
   value_asc: 'value_asc',
 } as const;
@@ -1246,6 +1247,10 @@ export interface TenderSummary {
   categories: Category[];
   relevance: Relevance;
   updatedAt: string;
+  /** Time when this tender was first inserted into Pardal. PNCP publication date is unrelated. */
+  firstSeenAt: string;
+  /** Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`. */
+  isNew: boolean;
 }
 
 export type RecommendationReasonKind = typeof RecommendationReasonKind[keyof typeof RecommendationReasonKind];
@@ -1633,6 +1638,8 @@ export type NotificationTender = {
   title: string;
   /** @nullable */
   tenderNumberShort: string | null;
+  /** Whether the linked tender is still inside the configured new-tender window. */
+  isNew: boolean;
 } | null;
 
 export type NotificationChange = {
@@ -1660,6 +1667,12 @@ export interface Notification {
   savedSearch: NotificationSavedSearch;
   /** @nullable */
   matchCount: number | null;
+  /**
+     * Number of linked notification results still inside the configured new-tender window.
+     * @minimum 0
+     * @nullable
+     */
+  newMatchCount: number | null;
   /** @maxItems 20 */
   tenderIds: string[];
   /** @maxItems 5 */
@@ -1875,6 +1888,11 @@ export interface SearchFacets {
   platform: FacetBucket[];
   groupTotals?: FacetGroupTotals;
   valueRange: SearchFacetsValueRange;
+  /**
+     * Results first inserted within the configured new-tender window, applying all other filters.
+     * @minimum 0
+     */
+  newCount: number;
 }
 
 export type SearchResponsePagination = {
@@ -2057,6 +2075,11 @@ export type CategoryFilterParameter = string[];
  */
 export type PlatformFilterParameter = string[];
 
+/**
+ * Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).
+ */
+export type NewOnlyParameter = boolean;
+
 export type ValueMinParameter = number;
 
 export type ValueMaxParameter = number;
@@ -2136,6 +2159,10 @@ category?: CategoryFilterParameter;
  * @items.minLength 1
  */
 platform?: PlatformFilterParameter;
+/**
+ * Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).
+ */
+newOnly?: NewOnlyParameter;
 /**
  * @minimum 0
  */

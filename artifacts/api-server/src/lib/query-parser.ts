@@ -71,6 +71,8 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
 
   if (normalized.facets === "true") normalized.facets = true;
   if (normalized.facets === "false") normalized.facets = false;
+  if (normalized.newOnly === "true") normalized.newOnly = true;
+  if (normalized.newOnly === "false") normalized.newOnly = false;
 
   const result = SearchTendersQueryParams.safeParse(normalized);
   if (!result.success) {
@@ -104,6 +106,7 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
     sourceId: result.data.sourceId ?? [],
     category: result.data.category ?? [],
     platform: result.data.platform ?? [],
+    newOnly: result.data.newOnly ?? false,
     valueMin: result.data.valueMin,
     valueMax: result.data.valueMax,
     publishedFrom: result.data.publishedFrom,

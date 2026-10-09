@@ -346,6 +346,28 @@ function PanelSkeleton() {
   );
 }
 
+function NewOnlyFilter({ params, facets, onChange, density }: Pick<PanelProps, 'params' | 'facets' | 'onChange'> & { density: FacetDensity }) {
+  const id = useId();
+  return (
+    <Section title="Entrada no Pardal" badge={params.newOnly ? 1 : 0}>
+      <label
+        htmlFor={id}
+        className={`flex ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'} cursor-pointer items-center gap-2.5 rounded-md px-1.5 type-ui text-foreground transition-colors duration-fast ease-standard hover:bg-surface-sunken`}
+      >
+        <Checkbox
+          id={id}
+          checked={params.newOnly ?? false}
+          onCheckedChange={(checked) => onChange({ newOnly: checked === true || undefined })}
+          data-testid="checkbox-filter-new-only"
+          className="border-input data-[state=checked]:border-primary"
+        />
+        <span className="min-w-0 flex-1">Novos (24 h)</span>
+        <span className="shrink-0 type-data text-2xs text-muted-foreground">{facets ? formatNumber(facets.newCount) : '—'}</span>
+      </label>
+    </Section>
+  );
+}
+
 /** Multi-select facet panel. Counts are disjunctive (each group ignores its own selection), so OR-ing within a group stays predictable. */
 export function FacetPanel({ params, facets, onChange, density = 'compact', loading = false }: PanelProps) {
   if (loading && !facets) return <PanelSkeleton />;
@@ -356,6 +378,7 @@ export function FacetPanel({ params, facets, onChange, density = 'compact', load
   const noOptions = FACET_GROUPS.every((config) => !facets?.[config.facet]?.length);
   return (
     <div data-testid="facet-panel">
+      <NewOnlyFilter params={params} facets={facets} onChange={onChange} density={density} />
       {noOptions && (
         <p className="border-b border-border-subtle py-4 type-meta text-muted-foreground">
           {countsKnown ? 'Nenhum filtro disponível para estes resultados.' : 'Filtros indisponíveis: não foi possível carregar os resultados.'}

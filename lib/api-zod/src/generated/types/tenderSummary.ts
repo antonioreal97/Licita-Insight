@@ -53,4 +53,8 @@ export interface TenderSummary {
   categories: Category[];
   relevance: Relevance;
   updatedAt: Date;
+  /** Time when this tender was first inserted into Pardal. PNCP publication date is unrelated. */
+  firstSeenAt: Date;
+  /** Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`. */
+  isNew: boolean;
 }
