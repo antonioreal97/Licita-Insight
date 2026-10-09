@@ -169,10 +169,8 @@ const colors = {
   ink: "#164C49", // texto (petroleo): 8.2:1 on creme, 8.8:1 on creme-claro
   inverse: "#00464E", // superficie-inversa (petroleo-profundo)
   inverseInk: "#F6F3ED", // texto-inverso (creme-claro): 9.6:1 on petroleo-profundo
-  brandMark: "#BFE17C", // lima-marca: the wordmark on petroleo-profundo only
   highlight: "#D9F58B", // destaque (lima): the one primary button per e-mail
   aqua: "#9ED6D1", // tags; petroleo on it 6.0:1
-  salvia: "#B8CDA5", // decorative shape
   line: "#CBD0C8", // linha (nevoa): decorative dividers only
 } as const;
 
@@ -194,6 +192,13 @@ const fontFaces = (origin: string): string =>
         `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url('${escapeHtml(`${origin}/fonts/${file}`)}') format('woff2')}`,
     )
     .join("\n");
+
+/**
+ * The official lima logo for the petróleo profundo header, rendered at 2x (320×272) from
+ * artifacts/licitainsight/public/brand/pardal-logo-lima.svg and served by the app. PNG because Gmail blocks SVG.
+ * The URL is the same for every recipient, so loading it does not tell who opened the e-mail.
+ */
+const LOGO_PATH = "/brand/email/pardal-logo-lima-2x.png";
 
 type Tone = "default" | "urgent";
 
@@ -479,10 +484,7 @@ ${fontFaces(input.origin)}
 <tr><td align="center" class="pd-outer" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;font-family:${textFont};color:${colors.ink}">
 <tr><td class="pd-hero" bgcolor="${colors.inverse}" style="background:${colors.inverse};padding:32px;border-radius:24px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td valign="middle" style="font-family:${titleFont};font-size:30px;line-height:32px;font-weight:500;letter-spacing:-0.01em;color:${colors.brandMark}">Pardal</td>
-<td valign="middle" align="right" width="112" aria-hidden="true" style="font-size:0;line-height:0"><span style="display:inline-block;width:40px;height:40px;border-radius:999px;background:${colors.aqua}"></span><span style="display:inline-block;width:64px;height:40px;margin-left:8px;border-radius:999px;background:${colors.salvia}"></span></td>
-</tr></table>
+<img src="${escapeHtml(`${input.origin}${LOGO_PATH}`)}" width="160" height="136" alt="Pardal Digital" style="display:block;width:160px;height:136px;border:0;outline:none;text-decoration:none;font-family:${titleFont};font-size:24px;line-height:32px;color:${colors.inverseInk}">
 <p style="margin:32px 0 0;font-family:${textFont};font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${colors.highlight}">${escapeHtml(eyebrow)}</p>
 <h1 style="margin:8px 0 0;font-family:${titleFont};font-size:30px;line-height:38px;font-weight:500;color:${colors.inverseInk}">${escapeHtml(heading)}</h1>
 <p style="margin:8px 0 0;font-family:${textFont};font-size:16px;line-height:24px;color:${colors.inverseInk}">${escapeHtml(summary)}</p>
