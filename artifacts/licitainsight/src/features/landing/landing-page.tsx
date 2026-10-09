@@ -79,7 +79,6 @@ function useMediaQuery(query: string) {
   }, [query]);
   return matches;
 }
-
 function PardalFlight() {
   const wide = useMediaQuery(PARDAL_FLIGHT_MEDIA);
   const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
@@ -578,7 +577,7 @@ function EvidenceSection() {
   ];
 
   return (
-    <section id="ia" aria-labelledby="ia-titulo" className="bg-superficie-inversa py-24 sm:py-32 text-texto-inverso">
+    <section id="ia" data-pardal-momento aria-labelledby="ia-titulo" className="bg-superficie-inversa py-24 sm:py-32 text-texto-inverso">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-14 lg:grid-cols-[.9fr_1.1fr] lg:items-start">
           <div className="lg:sticky lg:top-12">
@@ -850,7 +849,7 @@ function PlanSection() {
   const price = plan.data?.monthlyBrl ?? null;
   const signedIn = useSession().status === 'authenticated';
   return (
-    <section id="plano" data-testid="section-plan" aria-labelledby="plano-titulo" className="border-t border-border bg-surface-sunken py-24 sm:py-32">
+    <section id="plano" data-pardal-momento data-testid="section-plan" aria-labelledby="plano-titulo" className="border-t border-border bg-surface-sunken py-24 sm:py-32">
       <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
         <div>
           <div className={eyebrow}>Assinatura Transparente</div>
