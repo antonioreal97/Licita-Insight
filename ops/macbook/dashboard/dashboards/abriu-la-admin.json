@@ -1,19 +1,64 @@
 {
   "uid": "abriu-la-admin",
-  "title": "Abriu lá — Admin",
+  "title": "Pardal Digital — Admin",
   "tags": [
+    "pardal-digital",
     "abriu-la"
   ],
   "timezone": "America/Sao_Paulo",
   "editable": false,
   "graphTooltip": 1,
-  "refresh": "5m",
+  "refresh": "15s",
   "time": {
-    "from": "now-30d",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {
-    "hidden": true
+    "hidden": false
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "label": "Containers",
+        "type": "custom",
+        "query": "app,postgres,proxy,ocr,grafana,prometheus",
+        "options": [],
+        "multi": true,
+        "includeAll": true,
+        "allValue": "app|postgres|proxy|ocr|grafana|prometheus",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "daily_process_limit",
+        "label": "Limite diário de processos",
+        "type": "textbox",
+        "query": "10",
+        "options": [],
+        "current": {
+          "text": "10",
+          "value": "10"
+        }
+      },
+      {
+        "name": "monthly_brl",
+        "label": "Mensalidade (R$)",
+        "type": "textbox",
+        "query": "49.90",
+        "options": [],
+        "current": {
+          "text": "49.90",
+          "value": "49.90"
+        }
+      }
+    ]
   },
   "schemaVersion": 39,
   "version": 1,
@@ -45,6 +90,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -58,12 +109,6 @@
           "rawSql": "select count(*) as \"Usuários\" from users"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -92,6 +137,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -105,12 +156,6 @@
           "rawSql": "select\n  count(distinct user_id) filter (where last_seen_at > now() - interval '24 hours') as \"24 h\",\n  count(distinct user_id) filter (where last_seen_at > now() - interval '7 days') as \"7 dias\",\n  count(distinct user_id) filter (where last_seen_at > now() - interval '30 days') as \"30 dias\"\nfrom sessions"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -139,6 +184,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -152,12 +203,6 @@
           "rawSql": "select count(*) as \"Em trial\"\nfrom users u left join subscriptions s on s.user_id = u.id\nwhere u.trial_ends_at > now()\n  and not coalesce(s.status = 'active' or (s.status = 'canceled' and s.current_period_end > now()), false)"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -186,19 +231,6 @@
         "w": 12,
         "h": 9
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "licita-pg"
-          },
-          "editorMode": "code",
-          "rawQuery": true,
-          "format": "table",
-          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time, count(u.id) as \"Novos usuários\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join users u on date_trunc('day', u.created_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -215,6 +247,19 @@
         },
         "overrides": []
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time, count(u.id) as \"Novos usuários\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join users u on date_trunc('day', u.created_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
+        }
+      ],
       "options": {
         "legend": {
           "displayMode": "list",
@@ -255,6 +300,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -268,12 +319,6 @@
           "rawSql": "select count(*) as \"Pagantes\" from subscriptions s where s.status = 'active'"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -302,6 +347,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -312,15 +363,9 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "select count(*) * 49.90 as \"MRR (R$)\" from subscriptions s where s.status = 'active'"
+          "rawSql": "select count(*) * cast(${monthly_brl:sqlstring} as numeric) as \"MRR (R$)\" from subscriptions s where s.status = 'active'"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -349,6 +394,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -362,12 +413,6 @@
           "rawSql": "select coalesce(round(100.0 * count(*) filter (where s.status = 'active') / nullif(count(*), 0), 1), 0) as \"Conversão (%)\"\nfrom users u left join subscriptions s on s.user_id = u.id\nwhere u.trial_ends_at is not null"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -396,6 +441,12 @@
         "w": 12,
         "h": 9
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -409,12 +460,6 @@
           "rawSql": "select coalesce(s.status, 'sem assinatura') as \"Status\",\n       count(*) as \"Usuários\",\n       count(*) filter (where s.status = 'canceled' and s.current_period_end > now()) as \"Pago até o fim do período\"\nfrom users u left join subscriptions s on s.user_id = u.id\ngroup by 1 order by 2 desc"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
@@ -447,6 +492,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -460,12 +511,6 @@
           "rawSql": "select count(*) as \"Buscas salvas\", count(*) filter (where alerts_enabled) as \"Com alerta\"\nfrom saved_searches where deleted_at is null"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -494,6 +539,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -507,12 +558,6 @@
           "rawSql": "select count(*) as \"Editais salvos\", count(*) filter (where monitored) as \"Monitorados\",\n       count(distinct user_id) as \"Usuários\"\nfrom saved_tenders"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -541,6 +586,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -554,12 +605,6 @@
           "rawSql": "select count(*) as \"Total\", count(*) filter (where created_at > now() - interval '7 days') as \"7 dias\",\n       count(*) filter (where read_at is null) as \"Não lidas\"\nfrom notifications"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -601,6 +646,13 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -614,13 +666,6 @@
           "rawSql": "select coalesce(sum(cost_usd), 0) as \"OpenAI (mês)\"\nfrom ai_usage_ledger\nwhere feature in ('title', 'ask_summary', 'sheet_summary')\n  and occurred_at >= date_trunc('month', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD",
-          "decimals": 4
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -649,6 +694,13 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 4
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -662,13 +714,6 @@
           "rawSql": "select coalesce(sum(cost_usd), 0) as \"Jev (mês)\"\nfrom ai_usage_ledger\nwhere feature in ('ask', 'sheet', 'fit')\n  and occurred_at >= date_trunc('month', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD",
-          "decimals": 4
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -697,19 +742,6 @@
         "w": 12,
         "h": 9
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "licita-pg"
-          },
-          "editorMode": "code",
-          "rawQuery": true,
-          "format": "table",
-          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'title'), 0) as \"Títulos\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'ask_summary'), 0) as \"Resumo de perguntas\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'sheet_summary'), 0) as \"Resumo de fichas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join ai_usage_ledger l\n  on l.feature in ('title', 'ask_summary', 'sheet_summary')\n and date_trunc('day', l.occurred_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -727,6 +759,19 @@
         },
         "overrides": []
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'title'), 0) as \"Títulos\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'ask_summary'), 0) as \"Resumo de perguntas\",\n       coalesce(sum(l.cost_usd) filter (where l.feature = 'sheet_summary'), 0) as \"Resumo de fichas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join ai_usage_ledger l\n  on l.feature in ('title', 'ask_summary', 'sheet_summary')\n and date_trunc('day', l.occurred_at at time zone 'America/Sao_Paulo') = d.day\ngroup by d.day order by d.day"
+        }
+      ],
       "options": {
         "legend": {
           "displayMode": "list",
@@ -754,19 +799,6 @@
         "w": 12,
         "h": 9
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "licita-pg"
-          },
-          "editorMode": "code",
-          "rawQuery": true,
-          "format": "table",
-          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = false and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas novas\",\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = true and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas em cache\",\n       (select count(*) from tender_ai_sheets t\n         where t.generated_at is not null and date_trunc('day', t.generated_at at time zone 'America/Sao_Paulo') = d.day) as \"Fichas geradas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\norder by d.day"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -783,6 +815,19 @@
         },
         "overrides": []
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select (d.day at time zone 'America/Sao_Paulo') as time,\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = false and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas novas\",\n       (select count(*) from ai_ask_requests a\n         where a.cache_hit = true and date_trunc('day', a.created_at at time zone 'America/Sao_Paulo') = d.day) as \"Perguntas em cache\",\n       (select count(*) from tender_ai_sheets t\n         where t.generated_at is not null and date_trunc('day', t.generated_at at time zone 'America/Sao_Paulo') = d.day) as \"Fichas geradas\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\norder by d.day"
+        }
+      ],
       "options": {
         "legend": {
           "displayMode": "list",
@@ -810,6 +855,12 @@
         "w": 24,
         "h": 9
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -820,15 +871,9 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "select q.quota_day as \"Dia\", coalesce(u.name, '') as \"Nome\", u.email as \"E-mail\",\n       count(*) as \"Processos consultados\", 10 as \"Limite\"\nfrom ai_daily_tenders q join users u on u.id = q.user_id\nwhere q.quota_day >= (now() at time zone 'America/Sao_Paulo')::date - 29\ngroup by q.quota_day, u.name, u.email\norder by q.quota_day desc, 4 desc"
+          "rawSql": "select q.quota_day as \"Dia\", coalesce(u.name, '') as \"Nome\", u.email as \"E-mail\",\n       count(*) as \"Processos consultados\", cast(${daily_process_limit:sqlstring} as integer) as \"Limite\"\nfrom ai_daily_tenders q join users u on u.id = q.user_id\nwhere q.quota_day >= (now() at time zone 'America/Sao_Paulo')::date - 29\ngroup by q.quota_day, u.name, u.email\norder by q.quota_day desc, 4 desc"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
@@ -861,6 +906,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -874,12 +925,6 @@
           "rawSql": "select count(*) as \"Editais\" from tenders"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -908,6 +953,12 @@
         "w": 6,
         "h": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -921,12 +972,6 @@
           "rawSql": "select count(*) as \"Contratos\" from pncp_contracts"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -955,6 +1000,12 @@
         "w": 24,
         "h": 9
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -968,12 +1019,6 @@
           "rawSql": "select distinct on (source) source as \"Fonte\", status as \"Status\", started_at as \"Início\",\n       finished_at as \"Fim\", heartbeat_at as \"Último sinal\", upserted as \"Gravados\",\n       left(coalesce(error, ''), 160) as \"Erro\"\nfrom ingest_runs order by source, started_at desc"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
@@ -993,19 +1038,6 @@
         "w": 12,
         "h": 9
       },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "licita-pg"
-          },
-          "editorMode": "code",
-          "rawQuery": true,
-          "format": "table",
-          "rawSql": "with since as (select date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days' as day),\ncreated as (\n  select date_trunc('day', created_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where created_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1),\npublished as (\n  select date_trunc('day', published_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where published_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1)\nselect (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(c.n, 0) as \"Entraram na base\", coalesce(p.n, 0) as \"Publicados no PNCP\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join created c on c.day = d.day\nleft join published p on p.day = d.day\norder by d.day"
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -1022,6 +1054,19 @@
         },
         "overrides": []
       },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "with since as (select date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days' as day),\ncreated as (\n  select date_trunc('day', created_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where created_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1),\npublished as (\n  select date_trunc('day', published_at at time zone 'America/Sao_Paulo') as day, count(*) as n from tenders\n  where published_at >= (select day from since) at time zone 'America/Sao_Paulo' group by 1)\nselect (d.day at time zone 'America/Sao_Paulo') as time,\n       coalesce(c.n, 0) as \"Entraram na base\", coalesce(p.n, 0) as \"Publicados no PNCP\"\nfrom generate_series(\n      date_trunc('day', now() at time zone 'America/Sao_Paulo') - interval '29 days',\n      date_trunc('day', now() at time zone 'America/Sao_Paulo'),\n      interval '1 day') as d(day)\nleft join created c on c.day = d.day\nleft join published p on p.day = d.day\norder by d.day"
+        }
+      ],
       "options": {
         "legend": {
           "displayMode": "list",
@@ -1062,6 +1107,12 @@
         "w": 24,
         "h": 9
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
       "targets": [
         {
           "refId": "A",
@@ -1075,15 +1126,1150 @@
           "rawSql": "select u.name as \"Nome\", u.email as \"E-mail\", u.created_at as \"Criado em\",\n       (select max(se.last_seen_at) from sessions se where se.user_id = u.id) as \"Último acesso\",\n       u.trial_ends_at as \"Trial até\",\n       coalesce(s.status, 'sem assinatura') as \"Assinatura\",\n       case\n         when s.status = 'active' then 'Pagante'\n         when s.status = 'canceled' and s.current_period_end > now() then 'Pago até o fim do período'\n         when u.trial_ends_at > now() then 'Em trial'\n         else 'Sem acesso'\n       end as \"Situação\"\nfrom users u left join subscriptions s on s.user_id = u.id\norder by u.created_at desc\nlimit 50"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 28,
+      "type": "row",
+      "title": "Servidor",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 98,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "CPU por núcleo",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 99,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 - avg by (cpu) (rate(node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"}[$__rate_interval])) * 100",
+          "legendFormat": "CPU {{cpu}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Load average",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 99,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load1{job=\"node-exporter\"}",
+          "legendFormat": "1 min",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load5{job=\"node-exporter\"}",
+          "legendFormat": "5 min",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load15{job=\"node-exporter\"}",
+          "legendFormat": "15 min",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "RAM usada",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 108,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Swap usada",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 108,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - node_memory_SwapFree_bytes{job=\"node-exporter\"} / clamp_min(node_memory_SwapTotal_bytes{job=\"node-exporter\"}, 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Disco usado por filesystem",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 108,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{job=\"node-exporter\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs|ramfs\"}\n  / node_filesystem_size_bytes{job=\"node-exporter\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs|nsfs|ramfs\"})",
+          "legendFormat": "{{mountpoint}} ({{device}})",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Rede do servidor",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 117,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (device) (rate(node_network_receive_bytes_total{job=\"node-exporter\",device!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{device}} recebido",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "-sum by (device) (rate(node_network_transmit_bytes_total{job=\"node-exporter\",device!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{device}} enviado",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Temperatura",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 117,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_hwmon_temp_celsius{job=\"node-exporter\"}",
+          "legendFormat": "{{chip}} {{sensor}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "stat",
+      "title": "Bateria",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 126,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_power_supply_capacity{job=\"node-exporter\"}",
+          "legendFormat": "{{power_supply}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "description": "Aparece somente se o host expuser uma bateria em /sys/class/power_supply."
+    },
+    {
+      "id": 37,
+      "type": "row",
+      "title": "Containers",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 131,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "CPU por container",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 132,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (\n  rate(container_cpu_usage_seconds_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval])\n) * 100",
+          "legendFormat": "{{container_label_com_docker_compose_service}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 39,
+      "type": "timeseries",
+      "title": "Memória usada vs limite",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 132,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"})",
+          "legendFormat": "{{container_label_com_docker_compose_service}} usada",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (container_spec_memory_limit_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"} < 1e15)",
+          "legendFormat": "{{container_label_com_docker_compose_service}} limite",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Memória do limite",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 141,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "100 * sum by (container_label_com_docker_compose_service) (\n  container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}\n) / sum by (container_label_com_docker_compose_service) (\n  container_spec_memory_limit_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"} < 1e15\n)",
+          "legendFormat": "{{container_label_com_docker_compose_service}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Containers sem mem_limit não aparecem neste painel."
+    },
+    {
+      "id": 41,
+      "type": "stat",
+      "title": "Reinícios no período",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 141,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "changes((max by (container_label_com_docker_compose_service) (\n  container_start_time_seconds{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}\n))[$__range:])",
+          "legendFormat": "{{container_label_com_docker_compose_service}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Rede por container",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 150,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (rate(container_network_receive_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))",
+          "legendFormat": "{{container_label_com_docker_compose_service}} recebido",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "-sum by (container_label_com_docker_compose_service) (rate(container_network_transmit_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))",
+          "legendFormat": "{{container_label_com_docker_compose_service}} enviado",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "I/O de disco por container",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 150,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (rate(container_fs_reads_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))",
+          "legendFormat": "{{container_label_com_docker_compose_service}} leitura",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (container_label_com_docker_compose_service) (rate(container_fs_writes_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))",
+          "legendFormat": "{{container_label_com_docker_compose_service}} escrita",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": "row",
+      "title": "API",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 159,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Requisições por segundo",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 160,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(licitai_http_request_duration_seconds_count{job=\"pardal-api\"}[$__rate_interval]))",
+          "legendFormat": "req/s",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 46,
+      "type": "timeseries",
+      "title": "Latência p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 160,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(licitai_http_request_duration_seconds_bucket{job=\"pardal-api\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 47,
+      "type": "stat",
+      "title": "Erros 5xx por segundo",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 169,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(licitai_http_request_duration_seconds_count{job=\"pardal-api\",status_class=\"5xx\"}[$__rate_interval])) or vector(0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 48,
+      "type": "timeseries",
+      "title": "Fila de IA durável",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 169,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (status) (licitai_ai_jobs{job=\"pardal-api\",status=~\"queued|running\"})",
+          "legendFormat": "{{status}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 49,
+      "type": "timeseries",
+      "title": "Fila Jev",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "licita-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 178,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "licita-prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (lane) (licitai_jev_queue_depth{job=\"pardal-api\"})",
+          "legendFormat": "{{lane}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       }
     }
   ]

@@ -2,6 +2,16 @@
 # Credentials come from ~/licita-monitor/dashboard.env (env_file in compose.yml), never from git.
 apiVersion: 1
 datasources:
+  - name: Prometheus
+    uid: licita-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+
   - name: Licita (somente leitura)
     uid: licita-pg
     type: grafana-postgresql-datasource

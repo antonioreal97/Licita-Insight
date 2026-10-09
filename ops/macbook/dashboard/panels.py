@@ -1,7 +1,6 @@
-"""Panel definitions for the Abriu lá admin dashboard: (section, title, type, sql, options)."""
+"""Panel definitions: (section, title, type, SQL/PromQL, options)."""
 
 TZ = "America/Sao_Paulo"
-MONTHLY_BRL = "49.90"
 
 # Paying = Asaas status active. "Pago até o fim do período" = canceled with current_period_end still ahead
 # (the app keeps access for them: billing-access.ts hasSubscriptionEntitlement).
@@ -35,7 +34,7 @@ group by d.day order by d.day""", {"bars": True}),
     ("Receita", "Pagantes (Asaas active)", "stat",
      f"select count(*) as \"Pagantes\" from subscriptions s where {PAYING}", {}),
     ("Receita", "MRR estimado (R$)", "stat",
-     f"select count(*) * {MONTHLY_BRL} as \"MRR (R$)\" from subscriptions s where {PAYING}", {"unit": "currencyBRL"}),
+     f"select count(*) * cast(${{monthly_brl:sqlstring}} as numeric) as \"MRR (R$)\" from subscriptions s where {PAYING}", {"unit": "currencyBRL"}),
     ("Receita", "Conversão trial → pagante", "stat", f"""
 select coalesce(round(100.0 * count(*) filter (where {PAYING}) / nullif(count(*), 0), 1), 0) as "Conversão (%)"
 from users u left join subscriptions s on s.user_id = u.id
@@ -91,7 +90,7 @@ from {DAYS_30}
 order by d.day""", {"bars": True}),
     ("IA", "Cota de processos por usuário e dia (30 dias)", "table", f"""
 select q.quota_day as "Dia", coalesce(u.name, '') as "Nome", u.email as "E-mail",
-       count(*) as "Processos consultados", 10 as "Limite"
+       count(*) as "Processos consultados", cast(${{daily_process_limit:sqlstring}} as integer) as "Limite"
 from ai_daily_tenders q join users u on u.id = q.user_id
 where q.quota_day >= (now() at time zone '{TZ}')::date - 29
 group by q.quota_day, u.name, u.email
@@ -133,4 +132,82 @@ select u.name as "Nome", u.email as "E-mail", u.created_at as "Criado em",
 from users u left join subscriptions s on s.user_id = u.id
 order by u.created_at desc
 limit 50""", {}),
+
+    # ---------------------------------------------------------------- Servidor
+    ("Servidor", "CPU por núcleo", "timeseries", """
+100 - avg by (cpu) (rate(node_cpu_seconds_total{job="node-exporter",mode="idle"}[$__rate_interval])) * 100
+""", {"datasource": "prometheus", "unit": "percent", "legend": "CPU {{cpu}}"}),
+    ("Servidor", "Load average", "timeseries", [
+        {"expr": "node_load1{job=\"node-exporter\"}", "legend": "1 min"},
+        {"expr": "node_load5{job=\"node-exporter\"}", "legend": "5 min"},
+        {"expr": "node_load15{job=\"node-exporter\"}", "legend": "15 min"},
+    ], {"datasource": "prometheus"}),
+    ("Servidor", "RAM usada", "stat", """
+100 * (1 - node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"})
+""", {"datasource": "prometheus", "unit": "percent", "decimals": 1}),
+    ("Servidor", "Swap usada", "stat", """
+100 * (1 - node_memory_SwapFree_bytes{job="node-exporter"} / clamp_min(node_memory_SwapTotal_bytes{job="node-exporter"}, 1))
+""", {"datasource": "prometheus", "unit": "percent", "decimals": 1}),
+    ("Servidor", "Disco usado por filesystem", "timeseries", """
+100 * (1 - node_filesystem_avail_bytes{job="node-exporter",fstype!~"tmpfs|devtmpfs|overlay|squashfs|nsfs|ramfs"}
+  / node_filesystem_size_bytes{job="node-exporter",fstype!~"tmpfs|devtmpfs|overlay|squashfs|nsfs|ramfs"})
+""", {"datasource": "prometheus", "unit": "percent", "legend": "{{mountpoint}} ({{device}})"}),
+    ("Servidor", "Rede do servidor", "timeseries", [
+        {"expr": "sum by (device) (rate(node_network_receive_bytes_total{job=\"node-exporter\",device!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))", "legend": "{{device}} recebido"},
+        {"expr": "-sum by (device) (rate(node_network_transmit_bytes_total{job=\"node-exporter\",device!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))", "legend": "{{device}} enviado"},
+    ], {"datasource": "prometheus", "unit": "Bps"}),
+    ("Servidor", "Temperatura", "timeseries", """
+node_hwmon_temp_celsius{job="node-exporter"}
+""", {"datasource": "prometheus", "unit": "celsius", "legend": "{{chip}} {{sensor}}"}),
+    ("Servidor", "Bateria", "stat", """
+node_power_supply_capacity{job="node-exporter"}
+""", {"datasource": "prometheus", "unit": "percent", "legend": "{{power_supply}}", "description": "Aparece somente se o host expuser uma bateria em /sys/class/power_supply."}),
+
+    # ---------------------------------------------------------------- Containers
+    ("Containers", "CPU por container", "timeseries", """
+sum by (container_label_com_docker_compose_service) (
+  rate(container_cpu_usage_seconds_total{job="cadvisor",image!="",container_label_com_docker_compose_service=~"$container"}[$__rate_interval])
+) * 100
+""", {"datasource": "prometheus", "unit": "percent", "legend": "{{container_label_com_docker_compose_service}}"}),
+    ("Containers", "Memória usada vs limite", "timeseries", [
+        {"expr": "sum by (container_label_com_docker_compose_service) (container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"})", "legend": "{{container_label_com_docker_compose_service}} usada"},
+        {"expr": "sum by (container_label_com_docker_compose_service) (container_spec_memory_limit_bytes{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"} < 1e15)", "legend": "{{container_label_com_docker_compose_service}} limite"},
+    ], {"datasource": "prometheus", "unit": "bytes"}),
+    ("Containers", "Memória do limite", "timeseries", """
+100 * sum by (container_label_com_docker_compose_service) (
+  container_memory_working_set_bytes{job="cadvisor",image!="",container_label_com_docker_compose_service=~"$container"}
+) / sum by (container_label_com_docker_compose_service) (
+  container_spec_memory_limit_bytes{job="cadvisor",image!="",container_label_com_docker_compose_service=~"$container"} < 1e15
+)
+""", {"datasource": "prometheus", "unit": "percent", "legend": "{{container_label_com_docker_compose_service}}", "description": "Containers sem mem_limit não aparecem neste painel."}),
+    ("Containers", "Reinícios no período", "stat", """
+changes((max by (container_label_com_docker_compose_service) (
+  container_start_time_seconds{job="cadvisor",image!="",container_label_com_docker_compose_service=~"$container"}
+))[$__range:])
+""", {"datasource": "prometheus", "legend": "{{container_label_com_docker_compose_service}}", "decimals": 0}),
+    ("Containers", "Rede por container", "timeseries", [
+        {"expr": "sum by (container_label_com_docker_compose_service) (rate(container_network_receive_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))", "legend": "{{container_label_com_docker_compose_service}} recebido"},
+        {"expr": "-sum by (container_label_com_docker_compose_service) (rate(container_network_transmit_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))", "legend": "{{container_label_com_docker_compose_service}} enviado"},
+    ], {"datasource": "prometheus", "unit": "Bps"}),
+    ("Containers", "I/O de disco por container", "timeseries", [
+        {"expr": "sum by (container_label_com_docker_compose_service) (rate(container_fs_reads_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))", "legend": "{{container_label_com_docker_compose_service}} leitura"},
+        {"expr": "sum by (container_label_com_docker_compose_service) (rate(container_fs_writes_bytes_total{job=\"cadvisor\",image!=\"\",container_label_com_docker_compose_service=~\"$container\"}[$__rate_interval]))", "legend": "{{container_label_com_docker_compose_service}} escrita"},
+    ], {"datasource": "prometheus", "unit": "Bps"}),
+
+    # ---------------------------------------------------------------- API
+    ("API", "Requisições por segundo", "timeseries", """
+sum(rate(licitai_http_request_duration_seconds_count{job="pardal-api"}[$__rate_interval]))
+""", {"datasource": "prometheus", "unit": "reqps", "legend": "req/s"}),
+    ("API", "Latência p95", "timeseries", """
+histogram_quantile(0.95, sum by (le) (rate(licitai_http_request_duration_seconds_bucket{job="pardal-api"}[$__rate_interval])))
+""", {"datasource": "prometheus", "unit": "s", "legend": "p95"}),
+    ("API", "Erros 5xx por segundo", "stat", """
+sum(rate(licitai_http_request_duration_seconds_count{job="pardal-api",status_class="5xx"}[$__rate_interval])) or vector(0)
+""", {"datasource": "prometheus", "unit": "reqps", "decimals": 3}),
+    ("API", "Fila de IA durável", "timeseries", """
+sum by (status) (licitai_ai_jobs{job="pardal-api",status=~"queued|running"})
+""", {"datasource": "prometheus", "legend": "{{status}}"}),
+    ("API", "Fila Jev", "timeseries", """
+sum by (lane) (licitai_jev_queue_depth{job="pardal-api"})
+""", {"datasource": "prometheus", "legend": "{{lane}}"}),
 ]

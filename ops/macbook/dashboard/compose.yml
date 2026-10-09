@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     # Admin password and read-only DB credentials (0600, outside git).
-    env_file: ${HOME}/licita-monitor/dashboard.env
+    env_file: ${DASHBOARD_ENV_FILE:-${HOME}/licita-monitor/dashboard.env}
     environment:
       GF_SERVER_HTTP_PORT: "3000"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
@@ -29,7 +29,7 @@ services:
     # Loopback and Tailscale only; never 0.0.0.0 (the LAN at 192.168.1.13 must not reach it).
     ports:
       - "127.0.0.1:8787:3000"
-      - "100.76.192.116:8787:3000"
+      - "${DASHBOARD_TAILSCALE_IP:-100.76.192.116}:${DASHBOARD_TAILSCALE_PORT:-8787}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./provisioning:/etc/grafana/provisioning:ro
@@ -43,6 +43,78 @@ services:
       retries: 5
       start_period: 30s
 
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    restart: unless-stopped
+    cpus: 0.30
+    mem_limit: 384m
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=2GB
+    expose:
+      - "9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - licita
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/-/ready >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.9.1
+    restart: unless-stopped
+    cpus: 0.05
+    mem_limit: 64m
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.powersupplyclass
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+)($$|/)
+    expose:
+      - "9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - licita
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    restart: unless-stopped
+    cpus: 0.15
+    mem_limit: 192m
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=15s
+      - --max_housekeeping_interval=15s
+      - --disable_metrics=advtcp,app,cpuLoad,cpu_topology,cpuset,hugetlb,memory_numa,oom_event,percpu,perf_event,pressure,process,referenced_memory,resctrl,sched,tcp,udp
+      - --store_container_labels=true
+    expose:
+      - "8080"
+    volumes:
+      - /:/rootfs:ro
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - licita
+    devices:
+      - /dev/kmsg:/dev/kmsg
+
 networks:
   licita:
     name: licita-macbook_default
@@ -50,3 +122,4 @@ networks:
 
 volumes:
   grafana_data:
+  prometheus_data:

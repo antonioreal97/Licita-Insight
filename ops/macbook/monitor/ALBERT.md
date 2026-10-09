@@ -55,6 +55,10 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
      `cp ops/macbook/*.service ops/macbook/*.timer ops/macbook/monitor/*.service ops/macbook/monitor/*.timer ~/.config/systemd/user/`,
      `systemctl --user daemon-reload` e `systemctl --user enable --now` para cada `*.timer` copiado, **exceto** `licita-ngrok-vercel-sync.timer` quando `EDGE_URL` estiver definido (borda Oracle ativa): esse fica parado e desabilitado (`systemctl --user disable --now licita-ngrok-vercel-sync.timer`). Em `~/licita-monitor/config.env`, `EDGE_URL=` fica vazio por padrão. Para monitorar a borda Oracle, defina `EDGE_URL=https://137-131-233-192.sslip.io`; nesse modo, `edge:down` verifica `/api/readyz` e o resultado do sincronizador ngrok->Vercel é ignorado.
    - Se o deploy incluir `licita-proxy-tailscale.service` e `licita-dashboard-tailscale.service`, habilite ambos com `systemctl --user enable --now licita-proxy-tailscale.service licita-dashboard-tailscale.service`; eles esperam até cinco minutos por `tailscale ip -4` igual a `100.76.192.116` antes de publicar o proxy/Grafana. O usuário precisa de linger habilitado.
+   - Se `files` incluir `ops/macbook/dashboard/`, aplique o compose próprio depois da stack do app:
+     `docker compose -f ops/macbook/dashboard/compose.yml config -q && docker compose -f ops/macbook/dashboard/compose.yml up -d`.
+     Confira `docker compose -f ops/macbook/dashboard/compose.yml ps`; Prometheus, node-exporter e cAdvisor não
+     publicam portas, e o Grafana continua restrito ao loopback/Tailscale. Não use `down` nem `-v`.
      Se `ALBERT.md` mudou, releia-o antes de continuar.
    - `docs`: só o `pull`.
 4. Se a verificação falhar após o build, **não tente consertar**: reporte com a saída e sugira `git reset --hard
