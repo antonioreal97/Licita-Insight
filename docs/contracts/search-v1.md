@@ -11,17 +11,17 @@ fixa apenas a **forma pública** que o frontend consome. Mudanças de forma deve
 
 ## Convenções gerais
 
-| Item | Regra |
-|---|---|
-| Base path | `/api/v1` |
-| Formato | JSON UTF-8, chaves em `camelCase` |
-| Enums | inglês, `snake_case` (o frontend traduz para PT-BR) |
-| Datas | ISO 8601 com offset (`2024-11-04T09:00:00-03:00`); datas sem hora como `YYYY-MM-DD` |
-| Dinheiro | `number` em reais com até 2 casas (`1847000.5`), campo pode ser `null` quando sigiloso/ausente |
-| Campos ausentes | `null` explícito, nunca omitido, para campos declarados no schema |
-| Arrays em query | parâmetro repetido: `?status=open&status=under_review` |
-| Auth | v1 sem auth (dev). Preparar middleware para `Authorization: Bearer <token>` futuro |
-| Versão | path (`/v1`). Mudança incompatível ⇒ `/v2` |
+| Item            | Regra                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| Base path       | `/api/v1`                                                                                      |
+| Formato         | JSON UTF-8, chaves em `camelCase`                                                              |
+| Enums           | inglês, `snake_case` (o frontend traduz para PT-BR)                                            |
+| Datas           | ISO 8601 com offset (`2024-11-04T09:00:00-03:00`); datas sem hora como `YYYY-MM-DD`            |
+| Dinheiro        | `number` em reais com até 2 casas (`1847000.5`), campo pode ser `null` quando sigiloso/ausente |
+| Campos ausentes | `null` explícito, nunca omitido, para campos declarados no schema                              |
+| Arrays em query | parâmetro repetido: `?status=open&status=under_review`                                         |
+| Auth            | v1 sem auth (dev). Preparar middleware para `Authorization: Bearer <token>` futuro             |
+| Versão          | path (`/v1`). Mudança incompatível ⇒ `/v2`                                                     |
 
 ### Envelope de erro (todas as rotas)
 
@@ -36,22 +36,38 @@ fixa apenas a **forma pública** que o frontend consome. Mudanças de forma deve
 }
 ```
 
-| HTTP | code | Quando |
-|---|---|---|
-| 400 | `INVALID_PARAMETER` | parâmetro inválido / fora de faixa / enum desconhecido |
-| 404 | `NOT_FOUND` | licitação inexistente |
-| 429 | `RATE_LIMITED` | incluir header `Retry-After` |
-| 500 | `INTERNAL_ERROR` | falha inesperada |
-| 503 | `SEARCH_UNAVAILABLE` | índice de busca indisponível (o frontend mostra estado degradado) |
+| HTTP | code                 | Quando                                                            |
+| ---- | -------------------- | ----------------------------------------------------------------- |
+| 400  | `INVALID_PARAMETER`  | parâmetro inválido / fora de faixa / enum desconhecido            |
+| 404  | `NOT_FOUND`          | licitação inexistente                                             |
+| 429  | `RATE_LIMITED`       | incluir header `Retry-After`                                      |
+| 500  | `INTERNAL_ERROR`     | falha inesperada                                                  |
+| 503  | `SEARCH_UNAVAILABLE` | índice de busca indisponível (o frontend mostra estado degradado) |
 
 ## Enums
 
 ```ts
-type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled';
-type Modality = 'pregao_eletronico' | 'pregao_presencial' | 'concorrencia' | 'concorrencia_eletronica'
-  | 'dispensa' | 'inexigibilidade' | 'credenciamento' | 'leilao' | 'dialogo_competitivo' | 'other';
-type SortOption = 'relevance' | 'deadline_asc' | 'published_desc' | 'first_seen_desc' | 'value_desc' | 'value_asc';
-type SearchMode = 'keyword' | 'semantic' | 'hybrid';
+type TenderStatus =
+  "open" | "under_review" | "closed" | "suspended" | "cancelled";
+type Modality =
+  | "pregao_eletronico"
+  | "pregao_presencial"
+  | "concorrencia"
+  | "concorrencia_eletronica"
+  | "dispensa"
+  | "inexigibilidade"
+  | "credenciamento"
+  | "leilao"
+  | "dialogo_competitivo"
+  | "other";
+type SortOption =
+  | "relevance"
+  | "deadline_asc"
+  | "published_desc"
+  | "first_seen_desc"
+  | "value_desc"
+  | "value_asc";
+type SearchMode = "keyword" | "semantic" | "hybrid";
 ```
 
 `SearchMode`: v1 só precisa implementar `keyword`. `semantic`/`hybrid` podem responder como
@@ -65,25 +81,26 @@ type SearchMode = 'keyword' | 'semantic' | 'hybrid';
 
 ### Parâmetros (query)
 
-| Nome | Tipo | Default | Notas |
-|---|---|---|---|
-| `q` | string | — | texto livre; vazio = listar tudo (ordenar por `published_desc` quando `sort=relevance` e `q` vazio) |
-| `mode` | SearchMode | `keyword` | preparação para busca semântica |
-| `status` | TenderStatus[] | — | OR entre valores |
-| `modality` | Modality[] | — | OR |
-| `state` | string[] (UF, 2 letras) | — | OR |
-| `city` | string[] | — | código IBGE preferencial; nome aceito |
-| `organizationId` | string[] | — | OR |
-| `sourceId` | string[] | — | OR |
-| `category` | string[] | — | slugs de categoria |
-| `newOnly` | boolean | `false` | somente editais inseridos pela primeira vez no Pardal dentro de `NEW_TENDER_WINDOW_HOURS` (24 h por padrão) |
-| `valueMin` / `valueMax` | number | — | sobre `estimatedValue`; registros com valor `null` são excluídos quando um dos dois é enviado |
-| `publishedFrom` / `publishedTo` | date | — | sobre `publishedAt`, inclusivo, horário de Brasília |
-| `deadlineFrom` / `deadlineTo` | date | — | sobre `proposalDeadline`, inclusivo, horário de Brasília |
-| `sort` | SortOption | `relevance` | |
-| `page` | int ≥ 1 | 1 | |
-| `pageSize` | int 1–100 | 20 | |
-| `facets` | boolean | `true` | `false` pula o cálculo de facets |
+| Nome                            | Tipo                    | Default     | Notas                                                                                                       |
+| ------------------------------- | ----------------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `q`                             | string                  | —           | texto livre; vazio = listar tudo (ordenar por `published_desc` quando `sort=relevance` e `q` vazio)         |
+| `mode`                          | SearchMode              | `keyword`   | preparação para busca semântica                                                                             |
+| `status`                        | TenderStatus[]          | —           | OR entre valores                                                                                            |
+| `modality`                      | Modality[]              | —           | OR                                                                                                          |
+| `state`                         | string[] (UF, 2 letras) | —           | OR                                                                                                          |
+| `city`                          | string[]                | —           | código IBGE preferencial; nome aceito                                                                       |
+| `organizationId`                | string[]                | —           | OR                                                                                                          |
+| `sourceId`                      | string[]                | —           | OR                                                                                                          |
+| `category`                      | string[]                | —           | slugs de categoria                                                                                          |
+| `newOnly`                       | boolean                 | `false`     | somente editais inseridos pela primeira vez no Pardal dentro de `NEW_TENDER_WINDOW_HOURS` (24 h por padrão) |
+| `myRegion`                      | boolean                 | `false`     | exige sessão e aplica a região salva no perfil, incluindo raio e categorias remotas                         |
+| `valueMin` / `valueMax`         | number                  | —           | sobre `estimatedValue`; registros com valor `null` são excluídos quando um dos dois é enviado               |
+| `publishedFrom` / `publishedTo` | date                    | —           | sobre `publishedAt`, inclusivo, horário de Brasília                                                         |
+| `deadlineFrom` / `deadlineTo`   | date                    | —           | sobre `proposalDeadline`, inclusivo, horário de Brasília                                                    |
+| `sort`                          | SortOption              | `relevance` |                                                                                                             |
+| `page`                          | int ≥ 1                 | 1           |                                                                                                             |
+| `pageSize`                      | int 1–100               | 20          |                                                                                                             |
+| `facets`                        | boolean                 | `true`      | `false` pula o cálculo de facets                                                                            |
 
 Filtros diferentes combinam com AND. Facets devem ser calculados com **todos os filtros
 aplicados exceto o próprio grupo** (disjunctive faceting), para que o usuário veja
@@ -158,9 +175,34 @@ Resposta 200: `TenderDetail = TenderSummary & { … }`
 {
   description: string | null;
   processNumber: string | null;
-  items: { id: string; description: string; quantity: number | null; unit: string | null; estimatedUnitValue: number | null; estimatedTotalValue: number | null }[];
-  documents: { id: string; name: string; type: string; sizeBytes: number | null; url: string; publishedAt: string | null }[];
-  timeline: { at: string; type: 'published' | 'amended' | 'deadline_changed' | 'status_changed' | 'document_added'; description: string }[];
+  items: {
+    id: string;
+    description: string;
+    quantity: number | null;
+    unit: string | null;
+    estimatedUnitValue: number | null;
+    estimatedTotalValue: number | null;
+  }
+  [];
+  documents: {
+    id: string;
+    name: string;
+    type: string;
+    sizeBytes: number | null;
+    url: string;
+    publishedAt: string | null;
+  }
+  [];
+  timeline: {
+    at: string;
+    type: "published" |
+      "amended" |
+      "deadline_changed" |
+      "status_changed" |
+      "document_added";
+    description: string;
+  }
+  [];
   createdAt: string;
   detailsFetchedAt: string | null;
 }
@@ -179,15 +221,23 @@ Erros: 404 `NOT_FOUND`.
 
 **Propósito:** autocomplete do campo de busca.
 
-| Nome | Tipo | Default |
-|---|---|---|
-| `q` | string (≥ 2 chars) | obrigatório |
-| `limit` | int 1–20 | 8 |
+| Nome    | Tipo               | Default     |
+| ------- | ------------------ | ----------- |
+| `q`     | string (≥ 2 chars) | obrigatório |
+| `limit` | int 1–20           | 8           |
 
 Resposta 200:
 
 ```ts
-{ suggestions: { type: 'term' | 'organization' | 'category'; value: string; label: string; count: number | null }[] }
+{
+  suggestions: {
+    type: "term" | "organization" | "category";
+    value: string;
+    label: string;
+    count: number | null;
+  }
+  [];
+}
 ```
 
 Meta de latência: p95 < 150 ms.
@@ -200,7 +250,7 @@ Os campos abaixo são aditivos. Rotas, parâmetros existentes e semântica da v1
 inalterados.
 
 ```ts
-type EstimatedValueStatus = 'disclosed' | 'confidential' | 'not_published';
+type EstimatedValueStatus = "disclosed" | "confidential" | "not_published";
 
 type ValueHistogramBucket = {
   from: number;
@@ -265,7 +315,7 @@ sempre devolvido em resultados e detalhes.
 
 ```ts
 {
-  searchModeFallbackReason: 'not_available' | 'query_too_short' | null;
+  searchModeFallbackReason: "not_available" | "query_too_short" | null;
 }
 ```
 
@@ -286,11 +336,11 @@ mudança de rota ou de parâmetro.
 
 ### Datas do PNCP
 
-| Campo público | Campo PNCP | Semântica |
-|---|---|---|
-| `publishedAt` | `dataPublicacaoPncp` | publicação do registro no PNCP |
-| `openingAt` | `dataAberturaProposta` | início do recebimento de propostas; não representa sessão pública |
-| `proposalDeadline` | `dataEncerramentoProposta` | encerramento do recebimento de propostas |
+| Campo público      | Campo PNCP                 | Semântica                                                         |
+| ------------------ | -------------------------- | ----------------------------------------------------------------- |
+| `publishedAt`      | `dataPublicacaoPncp`       | publicação do registro no PNCP                                    |
+| `openingAt`        | `dataAberturaProposta`     | início do recebimento de propostas; não representa sessão pública |
+| `proposalDeadline` | `dataEncerramentoProposta` | encerramento do recebimento de propostas                          |
 
 O payload de publicação atualmente consumido não fornece uma data de sessão pública separada.
 Por isso, clientes devem rotular `openingAt` como **Início das propostas**. O adapter não infere
@@ -375,8 +425,8 @@ percurso sem pausa.
 
 ### Filtro e facet
 
-| Nome | Tipo | Notas |
-|---|---|---|
+| Nome       | Tipo     | Notas                                      |
+| ---------- | -------- | ------------------------------------------ |
 | `platform` | string[] | slugs de `platform.slug`; OR entre valores |
 
 Com `facets=true`, `facets.platform: FacetBucket[]` (label = `platform.label`) e
@@ -387,11 +437,11 @@ ignora apenas o próprio filtro `platform`. Buscas salvas preservam o parâmetro
 
 ## Performance esperada
 
-| Rota | p95 |
-|---|---|
+| Rota                           | p95      |
+| ------------------------------ | -------- |
 | `/tenders/search` (com facets) | < 500 ms |
-| `/tenders/{id}` | < 200 ms |
-| `/search/suggestions` | < 150 ms |
+| `/tenders/{id}`                | < 200 ms |
+| `/search/suggestions`          | < 150 ms |
 
 ## Fora de escopo v1
 

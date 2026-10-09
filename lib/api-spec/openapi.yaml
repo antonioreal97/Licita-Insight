@@ -76,6 +76,7 @@ paths:
         - $ref: "#/components/parameters/CategoryFilter"
         - $ref: "#/components/parameters/PlatformFilter"
         - $ref: "#/components/parameters/NewOnly"
+        - $ref: "#/components/parameters/MyRegion"
         - $ref: "#/components/parameters/ValueMin"
         - $ref: "#/components/parameters/ValueMax"
         - $ref: "#/components/parameters/PublishedFrom"
@@ -379,6 +380,49 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/profile/municipalities:
+    get:
+      operationId: listProfileMunicipalities
+      tags: [account]
+      summary: Autocomplete the embedded IBGE municipality dataset
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 80 }
+        - name: state
+          in: query
+          schema: { type: string, minLength: 2, maxLength: 2 }
+      responses:
+        "200":
+          description: Municipality references ordered by prefix match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileMunicipalitiesResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/me/company-profile/region-preview:
+    get:
+      operationId: getCompanyRegionPreview
+      tags: [account]
+      summary: Count open tenders matching the saved service region
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Approximate current open-tender count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer, minimum: 0 }
+                required: [count]
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
   /v1/profile/platforms:
     get:
       operationId: listProfilePlatforms
@@ -1471,6 +1515,13 @@ components:
       schema:
         type: boolean
         default: false
+    MyRegion:
+      name: myRegion
+      in: query
+      description: Apply the signed-in company's saved service region.
+      schema:
+        type: boolean
+        default: false
     ValueMin:
       name: valueMin
       in: query
@@ -2083,7 +2134,8 @@ components:
         inputTokens: { type: integer, minimum: 0 }
         estimatedCostUsd: { type: string }
         updatedAt: { type: string, format: date-time }
-      required: [userId, quotaDay, used, inputTokens, estimatedCostUsd, updatedAt]
+      required:
+        [userId, quotaDay, used, inputTokens, estimatedCostUsd, updatedAt]
     AccountExportAiDailyTender:
       type: object
       properties:
@@ -2099,7 +2151,8 @@ components:
         kind: { type: string }
         tenderId: { type: string }
         lane: { type: string, enum: [interactive, batch] }
-        status: { type: string, enum: [queued, running, succeeded, failed, dead] }
+        status:
+          { type: string, enum: [queued, running, succeeded, failed, dead] }
         attempts: { type: integer, minimum: 0 }
         maxAttempts: { type: integer, minimum: 1 }
         runAfter: { type: string, format: date-time }
@@ -2481,18 +2534,69 @@ components:
           additionalProperties: false
           properties:
             scope: { type: string, enum: [national] }
-          required: [scope]
+            mode: { type: string, enum: [strict, prioritize] }
+            acceptsRemote: { type: boolean }
+          required: [scope, mode, acceptsRemote]
         - type: object
           additionalProperties: false
           properties:
-            scope: { type: string, enum: [states] }
+            scope: { type: string, enum: [custom] }
+            mode: { type: string, enum: [strict, prioritize] }
+            acceptsRemote: { type: boolean }
+            regions:
+              type: array
+              uniqueItems: true
+              maxItems: 5
+              items:
+                type: string
+                enum: [north, northeast, central_west, southeast, south]
             states:
               type: array
-              minItems: 1
               maxItems: 27
               uniqueItems: true
               items: { type: string, minLength: 2, maxLength: 2 }
-          required: [scope, states]
+            municipalities:
+              type: array
+              uniqueItems: true
+              maxItems: 100
+              items:
+                $ref: "#/components/schemas/MunicipalityReference"
+            radius:
+              anyOf:
+                - type: object
+                  additionalProperties: false
+                  properties:
+                    center:
+                      $ref: "#/components/schemas/MunicipalityReference"
+                    km: { type: integer, enum: [50, 100, 200, 300, 500] }
+                  required: [center, km]
+                - type: "null"
+          required:
+            [
+              scope,
+              mode,
+              acceptsRemote,
+              regions,
+              states,
+              municipalities,
+              radius,
+            ]
+    MunicipalityReference:
+      type: object
+      additionalProperties: false
+      properties:
+        ibgeCode: { type: string, pattern: "^[0-9]{7}$" }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        state: { type: string, minLength: 2, maxLength: 2 }
+      required: [ibgeCode, name, state]
+    ProfileMunicipalitiesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MunicipalityReference"
+      required: [data]
     CompanyValueRange:
       type: object
       additionalProperties: false
@@ -2682,6 +2786,11 @@ components:
           required: [kind, terms]
         - type: object
           properties:
+            kind: { type: string, enum: [service_region] }
+            text: { type: string }
+          required: [kind, text]
+        - type: object
+          properties:
             kind: { type: string, enum: [out_of_coverage] }
             state: { type: [string, "null"] }
           required: [kind, state]
@@ -2746,7 +2855,15 @@ components:
         - other
     SortOption:
       type: string
-      enum: [relevance, deadline_asc, published_desc, first_seen_desc, value_desc, value_asc]
+      enum:
+        [
+          relevance,
+          deadline_asc,
+          published_desc,
+          first_seen_desc,
+          value_desc,
+          value_asc,
+        ]
     SearchMode:
       type: string
       enum: [keyword, semantic, hybrid]
@@ -3772,7 +3889,8 @@ components:
         platform:
           type: integer
           minimum: 0
-      required: [status, modality, state, source, category, organization, platform]
+      required:
+        [status, modality, state, source, category, organization, platform]
     SearchFacets:
       type: object
       properties:

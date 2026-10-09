@@ -34,6 +34,11 @@ import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
+import {
+  matchServiceRegion,
+  municipalityReference,
+  type ServiceRegionCoverage,
+} from "../service-region/service-region";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -402,10 +407,16 @@ export async function rebuildInterestProfile(
         ? (values.at(Math.floor(values.length * 0.9)) ?? null)
         : Number(profile.valueMax),
     coverageScope: profile
-      ? (profile.coverageScope as "national" | "states")
+      ? (profile.coverageScope as "national" | "states" | "custom")
       : null,
     coverageStates:
       profile?.coverageStates.map((state) => state.toUpperCase()) ?? [],
+    coverageRegions: profile?.coverageRegions ?? [],
+    coverageMunicipalities: profile?.coverageMunicipalities ?? [],
+    headquartersMunicipalityIbge: profile?.headquartersMunicipalityIbge ?? null,
+    coverageRadiusKm: profile?.coverageRadiusKm ?? null,
+    coverageMode: profile?.coverageMode ?? "strict",
+    acceptsRemote: profile?.acceptsRemote ?? false,
     exclusions: profile
       ? [...profile.excludedKeywords, ...profile.exclusions].flatMap(
           (value) => {
@@ -435,6 +446,7 @@ type ScoreCandidate = {
   searchText: string;
   categories: TenderCategory[];
   state: string | null;
+  municipalityIbge?: string | null;
   organizationId: string;
   organizationName: string;
   modality: string;
@@ -526,17 +538,57 @@ export function scoreRecommendation(
   }
 
   const state = candidate.state?.toUpperCase() ?? null;
-  if (
-    profile.coverageScope === "states" &&
-    (!state || !profile.coverageStates.includes(state))
-  )
-    score -= 35;
-  else if (profile.coverageScope === "states" && state) {
-    score += 14;
-    reasons.push({
-      kind: "location",
-      text: `Na sua área de atuação: ${state}`,
+  if (profile.coverageScope) {
+    const legacyCustom = profile.coverageScope === "states";
+    const center = profile.headquartersMunicipalityIbge
+      ? municipalityReference(profile.headquartersMunicipalityIbge)
+      : null;
+    const coverage: ServiceRegionCoverage =
+      profile.coverageScope === "national"
+        ? {
+            scope: "national",
+            mode: profile.coverageMode ?? "strict",
+            acceptsRemote: profile.acceptsRemote ?? false,
+          }
+        : {
+            scope: "custom",
+            mode:
+              profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict"),
+            acceptsRemote: profile.acceptsRemote ?? false,
+            regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+            states: profile.coverageStates,
+            municipalities: (profile.coverageMunicipalities ?? []).flatMap(
+              (code) => {
+                const city = municipalityReference(code);
+                return city ? [city] : [];
+              },
+            ),
+            radius:
+              center && profile.coverageRadiusKm
+                ? {
+                    center,
+                    km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+                  }
+                : null,
+          };
+    const region = matchServiceRegion(coverage, {
+      state,
+      municipalityIbge: candidate.municipalityIbge ?? null,
+      categories: candidate.categories,
     });
+    if (
+      !region.matches &&
+      coverage.scope === "custom" &&
+      coverage.mode === "strict"
+    )
+      return null;
+    if (region.matches && coverage.scope === "custom") {
+      score += region.remote ? 18 : 32;
+      reasons.push({ kind: "location", text: region.reason });
+    } else if (!region.matches && coverage.scope === "custom") {
+      score -= 18;
+      reasons.push({ kind: "location", text: region.reason });
+    }
   } else if (weightFor(profile.states, state) > 0) {
     score += 9;
     reasons.push({
@@ -664,6 +716,7 @@ const queryCandidates = async (
       searchText: tendersTable.searchText,
       categories: tendersTable.categories,
       state: tendersTable.state,
+      municipalityIbge: tendersTable.cityIbgeCode,
       organizationId: tendersTable.organizationId,
       organizationName: tendersTable.organizationName,
       modality: tendersTable.modality,

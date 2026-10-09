@@ -14,6 +14,9 @@ export type FitReason = {
   kind: 'exclusion';
   terms: string[];
 } | {
+  kind: 'service_region';
+  text: string;
+} | {
   kind: 'out_of_coverage';
   /** @nullable */
   state: string | null;

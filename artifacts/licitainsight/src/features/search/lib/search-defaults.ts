@@ -48,6 +48,7 @@ const FILTER_KEYS = [
   'deadlineFrom',
   'deadlineTo',
   'newOnly',
+  'myRegion',
 ] as const;
 
 /** "Limpar filtros": back to the default status, keeping the query, sort, mode and page size. */

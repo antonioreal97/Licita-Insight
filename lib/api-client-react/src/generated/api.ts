@@ -43,6 +43,7 @@ import type {
   EmailUnsubscribeRequest,
   EmailUnsubscribeResponse,
   ForbiddenResponse,
+  GetCompanyRegionPreview200,
   GetSearchSuggestionsParams,
   GetTenderFitsParams,
   HealthStatus,
@@ -50,6 +51,7 @@ import type {
   InternalErrorResponse,
   InvalidParameterResponse,
   ListNotificationsParams,
+  ListProfileMunicipalitiesParams,
   ListRecommendationsParams,
   ListSavedTendersParams,
   MarkNotificationsReadRequest,
@@ -62,6 +64,7 @@ import type {
   ProfileDescriptionSuggestionRequest,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfileMunicipalitiesResponse,
   ProfilePlatformsResponse,
   PutSavedTenderRequest,
   RateLimitedResponse,
@@ -1236,6 +1239,167 @@ export function useListProfileCategories<TData = Awaited<ReturnType<typeof listP
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListProfileCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListProfileMunicipalitiesUrl = (params: ListProfileMunicipalitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/profile/municipalities?${stringifiedParams}` : `/api/v1/profile/municipalities`
+}
+
+/**
+ * @summary Autocomplete the embedded IBGE municipality dataset
+ */
+export const listProfileMunicipalities = async (params: ListProfileMunicipalitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<ProfileMunicipalitiesResponse> => {
+
+  return customFetch<ProfileMunicipalitiesResponse>(getListProfileMunicipalitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfileMunicipalitiesQueryKey = (params?: ListProfileMunicipalitiesParams,) => {
+    return [
+    `/api/v1/profile/municipalities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProfileMunicipalitiesQueryOptions = <TData = Awaited<ReturnType<typeof listProfileMunicipalities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>>(params: ListProfileMunicipalitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfileMunicipalitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfileMunicipalities>>> = ({ signal }) => listProfileMunicipalities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfileMunicipalitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listProfileMunicipalities>>>
+export type ListProfileMunicipalitiesQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>
+
+
+/**
+ * @summary Autocomplete the embedded IBGE municipality dataset
+ */
+
+export function useListProfileMunicipalities<TData = Awaited<ReturnType<typeof listProfileMunicipalities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>>(
+ params: ListProfileMunicipalitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfileMunicipalitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCompanyRegionPreviewUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-profile/region-preview`
+}
+
+/**
+ * @summary Count open tenders matching the saved service region
+ */
+export const getCompanyRegionPreview = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetCompanyRegionPreview200> => {
+
+  return customFetch<GetCompanyRegionPreview200>(getGetCompanyRegionPreviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompanyRegionPreviewQueryKey = () => {
+    return [
+    `/api/v1/me/company-profile/region-preview`
+    ] as const;
+    }
+
+
+export const getGetCompanyRegionPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanyRegionPreviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyRegionPreview>>> = ({ signal }) => getCompanyRegionPreview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompanyRegionPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getCompanyRegionPreview>>>
+export type GetCompanyRegionPreviewQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Count open tenders matching the saved service region
+ */
+
+export function useGetCompanyRegionPreview<TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompanyRegionPreviewQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

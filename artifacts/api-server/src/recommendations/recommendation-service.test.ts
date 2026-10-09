@@ -94,7 +94,10 @@ test("plataforma cadastrada desempata, mas não recomenda sozinha", () => {
     publishedAt: new Date("2026-10-07T12:00:00Z"),
     textRank: 0.5,
   };
-  const registered = { ...profile, registeredPlatforms: ["licitanet", "sicaf"] };
+  const registered = {
+    ...profile,
+    registeredPlatforms: ["licitanet", "sicaf"],
+  };
   const boosted = scoreRecommendation(candidate, registered, [], now);
   const plain = scoreRecommendation(candidate, profile, [], now);
   assert.ok(boosted && plain);
@@ -102,7 +105,12 @@ test("plataforma cadastrada desempata, mas não recomenda sozinha", () => {
   assert.ok(boosted.reasons.some(({ kind }) => kind === "platform"));
 
   const unrelated = scoreRecommendation(
-    { ...candidate, searchText: "material de escritorio", state: null, textRank: 0 },
+    {
+      ...candidate,
+      searchText: "material de escritorio",
+      state: null,
+      textRank: 0,
+    },
     { ...registered, coverageScope: null, coverageStates: [] },
     [],
     now,
@@ -134,10 +142,58 @@ test("exclusões eliminam o candidato", () => {
   assert.equal(result, null);
 });
 
+test("região rígida filtra e prioridade mantém edital de fora com motivo", () => {
+  const candidate = {
+    id: "T-region",
+    searchText: "servicos de hemodialise",
+    categories: [{ slug: "saude", label: "Saúde" }],
+    state: "RJ",
+    municipalityIbge: "3304557",
+    organizationId: "O-region",
+    organizationName: "Órgão",
+    modality: "other",
+    platform: null,
+    platformLabel: null,
+    estimatedValue: "100000",
+    proposalDeadline: new Date("2026-10-20"),
+    publishedAt: new Date("2026-10-07"),
+    textRank: 1,
+  };
+  const serviceRegion = {
+    ...profile,
+    coverageScope: "custom" as const,
+    coverageStates: ["SP"],
+    coverageRegions: [],
+    coverageMunicipalities: [],
+    headquartersMunicipalityIbge: null,
+    coverageRadiusKm: null,
+  };
+  assert.equal(
+    scoreRecommendation(
+      candidate,
+      { ...serviceRegion, coverageMode: "strict" },
+      [],
+      new Date("2026-10-08"),
+    ),
+    null,
+  );
+  const prioritized = scoreRecommendation(
+    candidate,
+    { ...serviceRegion, coverageMode: "prioritize" },
+    [],
+    new Date("2026-10-08"),
+  );
+  assert.ok(prioritized);
+  assert.ok(
+    prioritized.reasons.some(({ text }) => text === "Fora da sua região"),
+  );
+});
+
 test("oportunidades reutilizam termos, cobertura e faixa do perfil", () => {
   const match = scoreOpportunityForProfile(
     {
-      searchText: "programa de inovacao para empresas de inteligencia artificial",
+      searchText:
+        "programa de inovacao para empresas de inteligencia artificial",
       audience: "startups e ICTs",
       state: "SP",
       amount: 250_000,

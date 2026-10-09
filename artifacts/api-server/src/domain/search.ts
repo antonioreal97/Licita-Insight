@@ -5,6 +5,7 @@ import type {
   TenderDetail,
   TenderStatus,
 } from "@workspace/api-zod";
+import type { ServiceRegionCoverage } from "../service-region/service-region";
 
 export type FacetGroup =
   | "new"
@@ -30,6 +31,8 @@ export interface SearchCriteria {
   category: string[];
   platform: string[];
   newOnly: boolean;
+  myRegion?: boolean;
+  serviceRegion?: ServiceRegionCoverage;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: Date;

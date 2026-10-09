@@ -25,6 +25,8 @@ export function reasonText(reason: FitReason): string {
       return `Combina com ${joinTerms(reason.terms)}, do seu perfil.`;
     case 'exclusion':
       return `Parece ser algo que vocês não atendem: ${joinTerms(reason.terms)}.`;
+    case 'service_region':
+      return `${reason.text}.`;
     case 'out_of_coverage':
       return reason.state ? `Edital em ${reason.state}, fora da sua área de atuação.` : 'Fora da sua área de atuação.';
     case 'out_of_value_range':
