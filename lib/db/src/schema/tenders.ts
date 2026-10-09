@@ -127,6 +127,10 @@ export const tendersTable = pgTable(
     index("tenders_fetched_at_idx").on(table.fetchedAt),
     index("tenders_created_at_idx").on(table.createdAt),
     index("tenders_platform_idx").on(table.platform),
+    // Covers the public per-state aggregate of open tenders (count, value sum, last fetch) without reading the heap.
+    index("tenders_open_by_state_idx")
+      .on(table.state, table.estimatedValue, table.fetchedAt)
+      .where(sql`${table.status} = 'open'`),
     index("tenders_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),
