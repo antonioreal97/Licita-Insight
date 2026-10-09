@@ -33,16 +33,19 @@ interface has to feel instant. Every animation must pass one test: would the UI 
 
 The public landing (`artifacts/licitainsight/src/features/landing/`) is a brand surface, not a work surface, so it may perform. Only there:
 
-- **Scroll-driven 3D pardal** (`pardal-flight-3d.tsx`): extruded from `public/brand/pardal-silhueta.svg`, flies in the side gutters and
-  crosses in the gap between sections. It renders on demand (scroll, resize, theme), never in an idle loop, and only from 1360px wide,
-  where the gutters fit it without covering text.
+- **Scroll-driven 3D pardal** (`pardal-flight-3d.tsx`): extruded from `public/brand/pardal-silhueta.svg`. Near each section boundary
+  it flies at the camera, its body (`corpo-cheio`) filling with the next section's background, until that color covers the screen;
+  a curtain in the same color then lifts with the boundary and reveals the next section in place. The transition runs at every
+  width; resting in the side gutters between boundaries only from 1360px, where they fit it without covering text. It renders on
+  demand (scroll, resize, theme), never in an idle loop. Colors come from the sections' own computed backgrounds, so they stay in
+  the palette.
 - **Pre-rendered clips that play once** (`pardal-clip.tsx`): HyperFrames compositions in `artifacts/licitainsight/motion/`, rendered by
   `pnpm --filter @workspace/licitainsight run motion:render` into `public/motion/` (WebM with alpha for Chrome/Firefox, HEVC with alpha
   for Safari, PNG of the last frame). They start when scrolled into view and stop on the last frame.
 
 Still forbidden on the landing: animating live data (index facts, tender preview), new infinite loops (the radar globe is the only
-one), and any motion under reduced motion. With reduced motion the bird is drawn once next to the hero and the clips show only their
-last frame.
+one), and any motion under reduced motion. With reduced motion there is no transition: the bird is drawn once next to the hero (only from
+1360px) and the clips show only their last frame.
 
 ## Reduced motion
 
