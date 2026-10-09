@@ -324,6 +324,66 @@ const buckets = async (
   });
 };
 
+type CombinedFacetRow = {
+  status: FacetBucket[];
+  modality: FacetBucket[];
+  state: FacetBucket[];
+  source: FacetBucket[];
+  city: FacetBucket[];
+  organization: FacetBucket[];
+  category: FacetBucket[];
+  platform: FacetBucket[];
+  estimated_values: number[];
+  new_count: number;
+  total: number;
+};
+
+type CombinedFacetResult = {
+  facets: SearchFacets;
+  total: number;
+};
+
+/**
+ * With no selected facet group, disjunctive faceting uses the same filtered
+ * tender set for every bucket. Materializing it once avoids repeating the
+ * trigram heap scan for every facet while preserving exact counts.
+ */
+export const canUseCombinedFacets = (criteria: SearchCriteria): boolean =>
+  queryTokens(criteria.query).length > 0 &&
+  criteria.status.length === 0 &&
+  criteria.modality.length === 0 &&
+  criteria.state.length === 0 &&
+  criteria.city.length === 0 &&
+  criteria.organizationId.length === 0 &&
+  criteria.sourceId.length === 0 &&
+  criteria.category.length === 0 &&
+  criteria.platform.length === 0 &&
+  !criteria.newOnly &&
+  criteria.valueMin === undefined &&
+  criteria.valueMax === undefined;
+
+const combinedFacetBuckets = (value: unknown, field: string): FacetBucket[] => {
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected an array for ${field}`);
+  }
+  return value.map((bucket) => {
+    if (
+      typeof bucket !== "object" ||
+      bucket === null ||
+      !("value" in bucket) ||
+      !("label" in bucket) ||
+      !("count" in bucket)
+    ) {
+      throw new Error(`Invalid bucket in ${field}`);
+    }
+    return {
+      value: String(bucket.value),
+      label: String(bucket.label),
+      count: requireNumber(bucket.count, `${field} count`),
+    };
+  });
+};
+
 export const tenderRowToDetail = (
   row: TenderRow,
   now = new Date(),
@@ -417,19 +477,36 @@ export class PostgresTenderRepository {
     const now = new Date();
     const tokens = queryTokens(criteria.query);
     const where = searchWhereFor(criteria, undefined, now);
-    const total = await countRows(where);
-    const rows = await db
+    const rowsQuery = db
       .select()
       .from(tendersTable)
       .where(where)
       .orderBy(...orderBy(criteria, tokens))
       .limit(criteria.pageSize)
       .offset((criteria.page - 1) * criteria.pageSize);
+    let total: number;
+    let rows: TenderRow[];
+    let facets: SearchFacets | null;
+    let indexUpdatedAt: Date | null;
 
-    const [facets, indexUpdatedAt] = await Promise.all([
-      criteria.facets ? this.facets(criteria, now) : Promise.resolve(null),
-      this.indexUpdatedAt(),
-    ]);
+    if (criteria.facets && canUseCombinedFacets(criteria)) {
+      const [pageRows, combined, updatedAt] = await Promise.all([
+        rowsQuery,
+        this.combinedFacets(criteria, now),
+        this.indexUpdatedAt(),
+      ]);
+      rows = pageRows;
+      total = combined.total;
+      facets = combined.facets;
+      indexUpdatedAt = updatedAt;
+    } else {
+      total = await countRows(where);
+      rows = await rowsQuery;
+      [facets, indexUpdatedAt] = await Promise.all([
+        criteria.facets ? this.facets(criteria, now) : Promise.resolve(null),
+        this.indexUpdatedAt(),
+      ]);
+    }
 
     return {
       data: normalizePageRelevance(
@@ -557,6 +634,167 @@ export class PostgresTenderRepository {
       })
       .from(tendersTable);
     return row?.indexUpdatedAt ?? null;
+  }
+
+  private async combinedFacets(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<CombinedFacetResult> {
+    const where = searchWhereFor(criteria, undefined, now);
+    const result = await db.execute<CombinedFacetRow>(sql`
+      with matched as materialized (
+        select
+          ${tendersTable.status} as status,
+          ${tendersTable.modality} as modality,
+          ${tendersTable.state} as state,
+          ${tendersTable.sourceId} as source_id,
+          ${tendersTable.sourceName} as source_name,
+          ${tendersTable.cityIbgeCode} as city_ibge_code,
+          ${tendersTable.city} as city,
+          ${tendersTable.organizationId} as organization_id,
+          ${tendersTable.organizationName} as organization_name,
+          ${tendersTable.categories} as categories,
+          ${tendersTable.platform} as platform,
+          coalesce(${tendersTable.platformLabel}, ${tendersTable.platform}) as platform_label,
+          ${tendersTable.estimatedValue} as estimated_value,
+          ${tendersTable.createdAt} as created_at
+        from ${tendersTable}
+        ${where ? sql`where ${where}` : sql``}
+      ),
+      status_buckets as (
+        select status as value, status as label, count(*)::int as bucket_count
+        from matched group by status
+      ),
+      modality_buckets as (
+        select modality as value, modality as label, count(*)::int as bucket_count
+        from matched group by modality
+      ),
+      state_buckets as (
+        select state as value, state as label, count(*)::int as bucket_count
+        from matched where state is not null group by state
+      ),
+      source_buckets as (
+        select source_id as value, source_name as label, count(*)::int as bucket_count
+        from matched group by source_id, source_name
+      ),
+      city_buckets as (
+        select city_ibge_code as value,
+               city || '/' || state as label,
+               city as sort_label,
+               count(*)::int as bucket_count
+        from matched
+        where city_ibge_code is not null and city is not null and state is not null
+        group by city_ibge_code, city, state
+        order by count(*) desc, city asc
+        limit 30
+      ),
+      organization_buckets as (
+        select organization_id as value,
+               organization_name as label,
+               count(*)::int as bucket_count
+        from matched
+        group by organization_id, organization_name
+        order by count(*) desc, organization_name asc
+        limit 20
+      ),
+      category_buckets as (
+        select cat->>'slug' as value,
+               cat->>'label' as label,
+               count(*)::int as bucket_count
+        from matched
+        cross join lateral jsonb_array_elements(categories) as cat
+        group by 1, 2
+      ),
+      platform_buckets as (
+        select platform as value, platform_label as label, count(*)::int as bucket_count
+        from matched
+        where platform is not null and platform_label is not null
+        group by platform, platform_label
+      )
+      select
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from status_buckets), '[]'::jsonb) as status,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from modality_buckets), '[]'::jsonb) as modality,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from state_buckets), '[]'::jsonb) as state,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from source_buckets), '[]'::jsonb) as source,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, sort_label asc) from city_buckets), '[]'::jsonb) as city,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from organization_buckets), '[]'::jsonb) as organization,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from category_buckets), '[]'::jsonb) as category,
+        coalesce((select jsonb_agg(jsonb_build_object(
+          'value', value, 'label', label, 'count', bucket_count
+        ) order by bucket_count desc, label asc) from platform_buckets), '[]'::jsonb) as platform,
+        coalesce((select jsonb_agg(estimated_value::float8)
+          from matched where estimated_value::float8 >= 0), '[]'::jsonb) as estimated_values,
+        (select count(*)::int from matched
+          where created_at > ${newTenderCutoff(now)} and created_at <= ${now}) as new_count,
+        (select count(*)::int from matched) as total
+    `);
+    const rows = "rows" in result ? result.rows : [];
+    const row = rows[0];
+    if (!row) throw new Error("Combined facet query returned no row");
+
+    const values = nonNegativeValues(
+      (Array.isArray(row.estimated_values) ? row.estimated_values : []).map(
+        (value) => requireNumber(value, "estimatedValue"),
+      ),
+    );
+    const range = numberRange(values);
+    const total = requireNumber(row.total, "combined facet total");
+
+    return {
+      total,
+      facets: {
+        status: combinedFacetBuckets(row.status, "status facet").map(
+          (bucket) => ({
+            ...bucket,
+            label: statusLabels[asStatus(bucket.value)],
+          }),
+        ),
+        modality: combinedFacetBuckets(row.modality, "modality facet").map(
+          (bucket) => ({
+            ...bucket,
+            label: modalityLabels[asModality(bucket.value)],
+          }),
+        ),
+        state: combinedFacetBuckets(row.state, "state facet"),
+        source: combinedFacetBuckets(row.source, "source facet"),
+        city: combinedFacetBuckets(row.city, "city facet"),
+        organization: combinedFacetBuckets(
+          row.organization,
+          "organization facet",
+        ),
+        category: combinedFacetBuckets(row.category, "category facet"),
+        platform: combinedFacetBuckets(row.platform, "platform facet"),
+        groupTotals: {
+          status: total,
+          modality: total,
+          state: total,
+          source: total,
+          category: total,
+          organization: total,
+          platform: total,
+        },
+        valueRange: {
+          min: range?.min ?? null,
+          max: range?.max ?? null,
+          histogram: createValueHistogram(values),
+        },
+        newCount: requireNumber(row.new_count, "new facet count"),
+      },
+    };
   }
 
   private async facets(
