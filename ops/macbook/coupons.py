@@ -20,7 +20,7 @@ OUT = Path.home() / "licita-cupons"
 
 
 def psql(sql, *params):
-    args = ["docker", "exec", "-i", PG, "psql", "-U", "licita", "-d", "licita", "-v", "ON_ERROR_STOP=1", "-At", "-F", "|"]
+    args = ["docker", "exec", "-i", PG, "psql", "-q", "-U", "licita", "-d", "licita", "-v", "ON_ERROR_STOP=1", "-At", "-F", "|"]
     for i, p in enumerate(params, 1):
         args += ["-v", f"p{i}={p}"]
     r = subprocess.run(args, input=sql, capture_output=True, text=True)
@@ -44,7 +44,9 @@ def create(a):
         h = hashlib.sha256(code.encode()).hexdigest()
         cid = str(uuid.uuid4())
         psql("insert into coupon_codes (id, code_hash, code_last4, duration_days, max_redemptions, starts_at, expires_at) "
-             "values (:'p1', :'p2', :'p3', :'p4'::int, :'p5'::int, :'p6'::timestamptz, nullif(:'p7','')::timestamptz);",
+             "values (:'p1', :'p2', :'p3', :'p4'::int, :'p5'::int, "
+             # Inativo = início no futuro; com prazo de resgate, o início pendente fica 1 s antes do prazo.
+             "least(:'p6'::timestamptz, nullif(:'p7','')::timestamptz - interval '1 second'), nullif(:'p7','')::timestamptz);",
              cid, h, code[-4:], a.days, a.max_uses, PENDING, expires or "")
         lines.append(f"{code}\t{a.days} dias\tusos: {a.max_uses}\tid: {cid}")
     path.write_text("\n".join(lines) + "\n")
@@ -56,17 +58,17 @@ def create(a):
 def listing(_):
     print("final | dias | usos | status | ativo desde | expira")
     print(psql("select code_last4, duration_days, redeemed_count||'/'||max_redemptions, "
-               "case when revoked_at is not null then 'revogado' when starts_at >= '2099-01-01' then 'INATIVO' "
+               "case when revoked_at is not null then 'revogado' when starts_at > now() then 'INATIVO' "
                "when expires_at is not null and expires_at < now() then 'expirado' "
                "when redeemed_count >= max_redemptions then 'esgotado' else 'ATIVO' end, "
-               "coalesce(to_char(starts_at at time zone 'America/Sao_Paulo','DD/MM/YYYY HH24:MI'),'-'), "
+               "case when starts_at > now() then '-' else coalesce(to_char(starts_at at time zone 'America/Sao_Paulo','DD/MM/YYYY HH24:MI'),'-') end, "
                "coalesce(to_char(expires_at at time zone 'America/Sao_Paulo','DD/MM/YYYY'),'-') "
                "from coupon_codes order by created_at;"))
 
 
 def set_start(ref, value, label):
     out = psql("update coupon_codes set starts_at = " + value + " where (code_last4 = upper(:'p1') or id = :'p1') "
-               "and revoked_at is null returning code_last4;", ref)
+               "and revoked_at is null and (expires_at is null or expires_at > now()) returning code_last4;", ref)
     if not out:
         sys.exit(f"Nenhum cupom encontrado para '{ref}'.")
     if len(out.splitlines()) > 1:
@@ -82,7 +84,7 @@ def main():
     c.add_argument("--expires", help="data limite para resgate, AAAA-MM-DD"); c.set_defaults(fn=create)
     sub.add_parser("list").set_defaults(fn=listing)
     for name, value, label in (("activate", "now()", "ATIVADO — já pode ser resgatado"),
-                               ("deactivate", f"'{PENDING}'::timestamptz", "desativado")):
+                               ("deactivate", f"least('{PENDING}'::timestamptz, expires_at - interval '1 second')", "desativado")):
         s = sub.add_parser(name); s.add_argument("ref")
         s.set_defaults(fn=lambda a, v=value, l=label: set_start(a.ref, v, l))
     a = p.parse_args(); a.fn(a)
