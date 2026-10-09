@@ -25,6 +25,7 @@ export const queryKeys = {
   me: {
     all: ['me'] as const,
     billing: ['me', 'billing'] as const,
+    coupon: ['me', 'billing', 'coupon'] as const,
     notificationPreferences: ['me', 'notification-preferences'] as const,
     recommendationPreferences: ['me', 'recommendation-preferences'] as const,
     recommendations: ['me', 'recommendations'] as const,

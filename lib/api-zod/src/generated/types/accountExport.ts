@@ -10,6 +10,7 @@ import type { AccountExportAiDailyUsage } from './accountExportAiDailyUsage';
 import type { AccountExportAiJob } from './accountExportAiJob';
 import type { AccountExportAiQuestion } from './accountExportAiQuestion';
 import type { AccountExportCompanyFitsItem } from './accountExportCompanyFitsItem';
+import type { AccountExportCouponRedemption } from './accountExportCouponRedemption';
 import type { AccountExportEmailDelivery } from './accountExportEmailDelivery';
 import type { AccountExportFitUsageItem } from './accountExportFitUsageItem';
 import type { AccountExportNotification } from './accountExportNotification';
@@ -44,4 +45,5 @@ export interface AccountExport {
   recommendationInterestProfile: AccountExportRecommendationInterestProfile;
   recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
+  couponRedemptions: AccountExportCouponRedemption[];
 }

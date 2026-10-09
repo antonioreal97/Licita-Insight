@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Info, LogOut } from 'lucide-react';
 import { useSearch } from 'wouter';
@@ -224,6 +224,27 @@ function BillingSection() {
     },
   });
 
+  const [couponCode, setCouponCode] = useState('');
+  const redeemCoupon = useMutation({
+    mutationFn: () => accountService.redeemBillingCoupon(couponCode),
+    onSuccess: async (result) => {
+      setCouponCode('');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.me.billing });
+      toast({
+        title: result.alreadyRedeemed ? 'Cupom já aplicado' : 'Cupom aplicado',
+        description: `Seu acesso está liberado até ${formatDate(result.accessUntil)}.`,
+      });
+    },
+    onError: (error) => {
+      console.error('[billing] Falha ao resgatar cupom.', error);
+      toast({
+        variant: 'destructive',
+        title: 'Não foi possível aplicar o cupom',
+        description: billingErrorMessage(error, 'Confira o código e tente de novo.'),
+      });
+    },
+  });
+
   const trial: TrialState = billing.data ? trialState(billing.data) : { kind: 'none' };
   // The price comes from the API only (public plan first, then billing); nothing shown when it isn't configured.
   const price = plan.data?.monthlyBrl ?? billing.data?.monthlyBrl ?? null;
@@ -303,6 +324,36 @@ function BillingSection() {
               <Button variant="outline" data-testid="button-billing-cancel" loading={cancel.isPending} onClick={() => cancel.mutate()}>
                 Cancelar assinatura
               </Button>
+            )}
+          </div>
+          <div className="mt-6 border-t border-border pt-5">
+            <label htmlFor="billing-coupon" className="type-ui font-semibold">Tem um cupom?</label>
+            <p className="mt-1 type-meta text-muted-foreground">Insira um código de 7 ou 30 dias para liberar ou estender seu acesso.</p>
+            <form
+              className="mt-3 flex max-w-md flex-wrap gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (couponCode.trim()) redeemCoupon.mutate();
+              }}
+            >
+              <input
+                id="billing-coupon"
+                data-testid="input-billing-coupon"
+                value={couponCode}
+                onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                placeholder="CÓDIGO DO CUPOM"
+                autoComplete="off"
+                maxLength={64}
+                className="min-w-48 flex-1 rounded-lg border border-border bg-background px-3 py-2 type-ui uppercase outline-none focus-visible:focus-ring"
+              />
+              <Button type="submit" variant="outline" data-testid="button-billing-coupon" loading={redeemCoupon.isPending} disabled={!couponCode.trim()}>
+                Aplicar cupom
+              </Button>
+            </form>
+            {billing.data.couponAccessUntil && (
+              <p data-testid="text-billing-coupon-until" className="mt-2 type-meta text-muted-foreground">
+                Acesso promocional válido até {formatDate(billing.data.couponAccessUntil)}.
+              </p>
             )}
           </div>
         </>

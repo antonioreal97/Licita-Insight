@@ -325,12 +325,13 @@ export type BillingStatus = 'none' | 'pending' | 'active' | 'past_due' | 'cancel
 
 /** What grants access (priority subscription > trial > dev). Optional until every API ships it (CODEX_HANDOFF-006/007). */
 /** `beta`: free closed-beta access granted by the owner, outside Asaas. */
-export type BillingSource = 'subscription' | 'trial' | 'beta' | 'dev';
+export type BillingSource = 'subscription' | 'coupon' | 'trial' | 'beta' | 'dev';
 
 export type BillingResponse = {
   status: BillingStatus;
   entitled: boolean;
   currentPeriodEnd: string | null;
+  couponAccessUntil?: string | null;
   canCancel: boolean;
   monthlyBrl: number | null;
   /** End of the free trial (ISO; length from `GET /billing/plan`). Absent on APIs without CODEX_HANDOFF-007. */
@@ -342,6 +343,7 @@ export type BillingResponse = {
 export type PublicPlan = { monthlyBrl: number | null; trialDays: number; currency: 'BRL' };
 
 export type BillingCheckoutResponse = { url: string };
+export type CouponRedemptionResponse = { accessUntil: string; durationDays: 7 | 30; alreadyRedeemed: boolean };
 
 /** A downloaded attachment (e.g. `GET /me/export`). `filename` comes from `Content-Disposition`, `null` when absent. */
 export type DownloadedFile = { blob: Blob; filename: string | null };

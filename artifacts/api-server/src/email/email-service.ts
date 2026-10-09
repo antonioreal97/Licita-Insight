@@ -15,6 +15,8 @@ import {
 } from "drizzle-orm";
 import {
   db,
+  couponCodesTable,
+  couponRedemptionsTable,
   emailDeliveriesTable,
   emailDeliveryNotificationsTable,
   notificationsTable,
@@ -57,6 +59,7 @@ type Candidate = EmailNotificationSnapshot & Recipient & {
   trialEndsAt: Date;
   subscriptionStatus: string | null;
   currentPeriodEnd: Date | null;
+  couponAccessUntil: Date | null;
 };
 
 type EmailGroup = {
@@ -103,11 +106,18 @@ const notificationSelection = {
   trialEndsAt: usersTable.trialEndsAt,
   subscriptionStatus: subscriptionsTable.status,
   currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
+  couponAccessUntil: sql<Date | null>`(
+    select max(${couponRedemptionsTable.accessUntil})
+    from ${couponRedemptionsTable}
+    inner join ${couponCodesTable} on ${couponCodesTable.id} = ${couponRedemptionsTable.couponId}
+    where ${couponRedemptionsTable.userId} = ${usersTable.id}
+      and ${couponCodesTable.revokedAt} is null
+  )`,
 };
 
 /** `betaEmails` comes lowercased from activeBetaGrantEmails, loaded once per job run. */
 export const hasEmailAccess = (
-  candidate: Pick<Candidate, "type" | "email" | "subscriptionStatus" | "currentPeriodEnd" | "trialEndsAt">,
+  candidate: Pick<Candidate, "type" | "email" | "subscriptionStatus" | "currentPeriodEnd" | "trialEndsAt" | "couponAccessUntil">,
   now: Date,
   betaEmails: ReadonlySet<string>,
 ): boolean =>
@@ -120,6 +130,8 @@ export const hasEmailAccess = (
       trialEndsAt: candidate.trialEndsAt,
     },
     now,
+    process.env,
+    candidate.couponAccessUntil,
   );
 
 const groupByUser = (
@@ -160,6 +172,13 @@ const digestDeadlines = async (
       trialEndsAt: usersTable.trialEndsAt,
       subscriptionStatus: subscriptionsTable.status,
       currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
+      couponAccessUntil: sql<Date | null>`(
+        select max(${couponRedemptionsTable.accessUntil})
+        from ${couponRedemptionsTable}
+        inner join ${couponCodesTable} on ${couponCodesTable.id} = ${couponRedemptionsTable.couponId}
+        where ${couponRedemptionsTable.userId} = ${usersTable.id}
+          and ${couponCodesTable.revokedAt} is null
+      )`,
       tenderId: tendersTable.id,
       tenderTitle: tendersTable.title,
       tenderOrganizationName: tendersTable.organizationName,

@@ -54,6 +54,7 @@ export const accountService = {
   getBilling: (signal?: AbortSignal) => accountAdapter.getBilling(signal),
   startCheckout: () => accountAdapter.startCheckout(),
   cancelBilling: () => accountAdapter.cancelBilling(),
+  redeemBillingCoupon: (code: string) => accountAdapter.redeemBillingCoupon(code),
   getPublicPlan: (signal?: AbortSignal) => accountAdapter.getPublicPlan(signal),
 
   listSavedTenders: (params: SavedTendersParams, signal?: AbortSignal) =>
