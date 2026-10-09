@@ -13,6 +13,7 @@ import {
   type AiPassageRecord,
 } from "@workspace/db";
 import { entitlementSource, type EntitlementSource } from "../billing/billing-access";
+import { activeCouponAccessUntil } from "../billing/coupons";
 import { AiQuotaExceededError, AiUnavailableError, ConflictError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
@@ -89,7 +90,7 @@ async function accessSource(userId: string, now: Date): Promise<EntitlementSourc
     .leftJoin(subscriptionsTable, eq(subscriptionsTable.userId, usersTable.id))
     .where(eq(usersTable.id, userId))
     .limit(1);
-  return entitlementSource(row ?? null, now);
+  return entitlementSource(row ?? null, now, process.env, await activeCouponAccessUntil(userId, now));
 }
 
 export async function hasAiAccess(userId: string, now = new Date()): Promise<boolean> {

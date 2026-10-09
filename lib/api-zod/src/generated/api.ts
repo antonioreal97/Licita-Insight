@@ -35,6 +35,7 @@ export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 export const searchTendersQueryNewOnlyDefault = false;
+export const searchTendersQueryMyRegionDefault = false;
 export const searchTendersQueryValueMinMin = 0;
 
 export const searchTendersQueryValueMaxMin = 0;
@@ -59,6 +60,7 @@ export const SearchTendersQueryParams = zod.object({
   "category": zod.array(zod.coerce.string().min(1)).optional(),
   "platform": zod.array(zod.coerce.string().min(1)).optional().describe('Normalized bidding platform slug (`TenderPlatform.slug`).'),
   "newOnly": zod.coerce.boolean().default(searchTendersQueryNewOnlyDefault).describe('Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).'),
+  "myRegion": zod.coerce.boolean().default(searchTendersQueryMyRegionDefault).describe('Apply the signed-in company\'s saved service region.'),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
   "publishedFrom": zod.date().optional().describe('Inclusive lower publication date in America/Sao_Paulo.'),
@@ -766,10 +768,26 @@ export const getCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
 
 export const getCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax = 80;
 
+export const getCompanyProfileResponseProfileOneOneCoverageTwoRegionsMax = 5;
+
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
 export const getCompanyProfileResponseProfileOneOneCoverageTwoStatesMax = 27;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemNameMax = 100;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMin = 2;
+export const getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMax = 2;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesMax = 100;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterNameMax = 100;
+
+export const getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMin = 2;
+export const getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMax = 2;
 
 export const getCompanyProfileResponseProfileOneOneValueRangeMinMin = 0;
 
@@ -788,10 +806,28 @@ export const GetCompanyProfileResponse = zod.object({
   "excludedKeywords": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(getCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
   "registeredPlatforms": zod.array(zod.string().min(1).max(getCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
-  "scope": zod.enum(['national'])
+  "scope": zod.enum(['national']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean()
 }),zod.object({
-  "scope": zod.enum(['states']),
-  "states": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).min(1).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesMax)
+  "scope": zod.enum(['custom']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean(),
+  "regions": zod.array(zod.enum(['north', 'northeast', 'central_west', 'southeast', 'south'])).max(getCompanyProfileResponseProfileOneOneCoverageTwoRegionsMax),
+  "states": zod.array(zod.string().min(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).max(getCompanyProfileResponseProfileOneOneCoverageTwoStatesMax),
+  "municipalities": zod.array(zod.object({
+  "ibgeCode": zod.string().regex(getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp),
+  "name": zod.string().min(1).max(getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemNameMax),
+  "state": zod.string().min(getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMin).max(getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMax)
+})).max(getCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesMax),
+  "radius": zod.union([zod.object({
+  "center": zod.object({
+  "ibgeCode": zod.string().regex(getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp),
+  "name": zod.string().min(1).max(getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterNameMax),
+  "state": zod.string().min(getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMin).max(getCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMax)
+}),
+  "km": zod.union([zod.literal(50),zod.literal(100),zod.literal(200),zod.literal(300),zod.literal(500)])
+}),zod.null()])
 })]),
   "valueRange": zod.object({
   "min": zod.number().min(getCompanyProfileResponseProfileOneOneValueRangeMinMin).nullable(),
@@ -837,10 +873,26 @@ export const putCompanyProfileBodyExcludedKeywordsMax = 20;
 
 export const putCompanyProfileBodyRegisteredPlatformsItemMax = 80;
 
+export const putCompanyProfileBodyCoverageTwoRegionsMax = 5;
+
 export const putCompanyProfileBodyCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileBodyCoverageTwoStatesItemMax = 2;
 
 export const putCompanyProfileBodyCoverageTwoStatesMax = 27;
+
+export const putCompanyProfileBodyCoverageTwoMunicipalitiesItemIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const putCompanyProfileBodyCoverageTwoMunicipalitiesItemNameMax = 100;
+
+export const putCompanyProfileBodyCoverageTwoMunicipalitiesItemStateMin = 2;
+export const putCompanyProfileBodyCoverageTwoMunicipalitiesItemStateMax = 2;
+
+export const putCompanyProfileBodyCoverageTwoMunicipalitiesMax = 100;
+
+export const putCompanyProfileBodyCoverageTwoRadiusOneCenterIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const putCompanyProfileBodyCoverageTwoRadiusOneCenterNameMax = 100;
+
+export const putCompanyProfileBodyCoverageTwoRadiusOneCenterStateMin = 2;
+export const putCompanyProfileBodyCoverageTwoRadiusOneCenterStateMax = 2;
 
 export const putCompanyProfileBodyValueRangeMinMin = 0;
 
@@ -857,10 +909,28 @@ export const PutCompanyProfileBody = zod.object({
   "excludedKeywords": zod.array(zod.string().min(putCompanyProfileBodyExcludedKeywordsItemMin).max(putCompanyProfileBodyExcludedKeywordsItemMax)).max(putCompanyProfileBodyExcludedKeywordsMax),
   "registeredPlatforms": zod.array(zod.string().min(1).max(putCompanyProfileBodyRegisteredPlatformsItemMax)).optional().describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
-  "scope": zod.enum(['national'])
+  "scope": zod.enum(['national']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean()
 }),zod.object({
-  "scope": zod.enum(['states']),
-  "states": zod.array(zod.string().min(putCompanyProfileBodyCoverageTwoStatesItemMin).max(putCompanyProfileBodyCoverageTwoStatesItemMax)).min(1).max(putCompanyProfileBodyCoverageTwoStatesMax)
+  "scope": zod.enum(['custom']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean(),
+  "regions": zod.array(zod.enum(['north', 'northeast', 'central_west', 'southeast', 'south'])).max(putCompanyProfileBodyCoverageTwoRegionsMax),
+  "states": zod.array(zod.string().min(putCompanyProfileBodyCoverageTwoStatesItemMin).max(putCompanyProfileBodyCoverageTwoStatesItemMax)).max(putCompanyProfileBodyCoverageTwoStatesMax),
+  "municipalities": zod.array(zod.object({
+  "ibgeCode": zod.string().regex(putCompanyProfileBodyCoverageTwoMunicipalitiesItemIbgeCodeRegExp),
+  "name": zod.string().min(1).max(putCompanyProfileBodyCoverageTwoMunicipalitiesItemNameMax),
+  "state": zod.string().min(putCompanyProfileBodyCoverageTwoMunicipalitiesItemStateMin).max(putCompanyProfileBodyCoverageTwoMunicipalitiesItemStateMax)
+})).max(putCompanyProfileBodyCoverageTwoMunicipalitiesMax),
+  "radius": zod.union([zod.object({
+  "center": zod.object({
+  "ibgeCode": zod.string().regex(putCompanyProfileBodyCoverageTwoRadiusOneCenterIbgeCodeRegExp),
+  "name": zod.string().min(1).max(putCompanyProfileBodyCoverageTwoRadiusOneCenterNameMax),
+  "state": zod.string().min(putCompanyProfileBodyCoverageTwoRadiusOneCenterStateMin).max(putCompanyProfileBodyCoverageTwoRadiusOneCenterStateMax)
+}),
+  "km": zod.union([zod.literal(50),zod.literal(100),zod.literal(200),zod.literal(300),zod.literal(500)])
+}),zod.null()])
 })]),
   "valueRange": zod.object({
   "min": zod.number().min(putCompanyProfileBodyValueRangeMinMin).nullable(),
@@ -898,10 +968,26 @@ export const putCompanyProfileResponseProfileOneOneExcludedKeywordsMax = 20;
 
 export const putCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax = 80;
 
+export const putCompanyProfileResponseProfileOneOneCoverageTwoRegionsMax = 5;
+
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin = 2;
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax = 2;
 
 export const putCompanyProfileResponseProfileOneOneCoverageTwoStatesMax = 27;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemNameMax = 100;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMin = 2;
+export const putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMax = 2;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesMax = 100;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterNameMax = 100;
+
+export const putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMin = 2;
+export const putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMax = 2;
 
 export const putCompanyProfileResponseProfileOneOneValueRangeMinMin = 0;
 
@@ -920,10 +1006,28 @@ export const PutCompanyProfileResponse = zod.object({
   "excludedKeywords": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMin).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsItemMax)).max(putCompanyProfileResponseProfileOneOneExcludedKeywordsMax),
   "registeredPlatforms": zod.array(zod.string().min(1).max(putCompanyProfileResponseProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
-  "scope": zod.enum(['national'])
+  "scope": zod.enum(['national']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean()
 }),zod.object({
-  "scope": zod.enum(['states']),
-  "states": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).min(1).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesMax)
+  "scope": zod.enum(['custom']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean(),
+  "regions": zod.array(zod.enum(['north', 'northeast', 'central_west', 'southeast', 'south'])).max(putCompanyProfileResponseProfileOneOneCoverageTwoRegionsMax),
+  "states": zod.array(zod.string().min(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMin).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesItemMax)).max(putCompanyProfileResponseProfileOneOneCoverageTwoStatesMax),
+  "municipalities": zod.array(zod.object({
+  "ibgeCode": zod.string().regex(putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp),
+  "name": zod.string().min(1).max(putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemNameMax),
+  "state": zod.string().min(putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMin).max(putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesItemStateMax)
+})).max(putCompanyProfileResponseProfileOneOneCoverageTwoMunicipalitiesMax),
+  "radius": zod.union([zod.object({
+  "center": zod.object({
+  "ibgeCode": zod.string().regex(putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp),
+  "name": zod.string().min(1).max(putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterNameMax),
+  "state": zod.string().min(putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMin).max(putCompanyProfileResponseProfileOneOneCoverageTwoRadiusOneCenterStateMax)
+}),
+  "km": zod.union([zod.literal(50),zod.literal(100),zod.literal(200),zod.literal(300),zod.literal(500)])
+}),zod.null()])
 })]),
   "valueRange": zod.object({
   "min": zod.number().min(putCompanyProfileResponseProfileOneOneValueRangeMinMin).nullable(),
@@ -956,6 +1060,51 @@ export const ListProfileCategoriesResponse = zod.object({
   "label": zod.string(),
   "openTenderCount": zod.number().int().min(listProfileCategoriesResponseDataItemOpenTenderCountMin)
 }))
+})
+
+
+/**
+ * @summary Autocomplete the embedded IBGE municipality dataset
+ */
+export const listProfileMunicipalitiesQueryQMin = 2;
+export const listProfileMunicipalitiesQueryQMax = 80;
+
+export const listProfileMunicipalitiesQueryStateMin = 2;
+export const listProfileMunicipalitiesQueryStateMax = 2;
+
+
+
+export const ListProfileMunicipalitiesQueryParams = zod.object({
+  "q": zod.coerce.string().min(listProfileMunicipalitiesQueryQMin).max(listProfileMunicipalitiesQueryQMax),
+  "state": zod.coerce.string().min(listProfileMunicipalitiesQueryStateMin).max(listProfileMunicipalitiesQueryStateMax).optional()
+})
+
+export const listProfileMunicipalitiesResponseDataItemIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const listProfileMunicipalitiesResponseDataItemNameMax = 100;
+
+export const listProfileMunicipalitiesResponseDataItemStateMin = 2;
+export const listProfileMunicipalitiesResponseDataItemStateMax = 2;
+
+
+
+export const ListProfileMunicipalitiesResponse = zod.object({
+  "data": zod.array(zod.object({
+  "ibgeCode": zod.string().regex(listProfileMunicipalitiesResponseDataItemIbgeCodeRegExp),
+  "name": zod.string().min(1).max(listProfileMunicipalitiesResponseDataItemNameMax),
+  "state": zod.string().min(listProfileMunicipalitiesResponseDataItemStateMin).max(listProfileMunicipalitiesResponseDataItemStateMax)
+}))
+})
+
+
+/**
+ * @summary Count open tenders matching the saved service region
+ */
+export const getCompanyRegionPreviewResponseCountMin = 0;
+
+
+
+export const GetCompanyRegionPreviewResponse = zod.object({
+  "count": zod.number().int().min(getCompanyRegionPreviewResponseCountMin)
 })
 
 
@@ -1083,6 +1232,9 @@ export const GetTenderFitsResponse = zod.object({
 }),zod.object({
   "kind": zod.enum(['exclusion']),
   "terms": zod.array(zod.string())
+}),zod.object({
+  "kind": zod.enum(['service_region']),
+  "text": zod.string()
 }),zod.object({
   "kind": zod.enum(['out_of_coverage']),
   "state": zod.string().nullable()
@@ -1253,10 +1405,26 @@ export const exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax = 
 
 export const exportAccountDataResponseCompanyProfileOneOneRegisteredPlatformsItemMax = 80;
 
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoRegionsMax = 5;
+
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin = 2;
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax = 2;
 
 export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesMax = 27;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemNameMax = 100;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemStateMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemStateMax = 2;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesMax = 100;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp = new RegExp('^[0-9]{7}$');
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterNameMax = 100;
+
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterStateMin = 2;
+export const exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterStateMax = 2;
 
 export const exportAccountDataResponseCompanyProfileOneOneValueRangeMinMin = 0;
 
@@ -1429,10 +1597,28 @@ export const ExportAccountDataResponse = zod.object({
   "excludedKeywords": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMin).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsItemMax)).max(exportAccountDataResponseCompanyProfileOneOneExcludedKeywordsMax),
   "registeredPlatforms": zod.array(zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneRegisteredPlatformsItemMax)).describe('Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.'),
   "coverage": zod.union([zod.object({
-  "scope": zod.enum(['national'])
+  "scope": zod.enum(['national']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean()
 }),zod.object({
-  "scope": zod.enum(['states']),
-  "states": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax)).min(1).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesMax)
+  "scope": zod.enum(['custom']),
+  "mode": zod.enum(['strict', 'prioritize']),
+  "acceptsRemote": zod.boolean(),
+  "regions": zod.array(zod.enum(['north', 'northeast', 'central_west', 'southeast', 'south'])).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoRegionsMax),
+  "states": zod.array(zod.string().min(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMin).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesItemMax)).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoStatesMax),
+  "municipalities": zod.array(zod.object({
+  "ibgeCode": zod.string().regex(exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemIbgeCodeRegExp),
+  "name": zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemNameMax),
+  "state": zod.string().min(exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemStateMin).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesItemStateMax)
+})).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoMunicipalitiesMax),
+  "radius": zod.union([zod.object({
+  "center": zod.object({
+  "ibgeCode": zod.string().regex(exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterIbgeCodeRegExp),
+  "name": zod.string().min(1).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterNameMax),
+  "state": zod.string().min(exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterStateMin).max(exportAccountDataResponseCompanyProfileOneOneCoverageTwoRadiusOneCenterStateMax)
+}),
+  "km": zod.union([zod.literal(50),zod.literal(100),zod.literal(200),zod.literal(300),zod.literal(500)])
+}),zod.null()])
 })]),
   "valueRange": zod.object({
   "min": zod.number().min(exportAccountDataResponseCompanyProfileOneOneValueRangeMinMin).nullable(),
@@ -1460,7 +1646,13 @@ export const ExportAccountDataResponse = zod.object({
   "status": zod.string(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
   "updatedAt": zod.coerce.date()
-}),zod.null()])
+}),zod.null()]),
+  "couponRedemptions": zod.array(zod.object({
+  "couponId": zod.string().uuid(),
+  "redeemedAt": zod.coerce.date(),
+  "accessUntil": zod.coerce.date(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)])
+}))
 })
 
 
@@ -1470,9 +1662,10 @@ export const ExportAccountDataResponse = zod.object({
 export const GetBillingResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('coupon'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
+  "couponAccessUntil": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
   "monthlyBrl": zod.number().nullable()
 })
@@ -1485,6 +1678,65 @@ export const GetBillingPlanResponse = zod.object({
   "monthlyBrl": zod.number().nullable(),
   "trialDays": zod.literal(7),
   "currency": zod.enum(['BRL'])
+})
+
+
+/**
+ * @summary Issue an owner-managed access coupon
+ */
+export const createBillingCouponHeaderXCouponAdminTokenMin = 16;
+
+
+
+export const CreateBillingCouponHeader = zod.object({
+  "x-coupon-admin-token": zod.string().min(createBillingCouponHeaderXCouponAdminTokenMin)
+})
+
+export const createBillingCouponBodyCodeMin = 4;
+export const createBillingCouponBodyCodeMax = 64;
+
+
+export const createBillingCouponBodyCodeRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9_-]{3,63}$');
+export const createBillingCouponBodyMaxRedemptionsDefault = 1;
+export const createBillingCouponBodyMaxRedemptionsMax = 1000000;
+
+
+
+export const CreateBillingCouponBody = zod.object({
+  "code": zod.string().min(createBillingCouponBodyCodeMin).max(createBillingCouponBodyCodeMax).regex(createBillingCouponBodyCodeRegExp).optional(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "maxRedemptions": zod.number().int().min(1).max(createBillingCouponBodyMaxRedemptionsMax).default(createBillingCouponBodyMaxRedemptionsDefault),
+  "startsAt": zod.coerce.date().nullish(),
+  "expiresAt": zod.coerce.date().nullish()
+})
+
+export const CreateBillingCouponResponse = zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "maxRedemptions": zod.number().int(),
+  "redeemedCount": zod.number().int(),
+  "startsAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const redeemBillingCouponBodyCodeMin = 4;
+export const redeemBillingCouponBodyCodeMax = 64;
+
+
+
+export const RedeemBillingCouponBody = zod.object({
+  "code": zod.string().min(redeemBillingCouponBodyCodeMin).max(redeemBillingCouponBodyCodeMax)
+})
+
+export const RedeemBillingCouponResponse = zod.object({
+  "accessUntil": zod.coerce.date(),
+  "durationDays": zod.union([zod.literal(7),zod.literal(30)]),
+  "alreadyRedeemed": zod.boolean()
 })
 
 
@@ -1502,9 +1754,10 @@ export const StartBillingCheckoutResponse = zod.object({
 export const CancelBillingSubscriptionResponse = zod.object({
   "status": zod.enum(['none', 'pending', 'active', 'past_due', 'canceled']),
   "entitled": zod.boolean(),
-  "source": zod.union([zod.literal('subscription'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
+  "source": zod.union([zod.literal('subscription'),zod.literal('coupon'),zod.literal('trial'),zod.literal('beta'),zod.literal('dev'),zod.literal(null)]).nullable(),
   "trialEndsAt": zod.coerce.date().nullable(),
   "currentPeriodEnd": zod.coerce.date().nullable(),
+  "couponAccessUntil": zod.coerce.date().nullable(),
   "canCancel": zod.boolean(),
   "monthlyBrl": zod.number().nullable()
 })

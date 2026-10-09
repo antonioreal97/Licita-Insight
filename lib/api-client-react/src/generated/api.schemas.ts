@@ -51,6 +51,7 @@ export type BillingEntitlementSource = typeof BillingEntitlementSource[keyof typ
 
 export const BillingEntitlementSource = {
   subscription: 'subscription',
+  coupon: 'coupon',
   trial: 'trial',
   beta: 'beta',
   dev: 'dev',
@@ -64,9 +65,80 @@ export interface BillingResponse {
   trialEndsAt: string | null;
   /** @nullable */
   currentPeriodEnd: string | null;
+  /** @nullable */
+  couponAccessUntil: string | null;
   canCancel: boolean;
   /** @nullable */
   monthlyBrl: number | null;
+}
+
+export type CreateCouponRequestDurationDays = typeof CreateCouponRequestDurationDays[keyof typeof CreateCouponRequestDurationDays];
+
+
+export const CreateCouponRequestDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CreateCouponRequest {
+  /**
+     * @minLength 4
+     * @maxLength 64
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9_-]{3,63}$
+     */
+  code?: string;
+  durationDays: CreateCouponRequestDurationDays;
+  /**
+     * @minimum 1
+     * @maximum 1000000
+     */
+  maxRedemptions?: number;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+}
+
+export interface RedeemCouponRequest {
+  /**
+     * @minLength 4
+     * @maxLength 64
+     */
+  code: string;
+}
+
+export type CouponResponseDurationDays = typeof CouponResponseDurationDays[keyof typeof CouponResponseDurationDays];
+
+
+export const CouponResponseDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CouponResponse {
+  id: string;
+  code: string;
+  durationDays: CouponResponseDurationDays;
+  maxRedemptions: number;
+  redeemedCount: number;
+  /** @nullable */
+  startsAt: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export type CouponRedemptionResponseDurationDays = typeof CouponRedemptionResponseDurationDays[keyof typeof CouponRedemptionResponseDurationDays];
+
+
+export const CouponRedemptionResponseDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface CouponRedemptionResponse {
+  accessUntil: string;
+  durationDays: CouponRedemptionResponseDurationDays;
+  alreadyRedeemed: boolean;
 }
 
 export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
@@ -540,6 +612,21 @@ export interface AccountExportAiJob {
   finishedAt: string | null;
 }
 
+export type AccountExportCouponRedemptionDurationDays = typeof AccountExportCouponRedemptionDurationDays[keyof typeof AccountExportCouponRedemptionDurationDays];
+
+
+export const AccountExportCouponRedemptionDurationDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+} as const;
+
+export interface AccountExportCouponRedemption {
+  couponId: string;
+  redeemedAt: string;
+  accessUntil: string;
+  durationDays: AccountExportCouponRedemptionDurationDays;
+}
+
 export type AccountExportCompanyFitsItem = { [key: string]: unknown };
 
 export type AccountExportFitUsageItem = { [key: string]: unknown };
@@ -550,17 +637,43 @@ export type AccountExportRecommendationInterestProfile = { [key: string]: unknow
 
 export type AccountExportRecommendationsItem = { [key: string]: unknown };
 
+export interface MunicipalityReference {
+  /** @pattern ^[0-9]{7}$ */
+  ibgeCode: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @minLength 2
+     * @maxLength 2
+     */
+  state: string;
+}
+
 export type CompanyCoverage = {
   scope: 'national';
+  mode: 'strict' | 'prioritize';
+  acceptsRemote: boolean;
 } | {
-  scope: 'states';
+  scope: 'custom';
+  mode: 'strict' | 'prioritize';
+  acceptsRemote: boolean;
+  /** @maxItems 5 */
+  regions: ('north' | 'northeast' | 'central_west' | 'southeast' | 'south')[];
   /**
-     * @minItems 1
      * @maxItems 27
      * @items.minLength 2
      * @items.maxLength 2
      */
   states: string[];
+  /** @maxItems 100 */
+  municipalities: MunicipalityReference[];
+  radius: {
+  center: MunicipalityReference;
+  km: 50 | 100 | 200 | 300 | 500;
+} | null;
 };
 
 export interface CompanyValueRange {
@@ -681,6 +794,7 @@ export interface AccountExport {
   recommendationInterestProfile: AccountExportRecommendationInterestProfile;
   recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
+  couponRedemptions: AccountExportCouponRedemption[];
 }
 
 export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof TenderAskIndexStatus];
@@ -917,6 +1031,10 @@ export interface TenderSheet {
   registrationRequirement: RegistrationRequirement | null;
 }
 
+export interface ProfileMunicipalitiesResponse {
+  data: MunicipalityReference[];
+}
+
 export interface CompanyProfileResponse {
   profile: CompanyProfile | null;
 }
@@ -1006,6 +1124,9 @@ export type FitReason = {
 } | {
   kind: 'exclusion';
   terms: string[];
+} | {
+  kind: 'service_region';
+  text: string;
 } | {
   kind: 'out_of_coverage';
   /** @nullable */
@@ -2080,6 +2201,11 @@ export type PlatformFilterParameter = string[];
  */
 export type NewOnlyParameter = boolean;
 
+/**
+ * Apply the signed-in company's saved service region.
+ */
+export type MyRegionParameter = boolean;
+
 export type ValueMinParameter = number;
 
 export type ValueMaxParameter = number;
@@ -2164,6 +2290,10 @@ platform?: PlatformFilterParameter;
  */
 newOnly?: NewOnlyParameter;
 /**
+ * Apply the signed-in company's saved service region.
+ */
+myRegion?: MyRegionParameter;
+/**
  * @minimum 0
  */
 valueMin?: ValueMinParameter;
@@ -2241,6 +2371,24 @@ export const SearchTransparencyContractsSort = {
   value_desc: 'value_desc',
   value_asc: 'value_asc',
 } as const;
+
+export type ListProfileMunicipalitiesParams = {
+/**
+ * @minLength 2
+ * @maxLength 80
+ */
+q: string;
+/**
+ * @minLength 2
+ * @maxLength 2
+ */
+state?: string;
+};
+
+export type GetCompanyRegionPreview200 = {
+  /** @minimum 0 */
+  count: number;
+};
 
 export type SuggestProfileKeywordsParams = {
 /**

@@ -89,6 +89,12 @@ test('filtro de novos e ordenação pela entrada no Pardal sobrevivem na URL', (
   assert.equal(withoutFilters(params).newOnly, undefined);
 });
 
+test('atalho Minha região sobrevive na URL e sai ao limpar filtros', () => {
+  const params = searchParamsFromUrl('q=software&myRegion=true');
+  assert.deepEqual(params, { q: 'software', myRegion: true, pageSize: 20 });
+  assert.equal(withoutFilters(params).myRegion, undefined);
+});
+
 test('estado da busca permanece na navegação da aba até voltar ao padrão', () => {
   const values = new Map<string, string>();
   const storage = {

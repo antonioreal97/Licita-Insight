@@ -42,8 +42,16 @@ export type RecommendationInterestProfile = {
   modalities: WeightedRecommendationValue[];
   valueMin: number | null;
   valueMax: number | null;
-  coverageScope: "national" | "states" | null;
+  coverageScope: "national" | "states" | "custom" | null;
   coverageStates: string[];
+  coverageRegions?: Array<
+    "north" | "northeast" | "central_west" | "southeast" | "south"
+  >;
+  coverageMunicipalities?: string[];
+  headquartersMunicipalityIbge?: string | null;
+  coverageRadiusKm?: number | null;
+  coverageMode?: "strict" | "prioritize";
+  acceptsRemote?: boolean;
   exclusions: string[];
   companySize: "me_epp" | "cooperative" | "other" | null;
   /** Absent in profiles rebuilt before platforms existed. */

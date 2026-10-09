@@ -5,16 +5,28 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { MunicipalityReference } from './municipalityReference';
 
 export type CompanyCoverage = {
   scope: 'national';
+  mode: 'strict' | 'prioritize';
+  acceptsRemote: boolean;
 } | {
-  scope: 'states';
+  scope: 'custom';
+  mode: 'strict' | 'prioritize';
+  acceptsRemote: boolean;
+  /** @maxItems 5 */
+  regions: ('north' | 'northeast' | 'central_west' | 'southeast' | 'south')[];
   /**
-     * @minItems 1
      * @maxItems 27
      * @items.minLength 2
      * @items.maxLength 2
      */
   states: string[];
+  /** @maxItems 100 */
+  municipalities: MunicipalityReference[];
+  radius: {
+  center: MunicipalityReference;
+  km: 50 | 100 | 200 | 300 | 500;
+} | null;
 };

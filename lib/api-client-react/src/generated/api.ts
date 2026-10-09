@@ -34,12 +34,16 @@ import type {
   CompanyProfileInput,
   CompanyProfileResponse,
   ConflictResponse,
+  CouponRedemptionResponse,
+  CouponResponse,
+  CreateCouponRequest,
   CreateSavedSearchRequest,
   DeleteAccountRequest,
   DevLoginRequest,
   EmailUnsubscribeRequest,
   EmailUnsubscribeResponse,
   ForbiddenResponse,
+  GetCompanyRegionPreview200,
   GetSearchSuggestionsParams,
   GetTenderFitsParams,
   HealthStatus,
@@ -47,6 +51,7 @@ import type {
   InternalErrorResponse,
   InvalidParameterResponse,
   ListNotificationsParams,
+  ListProfileMunicipalitiesParams,
   ListRecommendationsParams,
   ListSavedTendersParams,
   MarkNotificationsReadRequest,
@@ -59,6 +64,7 @@ import type {
   ProfileDescriptionSuggestionRequest,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfileMunicipalitiesResponse,
   ProfilePlatformsResponse,
   PutSavedTenderRequest,
   RateLimitedResponse,
@@ -68,6 +74,7 @@ import type {
   RecommendationPreferences,
   RecommendationsResponse,
   RecordRecommendationEvent202,
+  RedeemCouponRequest,
   SavedSearch,
   SavedSearchList,
   SavedTender,
@@ -1244,6 +1251,167 @@ export function useListProfileCategories<TData = Awaited<ReturnType<typeof listP
 
 
 
+export const getListProfileMunicipalitiesUrl = (params: ListProfileMunicipalitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/profile/municipalities?${stringifiedParams}` : `/api/v1/profile/municipalities`
+}
+
+/**
+ * @summary Autocomplete the embedded IBGE municipality dataset
+ */
+export const listProfileMunicipalities = async (params: ListProfileMunicipalitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<ProfileMunicipalitiesResponse> => {
+
+  return customFetch<ProfileMunicipalitiesResponse>(getListProfileMunicipalitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProfileMunicipalitiesQueryKey = (params?: ListProfileMunicipalitiesParams,) => {
+    return [
+    `/api/v1/profile/municipalities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProfileMunicipalitiesQueryOptions = <TData = Awaited<ReturnType<typeof listProfileMunicipalities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>>(params: ListProfileMunicipalitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfileMunicipalitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfileMunicipalities>>> = ({ signal }) => listProfileMunicipalities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProfileMunicipalitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listProfileMunicipalities>>>
+export type ListProfileMunicipalitiesQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>
+
+
+/**
+ * @summary Autocomplete the embedded IBGE municipality dataset
+ */
+
+export function useListProfileMunicipalities<TData = Awaited<ReturnType<typeof listProfileMunicipalities>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse>>(
+ params: ListProfileMunicipalitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProfileMunicipalities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProfileMunicipalitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCompanyRegionPreviewUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-profile/region-preview`
+}
+
+/**
+ * @summary Count open tenders matching the saved service region
+ */
+export const getCompanyRegionPreview = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetCompanyRegionPreview200> => {
+
+  return customFetch<GetCompanyRegionPreview200>(getGetCompanyRegionPreviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCompanyRegionPreviewQueryKey = () => {
+    return [
+    `/api/v1/me/company-profile/region-preview`
+    ] as const;
+    }
+
+
+export const getGetCompanyRegionPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanyRegionPreviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyRegionPreview>>> = ({ signal }) => getCompanyRegionPreview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCompanyRegionPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getCompanyRegionPreview>>>
+export type GetCompanyRegionPreviewQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Count open tenders matching the saved service region
+ */
+
+export function useGetCompanyRegionPreview<TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCompanyRegionPreviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListProfilePlatformsUrl = () => {
 
 
@@ -2385,6 +2553,182 @@ export function useGetBillingPlan<TData = Awaited<ReturnType<typeof getBillingPl
 
 
 
+
+export const getCreateBillingCouponUrl = () => {
+
+
+
+
+  return `/api/v1/billing/coupons`
+}
+
+/**
+ * @summary Issue an owner-managed access coupon
+ */
+export const createBillingCoupon = async (createCouponRequest: CreateCouponRequest, options?: Parameters<typeof customFetch>[1]): Promise<CouponResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CouponResponse>(getCreateBillingCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createCouponRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateBillingCouponMutationKey = () => ['createBillingCoupon'] as const;
+
+export const getCreateBillingCouponMutationOptions = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext> => {
+
+const mutationKey = getCreateBillingCouponMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBillingCoupon>>, CreateBillingCouponMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBillingCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBillingCouponMutationResult = NonNullable<Awaited<ReturnType<typeof createBillingCoupon>>>
+    export type CreateBillingCouponMutationBody = BodyType<CreateCouponRequest>
+    export type CreateBillingCouponMutationError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>
+    export type CreateBillingCouponMutationVariables = {data: BodyType<CreateCouponRequest>}
+
+    /**
+ * @summary Issue an owner-managed access coupon
+ */
+export const useCreateBillingCoupon = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCoupon>>, TError,CreateBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBillingCoupon>>,
+        TError,
+        CreateBillingCouponMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateBillingCouponMutationOptions(options));
+    }
+
+export const getRedeemBillingCouponUrl = () => {
+
+
+
+
+  return `/api/v1/me/billing/coupon`
+}
+
+/**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const redeemBillingCoupon = async (redeemCouponRequest: RedeemCouponRequest, options?: Parameters<typeof customFetch>[1]): Promise<CouponRedemptionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CouponRedemptionResponse>(getRedeemBillingCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(redeemCouponRequest)
+  }
+);}
+
+
+
+
+
+export const getRedeemBillingCouponMutationKey = () => ['redeemBillingCoupon'] as const;
+
+export const getRedeemBillingCouponMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext> => {
+
+const mutationKey = getRedeemBillingCouponMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof redeemBillingCoupon>>, RedeemBillingCouponMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  redeemBillingCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RedeemBillingCouponMutationResult = NonNullable<Awaited<ReturnType<typeof redeemBillingCoupon>>>
+    export type RedeemBillingCouponMutationBody = BodyType<RedeemCouponRequest>
+    export type RedeemBillingCouponMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type RedeemBillingCouponMutationVariables = {data: BodyType<RedeemCouponRequest>}
+
+    /**
+ * @summary Redeem an access coupon for the authenticated account
+ */
+export const useRedeemBillingCoupon = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemBillingCoupon>>, TError,RedeemBillingCouponMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof redeemBillingCoupon>>,
+        TError,
+        RedeemBillingCouponMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRedeemBillingCouponMutationOptions(options));
+    }
 
 export const getStartBillingCheckoutUrl = () => {
 

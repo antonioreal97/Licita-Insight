@@ -32,6 +32,7 @@ test("closed-beta grants with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABA
   }
   // The table comes from the versioned migration itself, not from public, so this proves 0018.
   await pool.query(readFileSync(path.join(repoRoot, "lib/db/migrations/0018_beta_access.sql"), "utf8"));
+  await pool.query(readFileSync(path.join(repoRoot, "lib/db/migrations/0035_coupons.sql"), "utf8"));
 
   const now = new Date();
   const past = new Date(now.getTime() - 86_400_000);

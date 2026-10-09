@@ -64,6 +64,12 @@ Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira s
 - Mac local: Docker da stack antiga parado (6 containers); túnel SSH `127.0.0.1:24252 → licita-worker` ativo
   (processo desanexado) para testar o app do servidor por `localhost`.
 
+Landing com o pardal em movimento (09 out 2026, branch `feat/pardal-motion`, sem deploy):
+pardal 3D ligado à rolagem e dois clipes pré-renderizados com o CLI do HyperFrames (`hyperframes@0.8.140`, via
+`pnpm dlx`, nunca instalado como dependência para não puxar Puppeteer/Chrome no Docker e na Vercel). Re-render só
+no macOS (HEVC com alfa via VideoToolbox). Detalhes em [progress](progress.md) e
+[`design-system/motion.md`](../design-system/motion.md).
+
 Ciclo 14 (02 out 2026, branch `antonioreal97/cycle14` a partir do `main` com o PR #16 mergeado; sem deploy).
 Decisão do owner: o Jev continua escolhendo os trechos e decidindo se há evidência; o `gpt-4o-mini` só **redige**
 a partir deles. A chave da OpenAI é do owner e ainda não existe; sem ela tudo funciona como antes. Run do Orca

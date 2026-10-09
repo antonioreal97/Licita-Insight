@@ -3,6 +3,8 @@ import type {
   AskTenderResult,
   CompanyProfileResponse,
   ProfileCategoriesResponse,
+  ProfileMunicipalitiesResponse,
+  CompanyRegionPreviewResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
   ProfilePlatformsResponse,
@@ -22,6 +24,8 @@ export const httpAiAdapter: AiAdapter = {
   saveCompanyProfile: (profile) => sendJson<CompanyProfileResponse>('PUT', '/v1/me/company-profile', profile),
   deleteCompanyProfile: () => sendJson<void>('DELETE', '/v1/me/company-profile'),
   listProfileCategories: (signal) => getJson<ProfileCategoriesResponse>('/v1/profile/categories', {}, signal),
+  listProfileMunicipalities: (query, signal) => getJson<ProfileMunicipalitiesResponse>('/v1/profile/municipalities', { q: query }, signal),
+  getCompanyRegionPreview: (signal) => getJson<CompanyRegionPreviewResponse>('/v1/me/company-profile/region-preview', {}, signal),
   listProfilePlatforms: (signal) => getJson<ProfilePlatformsResponse>('/v1/profile/platforms', {}, signal),
   suggestProfileKeywords: (query, signal) => getJson<ProfileKeywordSuggestionsResponse>('/v1/profile/keywords/suggest', { q: query }, signal),
   suggestProfileFiltersFromDescription: (description, signal) =>

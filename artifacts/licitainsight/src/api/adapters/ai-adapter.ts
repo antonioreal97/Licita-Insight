@@ -3,6 +3,8 @@ import type {
   CompanyProfileInput,
   CompanyProfileResponse,
   ProfileCategoriesResponse,
+  ProfileMunicipalitiesResponse,
+  CompanyRegionPreviewResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
   ProfilePlatformsResponse,
@@ -21,6 +23,8 @@ export interface AiAdapter {
   saveCompanyProfile(profile: CompanyProfileInput): Promise<CompanyProfileResponse>;
   deleteCompanyProfile(): Promise<void>;
   listProfileCategories(signal?: AbortSignal): Promise<ProfileCategoriesResponse>;
+  listProfileMunicipalities(query: string, signal?: AbortSignal): Promise<ProfileMunicipalitiesResponse>;
+  getCompanyRegionPreview(signal?: AbortSignal): Promise<CompanyRegionPreviewResponse>;
   listProfilePlatforms(signal?: AbortSignal): Promise<ProfilePlatformsResponse>;
   suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
   suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;

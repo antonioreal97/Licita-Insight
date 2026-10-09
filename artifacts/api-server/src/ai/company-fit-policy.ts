@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import { InvalidParameterError, type ApiErrorDetail } from "../lib/api-error";
 import { TENDER_CATEGORIES } from "../catalog/tender-categories";
 import { isRegistrationSlug } from "../catalog/tender-platforms";
+import {
+  MACROREGION_UFS,
+  municipalityReference,
+  type Macroregion,
+  type ServiceRegionCoverage,
+} from "../service-region/service-region";
 
 export type CompanySize = "me_epp" | "cooperative" | "other";
 export type CompanyProfileInput = {
@@ -13,7 +19,7 @@ export type CompanyProfileInput = {
   excludedKeywords: string[];
   /** Bidding rooms and SICAF the company is registered in. Does not feed the AI fit. */
   registeredPlatforms: string[];
-  coverage: { scope: "national" } | { scope: "states"; states: string[] };
+  coverage: ServiceRegionCoverage;
   valueRange: { min: number | null; max: number | null };
   size: CompanySize;
 };
@@ -50,6 +56,10 @@ const UFS = new Set([
 const CATEGORY_SLUGS = new Set<string>(
   TENDER_CATEGORIES.map(({ slug }) => slug),
 );
+const MACROREGIONS = new Set<Macroregion>(
+  Object.keys(MACROREGION_UFS) as Macroregion[],
+);
+const COVERAGE_RADII = new Set([50, 100, 200, 300, 500]);
 
 const normalized = (value: string): string =>
   value.normalize("NFKC").trim().replace(/\s+/g, " ");
@@ -176,23 +186,142 @@ export function parseCompanyProfileInput(value: unknown): CompanyProfileInput {
     details.push({ field: "coverage", issue: "invalid_type" });
   } else {
     const coverageInput = body.coverage as Record<string, unknown>;
-    if (coverageInput.scope === "national") coverage = { scope: "national" };
-    else if (coverageInput.scope === "states") {
-      if (!Array.isArray(coverageInput.states)) {
+    const mode =
+      coverageInput.mode === undefined ? "strict" : coverageInput.mode;
+    const acceptsRemote =
+      coverageInput.acceptsRemote === undefined
+        ? false
+        : coverageInput.acceptsRemote;
+    if (mode !== "strict" && mode !== "prioritize")
+      details.push({ field: "coverage.mode", issue: "invalid_enum" });
+    if (typeof acceptsRemote !== "boolean")
+      details.push({ field: "coverage.acceptsRemote", issue: "invalid_type" });
+    if (coverageInput.scope === "national") {
+      coverage = {
+        scope: "national",
+        mode: mode as "strict" | "prioritize",
+        acceptsRemote: acceptsRemote as boolean,
+      };
+    } else if (
+      coverageInput.scope === "states" ||
+      coverageInput.scope === "custom"
+    ) {
+      const rawStates = coverageInput.states ?? [];
+      const rawRegions =
+        coverageInput.scope === "states" ? [] : (coverageInput.regions ?? []);
+      const rawMunicipalities =
+        coverageInput.scope === "states"
+          ? []
+          : (coverageInput.municipalities ?? []);
+      const rawRadius =
+        coverageInput.scope === "states"
+          ? null
+          : (coverageInput.radius ?? null);
+      if (!Array.isArray(rawStates))
         details.push({ field: "coverage.states", issue: "invalid_type" });
-      } else {
-        if (coverageInput.states.length < 1 || coverageInput.states.length > 27)
-          details.push({ field: "coverage.states", issue: "invalid_length" });
-        const states = coverageInput.states.map((state) =>
-          typeof state === "string" ? state.trim().toUpperCase() : "",
-        );
+      if (!Array.isArray(rawRegions))
+        details.push({ field: "coverage.regions", issue: "invalid_type" });
+      if (!Array.isArray(rawMunicipalities))
+        details.push({
+          field: "coverage.municipalities",
+          issue: "invalid_type",
+        });
+      const states = Array.isArray(rawStates)
+        ? rawStates.map((state) =>
+            typeof state === "string" ? state.trim().toUpperCase() : "",
+          )
+        : [];
+      const regions = Array.isArray(rawRegions)
+        ? rawRegions.map(
+            (region) =>
+              (typeof region === "string" ? region : "") as Macroregion,
+          )
+        : [];
+      const municipalityCodes = Array.isArray(rawMunicipalities)
+        ? rawMunicipalities.map((city, index) => {
+            const code =
+              typeof city === "string"
+                ? city
+                : city && typeof city === "object" && !Array.isArray(city)
+                  ? String((city as Record<string, unknown>).ibgeCode ?? "")
+                  : "";
+            if (!municipalityReference(code))
+              details.push({
+                field: `coverage.municipalities.${index}`,
+                issue: "invalid_value",
+              });
+            return code;
+          })
+        : [];
+      if (
+        states.some((state) => !UFS.has(state)) ||
+        new Set(states).size !== states.length
+      )
+        details.push({ field: "coverage.states", issue: "invalid_value" });
+      if (
+        regions.some((region) => !MACROREGIONS.has(region)) ||
+        new Set(regions).size !== regions.length
+      )
+        details.push({ field: "coverage.regions", issue: "invalid_value" });
+      if (new Set(municipalityCodes).size !== municipalityCodes.length)
+        details.push({ field: "coverage.municipalities", issue: "duplicate" });
+      let radius: Extract<
+        ServiceRegionCoverage,
+        { scope: "custom" }
+      >["radius"] = null;
+      if (rawRadius !== null) {
         if (
-          states.some((state) => !UFS.has(state)) ||
-          new Set(states).size !== states.length
-        )
-          details.push({ field: "coverage.states", issue: "invalid_value" });
-        coverage = { scope: "states", states };
+          !rawRadius ||
+          typeof rawRadius !== "object" ||
+          Array.isArray(rawRadius)
+        ) {
+          details.push({ field: "coverage.radius", issue: "invalid_type" });
+        } else {
+          const radiusInput = rawRadius as Record<string, unknown>;
+          const centerValue = radiusInput.center;
+          const centerCode =
+            typeof centerValue === "string"
+              ? centerValue
+              : centerValue &&
+                  typeof centerValue === "object" &&
+                  !Array.isArray(centerValue)
+                ? String(
+                    (centerValue as Record<string, unknown>).ibgeCode ?? "",
+                  )
+                : "";
+          const center = municipalityReference(centerCode);
+          const km = radiusInput.km;
+          if (!center)
+            details.push({
+              field: "coverage.radius.center",
+              issue: "invalid_value",
+            });
+          if (typeof km !== "number" || !COVERAGE_RADII.has(km))
+            details.push({
+              field: "coverage.radius.km",
+              issue: "invalid_value",
+            });
+          if (center && typeof km === "number" && COVERAGE_RADII.has(km))
+            radius = { center, km: km as 50 | 100 | 200 | 300 | 500 };
+        }
       }
+      if (
+        states.length + regions.length + municipalityCodes.length === 0 &&
+        radius === null
+      )
+        details.push({ field: "coverage", issue: "invalid_length" });
+      coverage = {
+        scope: "custom",
+        mode: mode as "strict" | "prioritize",
+        acceptsRemote: acceptsRemote as boolean,
+        states,
+        regions,
+        municipalities: municipalityCodes.flatMap((code) => {
+          const city = municipalityReference(code);
+          return city ? [city] : [];
+        }),
+        radius,
+      };
     } else details.push({ field: "coverage.scope", issue: "invalid_enum" });
   }
   let min: number | null | undefined;

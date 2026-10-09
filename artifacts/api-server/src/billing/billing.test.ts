@@ -114,6 +114,17 @@ describe("subscription access", () => {
     );
   });
 
+  it("recognizes a coupon until its exact boundary and keeps subscription priority", () => {
+    const now = new Date("2026-10-08T12:00:00.000Z");
+    const end = new Date(now.getTime() + 30 * 86_400_000);
+    assert.equal(entitlementSource(null, now, {}, end), "coupon");
+    assert.equal(entitlementSource(null, end, {}, end), null);
+    assert.equal(
+      entitlementSource({ status: "active", currentPeriodEnd: null }, now, {}, end),
+      "subscription",
+    );
+  });
+
   it("distinguishes paid access so checkout remains available during trial", () => {
     assert.equal(
       hasSubscriptionEntitlement(

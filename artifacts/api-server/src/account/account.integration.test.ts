@@ -116,6 +116,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     readFileSync(new URL("../../../../lib/db/migrations/0018_beta_access.sql", import.meta.url), "utf8"),
   );
   await pool.query(
+    readFileSync(new URL("../../../../lib/db/migrations/0035_coupons.sql", import.meta.url), "utf8"),
+  );
+  await pool.query(
     readFileSync(new URL("../../../../lib/db/migrations/0026_ai_daily_tenders.sql", import.meta.url), "utf8"),
   );
   const participationColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'saved_tenders' and column_name = 'stage'", [schema]);
@@ -751,7 +754,18 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       selectedCategories: ["ti-telecom"],
       selectedKeywords: ["servidor rack"],
       excludedKeywords: ["impressora"],
-      coverage: { scope: "states", states: ["SP"] },
+      coverage: {
+        scope: "custom",
+        mode: "strict",
+        acceptsRemote: false,
+        regions: ["southeast"],
+        states: ["SP"],
+        municipalities: [{ ibgeCode: "3509502", name: "Campinas", state: "SP" }],
+        radius: {
+          center: { ibgeCode: "3509502", name: "Campinas", state: "SP" },
+          km: 100,
+        },
+      },
       valueRange: { min: null, max: 1000 },
       size: "other",
     };
@@ -798,12 +812,44 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
         selectedCategories: string[];
         selectedKeywords: string[];
         excludedKeywords: string[];
+        coverage: {
+          scope: string;
+          mode: string;
+          acceptsRemote: boolean;
+          municipalities: Array<{ ibgeCode: string }>;
+          radius: { km: number } | null;
+        };
       };
     };
     assert.equal(savedProfile.profile.version, 1);
     assert.deepEqual(savedProfile.profile.selectedCategories, ["ti-telecom"]);
     assert.deepEqual(savedProfile.profile.selectedKeywords, ["servidor rack"]);
     assert.deepEqual(savedProfile.profile.excludedKeywords, ["impressora"]);
+    assert.equal(savedProfile.profile.coverage.mode, "strict");
+    assert.equal(savedProfile.profile.coverage.acceptsRemote, false);
+    assert.equal(savedProfile.profile.coverage.municipalities[0]?.ibgeCode, "3509502");
+    assert.equal(savedProfile.profile.coverage.radius?.km, 100);
+    const municipalities = await request("/v1/profile/municipalities?q=campin", {}, authenticatedCookie);
+    assert.equal(municipalities.status, 200);
+    assert.ok(
+      ((await municipalities.json()) as { data: Array<{ ibgeCode: string }> }).data.some(
+        ({ ibgeCode }) => ibgeCode === "3509502",
+      ),
+    );
+    const regionPreview = await request("/v1/me/company-profile/region-preview", {}, authenticatedCookie);
+    assert.equal(regionPreview.status, 200);
+    assert.equal(typeof ((await regionPreview.json()) as { count: number }).count, "number");
+    const regionSearch = await request(
+      "/v1/tenders/search?myRegion=true&facets=false",
+      {},
+      authenticatedCookie,
+    );
+    assert.equal(regionSearch.status, 200);
+    assert.equal(
+      ((await regionSearch.json()) as { data: Array<{ id: string }> }).data.some(({ id }) => id === tenderId),
+      false,
+      "Minha região aplica a cobertura salva à busca",
+    );
     const fit = await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, authenticatedCookie);
     assert.equal(fit.status, 200);
     const fitBody = (await fit.json()) as {
@@ -1327,6 +1373,20 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
   await t.test("exports every user-owned table without secrets", async () => {
     const [exportUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "user-a@example.test"));
+    await db.insert(companyProfilesTable).values({
+      userId: exportUser!.id,
+      description: "TEST DATA serviços de tecnologia e consultoria remota.",
+      offerings: ["software"],
+      coverageScope: "custom",
+      coverageStates: ["SP"],
+      coverageRegions: ["southeast"],
+      coverageMunicipalities: ["3509502"],
+      headquartersMunicipalityIbge: "3509502",
+      coverageRadiusKm: 200,
+      coverageMode: "prioritize",
+      acceptsRemote: true,
+      size: "other",
+    });
     await db.insert(emailDeliveriesTable).values({
       id: "export-email",
       userId: exportUser!.id,
@@ -1386,6 +1446,12 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
       aiDailyTenders: { quotaDay: string; tenderId: string }[];
       aiJobs: { id: string; kind: string; status: string }[];
       recommendationEvents: { normalizedTerms: string[] }[];
+      companyProfile: {
+        coverageRegions: string[];
+        coverageMunicipalities: string[];
+        coverageMode: string;
+        acceptsRemote: boolean;
+      } | null;
       [key: string]: unknown;
     };
     assert.equal(body.user.email, "user-a@example.test");
@@ -1407,6 +1473,11 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.ok(body.savedTenders.some(({ tenderId: id }) => id === tenderId));
     assert.ok(body.savedSearches.some(({ deletedAt }) => deletedAt !== null));
     assert.deepEqual(body.recommendationEvents.at(-1)?.normalizedTerms, ["hemodialise", "hospitalar"]);
+    assert.ok(body.companyProfile);
+    assert.equal(body.companyProfile.coverageMode, "prioritize");
+    assert.deepEqual(body.companyProfile.coverageRegions, ["southeast"]);
+    assert.deepEqual(body.companyProfile.coverageMunicipalities, ["3509502"]);
+    assert.equal(body.companyProfile.acceptsRemote, true);
 
     const userOwnedTables = await pool.query<{ table_name: string }>(
       `select c.table_name

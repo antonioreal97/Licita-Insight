@@ -7,7 +7,7 @@ import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
-import { useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
+import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { sortLabels } from '@/lib/tender-labels';
 import { countActiveFilters, DEFAULT_PAGE_SIZE } from '@/services/search-service';
@@ -46,6 +46,7 @@ export default function SearchPage() {
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
   const lastRecordedSearch = useRef<string | null>(null);
   const recommendationPreferences = useRecommendationPreferences();
+  const companyProfile = useCompanyProfile();
   const desktopFiltersRef = useRef<HTMLDivElement>(null);
 
   const response = search.data;
@@ -165,6 +166,21 @@ export default function SearchPage() {
           fallbackReason={search.isPlaceholderData || !params.q ? undefined : response?.meta.searchModeFallbackReason}
           onChange={(mode) => update({ mode })}
         />
+        {companyProfile.data?.profile && (
+          <button
+            type="button"
+            aria-pressed={params.myRegion === true}
+            onClick={() => update({ myRegion: params.myRegion ? undefined : true })}
+            className={`rounded-full border px-3 py-1.5 type-meta font-semibold transition-colors duration-fast focus-visible:focus-ring ${
+              params.myRegion
+                ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
+                : 'border-border bg-surface text-foreground hover:border-border-strong'
+            }`}
+            data-testid="button-my-region"
+          >
+            Minha região
+          </button>
+        )}
       </div>
 
       {/* Container query: the facet sidebar appears when the content column (not the viewport) is wide enough. */}

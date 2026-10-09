@@ -1,12 +1,8 @@
+import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import {
-  and,
-  asc,
-  desc,
-  eq,
-  inArray,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+  municipalityCodesWithinRadius,
+  statesForMacroregions,
+} from "../service-region/service-region";
 import { type PgColumn } from "drizzle-orm/pg-core";
 import type {
   FacetBucket,
@@ -18,7 +14,11 @@ import type {
   TenderStatus,
 } from "@workspace/api-zod";
 import { db, tendersTable } from "@workspace/db";
-import type { TenderDocumentRecord, TenderItemRecord, TenderTimelineRecord } from "@workspace/db/schema";
+import type {
+  TenderDocumentRecord,
+  TenderItemRecord,
+  TenderTimelineRecord,
+} from "@workspace/db/schema";
 import type { FacetGroup, SearchCriteria } from "../domain/search";
 import { platformKind, platformUrl } from "../catalog/tender-platforms";
 import { normalizeText, queryTokens } from "../domain/normalize";
@@ -73,7 +73,9 @@ const like = (column: PgColumn, token: string): SQL =>
 const requireNumber = (value: unknown, field: string): number => {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number)) {
-    throw new Error(`Expected a number for ${field}, received ${String(value)}`);
+    throw new Error(
+      `Expected a number for ${field}, received ${String(value)}`,
+    );
   }
   return number;
 };
@@ -100,7 +102,8 @@ export const searchWhereFor = (
   const filters: SQL[] = [];
   const tokens = queryTokens(criteria.query);
 
-  for (const token of tokens) filters.push(like(tendersTable.searchText, token));
+  for (const token of tokens)
+    filters.push(like(tendersTable.searchText, token));
 
   if (skip !== "status" && criteria.status.length > 0) {
     filters.push(inArray(tendersTable.status, criteria.status));
@@ -119,7 +122,10 @@ export const searchWhereFor = (
   if (skip !== "city" && criteria.city.length > 0) {
     filters.push(
       sql`(
-        ${tendersTable.cityIbgeCode} in (${sql.join(criteria.city.map((city) => sql`${city}`), sql`, `)})
+        ${tendersTable.cityIbgeCode} in (${sql.join(
+          criteria.city.map((city) => sql`${city}`),
+          sql`, `,
+        )})
         or ${tendersTable.cityNorm} in (${sql.join(
           criteria.city.map((city) => sql`${normalizeText(city)}`),
           sql`, `,
@@ -137,32 +143,106 @@ export const searchWhereFor = (
     filters.push(sql`exists (
       select 1
       from jsonb_array_elements(${tendersTable.categories}) as cat
-      where cat->>'slug' in (${sql.join(criteria.category.map((slug) => sql`${slug}`), sql`, `)})
+      where cat->>'slug' in (${sql.join(
+        criteria.category.map((slug) => sql`${slug}`),
+        sql`, `,
+      )})
     )`);
   }
   if (skip !== "platform" && criteria.platform.length > 0) {
     filters.push(inArray(tendersTable.platform, criteria.platform));
   }
   if (skip !== "new" && criteria.newOnly) {
-    filters.push(sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`);
+    filters.push(
+      sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
+    );
+  }
+  if (criteria.serviceRegion?.scope === "custom") {
+    const coverage = criteria.serviceRegion;
+    const states = [
+      ...new Set([
+        ...coverage.states,
+        ...statesForMacroregions(coverage.regions),
+      ]),
+    ];
+    const municipalityCodes = [
+      ...new Set([
+        ...coverage.municipalities.map(({ ibgeCode }) => ibgeCode),
+        ...(coverage.radius
+          ? municipalityCodesWithinRadius(
+              coverage.radius.center.ibgeCode,
+              coverage.radius.km,
+            )
+          : []),
+      ]),
+    ];
+    const remoteSlugs = coverage.acceptsRemote
+      ? [
+          "ti-telecom",
+          "consultoria-tecnica",
+          "educacao-capacitacao",
+          "publicidade-comunicacao",
+          "seguros-financeiros",
+        ]
+      : [];
+    filters.push(sql`(
+      ${
+        states.length
+          ? sql`upper(${tendersTable.state}) in (${sql.join(
+              states.map((state) => sql`${state}`),
+              sql`, `,
+            )})`
+          : sql`false`
+      }
+      or ${municipalityCodes.length ? inArray(tendersTable.cityIbgeCode, municipalityCodes) : sql`false`}
+      or ${
+        remoteSlugs.length
+          ? sql`exists (
+        select 1 from jsonb_array_elements(${tendersTable.categories}) as cat
+        where cat->>'slug' in (${sql.join(
+          remoteSlugs.map((slug) => sql`${slug}`),
+          sql`, `,
+        )})
+      )`
+          : sql`false`
+      }
+    )`);
   }
   if (skip !== "valueRange" && criteria.valueMin !== undefined) {
-    filters.push(sql`${tendersTable.estimatedValue}::float8 >= ${criteria.valueMin}`);
+    filters.push(
+      sql`${tendersTable.estimatedValue}::float8 >= ${criteria.valueMin}`,
+    );
   }
   if (skip !== "valueRange" && criteria.valueMax !== undefined) {
-    filters.push(sql`${tendersTable.estimatedValue}::float8 <= ${criteria.valueMax}`);
+    filters.push(
+      sql`${tendersTable.estimatedValue}::float8 <= ${criteria.valueMax}`,
+    );
   }
   if (criteria.publishedFrom) {
-    filters.push(onOrAfterSaoPauloDate(tendersTable.publishedAt, criteria.publishedFrom));
+    filters.push(
+      onOrAfterSaoPauloDate(tendersTable.publishedAt, criteria.publishedFrom),
+    );
   }
   if (criteria.publishedTo) {
-    filters.push(onOrBeforeSaoPauloDate(tendersTable.publishedAt, criteria.publishedTo));
+    filters.push(
+      onOrBeforeSaoPauloDate(tendersTable.publishedAt, criteria.publishedTo),
+    );
   }
   if (criteria.deadlineFrom) {
-    filters.push(onOrAfterSaoPauloDate(tendersTable.proposalDeadline, criteria.deadlineFrom));
+    filters.push(
+      onOrAfterSaoPauloDate(
+        tendersTable.proposalDeadline,
+        criteria.deadlineFrom,
+      ),
+    );
   }
   if (criteria.deadlineTo) {
-    filters.push(onOrBeforeSaoPauloDate(tendersTable.proposalDeadline, criteria.deadlineTo));
+    filters.push(
+      onOrBeforeSaoPauloDate(
+        tendersTable.proposalDeadline,
+        criteria.deadlineTo,
+      ),
+    );
   }
 
   return filters.length > 0 ? and(...filters) : undefined;
@@ -234,20 +314,27 @@ const buckets = async (
   const rows = await (limit ? query.limit(limit) : query);
   return rows.flatMap((row) => {
     if (row.value === null || row.label === null) return [];
-    return [{
-      value: String(row.value),
-      label: String(row.label),
-      count: requireNumber(row.count, "facet count"),
-    }];
+    return [
+      {
+        value: String(row.value),
+        label: String(row.label),
+        count: requireNumber(row.count, "facet count"),
+      },
+    ];
   });
 };
 
-export const tenderRowToDetail = (row: TenderRow, now = new Date()): TenderDetail => {
+export const tenderRowToDetail = (
+  row: TenderRow,
+  now = new Date(),
+): TenderDetail => {
   const items = row.items as TenderItemRecord[];
   const documents = row.documents as TenderDocumentRecord[];
   const timeline = row.timeline as TenderTimelineRecord[];
   const estimatedValue =
-    row.estimatedValue === null ? null : requireNumber(row.estimatedValue, "estimatedValue");
+    row.estimatedValue === null
+      ? null
+      : requireNumber(row.estimatedValue, "estimatedValue");
   const rawPayload = row.rawPayload as {
     publication?: Record<string, unknown>;
   };
@@ -271,7 +358,8 @@ export const tenderRowToDetail = (row: TenderRow, now = new Date()): TenderDetai
     tenderNumberShort:
       row.sourceId === "pncp" ? pncpTenderNumberShort(publication) : null,
     estimatedValue,
-    estimatedValueStatus: row.estimatedValueStatus as TenderDetail["estimatedValueStatus"],
+    estimatedValueStatus:
+      row.estimatedValueStatus as TenderDetail["estimatedValueStatus"],
     publishedAt: row.publishedAt,
     openingAt: row.openingAt,
     proposalDeadline: row.proposalDeadline,
@@ -281,14 +369,15 @@ export const tenderRowToDetail = (row: TenderRow, now = new Date()): TenderDetai
       cityIbgeCode: row.cityIbgeCode,
     },
     source: { id: row.sourceId, name: row.sourceName, url: row.sourceUrl },
-    platform: row.platform === null
-      ? null
-      : {
-          slug: row.platform,
-          label: row.platformLabel ?? row.platform,
-          kind: platformKind(row.platform),
-          url: platformUrl(row.platform),
-        },
+    platform:
+      row.platform === null
+        ? null
+        : {
+            slug: row.platform,
+            label: row.platformLabel ?? row.platform,
+            kind: platformKind(row.platform),
+            url: platformUrl(row.platform),
+          },
     categories: row.categories,
     relevance: { score: null, highlights: [] },
     updatedAt: row.updatedAt,
@@ -344,7 +433,9 @@ export class PostgresTenderRepository {
 
     return {
       data: normalizePageRelevance(
-        rows.map((row) => toSummary(tenderRowToDetail(row, now), criteria, tokens)),
+        rows.map((row) =>
+          toSummary(tenderRowToDetail(row, now), criteria, tokens),
+        ),
       ),
       pagination: {
         page: criteria.page,
@@ -383,7 +474,10 @@ export class PostgresTenderRepository {
     };
   }
 
-  async suggestions(query: string, limit: number): Promise<SuggestionsResponse> {
+  async suggestions(
+    query: string,
+    limit: number,
+  ): Promise<SuggestionsResponse> {
     const normalized = normalizeText(query);
     const pattern = likePattern(normalized);
     const [organizations, categories, termCount] = await Promise.all([
@@ -419,7 +513,10 @@ export class PostgresTenderRepository {
         type: "organization" as const,
         value: organization.value,
         label: organization.label,
-        count: requireNumber(organization.count, "organization suggestion count"),
+        count: requireNumber(
+          organization.count,
+          "organization suggestion count",
+        ),
       })),
       ...categoryRows.map((category) => ({
         type: "category" as const,
@@ -428,7 +525,14 @@ export class PostgresTenderRepository {
         count: requireNumber(category.count, "category suggestion count"),
       })),
       ...(termCount > 0
-        ? [{ type: "term" as const, value: query.trim(), label: query.trim(), count: termCount }]
+        ? [
+            {
+              type: "term" as const,
+              value: query.trim(),
+              label: query.trim(),
+              count: termCount,
+            },
+          ]
         : []),
     ]
       .sort((left, right) => (right.count ?? 0) - (left.count ?? 0))
@@ -455,7 +559,10 @@ export class PostgresTenderRepository {
     return row?.indexUpdatedAt ?? null;
   }
 
-  private async facets(criteria: SearchCriteria, now: Date): Promise<SearchFacets> {
+  private async facets(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<SearchFacets> {
     const [
       status,
       modality,
@@ -475,14 +582,29 @@ export class PostgresTenderRepository {
       valueRows,
       newCount,
     ] = await Promise.all([
-      buckets(tendersTable.status, sql<string>`${tendersTable.status}`, searchWhereFor(criteria, "status", now)),
-      buckets(tendersTable.modality, sql<string>`${tendersTable.modality}`, searchWhereFor(criteria, "modality", now)),
+      buckets(
+        tendersTable.status,
+        sql<string>`${tendersTable.status}`,
+        searchWhereFor(criteria, "status", now),
+      ),
+      buckets(
+        tendersTable.modality,
+        sql<string>`${tendersTable.modality}`,
+        searchWhereFor(criteria, "modality", now),
+      ),
       buckets(
         tendersTable.state,
         sql<string>`${tendersTable.state}`,
-        and(searchWhereFor(criteria, "state", now), sql`${tendersTable.state} is not null`),
+        and(
+          searchWhereFor(criteria, "state", now),
+          sql`${tendersTable.state} is not null`,
+        ),
       ),
-      buckets(tendersTable.sourceId, sql<string>`${tendersTable.sourceName}`, searchWhereFor(criteria, "source", now)),
+      buckets(
+        tendersTable.sourceId,
+        sql<string>`${tendersTable.sourceName}`,
+        searchWhereFor(criteria, "source", now),
+      ),
       this.cityFacet(criteria, now),
       this.organizationFacet(criteria, now),
       this.categoryFacet(criteria, now),
@@ -502,15 +624,21 @@ export class PostgresTenderRepository {
         .select({ value: tendersTable.estimatedValue })
         .from(tendersTable)
         .where(searchWhereFor(criteria, "valueRange", now)),
-      countRows(and(
-        searchWhereFor(criteria, "new", now),
-        sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
-      )),
+      countRows(
+        and(
+          searchWhereFor(criteria, "new", now),
+          sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
+        ),
+      ),
     ]);
 
     const values = nonNegativeValues(
       valueRows
-        .map((row) => (row.value === null ? null : requireNumber(row.value, "estimatedValue")))
+        .map((row) =>
+          row.value === null
+            ? null
+            : requireNumber(row.value, "estimatedValue"),
+        )
         .filter((value): value is number => value !== null),
     );
     const range = numberRange(values);
@@ -548,7 +676,10 @@ export class PostgresTenderRepository {
     };
   }
 
-  private async cityFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
+  private async cityFacet(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<FacetBucket[]> {
     const rows = await db
       .select({
         value: tendersTable.cityIbgeCode,
@@ -571,15 +702,20 @@ export class PostgresTenderRepository {
 
     return rows.flatMap((row) => {
       if (!row.value || !row.city || !row.state) return [];
-      return [{
-        value: row.value,
-        label: `${row.city}/${row.state}`,
-        count: requireNumber(row.count, "city facet count"),
-      }];
+      return [
+        {
+          value: row.value,
+          label: `${row.city}/${row.state}`,
+          count: requireNumber(row.count, "city facet count"),
+        },
+      ];
     });
   }
 
-  private async organizationFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
+  private async organizationFacet(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<FacetBucket[]> {
     const where = searchWhereFor(criteria, "organization", now);
     const top = await db
       .select({
@@ -613,16 +749,26 @@ export class PostgresTenderRepository {
       result.push({
         value: organizationId,
         label: nameRow?.name ?? organizationId,
-        count: requireNumber(countRow?.count ?? 0, "selected organization count"),
+        count: requireNumber(
+          countRow?.count ?? 0,
+          "selected organization count",
+        ),
       });
     }
 
     return result;
   }
 
-  private async categoryFacet(criteria: SearchCriteria, now: Date): Promise<FacetBucket[]> {
+  private async categoryFacet(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<FacetBucket[]> {
     const where = searchWhereFor(criteria, "category", now);
-    const result = await db.execute<{ value: string; label: string; count: number }>(sql`
+    const result = await db.execute<{
+      value: string;
+      label: string;
+      count: number;
+    }>(sql`
       select cat->>'slug' as value,
              cat->>'label' as label,
              count(*)::int as count

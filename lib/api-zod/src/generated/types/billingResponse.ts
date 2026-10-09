@@ -16,6 +16,8 @@ export interface BillingResponse {
   trialEndsAt: Date | null;
   /** @nullable */
   currentPeriodEnd: Date | null;
+  /** @nullable */
+  couponAccessUntil: Date | null;
   canCancel: boolean;
   /** @nullable */
   monthlyBrl: number | null;
