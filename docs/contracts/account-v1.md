@@ -272,9 +272,11 @@ type NotificationPreferences = {
   quando `BREVO_API_KEY` existe; caso contrário, Resend é usado quando `RESEND_API_KEY` existe.
   Sem chave de provedor ou `MAIL_FROM`, a API permanece disponível, registra warning e marca a
   entrega como `skipped`. `MAIL_REPLY_TO` é opcional.
-- As mensagens são HTML simples + texto puro em PT-BR, sem pixel, imagem ou link de tracking
-  gerado pela aplicação. O rastreamento de abertura/clique também deve permanecer desligado no
-  domínio do provedor.
+- As mensagens são HTML simples + texto puro em PT-BR, sem pixel ou link de tracking gerado pela
+  aplicação. A única imagem é a logo do cabeçalho (PNG estático em
+  `${PUBLIC_APP_ORIGIN}/brand/email/pardal-logo-lima-2x.png`, servido junto com o frontend), com a
+  mesma URL para todos os destinatários. O rastreamento de abertura/clique também deve permanecer
+  desligado no domínio do provedor.
 
 ## 6. Perfil da empresa e filtros inteligentes
 
