@@ -112,6 +112,19 @@ Deriva de [activeContext](activeContext.md).
 - Filtro/facet `platform` na busca; badge "Disputa em" no card e no detalhe; perfil "Sou cadastrado em" (`registeredPlatforms`, não muda `version` nem a aderência); aviso de credenciamento prévio na ficha, por regex e dias úteis com feriados nacionais ([`docs/contracts/ai-v1.md`](../docs/contracts/ai-v1.md)).
 - Produção: a migração `0033_tender_platform` precisa ser aplicada manualmente antes do deploy; o job `tender_platform_backfill` da API preenche os antigos sozinho (ao subir e às 02:00, só enquanto houver `platform` nulo). Amostra de 8 out 2026 (104.748 abertos): 36,4% em sala conhecida, 39,9% sistema de origem, 23,7% outro sistema.
 
+## Na branch — pardal em movimento na landing (`feat/pardal-motion`, 09 out 2026)
+
+- Pardal 3D (Three.js, `pardal-flight-3d.tsx`) extrudado de `public/brand/pardal-silhueta.svg` (os 4 paths do logo:
+  corpo, olho e asa em dois paths, que bate). Voa nas margens laterais e cruza no vão entre seções, só a partir de
+  1360 px; render sob demanda; tinta invertida sobre `bg-superficie-inversa`. Carrega sob demanda
+  (`React.lazy`), como o globo.
+- Dois clipes HyperFrames (`motion/pardal-assinatura`, `motion/pardal-raio-x`) renderizados por
+  `pnpm --filter @workspace/licitainsight run motion:render` em `public/motion/` (WebM alfa + HEVC alfa + pôster PNG),
+  tocados uma vez na seção "IA com fonte" e na chamada final (`pardal-clip.tsx`).
+- Exceção de movimento da landing em [`design-system/motion.md`](../design-system/motion.md).
+- Verificado em navegador (sem API): Chrome escolhe WebM, WebKit escolhe HEVC, alfa correto nos dois, temas Creme e
+  Petróleo, movimento reduzido. Falta: Safari real, conferência com dados da API e ao vivo após o deploy.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).

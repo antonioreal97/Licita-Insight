@@ -29,6 +29,21 @@ interface has to feel instant. Every animation must pass one test: would the UI 
 6. **No bounce, no overshoot, no infinite loops**, except `animate-spin` on a real in-flight request and `animate-pulse` on skeletons.
 7. **Interruptible.** Hover-out must reverse from the current state. That works automatically with CSS transitions. Keyframes on hover do not.
 
+## Exception: marketing landing
+
+The public landing (`artifacts/licitainsight/src/features/landing/`) is a brand surface, not a work surface, so it may perform. Only there:
+
+- **Scroll-driven 3D pardal** (`pardal-flight-3d.tsx`): extruded from `public/brand/pardal-silhueta.svg`, flies in the side gutters and
+  crosses in the gap between sections. It renders on demand (scroll, resize, theme), never in an idle loop, and only from 1360px wide,
+  where the gutters fit it without covering text.
+- **Pre-rendered clips that play once** (`pardal-clip.tsx`): HyperFrames compositions in `artifacts/licitainsight/motion/`, rendered by
+  `pnpm --filter @workspace/licitainsight run motion:render` into `public/motion/` (WebM with alpha for Chrome/Firefox, HEVC with alpha
+  for Safari, PNG of the last frame). They start when scrolled into view and stop on the last frame.
+
+Still forbidden on the landing: animating live data (index facts, tender preview), new infinite loops (the radar globe is the only
+one), and any motion under reduced motion. With reduced motion the bird is drawn once next to the hero and the clips show only their
+last frame.
+
 ## Reduced motion
 
 `index.css` has a global `@media (prefers-reduced-motion: reduce)` rule that shortens every animation and transition to 0.01ms
