@@ -80,7 +80,7 @@ export default function SettingsPage() {
                     className="flex items-center gap-2 whitespace-nowrap px-3 py-2 text-xs font-semibold text-muted-foreground"
                   >
                     {name}
-                    <span className="rounded-xs bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>
+                    <span className="rounded-lg bg-secondary px-1 py-px type-label font-bold text-secondary-foreground">em breve</span>
                   </span>
                 )}
               </li>
@@ -344,7 +344,7 @@ function BillingSection() {
                 placeholder="CÓDIGO DO CUPOM"
                 autoComplete="off"
                 maxLength={64}
-                className="min-w-48 flex-1 rounded-lg border border-border bg-background px-3 py-2 type-ui uppercase outline-none focus-visible:focus-ring"
+                className="min-w-48 flex-1 rounded-lg border border-input bg-background px-3 py-2 type-ui uppercase outline-none focus-visible:focus-ring"
               />
               <Button type="submit" variant="outline" data-testid="button-billing-coupon" loading={redeemCoupon.isPending} disabled={!couponCode.trim()}>
                 Aplicar cupom

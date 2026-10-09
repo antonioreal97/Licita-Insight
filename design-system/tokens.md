@@ -99,7 +99,7 @@ They are named `type-*` so `cn()`/tailwind-merge does not confuse them with text
 
 ### Raw sizes
 
-`text-3xs` (10px/14), `text-2xs` (11px/16), plus Tailwind defaults `text-xs` (12), `text-sm` (14), `text-base` (16)…
+Nothing under 12px: Tailwind defaults `text-xs` (12), `text-sm` (14), `text-base` (16). Titles and landing copy use the Pardal styles (`type-display`, `type-titulo-1..3`, `type-corpo-grande`, `type-corpo`) instead of raw sizes.
 Tracking: `tracking-display` (−0.04em), `tracking-heading` (−0.02em), `tracking-label` (0.04em), `tracking-eyebrow` (0.14em).
 
 ### Legacy role classes (still supported)

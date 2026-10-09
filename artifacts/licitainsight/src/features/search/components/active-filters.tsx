@@ -17,7 +17,7 @@ export function ActiveFilters({ params, onRemove, onClearAll, canClear }: Props)
           onClick={() => onRemove(chip.remove)}
           aria-label={`Remover filtro ${chip.group}: ${chip.label}`}
           data-testid={`chip-${chip.id}`}
-          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
+          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-pill border border-border bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
         >
           <span className="text-muted-foreground">{chip.group}:</span>
           <span className="truncate font-medium">{chip.label}</span>
@@ -31,7 +31,7 @@ export function ActiveFilters({ params, onRemove, onClearAll, canClear }: Props)
           type="button"
           onClick={onClearAll}
           data-testid="button-clear-all-filters"
-          className="min-h-8 rounded-md px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+          className="min-h-8 rounded-lg px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
         >
           Limpar tudo
         </button>

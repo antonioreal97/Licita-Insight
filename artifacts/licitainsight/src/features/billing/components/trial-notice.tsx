@@ -20,7 +20,7 @@ export function AccessBadge() {
         href={BILLING_HREF}
         data-testid="badge-access-dev"
         title="Acesso de desenvolvimento (BILLING_DEV_ENTITLED). Não é uma assinatura paga."
-        className="rounded-full border border-border bg-muted px-2 py-0.5 type-label font-bold text-muted-foreground hover:text-foreground focus-visible:focus-ring"
+        className="rounded-pill border border-border bg-muted px-2 py-0.5 type-label font-bold text-muted-foreground hover:text-foreground focus-visible:focus-ring"
       >
         Dev
       </Link>
@@ -40,7 +40,7 @@ export function AccessBadge() {
           : `Período de teste, termina ${trial.daysLeft === 0 ? 'hoje' : `em ${daysLabel(trial.daysLeft)}`}. Ver assinatura`
       }
       className={cn(
-        'whitespace-nowrap rounded-full px-2.5 py-0.5 type-label font-bold transition-colors duration-fast ease-standard focus-visible:focus-ring',
+        'whitespace-nowrap rounded-pill px-2.5 py-0.5 type-label font-bold transition-colors duration-fast ease-standard focus-visible:focus-ring',
         trial.ending
           ? 'bg-warning-subtle text-warning-subtle-foreground hover:bg-warning-subtle/80'
           : 'bg-primary-subtle text-primary-subtle-foreground hover:bg-primary-subtle/80',
@@ -110,7 +110,7 @@ export function TrialEndingBanner() {
           writeDismissedOn(today);
           setDismissedOn(today);
         }}
-        className="-mr-1 shrink-0 rounded-md p-1.5 transition-colors duration-fast ease-standard hover:bg-warning/15 focus-visible:focus-ring"
+        className="-mr-1 shrink-0 rounded-lg p-1.5 transition-colors duration-fast ease-standard hover:bg-warning/15 focus-visible:focus-ring"
       >
         <X size={16} strokeWidth={1.75} aria-hidden />
       </button>

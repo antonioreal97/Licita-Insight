@@ -40,6 +40,7 @@ import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
 import { formatCurrency, formatCurrencyPrecise, formatDateTime, formatNumber } from '@/lib/format';
 import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
+import { buttonClass } from '@/components/common/action-button';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
 import {
@@ -50,14 +51,11 @@ import {
 } from '@/components/ui/accordion';
 
 const navLink = 'font-semibold text-primary transition-colors duration-fast hover:underline';
-const primaryCta =
-  'inline-flex items-center justify-center rounded-pill bg-action px-5 py-2.5 text-sm font-semibold text-action-foreground transition-colors duration-fast hover:bg-action-hover focus-visible:focus-ring';
-const heroCta =
-  'inline-flex items-center justify-center gap-2 rounded-pill bg-action px-7 py-4 text-sm font-semibold tracking-wide text-action-foreground transition-colors duration-fast hover:bg-action-hover focus-visible:focus-ring';
-const secondaryCta =
-  'inline-flex items-center justify-center gap-2 rounded-pill border border-border bg-surface px-7 py-4 text-sm font-semibold tracking-wide text-foreground transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring';
+const primaryCta = buttonClass('dark', 'lg');
+const heroCta = cn(buttonClass('primary', 'lg'), 'h-13 px-7');
+const secondaryCta = cn(buttonClass('outline', 'lg'), 'h-13 px-7');
 const eyebrow = 'type-eyebrow font-bold text-primary tracking-eyebrow uppercase';
-const sectionTitle = 'mt-4 text-3xl font-semibold leading-[1.05] tracking-display sm:text-4xl lg:text-[46px]';
+const sectionTitle = 'mt-4 type-titulo-2 lg:type-titulo-1';
 
 // Same as the globe: three.js only downloads when the flying pardal is shown.
 const PardalFlight3D = lazy(() =>
@@ -158,7 +156,7 @@ function LiveIndexFacts() {
     >
       <div className="rounded-xl border border-border bg-surface p-4">
         <dt className="type-label text-muted-foreground">Índice Nacional</dt>
-        <dd className="mt-1.5 type-data text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <dd className="mt-1.5 type-titulo-3 text-foreground sm:type-titulo-2">
           {formatNumber(total)}
         </dd>
         <p className="mt-1 type-meta text-muted-foreground">editais catalogados</p>
@@ -166,7 +164,7 @@ function LiveIndexFacts() {
       {open.isSuccess && (
         <div className="rounded-xl border border-border bg-surface p-4">
           <dt className="type-label text-muted-foreground">Disputas Abertas</dt>
-          <dd className="mt-1.5 type-data text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <dd className="mt-1.5 type-titulo-3 text-foreground sm:type-titulo-2">
             {formatNumber(open.data.pagination.total)}
           </dd>
           <p className="mt-1 type-meta text-muted-foreground">oportunidades ativas</p>
@@ -193,7 +191,7 @@ function HeroRadar() {
   return (
     <div className="relative min-w-0">
       {/* Precision telemetry frame */}
-      <div aria-hidden className="absolute -inset-3 rounded-[30px] border border-border bg-primary-subtle/30 sm:-inset-5" />
+      <div aria-hidden className="absolute -inset-3 rounded-2xl border border-border bg-primary-subtle/30 sm:-inset-5" />
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
         {/* Cockpit telemetry header with view toggle */}
@@ -214,7 +212,7 @@ function HeroRadar() {
               type="button"
               onClick={() => setViewMode('tenders')}
               className={cn(
-                'rounded-pill px-3 py-1 text-3xs font-semibold transition-colors duration-fast focus-visible:focus-ring',
+                'rounded-pill px-3 py-1 text-xs font-semibold transition-colors duration-fast focus-visible:focus-ring',
                 viewMode === 'tenders'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -226,7 +224,7 @@ function HeroRadar() {
               type="button"
               onClick={() => setViewMode('globe')}
               className={cn(
-                'flex items-center gap-1 rounded-pill px-3 py-1 text-3xs font-semibold transition-colors duration-fast focus-visible:focus-ring',
+                'flex items-center gap-1 rounded-pill px-3 py-1 text-xs font-semibold transition-colors duration-fast focus-visible:focus-ring',
                 viewMode === 'globe'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -244,7 +242,7 @@ function HeroRadar() {
               <Suspense fallback={<div className="h-[290px] w-full sm:h-[330px]" aria-hidden="true" />}>
                 <RadarGlobe3D className="h-[290px] w-full sm:h-[330px]" />
               </Suspense>
-              <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2.5 text-3xs text-muted-foreground">
+              <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5 font-semibold text-foreground">
                   <span className="size-1.5 rounded-full bg-primary" /> 27 UFs monitoradas
                 </span>
@@ -267,8 +265,8 @@ function HeroRadar() {
 
             {preview.isPending && (
               <div className="space-y-3 py-6">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-3/4 animate-pulse rounded-lg bg-muted" />
+                <div className="h-4 w-1/2 animate-pulse rounded-lg bg-muted" />
               </div>
             )}
 
@@ -292,21 +290,21 @@ function HeroRadar() {
               >
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-status-open px-2.5 py-0.5 text-3xs font-bold text-status-open-foreground">
+                    <span className="rounded-pill bg-status-open px-2.5 py-0.5 text-xs font-bold text-status-open-foreground">
                       {statusLabels[t.status]}
                     </span>
-                    <span className="rounded-md border border-border bg-surface px-1.5 py-0.5 type-data text-3xs font-bold text-muted-foreground">
+                    <span className="rounded-lg border border-border bg-surface px-1.5 py-0.5 type-data text-xs font-bold text-muted-foreground">
                       {t.location.state}
                     </span>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2.5 py-0.5 text-3xs font-semibold text-primary-subtle-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-pill bg-primary-subtle px-2.5 py-0.5 text-xs font-semibold text-primary-subtle-foreground">
                     <Target size={10} /> Alta aderência
                   </span>
                 </div>
                 <div className="line-clamp-2 text-xs font-semibold leading-5 text-foreground group-hover:text-primary">
                   {t.title}
                 </div>
-                <div className="mt-2.5 flex items-center justify-between gap-3 text-3xs text-muted-foreground">
+                <div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <span className="truncate">{t.organization.name}</span>
                   <span className="shrink-0 type-data text-xs font-bold text-primary">{formatCurrency(t.estimatedValue)}</span>
                 </div>
@@ -322,28 +320,28 @@ function HeroRadar() {
         className="relative -mt-20 ml-4 max-w-sm rounded-2xl border border-border-strong bg-surface-raised p-4 sm:absolute sm:-bottom-8 sm:-left-8 sm:mt-0 sm:ml-0"
       >
         <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-2.5">
-          <div className="flex items-center gap-2 text-2xs font-semibold text-foreground">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <FileSearch size={14} className="text-primary" />
             Raio-X de Edital por IA
           </div>
-          <span className="rounded-pill bg-primary-subtle px-2.5 py-0.5 text-3xs font-bold text-primary-subtle-foreground">
+          <span className="rounded-pill bg-primary-subtle px-2.5 py-0.5 text-xs font-bold text-primary-subtle-foreground">
             Página citada
           </span>
         </div>
 
         <div className="mt-2.5">
-          <p className="text-2xs font-bold text-foreground">Pergunta: Exige visita técnica presencial obrigatória?</p>
+          <p className="text-xs font-bold text-foreground">Pergunta: Exige visita técnica presencial obrigatória?</p>
           <div className="mt-2 rounded-xl border-l-2 border-primary bg-surface-sunken p-2.5">
-            <p className="text-3xs italic leading-relaxed text-muted-foreground">
+            <p className="text-xs italic leading-relaxed text-muted-foreground">
               «A visita técnica possui caráter facultativo, facultando-se ao licitante a apresentação de declaração formal de pleno conhecimento das condições locais.»
             </p>
-            <p className="mt-1.5 font-semibold text-primary text-3xs">
+            <p className="mt-1.5 font-semibold text-primary text-xs">
               Termo de Referência · Pág. 34, Cláusula 8.1
             </p>
           </div>
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border-subtle pt-2 text-3xs">
+        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border-subtle pt-2 text-xs">
           <span className="inline-flex items-center gap-1 font-semibold text-primary">
             <Check size={12} /> Visita facultativa com declaração
           </span>
@@ -394,7 +392,7 @@ function PerformanceComparisonSection() {
           <h2 id="performance-titulo" className={sectionTitle}>
             Em compras públicas, velocidade com precisão decide contratos.
           </h2>
-          <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
             O segundo colocado em uma licitação é apenas o primeiro a perder. Veja a diferença mensurável entre o método manual tradicional e o Pardal Digital.
           </p>
         </div>
@@ -407,7 +405,7 @@ function PerformanceComparisonSection() {
                 <div className="mt-4 rounded-xl border border-border/70 bg-surface-sunken p-3.5">
                   <p className="type-meta text-muted-foreground">Método manual</p>
                   <p className="mt-1 text-sm font-semibold text-muted-foreground">{c.traditional}</p>
-                  <p className="mt-0.5 type-meta text-muted-foreground/80">{c.traditionalSub}</p>
+                  <p className="mt-0.5 type-meta text-muted-foreground">{c.traditionalSub}</p>
                 </div>
               </div>
 
@@ -493,7 +491,7 @@ function ServicesSection() {
         <h2 id="servicos-titulo" className={sectionTitle}>
           Tudo o que sua equipe precisa para vencer licitações.
         </h2>
-        <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+        <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
           Do edital publicado no PNCP à decisão fundamentada de participar. Ferramentas construídas com foco em clareza, velocidade e segurança jurídica.
         </p>
       </div>
@@ -515,13 +513,13 @@ function ServicesSection() {
                     <Icon size={22} aria-hidden />
                   </span>
                   {f.badge && (
-                    <span className="rounded-pill border border-border bg-surface-sunken px-3 py-1 text-3xs font-semibold text-muted-foreground">
+                    <span className="rounded-pill border border-border bg-surface-sunken px-3 py-1 text-xs font-semibold text-muted-foreground">
                       {f.badge}
                     </span>
                   )}
                 </div>
 
-                <h3 className="mt-6 text-xl font-semibold tracking-heading text-foreground">{f.title}</h3>
+                <h3 className="mt-6 type-titulo-3 text-foreground">{f.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">{f.desc}</p>
 
                 <ul className="mt-6 space-y-2.5 border-t border-border-subtle pt-6 text-xs text-foreground">
@@ -581,10 +579,10 @@ function EvidenceSection() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid gap-14 lg:grid-cols-[.9fr_1.1fr] lg:items-start">
           <div className="lg:sticky lg:top-12">
-            <div className="inline-flex items-center gap-2 rounded-pill border border-texto-inverso/20 bg-texto-inverso/10 px-3.5 py-1 text-2xs font-semibold text-texto-inverso">
+            <div className="inline-flex items-center gap-2 rounded-pill border border-texto-inverso/20 bg-texto-inverso/10 px-3.5 py-1 text-xs font-semibold text-texto-inverso">
               <Sparkles size={13} /> Engenharia Anti-Alucinação
             </div>
-            <h2 id="ia-titulo" className="mt-4 text-3xl font-semibold leading-[1.05] tracking-display text-texto-inverso sm:text-4xl lg:text-[46px]">
+            <h2 id="ia-titulo" className="mt-4 type-titulo-2 text-texto-inverso lg:type-titulo-1">
               A IA encontra o trecho. Quem valida a regra é você.
             </h2>
             <p className="mt-5 max-w-md text-sm leading-7 text-texto-inverso/90 sm:text-base">
@@ -620,7 +618,7 @@ function EvidenceSection() {
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-pill border border-texto-inverso/30 px-2.5 py-0.5 text-3xs font-bold text-texto-inverso">
+                    <span className="rounded-pill border border-texto-inverso/30 px-2.5 py-0.5 text-xs font-bold text-texto-inverso">
                       {p.tag}
                     </span>
                     <FileSearch size={16} className="text-texto-inverso/80" />
@@ -628,7 +626,7 @@ function EvidenceSection() {
                   <h3 className="mt-4 text-base font-semibold text-texto-inverso">{p.title}</h3>
                   <p className="mt-2 text-xs leading-5 text-texto-inverso/80">{p.desc}</p>
                 </div>
-                <div className="mt-6 border-t border-texto-inverso/20 pt-3 text-3xs font-semibold text-texto-inverso/70">
+                <div className="mt-6 border-t border-texto-inverso/20 pt-3 text-xs font-semibold text-texto-inverso">
                   Auditado com número de página
                 </div>
               </article>
@@ -679,7 +677,7 @@ function HowItWorksSection() {
           <h2 id="como-funciona-titulo" className={sectionTitle}>
             Em 3 passos simples, o controle total das suas oportunidades.
           </h2>
-          <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
             Sem processos complexos de implantação. Em menos de 2 minutos sua conta está configurada e monitorando o mercado.
           </p>
         </div>
@@ -690,12 +688,12 @@ function HowItWorksSection() {
             return (
               <div key={st.step} className="relative rounded-2xl border border-border bg-background p-8">
                 <div className="flex items-center justify-between">
-                  <span className="type-data text-3xl font-bold tracking-tight text-primary">{st.step}</span>
+                  <span className="type-titulo-2 text-primary">{st.step}</span>
                   <span className="grid size-11 place-items-center rounded-xl bg-primary-subtle text-primary">
                     <Icon size={21} />
                   </span>
                 </div>
-                <h3 className="mt-6 text-lg font-semibold tracking-heading text-foreground">{st.title}</h3>
+                <h3 className="mt-6 type-titulo-3 text-foreground">{st.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{st.desc}</p>
               </div>
             );
@@ -742,7 +740,7 @@ function TransparencySection() {
         </div>
 
         <div className="relative">
-          <div aria-hidden className="absolute -inset-3 rounded-[30px] border border-border bg-primary-subtle/30 sm:-inset-5" />
+          <div aria-hidden className="absolute -inset-3 rounded-2xl border border-border bg-primary-subtle/30 sm:-inset-5" />
           <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
               <div className="flex items-center gap-2 text-xs font-semibold">
@@ -758,7 +756,7 @@ function TransparencySection() {
                     <p className="type-label text-muted-foreground">Contrato homologado</p>
                     <h3 className="mt-1.5 max-w-md text-base font-semibold leading-6">Serviços técnicos especializados em TI</h3>
                   </div>
-                  <span className="rounded-full bg-status-open px-2.5 py-1 text-3xs font-bold text-status-open-foreground">homologado</span>
+                  <span className="rounded-pill bg-status-open px-2.5 py-1 text-xs font-bold text-status-open-foreground">homologado</span>
                 </div>
                 <dl className="mt-4 grid gap-2.5">
                   {rows.map((row) => (
@@ -880,7 +878,7 @@ function PlanSection() {
         </div>
 
         <div className="relative">
-          <div aria-hidden className="absolute -inset-3 rounded-[30px] border border-border bg-primary-subtle/40 sm:-inset-5" />
+          <div aria-hidden className="absolute -inset-3 rounded-2xl border border-border bg-primary-subtle/40 sm:-inset-5" />
           <div className="relative rounded-2xl border border-border-strong bg-surface p-7 sm:p-10">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-6">
               <div>
@@ -894,11 +892,11 @@ function PlanSection() {
 
             <div className="mt-7">
               {plan.isPending && (
-                <span role="status" aria-label="Carregando plano" className="block h-12 w-48 animate-pulse rounded-md bg-muted" />
+                <span role="status" aria-label="Carregando plano" className="block h-12 w-48 animate-pulse rounded-lg bg-muted" />
               )}
               {price !== null && (
                 <div data-testid="text-plan-price" className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold tracking-tight text-foreground tabular-nums sm:text-5xl">
+                  <span className="type-titulo-1 text-foreground sm:type-display">
                     {formatCurrencyPrecise(price)}
                   </span>
                   <span className="text-sm font-semibold text-muted-foreground">/ mês</span>
@@ -999,12 +997,12 @@ function FinalCta() {
   const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   return (
     <section aria-labelledby="cta-titulo" className="px-5 pb-24 sm:px-8 sm:pb-28">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-3xl bg-superficie-inversa px-8 py-16 sm:px-14 lg:flex-row lg:items-center">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-2xl bg-superficie-inversa px-8 py-16 sm:px-14 lg:flex-row lg:items-center">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-pill border border-texto-inverso/20 bg-texto-inverso/10 px-3.5 py-1 text-2xs font-semibold text-texto-inverso">
+          <span className="inline-flex items-center gap-1.5 rounded-pill border border-texto-inverso/20 bg-texto-inverso/10 px-3.5 py-1 text-xs font-semibold text-texto-inverso">
             <Sparkles size={13} /> Oportunidades abertas agora
           </span>
-          <h2 id="cta-titulo" className="mt-4 max-w-xl text-3xl font-semibold leading-tight tracking-display text-texto-inverso sm:text-4xl lg:text-[42px]">
+          <h2 id="cta-titulo" className="mt-4 max-w-xl type-titulo-2 text-texto-inverso lg:type-titulo-1">
             O próximo grande contrato da sua empresa já pode estar publicado.
           </h2>
           <p className="mt-3 max-w-lg text-sm leading-6 text-texto-inverso/90 sm:text-base">
@@ -1071,13 +1069,13 @@ export default function LandingPage() {
             </div>
 
             {/* Main Headline (Apple/Nike Style) */}
-            <h1 className="max-w-2xl text-[44px] font-semibold leading-[1.02] tracking-display sm:text-[56px] lg:text-[62px] xl:text-[68px]">
+            <h1 className="max-w-2xl type-titulo-1 lg:type-display">
               <span className="block text-hero-lead">Decida em minutos.</span>
               <span className="block text-hero-highlight">Dispute para vencer.</span>
             </h1>
 
             {/* Subheadline with high commercial appeal */}
-            <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
+            <p className="mt-6 max-w-xl type-corpo text-muted-foreground sm:type-corpo-grande">
               A plataforma de inteligência que analisa editais do PNCP em tempo real, calcula a aderência exata da sua empresa e cita a página oficial de cada exigência. Sem respostas inventadas.
             </p>
 
@@ -1125,7 +1123,7 @@ export default function LandingPage() {
           <div className="space-y-1">
             <p className="font-semibold text-foreground">Pardal Digital · Inteligência para Compras Públicas</p>
             <p>© 2026 Pardal Digital · Dados oficiais extraídos do PNCP e do Mapas Culturais.</p>
-            <p className="text-muted-foreground/80">Feito para equipes que leem antes de agir e decidem para vencer.</p>
+            <p className="text-muted-foreground">Feito para equipes que leem antes de agir e decidem para vencer.</p>
           </div>
           <LegalLinks className="sm:justify-end" />
         </div>

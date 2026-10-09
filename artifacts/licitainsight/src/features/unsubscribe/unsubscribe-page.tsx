@@ -40,7 +40,7 @@ export default function UnsubscribePage() {
           <BrandLogo className="h-12" />
         </Link>
         <div className="mb-3 type-eyebrow font-bold text-primary">e-mails</div>
-        <h1 className="text-3xl font-semibold tracking-display">Descadastro de e-mails</h1>
+        <h1 className="type-titulo-2">Descadastro de e-mails</h1>
 
         {unsubscribe.isSuccess ? (
           <div role="status" data-testid="text-unsubscribe-success" className="mt-6 flex gap-3 rounded-lg border border-border bg-card p-4">

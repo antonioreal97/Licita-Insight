@@ -30,10 +30,10 @@ function LegalPage({ title, children }: { title: string; children: ReactNode }) 
         </div>
       </header>
       <main id="conteudo" className="mx-auto max-w-4xl px-5 py-10 sm:px-8 sm:py-14">
-        <p className="inline-flex rounded-full border border-warning/40 bg-warning-subtle px-3 py-1 type-meta font-semibold text-warning-subtle-foreground">
+        <p className="inline-flex rounded-pill border border-warning/40 bg-warning-subtle px-3 py-1 type-meta font-semibold text-warning-subtle-foreground">
           {LEGAL_DRAFT_NOTICE}
         </p>
-        <h1 className="mt-5 text-3xl font-semibold tracking-display sm:text-4xl">{title}</h1>
+        <h1 className="mt-5 type-titulo-2 sm:type-titulo-1">{title}</h1>
         <p className="mt-2 type-meta text-muted-foreground">Atualizada em {LEGAL_UPDATED_AT}.</p>
         <article className="prose prose-slate mt-10 max-w-none dark:prose-invert prose-headings:tracking-tight prose-a:text-primary">
           {children}

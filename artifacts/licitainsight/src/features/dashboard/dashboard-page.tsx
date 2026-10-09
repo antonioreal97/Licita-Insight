@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
 import { ArrowRight, Bell, Search, Target } from 'lucide-react';
-import { Button } from '@/components/common/action-button';
+import { Button, buttonClass } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { signInWithGoogle, useSession } from '@/features/auth/hooks/use-session';
@@ -88,7 +88,7 @@ function MonitoringCard() {
         <Link
           href="/settings?billing=required#assinatura"
           data-testid="link-dashboard-subscribe"
-          className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+          className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
         >
           Ver assinatura <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
         </Link>
@@ -112,7 +112,7 @@ function MonitoringCard() {
       <Link
         href="/monitoring"
         data-testid="link-dashboard-monitoring"
-        className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+        className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
       >
         Abrir monitoramento <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
       </Link>
@@ -134,7 +134,7 @@ function OpportunitiesCard() {
       <Link
         href="/oportunidades"
         data-testid="link-dashboard-opportunities"
-        className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+        className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
       >
         Ver chamadas <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
       </Link>
@@ -156,7 +156,7 @@ function PersonalDeadlines() {
           <h2 id="personal-deadlines-title" className="type-section text-foreground">Seus próximos prazos</h2>
           <p className="mt-1 type-meta text-muted-foreground">Editais que você marcou como Analisando ou Preparando documentos, com prazo futuro.</p>
         </div>
-        <Link href="/saved-tenders" className="shrink-0 rounded-sm type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">Ver salvos</Link>
+        <Link href="/saved-tenders" className="shrink-0 rounded-lg type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">Ver salvos</Link>
       </div>
       {error ? <ErrorState error={error} onRetry={() => { void analyzing.refetch(); void preparing.refetch(); }} />
         : analyzing.isPending || preparing.isPending ? <RowsSkeleton rows={2} />
@@ -213,7 +213,7 @@ export default function DashboardPage() {
   const fitsPending = fits.isPending || candidates.some(tender => !fits.data?.results[tender.id] || fits.data.results[tender.id].status === 'pending');
   const metrics = (
     <section aria-label="Métricas nacionais" data-testid="dashboard-national-metrics" className="grid grid-cols-2 gap-5 rounded-xl border border-border bg-card px-4 py-5 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-border-subtle sm:px-0 sm:py-6">
-      <Link href="/search?newOnly=true&sort=first_seen_desc" data-testid="link-dashboard-new-tenders" className="rounded-sm focus-visible:focus-ring">
+      <Link href="/search?newOnly=true&sort=first_seen_desc" data-testid="link-dashboard-new-tenders" className="rounded-lg focus-visible:focus-ring">
         <MiniMetric label="Novos desde ontem" value={metricValue(newTenders.data?.pagination.total, newTenders.isPending, newTenders.isError)} detail="editais novos no Pardal" attention />
       </Link>
       <MiniMetric label="Prazo nos próximos 7 dias" value={metricValue(soon.data?.pagination.total, soon.isPending, soon.isError)} detail="editais em aberto" attention />
@@ -232,7 +232,7 @@ export default function DashboardPage() {
           <Link
             href="/search"
             data-testid="link-dashboard-search"
-            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-pill bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active focus-visible:focus-ring sm:self-auto"
+            className={`${buttonClass()} self-start sm:self-auto`}
           >
             <Search size={15} strokeWidth={1.75} />
             Explorar editais
@@ -256,7 +256,7 @@ export default function DashboardPage() {
             <Link
               href={`/search?status=open&sort=deadline_asc&deadlineFrom=${today}`}
               data-testid="link-dashboard-all"
-              className="shrink-0 rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+              className="shrink-0 rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
             >
               Ver todos com prazo <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
             </Link>

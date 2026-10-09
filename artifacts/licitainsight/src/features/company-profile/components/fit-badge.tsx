@@ -48,7 +48,7 @@ export function FitBadge({ fit, className }: { fit: TenderFit | undefined; class
       data-testid="badge-fit"
       data-level={fit.status === 'filtered' ? 'filtered' : fit.level}
       title={why || undefined}
-      className={cn('relative z-raised inline-flex items-center gap-1 rounded-sm px-1.5 py-px text-3xs font-semibold ring-1 ring-inset', style.className, className)}
+      className={cn('relative z-raised inline-flex items-center gap-1 rounded-lg px-1.5 py-px text-xs font-semibold ring-1 ring-inset', style.className, className)}
     >
       <Target size={11} aria-hidden="true" />
       {style.label}

@@ -39,7 +39,7 @@ export function OpportunityStatusBadge({ status }: { status: OpportunityStatus }
   return (
     <span
       data-testid={`opportunity-status-${status}`}
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-2xs font-semibold ${tones[status]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-2.5 py-1 text-xs font-semibold ${tones[status]}`}
     >
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
       {opportunityStatusLabels[status]}

@@ -180,6 +180,8 @@ function serverErrors(error: unknown): Errors {
   return errors;
 }
 
+/** Selected option card: sálvia fill, so every text inside takes its petróleo ink (muted text fails AA on sálvia). */
+const selectedOption = 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground **:text-primary-subtle-foreground';
 const errorText = 'mt-1.5 type-meta font-normal text-destructive';
 const chipInput =
   'h-[2.625rem] min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-[length:var(--type-ui-size)] font-normal text-foreground transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring aria-[invalid=true]:border-destructive dark:bg-card';
@@ -249,7 +251,7 @@ function TermsField({
       {terms.length > 0 && (
         <ul aria-label={label} className="mt-2.5 flex flex-wrap gap-1.5" data-testid={`${testId}-list`}>
           {terms.map((term) => (
-            <li key={term} className="inline-flex items-center gap-1 rounded-full bg-secondary py-1 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground">
+            <li key={term} className="inline-flex items-center gap-1 rounded-pill bg-secondary py-1 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground">
               {term}
               <button
                 type="button"
@@ -335,7 +337,7 @@ function MunicipalityAutocomplete({
           data-testid={testId}
         />
         {query.trim().length >= 2 && (
-          <ul id={listId} role="listbox" className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+          <ul id={listId} role="listbox" className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-border bg-popover p-1 ">
             {results.isFetching ? (
               <li className="px-3 py-2 type-meta text-muted-foreground">Buscando municípios…</li>
             ) : suggestions.length === 0 ? (
@@ -345,7 +347,7 @@ function MunicipalityAutocomplete({
                 <li key={city.ibgeCode} role="option" aria-selected="false">
                   <button
                     type="button"
-                    className="w-full rounded-md px-3 py-2 text-left type-ui hover:bg-muted focus-visible:focus-ring"
+                    className="w-full rounded-lg px-3 py-2 text-left type-ui hover:bg-muted focus-visible:focus-ring"
                     onClick={() => {
                       onSelect(city);
                       setQuery('');
@@ -583,7 +585,7 @@ export function CompanyProfileSection() {
                         key={category.slug}
                         type="button"
                         onClick={() => set({ selectedCategories: [...new Set([...draft.selectedCategories, category.slug])] })}
-                        className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
+                        className="rounded-pill border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
                       >
                         + {category.label}
                       </button>
@@ -593,7 +595,7 @@ export function CompanyProfileSection() {
                         key={keyword.normalizedTerm}
                         type="button"
                         onClick={() => set({ selectedKeywords: [...new Set([...draft.selectedKeywords, keyword.displayTerm])].slice(0, PROFILE_LIMITS.terms) })}
-                        className="rounded-full border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
+                        className="rounded-pill border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
                       >
                         + {keyword.displayTerm}
                       </button>
@@ -629,7 +631,7 @@ export function CompanyProfileSection() {
                       key={category.slug}
                       className={cn(
                         'flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2',
-                        checked ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-surface hover:border-border-strong',
+                        checked ? selectedOption : 'border-border bg-surface hover:border-border-strong',
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-2 type-ui">
@@ -677,7 +679,7 @@ export function CompanyProfileSection() {
                       key={platform.slug}
                       className={cn(
                         'flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2',
-                        checked ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-surface hover:border-border-strong',
+                        checked ? selectedOption : 'border-border bg-surface hover:border-border-strong',
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-2 type-ui">
@@ -792,7 +794,7 @@ export function CompanyProfileSection() {
                         <label
                           key={region.value}
                           className={cn(
-                            'cursor-pointer rounded-full border px-3 py-1.5 type-meta font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
+                            'cursor-pointer rounded-pill border px-3 py-1.5 type-meta font-medium has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
                             on
                               ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
                               : 'border-border bg-background hover:border-border-strong',
@@ -820,7 +822,7 @@ export function CompanyProfileSection() {
                         <label
                           key={uf}
                           className={cn(
-                            'flex h-9 cursor-pointer items-center justify-center rounded-md border text-xs font-semibold transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
+                            'flex h-9 cursor-pointer items-center justify-center rounded-lg border text-xs font-semibold transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
                             on
                               ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground'
                               : 'border-border bg-background text-foreground hover:border-border-strong',
@@ -852,7 +854,7 @@ export function CompanyProfileSection() {
                       {draft.municipalities.map((city) => (
                         <li
                           key={city.ibgeCode}
-                          className="inline-flex items-center gap-1 rounded-full bg-secondary py-1 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground"
+                          className="inline-flex items-center gap-1 rounded-pill bg-secondary py-1 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground"
                         >
                           {city.name}-{city.state}
                           <button
@@ -918,7 +920,7 @@ export function CompanyProfileSection() {
                   <label
                     className={cn(
                       'cursor-pointer rounded-lg border p-3',
-                      draft.coverageMode === 'strict' ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-background',
+                      draft.coverageMode === 'strict' ? selectedOption : 'border-border bg-background',
                     )}
                   >
                     <span className="flex items-start gap-2 type-ui font-medium">
@@ -936,7 +938,7 @@ export function CompanyProfileSection() {
                   <label
                     className={cn(
                       'cursor-pointer rounded-lg border p-3',
-                      draft.coverageMode === 'prioritize' ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-background',
+                      draft.coverageMode === 'prioritize' ? selectedOption : 'border-border bg-background',
                     )}
                   >
                     <span className="flex items-start gap-2 type-ui font-medium">
@@ -1029,7 +1031,7 @@ export function CompanyProfileSection() {
                   key={option.value}
                   className={cn(
                     'flex cursor-pointer gap-2.5 rounded-lg border p-3 transition-colors duration-fast ease-standard has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
-                    draft.size === option.value ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-surface hover:border-border-strong',
+                    draft.size === option.value ? selectedOption : 'border-border bg-surface hover:border-border-strong',
                   )}
                 >
                   <input

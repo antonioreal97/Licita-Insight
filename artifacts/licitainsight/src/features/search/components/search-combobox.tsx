@@ -197,7 +197,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                 setOpen(true);
                 inputRef.current?.focus();
               }}
-              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
             >
               <X size={15} aria-hidden />
             </button>
@@ -220,7 +220,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
               inputRef.current?.focus(); // before close(): the input's onFocus reopens the popup
               close();
             }}
-            className="absolute inset-x-0 top-[calc(100%+6px)] z-popover overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-base ease-emphasized"
+            className="absolute inset-x-0 top-[calc(100%+6px)] z-popover overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground animate-in fade-in-0 slide-in-from-top-1 duration-base ease-emphasized"
           >
             <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
               <span className="type-eyebrow font-bold text-muted-foreground" id={`${listboxId}-label`}>
@@ -234,7 +234,7 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                     recent.clear();
                     inputRef.current?.focus();
                   }}
-                  className="rounded-sm px-1.5 py-1 type-meta font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
+                  className="rounded-lg px-1.5 py-1 type-meta font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted focus-visible:focus-ring"
                 >
                   Limpar histórico
                 </button>
@@ -268,10 +268,10 @@ export function SearchCombobox({ value, onSubmitQuery, onSelectFilter }: Props) 
                         <MatchedText label={option.label} query={trimmed} />
                       </span>
                       {/* Always reserve the count slot so the right edge lines up. */}
-                      <span className="w-10 shrink-0 text-right type-data text-2xs text-muted-foreground">
+                      <span className="w-10 shrink-0 text-right type-data text-xs text-muted-foreground">
                         {option.kind === 'suggestion' && option.count !== null ? formatNumber(option.count) : ''}
                       </span>
-                      <span className="hidden w-[4.5rem] shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 text-center text-3xs font-medium text-secondary-foreground sm:inline">
+                      <span className="hidden w-[4.5rem] shrink-0 rounded-lg bg-secondary px-1.5 py-0.5 text-center text-xs font-medium text-secondary-foreground sm:inline">
                         {meta.label}
                       </span>
                     </li>

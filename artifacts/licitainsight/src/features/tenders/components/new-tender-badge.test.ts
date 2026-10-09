@@ -10,9 +10,9 @@ describe('NewTenderBadge', () => {
 
     assert.match(html, />Novo</);
     assert.match(html, new RegExp(`aria-label="${NEW_TENDER_LABEL}"`));
-    assert.match(html, /var\(--destaque\)/);
-    assert.match(html, /var\(--texto-sobre-destaque\)/);
-    assert.match(html, /var\(--raio-pill\)/);
+    assert.match(html, /\bbg-destaque\b/);
+    assert.match(html, /\btext-texto-sobre-destaque\b/);
+    assert.match(html, /\brounded-pill\b/);
   });
 
   it('disappears when the server no longer marks the tender as new', () => {

@@ -34,7 +34,7 @@ export function SaveButton({ saved, onToggle, describedBy, testId, iconSize = 17
           onToggle();
         }}
         className={cn(
-          'grid place-items-center rounded-md transition-[background-color,color,scale] duration-fast ease-standard hover:bg-muted active:scale-[0.98]',
+          'grid place-items-center rounded-lg transition-[background-color,color,scale] duration-fast ease-standard hover:bg-muted active:scale-[0.98]',
           saved ? 'text-primary' : 'text-muted-foreground hover:text-primary',
           className,
         )}

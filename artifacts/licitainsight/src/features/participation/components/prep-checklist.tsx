@@ -28,8 +28,8 @@ export function ChecklistControl({ tenderId, itemKey, label }: { tenderId: strin
             disabled={waiting || isPending}
             onClick={() => state !== option && update({ tenderId, previous: participation, body: { checklist: [{ key: itemKey, state: option }] } })}
             className={cn(
-              'h-11 rounded-md px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-7',
-              state === option && 'bg-surface text-foreground shadow-2xs',
+              'h-11 rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50 sm:h-7',
+              state === option && 'bg-surface text-foreground ',
             )}
             data-testid={`button-checklist-${itemKey}-${option}`}
           >

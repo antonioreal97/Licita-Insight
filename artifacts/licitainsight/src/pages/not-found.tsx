@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Compass } from 'lucide-react';
+import { buttonClass } from '@/components/common/action-button';
 
 export default function NotFound() {
   useEffect(() => {
@@ -19,7 +20,7 @@ export default function NotFound() {
           <Link
             href="/dashboard"
             data-testid="link-not-found-home"
-            className="inline-flex h-9 items-center gap-2 rounded-pill bg-action px-3.5 type-ui font-semibold text-action-foreground shadow-xs transition-colors duration-fast hover:bg-action-hover"
+            className={buttonClass()}
           >
             <ArrowLeft size={15} aria-hidden="true" />
             Voltar ao início
@@ -27,7 +28,7 @@ export default function NotFound() {
           <Link
             href="/search"
             data-testid="link-not-found-search"
-            className="inline-flex h-9 items-center rounded-pill border border-border bg-surface px-3.5 type-ui font-semibold text-foreground shadow-2xs transition-colors duration-fast hover:border-border-strong hover:bg-surface-sunken"
+            className={buttonClass('outline')}
           >
             Explorar editais
           </Link>

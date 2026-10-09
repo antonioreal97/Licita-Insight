@@ -29,7 +29,7 @@ import { fetchAllSavedTenders, useSavedTendersList } from './hooks/use-saved-ten
 import { csvCell } from './lib/csv-cell';
 
 const PAGE_SIZE = 50;
-const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-sm';
+const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-lg';
 
 /** Stages still heading to the proposal deadline list the nearest deadline first. */
 const BY_DEADLINE: ParticipationStage[] = ['analyzing', 'participating'];
@@ -153,14 +153,14 @@ function ParticipationBar({ item, monitored, onMonitor }: { item: SavedTender; m
                 <ChevronDown size={13} aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={6} className="w-60 rounded-xl bg-surface-raised p-1.5 shadow-lg">
+            <DropdownMenuContent align="end" sideOffset={6} className="w-60 rounded-xl bg-surface-raised p-1.5 ">
               <DropdownMenuLabel className="px-2.5 py-1.5 type-meta font-semibold text-muted-foreground">Etapa deste edital</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={item.stage}
                 onValueChange={(value) => value !== item.stage && update({ tenderId: id, previous: item, body: { stage: value as ParticipationStage } })}
               >
                 {STAGE_ORDER.map((stage) => (
-                  <DropdownMenuRadioItem key={stage} value={stage} className="cursor-pointer rounded-md py-2 type-ui" data-testid={`menu-stage-${stage}`}>
+                  <DropdownMenuRadioItem key={stage} value={stage} className="cursor-pointer rounded-lg py-2 type-ui" data-testid={`menu-stage-${stage}`}>
                     {STAGE_LABELS[stage]}
                   </DropdownMenuRadioItem>
                 ))}
@@ -270,8 +270,8 @@ export default function SavedTendersPage() {
               aria-pressed={stage === segment.value}
               onClick={() => filter(segment.value)}
               className={cn(
-                'h-11 whitespace-nowrap rounded-md px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-7',
-                stage === segment.value && 'bg-surface text-foreground shadow-2xs',
+                'h-11 whitespace-nowrap rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-7',
+                stage === segment.value && 'bg-surface text-foreground ',
               )}
               data-testid={`filter-stage-${segment.value ?? 'all'}`}
             >

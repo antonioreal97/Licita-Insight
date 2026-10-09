@@ -44,7 +44,7 @@ export function FiltersSheet({ open, onOpenChange, params, onApply, triggerRef }
             event.preventDefault();
             triggerRef.current?.focus();
           }}
-          className="fixed inset-y-0 right-0 z-modal flex h-full w-full flex-col border-l border-border bg-background shadow-xl duration-slow ease-emphasized data-[state=closed]:duration-base data-[state=closed]:ease-exit data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
+          className="fixed inset-y-0 right-0 z-modal flex h-full w-full flex-col border-l border-border bg-background duration-slow ease-emphasized data-[state=closed]:duration-base data-[state=closed]:ease-exit data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
