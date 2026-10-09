@@ -59,11 +59,11 @@ export function SearchModeControl({ mode, appliedMode, fallbackReason, onChange 
               title={option.hint}
               data-testid={`radio-search-mode-${option.value}`}
               onClick={() => onChange(option.value === 'keyword' ? undefined : option.value)}
-              className={`inline-flex min-h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-[background-color,color,box-shadow] duration-fast ease-standard focus-visible:focus-ring ${checked ? 'bg-surface text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-[background-color,color,box-shadow] duration-fast ease-standard focus-visible:focus-ring ${checked ? 'bg-surface text-foreground ' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {option.value === 'semantic' && <Sparkles size={13} aria-hidden className={checked ? 'text-primary' : ''} />}
               {option.label}
-              {option.value === 'semantic' && <span className="rounded-xs bg-primary-subtle px-1 py-px type-label text-primary-subtle-foreground">beta</span>}
+              {option.value === 'semantic' && <span className="rounded-lg bg-primary-subtle px-1 py-px type-label text-primary-subtle-foreground">beta</span>}
             </button>
           );
         })}

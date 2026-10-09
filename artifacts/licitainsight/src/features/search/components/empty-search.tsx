@@ -15,7 +15,7 @@ type Props = {
 
 export function EmptySearch({ query, hasFilters, relaxation, onRelax, onClearFilters, onClearQuery }: Props) {
   return (
-    <div data-testid="state-empty" className="rounded-xl border border-dashed border-border-strong bg-transparent px-5 py-14 text-center sm:px-6 sm:py-16">
+    <div data-testid="state-empty" className="rounded-xl border border-dashed border-border-strong bg-card px-6 py-14 text-center">
       <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-secondary text-muted-foreground">
         <SearchX size={19} aria-hidden />
       </div>

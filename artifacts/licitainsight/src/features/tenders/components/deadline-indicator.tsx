@@ -55,7 +55,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         )}
         <span
           className={cn(
-            'inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-1 text-3xs font-semibold',
+            'inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-1 text-xs font-semibold',
             tone,
             !pill(info.urgency) && 'px-0 font-medium',
           )}
@@ -79,7 +79,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
         )}
         {info.urgency !== 'unknown' && (
           <span
-            className={cn('inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 type-meta font-semibold', tone, !pill(info.urgency) && 'px-0 font-medium')}
+            className={cn('inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 type-meta font-semibold', tone, !pill(info.urgency) && 'px-0 font-medium')}
           >
             {/* The fact label above already carries a clock icon; repeat an icon only when it adds urgency. */}
             {info.urgency !== 'normal' && <Icon size={12} aria-hidden="true" />}
@@ -95,7 +95,7 @@ export function DeadlineIndicator({ deadline, status, variant = 'inline', now, c
       <span
         title={deadline && info.urgency !== 'unknown' ? formatDateTime(deadline) : undefined}
         className={cn(
-          'inline-flex items-center gap-1 whitespace-nowrap rounded-md text-xs font-semibold',
+          'inline-flex items-center gap-1 whitespace-nowrap rounded-lg text-xs font-semibold',
           tone,
           pill(info.urgency) ? 'px-1.5 py-0.5' : 'font-medium',
         )}

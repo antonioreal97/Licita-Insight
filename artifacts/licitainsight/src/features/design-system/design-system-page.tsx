@@ -128,7 +128,7 @@ function SwatchGrid({ label, items }: { label: string; items: Swatch[] }) {
               {s.ink && <span className="type-meta font-semibold">Aa</span>}
             </div>
             <div className="mt-2 truncate type-meta font-semibold">{s.name}</div>
-            <div className="truncate font-mono text-3xs text-muted-foreground">{s.token}</div>
+            <div className="truncate font-mono text-xs text-muted-foreground">{s.token}</div>
           </div>
         ))}
       </div>
@@ -169,10 +169,10 @@ export default function DesignSystemPage() {
                     <td className="py-3">
                       <StatusBadge status={s.status} />
                     </td>
-                    <td className="py-3 font-mono text-2xs">{s.token}</td>
-                    <td className="py-3 font-mono text-2xs text-muted-foreground">{s.className}</td>
-                    <td className="py-3 text-right type-data text-2xs">{s.light}:1</td>
-                    <td className="py-3 text-right type-data text-2xs">{s.dark}:1</td>
+                    <td className="py-3 font-mono text-xs">{s.token}</td>
+                    <td className="py-3 font-mono text-xs text-muted-foreground">{s.className}</td>
+                    <td className="py-3 text-right type-data text-xs">{s.light}:1</td>
+                    <td className="py-3 text-right type-data text-xs">{s.dark}:1</td>
                   </tr>
                 ))}
               </tbody>
@@ -185,8 +185,8 @@ export default function DesignSystemPage() {
             {typeRoles.map((t) => (
               <div key={t.role} className="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[180px_1fr] sm:items-baseline sm:gap-6">
                 <div>
-                  <div className="font-mono text-2xs font-bold">{t.role}</div>
-                  <div className="font-mono text-3xs text-muted-foreground">{t.spec}</div>
+                  <div className="font-mono text-xs font-bold">{t.role}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{t.spec}</div>
                 </div>
                 <div className={`min-w-0 ${t.className}`}>{t.sample}</div>
               </div>
@@ -198,7 +198,7 @@ export default function DesignSystemPage() {
           <div className="space-y-6">
             {variants.map(({ variant, label }) => (
               <div key={variant} className="grid gap-3 sm:grid-cols-[120px_1fr] sm:items-center">
-                <div className="font-mono text-2xs font-bold">{variant}</div>
+                <div className="font-mono text-xs font-bold">{variant}</div>
                 <div className="flex flex-wrap items-center gap-3">
                   {sizes.map((size) => (
                     <Button key={size} variant={variant} size={size} data-testid={`button-system-${variant}-${size}`}>
@@ -217,7 +217,7 @@ export default function DesignSystemPage() {
               </div>
             ))}
             <div className="grid gap-3 border-t border-border-subtle pt-6 sm:grid-cols-[120px_1fr] sm:items-center">
-              <div className="font-mono text-2xs font-bold">toggle</div>
+              <div className="font-mono text-xs font-bold">toggle</div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="outline" aria-pressed="false" data-testid="button-system-toggle-off">
                   <Download size={15} />
@@ -273,10 +273,10 @@ export default function DesignSystemPage() {
               </Button>
             </div>
             <div className="rounded-lg border border-border p-6" aria-busy="true" aria-label="Carregando">
-              <div className="h-3 w-3/4 animate-pulse rounded-sm bg-muted" />
-              <div className="mt-3 h-2 w-full animate-pulse rounded-sm bg-muted" />
-              <div className="mt-2 h-2 w-1/2 animate-pulse rounded-sm bg-muted" />
-              <div className="mt-5 h-6 w-20 animate-pulse rounded-full bg-muted" />
+              <div className="h-3 w-3/4 animate-pulse rounded-lg bg-muted" />
+              <div className="mt-3 h-2 w-full animate-pulse rounded-lg bg-muted" />
+              <div className="mt-2 h-2 w-1/2 animate-pulse rounded-lg bg-muted" />
+              <div className="mt-5 h-6 w-20 animate-pulse rounded-pill bg-muted" />
             </div>
             <div className="rounded-lg border border-destructive-subtle-border bg-destructive-subtle p-6 text-destructive-subtle-foreground" role="alert">
               <CircleAlert size={18} />
@@ -300,16 +300,16 @@ export default function DesignSystemPage() {
               ].map((r) => (
                 <div key={r.name}>
                   <div className={`h-16 border border-border bg-salvia ${r.className}`} />
-                  <div className="mt-2 font-mono text-3xs text-muted-foreground">{r.name}</div>
+                  <div className="mt-2 font-mono text-xs text-muted-foreground">{r.name}</div>
                 </div>
               ))}
             </div>
             <div className="divide-y divide-border-subtle">
               {motion.map((m) => (
                 <div key={m.token} className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0">
-                  <span className="font-mono text-2xs">{m.token}</span>
+                  <span className="font-mono text-xs">{m.token}</span>
                   <span className="type-meta text-muted-foreground">{m.use}</span>
-                  <span className="type-data text-2xs">{m.value}</span>
+                  <span className="type-data text-xs">{m.value}</span>
                 </div>
               ))}
             </div>

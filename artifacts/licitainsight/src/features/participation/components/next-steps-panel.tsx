@@ -75,7 +75,7 @@ export function NextStepsPanel({ tender, monitored }: { tender: TenderDetail; mo
       )}
       {upcoming && (
         <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border-subtle pt-4 type-meta text-muted-foreground" data-testid="text-next-event">
-          <span className="rounded-sm bg-primary-subtle px-1.5 py-0.5 text-3xs font-semibold text-primary-subtle-foreground">Previsto</span>
+          <span className="rounded-lg bg-primary-subtle px-1.5 py-0.5 text-xs font-semibold text-primary-subtle-foreground">Previsto</span>
           <time dateTime={upcoming.at} className="tabular-nums">
             {formatDateTime(upcoming.at)}
           </time>

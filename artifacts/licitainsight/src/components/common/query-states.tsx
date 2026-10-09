@@ -2,7 +2,7 @@ import { CircleAlert, FilterX, RefreshCw } from 'lucide-react';
 import { isApiError } from '@/api';
 import { Button } from './action-button';
 
-const bar = 'animate-pulse rounded-sm bg-muted';
+const bar = 'animate-pulse rounded-lg bg-muted';
 
 /**
  * Mirrors `TenderRow` (badge line, title, org, published · value/deadline column · save) so nothing jumps when data arrives.
@@ -23,7 +23,7 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
           className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-border-subtle px-4 py-4 last:border-0 sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:gap-x-5 sm:px-5"
         >
           <div className="min-w-0">
-            <div className={`h-5 w-16 rounded-full ${bar}`} />
+            <div className={`h-5 w-16 rounded-pill ${bar}`} />
             <div className={`mt-2 h-4 w-3/4 ${bar}`} />
             <div className={`mt-2 h-3 w-1/2 ${bar}`} />
             <div className={`mt-2 h-3 w-1/3 ${bar}`} />
@@ -37,7 +37,7 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
             <div className={`h-4 w-24 ${bar}`} />
             <div className={`h-3 w-20 ${bar}`} />
           </div>
-          <div className={`h-9 w-9 rounded-md ${bar}`} />
+          <div className={`h-9 w-9 rounded-lg ${bar}`} />
         </div>
       ))}
     </div>
@@ -105,7 +105,7 @@ export function ErrorState({ error, onRetry, onClearFilters }: { error: unknown;
           Tentar novamente
         </Button>
       ) : null}
-      {requestId && <div className="mt-3 type-data text-3xs opacity-80">ref. {requestId}</div>}
+      {requestId && <div className="mt-3 type-data text-xs opacity-80">ref. {requestId}</div>}
     </div>
   );
 }

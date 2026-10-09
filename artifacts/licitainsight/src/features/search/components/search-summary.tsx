@@ -18,7 +18,7 @@ export function SearchSummary({ params, className }: { params: TenderSearchParam
       {items.map((item) => (
         <li
           key={item.id}
-          className="inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-sunken px-2 py-0.5 type-meta"
+          className="inline-flex max-w-full items-center gap-1 rounded-pill border border-border-subtle bg-surface-sunken px-2 py-0.5 type-meta"
         >
           <span className="shrink-0 text-muted-foreground">{item.group}:</span>
           <span className="truncate font-medium text-foreground">{item.label}</span>

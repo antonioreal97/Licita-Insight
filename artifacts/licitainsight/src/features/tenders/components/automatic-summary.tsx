@@ -29,7 +29,7 @@ export function AutomaticSummary({
             <a
               key={`${citation}-${index}`}
               href={citationHref(citation)}
-              className="mx-0.5 rounded-sm font-semibold text-primary underline underline-offset-2 focus-visible:focus-ring"
+              className="mx-0.5 rounded-lg font-semibold text-primary underline underline-offset-2 focus-visible:focus-ring"
               aria-label={`Ir para o trecho ${citation}`}
             >
               {part}

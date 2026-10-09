@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   Moon,
-  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -72,7 +71,6 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
     items: [
       { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
       // Internal reference page: never shown to customers.
-      ...(import.meta.env.DEV ? [{ href: '/design-system', label: 'Design system', icon: Palette, testId: 'link-nav-design-system' }] : []),
     ],
   },
 ];
@@ -203,7 +201,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a
         href="#conteudo"
         data-testid="link-skip-to-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-toast focus:rounded-lg focus:bg-surface-raised focus:px-4 focus:py-2 focus:type-ui focus:font-semibold focus:text-foreground focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-toast focus:rounded-lg focus:bg-surface-raised focus:px-4 focus:py-2 focus:type-ui focus:font-semibold focus:text-foreground "
       >
         Pular para o conteúdo
       </a>
@@ -301,12 +299,12 @@ export function UserAvatar({ user, className }: { user: User; className?: string
   return (
     <Avatar className={cn('size-8', className)}>
       {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
-      <AvatarFallback className="bg-primary-subtle text-3xs font-bold text-primary-subtle-foreground">{initials(user)}</AvatarFallback>
+      <AvatarFallback className="bg-primary-subtle text-xs font-bold text-primary-subtle-foreground">{initials(user)}</AvatarFallback>
     </Avatar>
   );
 }
 
-const menuItem = 'cursor-pointer gap-2.5 rounded-md px-2.5 py-2 type-ui';
+const menuItem = 'cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 type-ui';
 
 function AccountMenu() {
   const { user, status, error } = useSession();
@@ -320,7 +318,7 @@ function AccountMenu() {
   if (status === 'loading' && !error) {
     return (
       <div role="status" aria-label="Carregando conta" className="flex items-center gap-2">
-        <span aria-hidden className="hidden h-3 w-24 animate-pulse rounded-sm bg-muted sm:block" />
+        <span aria-hidden className="hidden h-3 w-24 animate-pulse rounded-lg bg-muted sm:block" />
         <span aria-hidden className="size-8 animate-pulse rounded-full bg-muted" />
       </div>
     );
@@ -355,7 +353,7 @@ function AccountMenu() {
           <ChevronDown size={14} strokeWidth={1.75} aria-hidden className="hidden sm:block" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-xl bg-surface-raised p-1.5 shadow-lg">
+      <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-xl bg-surface-raised p-1.5 ">
         <DropdownMenuLabel className="flex items-center gap-3 px-2.5 py-2 font-normal">
           <UserAvatar user={user} className="size-9" />
           <span className="min-w-0">
@@ -405,7 +403,7 @@ function NotificationBell() {
             <span
               aria-hidden
               data-testid="badge-unread-count"
-              className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 type-data text-3xs font-bold text-accent-foreground ring-2 ring-background"
+              className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-pill bg-accent px-1 type-data text-xs font-bold text-accent-foreground ring-2 ring-background"
             >
               {count > 9 ? '9+' : count}
             </span>
@@ -416,7 +414,7 @@ function NotificationBell() {
         aria-label="Notificações"
         align="end"
         sideOffset={8}
-        className="w-[min(24rem,calc(100vw-2rem))] rounded-xl bg-surface-raised p-0 shadow-lg"
+        className="w-[min(24rem,calc(100vw-2rem))] rounded-xl bg-surface-raised p-0 "
       >
         {/* Mounted only while open, so the list is fetched on demand (the badge polls the cheap count). */}
         <NotificationPanel unreadCount={count} onClose={() => setOpen(false)} />
@@ -444,7 +442,7 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
           href="/settings?billing=required#assinatura"
           data-testid="link-notifications-subscribe"
           onClick={onClose}
-          className="mt-4 inline-flex rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
+          className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
         >
           Ver assinatura
         </Link>
@@ -476,8 +474,8 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
               <div key={index} aria-hidden className="flex gap-3 px-4 py-3">
                 <span className="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
                 <span className="flex-1 space-y-2 pt-1">
-                  <span className="block h-3 w-2/5 animate-pulse rounded-sm bg-muted" />
-                  <span className="block h-3 w-4/5 animate-pulse rounded-sm bg-muted" />
+                  <span className="block h-3 w-2/5 animate-pulse rounded-lg bg-muted" />
+                  <span className="block h-3 w-4/5 animate-pulse rounded-lg bg-muted" />
                 </span>
               </div>
             ))}
@@ -516,7 +514,7 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
           href="/monitoring"
           data-testid="link-notifications-all"
           onClick={onClose}
-          className="block rounded-md px-3 py-2 text-center type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted"
+          className="block rounded-lg px-3 py-2 text-center type-ui font-semibold text-primary transition-colors duration-fast ease-standard hover:bg-muted"
         >
           Ver tudo
         </Link>

@@ -29,7 +29,7 @@ const SheetOverlay = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Ove
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  'fixed z-modal gap-4 bg-surface-raised p-6 text-foreground shadow-xl transition ease-emphasized duration-slow data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:ease-exit',
+  'fixed z-modal gap-4 bg-surface-raised p-6 text-foreground transition ease-emphasized duration-slow data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:ease-exit',
   {
     variants: {
       side: {
@@ -60,7 +60,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetPrimitive.Close
           {...closeProps}
           className={cn(
-            'absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground disabled:pointer-events-none',
+            'absolute right-4 top-4 rounded-lg p-1 text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground disabled:pointer-events-none',
             closeProps?.className,
           )}
         >
@@ -85,7 +85,7 @@ const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 SheetFooter.displayName = 'SheetFooter';
 
 const SheetTitle = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Title>, React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>>(
-  ({ className, ...props }, ref) => <SheetPrimitive.Title ref={ref} className={cn('text-lg font-semibold text-foreground', className)} {...props} />,
+  ({ className, ...props }, ref) => <SheetPrimitive.Title ref={ref} className={cn('type-title text-foreground', className)} {...props} />,
 );
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 

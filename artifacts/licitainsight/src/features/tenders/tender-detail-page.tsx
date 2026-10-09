@@ -27,7 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { isApiError, type TenderDetail, type TenderDocument, type TimelineEvent } from '@/api';
-import { Button } from '@/components/common/action-button';
+import { Button, buttonClass } from '@/components/common/action-button';
 import { ErrorState } from '@/components/common/query-states';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
@@ -57,9 +57,9 @@ import { accountService } from '@/services/account-service';
 function DetailSkeleton() {
   return (
     <div aria-busy="true" aria-label="Carregando licitação" className="space-y-6">
-      <div className="h-3 w-40 animate-pulse rounded-sm bg-muted" />
-      <div className="h-9 w-3/4 animate-pulse rounded-sm bg-muted" />
-      <div className="h-3 w-1/2 animate-pulse rounded-sm bg-muted" />
+      <div className="h-3 w-40 animate-pulse rounded-lg bg-muted" />
+      <div className="h-9 w-3/4 animate-pulse rounded-lg bg-muted" />
+      <div className="h-3 w-1/2 animate-pulse rounded-lg bg-muted" />
       <div className="h-20 animate-pulse rounded-xl bg-muted" />
       <div className="h-48 animate-pulse rounded-xl bg-muted" />
     </div>
@@ -70,7 +70,7 @@ const Panel = ({ id, title, aside, children, className }: { id?: string; title: 
   <section id={id} className={cn('scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7', className)}>
     <div className="mb-4 flex items-baseline justify-between gap-3">
       <h2 className="type-section text-foreground">{title}</h2>
-      {aside && <span className="shrink-0 type-data text-2xs text-muted-foreground">{aside}</span>}
+      {aside && <span className="shrink-0 type-data text-xs text-muted-foreground">{aside}</span>}
     </div>
     {children}
   </section>
@@ -79,11 +79,6 @@ const Panel = ({ id, title, aside, children, className }: { id?: string; title: 
 /** Long objetos (PNCP often sends 300–600 chars) are clamped so value and deadline stay above the fold. */
 const LONG_TITLE = 140;
 
-/** Primary-button look for the external source link (the product Button has no `asChild`; see design-system/components.md). */
-const sourceLinkClass =
-  'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-pill bg-action font-semibold text-action-foreground shadow-xs ' +
-  'transition-[background-color,scale] duration-fast ease-standard hover:bg-action-hover active:scale-[0.98] active:bg-action-active ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /** Case/space/trailing-ellipsis-insensitive form used to tell whether one text is just a cut of another. */
 const comparable = (text: string) =>
@@ -220,7 +215,7 @@ export default function TenderDetailPage() {
               {modality}
             </span>
             {number && (
-              <span title={tender.tenderNumber ?? undefined} className="type-data text-3xs">
+              <span title={tender.tenderNumber ?? undefined} className="type-data text-xs">
                 {number}
               </span>
             )}
@@ -281,7 +276,7 @@ export default function TenderDetailPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="button-open-source"
-                className={cn(sourceLinkClass, 'h-9 px-3.5 text-[length:var(--type-ui-size)]')}
+                className={buttonClass()}
               >
                 Abrir fonte original <ExternalLink size={14} aria-hidden="true" />
                 <span className="sr-only">(abre em nova aba)</span>
@@ -300,7 +295,7 @@ export default function TenderDetailPage() {
       <section
         aria-label="Principais informações"
         data-stuck={stuck}
-        className="z-raised mb-6 rounded-xl border border-border bg-card transition-shadow duration-base ease-standard xl:sticky xl:top-[calc(var(--spacing-header)+0.75rem)] xl:data-[stuck=true]:shadow-sm"
+        className="z-raised mb-6 rounded-xl border border-border bg-card transition-shadow duration-base ease-standard xl:sticky xl:top-[calc(var(--spacing-header)+0.75rem)] "
       >
         <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-[1.5fr_1.2fr_1.2fr_1fr_1fr_1.1fr]">
           {/* The deadline decides everything else: first, and widest. */}
@@ -370,7 +365,7 @@ export default function TenderDetailPage() {
             {tender.categories.length > 0 && (
               <ul aria-label="Categorias" className="mt-5 flex flex-wrap gap-1.5">
                 {tender.categories.map((category) => (
-                  <li key={category.slug} className="rounded-sm px-1.5 py-0.5 text-2xs font-medium text-muted-foreground ring-1 ring-inset ring-border-subtle">
+                  <li key={category.slug} className="rounded-lg px-1.5 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-inset ring-border-subtle">
                     {category.label}
                   </li>
                 ))}
@@ -420,7 +415,7 @@ export default function TenderDetailPage() {
             target="_blank"
             rel="noopener noreferrer"
             data-testid="button-open-source-mobile"
-            className={cn(sourceLinkClass, 'h-11 flex-1 px-5 text-sm')}
+            className={cn(buttonClass('primary', 'lg'), 'flex-1')}
           >
             Abrir fonte original <ExternalLink size={14} aria-hidden="true" />
             <span className="sr-only">(abre em nova aba)</span>
@@ -473,7 +468,7 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
               <li key={item.id} className="px-5 py-3">
                 <p className="break-words type-ui font-medium">{item.description}</p>
                 <div className="mt-1 flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 type-data text-2xs text-muted-foreground">
+                  <span className="min-w-0 type-data text-xs text-muted-foreground">
                     {item.quantity === null ? '—' : formatNumber(item.quantity)}
                     {item.unit ? ` ${item.unit}` : ''} × {formatCurrencyPrecise(item.estimatedUnitValue)}
                   </span>
@@ -485,11 +480,11 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
           <div className="mt-3 flex items-start justify-between gap-3 sm:hidden">
             <p className="type-meta font-semibold">
               Total estimado dos itens
-              {missingNote && <span className="block text-3xs font-normal text-muted-foreground">{missingNote}</span>}
+              {missingNote && <span className="block text-xs font-normal text-muted-foreground">{missingNote}</span>}
             </p>
             <ValueDisplay value={total} precise className="type-ui" />
           </div>
-          {differenceNote && <p className="mt-2 text-3xs text-muted-foreground sm:hidden">{differenceNote}</p>}
+          {differenceNote && <p className="mt-2 text-xs text-muted-foreground sm:hidden">{differenceNote}</p>}
 
           <div role="region" aria-label="Tabela de itens" tabIndex={0} className="-mx-7 hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left text-xs">
@@ -519,7 +514,7 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
               <tbody>
                 {items.map((item, index) => (
                   <tr key={item.id} className="transition-colors duration-fast ease-standard hover:bg-surface-sunken">
-                    <td className={cn(td, 'pl-7 pr-2 type-data text-3xs text-muted-foreground')}>{index + 1}</td>
+                    <td className={cn(td, 'pl-7 pr-2 type-data text-xs text-muted-foreground')}>{index + 1}</td>
                     <th scope="row" className={cn(td, 'font-medium')}>
                       <span className="break-words">{item.description}</span>
                     </th>
@@ -540,7 +535,7 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
                 <tr>
                   <th scope="row" colSpan={5} className="py-3 pl-7 pr-3 text-right type-meta font-semibold">
                     Total estimado dos itens
-                    {missingNote && <span className="block text-3xs font-normal text-muted-foreground">{missingNote}</span>}
+                    {missingNote && <span className="block text-xs font-normal text-muted-foreground">{missingNote}</span>}
                   </th>
                   <td className="py-3 pl-3 pr-7 text-right align-top">
                     <ValueDisplay value={total} precise className="type-ui" />
@@ -548,7 +543,7 @@ function ItemsPanel({ tender }: { tender: TenderDetail }) {
                 </tr>
                 {differenceNote && (
                   <tr>
-                    <td colSpan={6} className="px-7 pb-1 text-right text-3xs text-muted-foreground">
+                    <td colSpan={6} className="px-7 pb-1 text-right text-xs text-muted-foreground">
                       {differenceNote}
                     </td>
                   </tr>
@@ -585,15 +580,15 @@ function DocumentsPanel({ documents, pending }: { documents: TenderDocument[]; p
                   rel="noopener noreferrer"
                   data-testid={`button-download-${doc.id}`}
                   aria-label={`Baixar ${doc.name} (${doc.type}${size ? `, ${size}` : ''})`}
-                  className="group flex w-full items-center gap-3 rounded-md px-2 py-3 text-left transition-colors duration-fast ease-standard hover:bg-surface-sunken"
+                  className="group flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors duration-fast ease-standard hover:bg-surface-sunken"
                 >
                   <Icon size={18} aria-hidden="true" className="shrink-0 text-foreground-subtle" />
                   <span className="min-w-0 flex-1">
                     <span title={doc.name} className="block truncate text-xs font-medium">
                       {doc.name}
                     </span>
-                    <span className="mt-0.5 flex flex-wrap gap-x-1.5 text-3xs text-muted-foreground">
-                      <span className="font-semibold text-foreground/70">{doc.type}</span>
+                    <span className="mt-0.5 flex flex-wrap gap-x-1.5 text-xs text-muted-foreground">
+                      <span className="font-semibold text-muted-foreground">{doc.type}</span>
                       <span aria-hidden="true">·</span>
                       <span className="tabular-nums">{size ?? 'tamanho não informado'}</span>
                       {doc.publishedAt && (
@@ -645,7 +640,7 @@ function TimelinePanel({ events }: { events: TimelineEvent[] }) {
                   aria-hidden="true"
                   className={cn(
                     'relative grid h-8 w-8 shrink-0 place-items-center rounded-full border',
-                    upcoming ? 'border-dashed border-primary bg-card text-primary' : 'border-border bg-muted text-foreground/70',
+                    upcoming ? 'border-dashed border-primary bg-card text-primary' : 'border-border bg-muted text-muted-foreground',
                   )}
                 >
                   <Icon size={14} />
@@ -658,7 +653,7 @@ function TimelinePanel({ events }: { events: TimelineEvent[] }) {
                       {formatDateTime(event.at)}
                     </time>
                     {upcoming && (
-                      <span className="rounded-sm bg-primary-subtle px-1.5 py-0.5 text-3xs font-semibold text-primary-subtle-foreground">Previsto</span>
+                      <span className="rounded-lg bg-primary-subtle px-1.5 py-0.5 text-xs font-semibold text-primary-subtle-foreground">Previsto</span>
                     )}
                   </div>
                   <p className="mt-1 break-words type-body">{event.description}</p>

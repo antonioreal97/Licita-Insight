@@ -52,8 +52,8 @@ Run through this before you open a PR that touches UI.
 | `bg-status-open text-status-open-foreground`            | `bg-[#e1f4ed] text-[#14765c]`                                      |
 | `text-muted-foreground` for secondary text              | `text-slate-500`, `opacity-60` on text                             |
 | `border border-border` to separate                      | Cards inside cards inside cards                                    |
-| `shadow-lg` only on popovers, dialogs, sheets           | Shadows on static cards, glow effects                              |
-| `Button` from `@/components/common/action-button`       | `ui/button` or a raw `<button>` with custom classes in a feature   |
+| `border` to separate popovers, dialogs and sheets       | Any `shadow-*` or glow (Pardal has no shadows)                     |
+| `Button` / `buttonClass()` from `common/action-button`  | A raw `<button>` or `<a>` with button classes copied by hand       |
 | One accent (`bg-accent`) for counts that need attention | Gradients, glassmorphism, `backdrop-blur` for decoration           |
 | `type-label` for field and column labels                | Uppercase body text, letter-spacing on sentences                   |
 | Transitions on color/border/shadow at `duration-fast`   | `transition-all`, bouncy springs, entrance animations on every row |
@@ -68,7 +68,6 @@ Run through this before you open a PR that touches UI.
 - Status: `bg-status-{open|under-review|closed|suspended|cancelled}` + `text-status-{…}-foreground`
 - Sidebar text: `text-sidebar-strong-foreground`, `text-sidebar-foreground`, `text-sidebar-muted-foreground`, `text-sidebar-subtle-foreground`
 - Type roles: `type-display`, `type-display-sm`, `type-title`, `type-section`, `type-body`, `type-ui`, `type-meta`, `type-label`, `type-eyebrow`, `type-data`
-- Font sizes: `text-3xs` (10px), `text-2xs` (11px)
 - Tracking: `tracking-display`, `tracking-heading`, `tracking-label`, `tracking-eyebrow`
 - Motion: `duration-instant|fast|base|slow`, `ease-standard|emphasized|exit`
 - Layers: `z-raised|sticky|overlay|nav|modal|popover|toast`

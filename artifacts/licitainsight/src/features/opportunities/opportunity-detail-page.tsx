@@ -4,15 +4,16 @@ import { ExternalLink } from 'lucide-react';
 import { isApiError } from '@/api';
 import { ErrorState } from '@/components/common/query-states';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { AccessPanel, OpportunityAccessGate, linkButtonClass } from './components/access-gate';
+import { buttonClass } from '@/components/common/action-button';
+import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityStatusBadge, opportunityKindLabels, opportunityProgramLabels } from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 
 function DetailSkeleton() {
   return (
     <div aria-busy="true" aria-label="Carregando chamada" className="space-y-4">
-      <div className="h-3 w-40 animate-pulse rounded-sm bg-muted" />
-      <div className="h-9 w-3/4 animate-pulse rounded-sm bg-muted" />
+      <div className="h-3 w-40 animate-pulse rounded-lg bg-muted" />
+      <div className="h-9 w-3/4 animate-pulse rounded-lg bg-muted" />
       <div className="h-24 animate-pulse rounded-xl bg-muted" />
     </div>
   );
@@ -67,7 +68,7 @@ function OpportunityDetail() {
       </Link>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <OpportunityStatusBadge status={opportunity.status} />
-        <span className="rounded-full bg-secondary px-2.5 py-1 text-2xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
+        <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
         <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
         {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
         <span className="type-label text-muted-foreground">{opportunity.state ?? 'Nacional'}</span>
@@ -75,7 +76,7 @@ function OpportunityDetail() {
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <h1 className="max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
         {opportunity.sourceUrl && (
-          <a href={opportunity.sourceUrl} target="_blank" rel="noreferrer" data-testid="link-opportunity-source" className={linkButtonClass}>
+          <a href={opportunity.sourceUrl} target="_blank" rel="noreferrer" data-testid="link-opportunity-source" className={buttonClass()}>
             Ver na fonte
             <ExternalLink size={16} aria-hidden />
           </a>

@@ -140,5 +140,4 @@ Deriva de [activeContext](activeContext.md).
 ## Problemas conhecidos
 
 - Overrides de binários nativos no `pnpm-workspace.yaml` são para linux-x64 (Replit). Dev no macOS pode falhar ao resolver esbuild/lightningcss/rollup.
-- `Button` das páginas não é o `components/ui/button`. Dois estilos coexistem.
 - Id inexistente na API responde 404.

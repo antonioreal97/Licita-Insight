@@ -4,6 +4,7 @@ import { ExternalLink, SearchX } from 'lucide-react';
 import { isApiError, type OpportunityKind, type OpportunitySource, type OpportunityStatus, type OpportunitySummary } from '@/api';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
+import { EmptyState } from '@/components/common/empty-state';
 import { SearchPagination } from '@/features/search/components/search-pagination';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
@@ -52,7 +53,7 @@ const KINDS = Object.keys(opportunityKindLabels) as OpportunityKind[];
 const SOURCES = Object.keys(opportunitySourceLabels) as OpportunitySource[];
 
 const selectClass =
-  'h-10 rounded-lg border border-border bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+  'h-10 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
   const place = opportunity.state ?? 'Nacional';
@@ -61,7 +62,7 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
       <div className="grid gap-3 px-4 py-4 transition-colors duration-fast ease-standard hover:bg-muted/60 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <OpportunityStatusBadge status={opportunity.status} />
-          <span className="rounded-full bg-secondary px-2.5 py-1 text-2xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
+          <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
           <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
           {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
           <span className="type-label text-muted-foreground">{place}</span>
@@ -136,7 +137,7 @@ function OpportunitySearch() {
             defaultValue={params.q ?? ''}
             data-testid="input-opportunity-query"
             placeholder="Título, órgão ou resumo"
-            className="h-10 w-full rounded-lg border border-border bg-card px-3 type-ui text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-10 w-full rounded-lg border border-input bg-card px-3 type-ui text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
         </label>
         <label>
@@ -237,13 +238,9 @@ function OpportunitySearch() {
           <ErrorState error={search.error} onRetry={() => search.refetch()} />
         )
       ) : response && response.data.length === 0 ? (
-        <div data-testid="state-empty" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
-          <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-secondary text-muted-foreground">
-            <SearchX size={19} aria-hidden />
-          </div>
-          <h2 className="mt-4 type-section">Nenhuma chamada encontrada</h2>
-          <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.</p>
-        </div>
+        <EmptyState icon={SearchX} title="Nenhuma chamada encontrada" testId="state-empty">
+          Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.
+        </EmptyState>
       ) : (
         <section aria-label="Oportunidades" data-testid="list-opportunities">
           <p className="mb-3 type-meta text-muted-foreground">

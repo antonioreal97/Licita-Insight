@@ -80,7 +80,7 @@ export function SmartKeywordCombobox({
           {selected.map((term) => (
             <li
               key={term}
-              className="inline-flex items-center gap-1 rounded-full bg-primary-subtle py-1 pr-1 pl-2.5 text-xs font-medium text-primary-subtle-foreground"
+              className="inline-flex items-center gap-1 rounded-pill bg-primary-subtle py-1 pr-1 pl-2.5 text-xs font-medium text-primary-subtle-foreground"
             >
               {term}
               <button
@@ -125,7 +125,7 @@ export function SmartKeywordCombobox({
             id={listId}
             role="listbox"
             aria-label={`Sugestões para ${label}`}
-            className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg"
+            className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-popover p-1 "
           >
             {suggestions.length === 0 && !result.isFetching ? (
               <p className="px-3 py-2 type-meta text-muted-foreground">Nenhum termo da base encontrado.</p>
@@ -140,7 +140,7 @@ export function SmartKeywordCombobox({
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setActive(index)}
                   onClick={() => choose(suggestion)}
-                  className={cn('flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left', active === index && 'bg-accent')}
+                  className={cn('flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left', active === index && 'bg-accent')}
                 >
                   <span>
                     <span className="block type-ui font-medium text-foreground">{suggestion.displayTerm}</span>
