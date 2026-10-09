@@ -74,6 +74,7 @@ paths:
         - $ref: "#/components/parameters/OrganizationFilter"
         - $ref: "#/components/parameters/SourceFilter"
         - $ref: "#/components/parameters/CategoryFilter"
+        - $ref: "#/components/parameters/PlatformFilter"
         - $ref: "#/components/parameters/ValueMin"
         - $ref: "#/components/parameters/ValueMax"
         - $ref: "#/components/parameters/PublishedFrom"
@@ -373,6 +374,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProfileCategoriesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/profile/platforms:
+    get:
+      operationId: listProfilePlatforms
+      tags: [account]
+      summary: List the bidding rooms and SICAF a company can declare it is registered in
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Known bidding rooms (with open-tender counts) followed by SICAF
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePlatformsResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -1380,6 +1398,17 @@ components:
         items:
           type: string
           minLength: 1
+    PlatformFilter:
+      name: platform
+      in: query
+      description: Normalized bidding platform slug (`TenderPlatform.slug`).
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          minLength: 1
     ValueMin:
       name: valueMin
       in: query
@@ -2295,6 +2324,10 @@ components:
           $ref: "#/components/schemas/DocumentReadingSummary"
         model: { type: [string, "null"] }
         generatedAt: { type: [string, "null"], format: date-time }
+        registrationRequirement:
+          anyOf:
+            - $ref: "#/components/schemas/RegistrationRequirement"
+            - type: "null"
       required:
         [
           status,
@@ -2304,7 +2337,30 @@ components:
           documentReading,
           model,
           generatedAt,
+          registrationRequirement,
         ]
+    RegistrationRequirement:
+      type: object
+      additionalProperties: false
+      description: >-
+        Prior registration clause found by rules in the indexed edital text (no AI call). The deadline
+        counts back from the proposal deadline skipping weekends and national holidays only.
+      properties:
+        systems:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              slug: { type: string }
+              label: { type: string }
+            required: [slug, label]
+        businessDaysBefore: { type: [integer, "null"], minimum: 1 }
+        referenceDate: { type: [string, "null"], format: date }
+        deadline: { type: [string, "null"], format: date }
+        evidence:
+          $ref: "#/components/schemas/SheetEvidence"
+      required: [systems, businessDaysBefore, referenceDate, deadline, evidence]
     CompanySize:
       type: string
       enum: [me_epp, cooperative, other]
@@ -2364,6 +2420,13 @@ components:
           maxItems: 20
           uniqueItems: true
           items: { type: string, minLength: 2, maxLength: 80 }
+        registeredPlatforms:
+          type: array
+          description: >-
+            Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on
+            input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 80 }
         coverage:
           $ref: "#/components/schemas/CompanyCoverage"
         valueRange:
@@ -2389,7 +2452,7 @@ components:
           properties:
             version: { type: integer, minimum: 1 }
             updatedAt: { type: string, format: date-time }
-          required: [version, updatedAt]
+          required: [version, updatedAt, registeredPlatforms]
     CompanyProfileResponse:
       type: object
       properties:
@@ -2412,6 +2475,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProfileCategory"
+      required: [data]
+    ProfilePlatform:
+      type: object
+      properties:
+        slug: { type: string }
+        label: { type: string }
+        url: { type: [string, "null"], format: uri }
+        kind:
+          type: string
+          enum: [platform, registry]
+        openTenderCount:
+          type: [integer, "null"]
+          minimum: 0
+          description: Open tenders disputed in the room; null for SICAF (registry, not a room).
+      required: [slug, label, url, kind, openTenderCount]
+    ProfilePlatformsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfilePlatform"
       required: [data]
     ProfileKeywordSuggestion:
       type: object
@@ -2583,6 +2668,22 @@ components:
           type: [string, "null"]
           format: uri
       required: [id, name, url]
+    TenderPlatform:
+      type: object
+      description: >-
+        Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding
+        room; `source_system` = management software that published the tender (not the room);
+        `other` = any other publisher; `unknown` = the PNCP did not say.
+      properties:
+        slug: { type: string }
+        label: { type: string }
+        kind:
+          type: string
+          enum: [platform, source_system, other, unknown]
+        url:
+          type: [string, "null"]
+          format: uri
+      required: [slug, label, kind, url]
     Category:
       type: object
       properties:
@@ -2660,6 +2761,11 @@ components:
           $ref: "#/components/schemas/Location"
         source:
           $ref: "#/components/schemas/Source"
+        platform:
+          anyOf:
+            - $ref: "#/components/schemas/TenderPlatform"
+            - type: "null"
+          description: Null until the tender is ingested or backfilled with the platform column.
         categories:
           type: array
           items:
@@ -2687,6 +2793,7 @@ components:
         - proposalDeadline
         - location
         - source
+        - platform
         - categories
         - relevance
         - updatedAt
@@ -2706,6 +2813,7 @@ components:
               location,
               organization,
               value,
+              platform,
             ]
         text: { type: string }
       required: [kind, text]
@@ -3533,7 +3641,10 @@ components:
         organization:
           type: integer
           minimum: 0
-      required: [status, modality, state, source, category, organization]
+        platform:
+          type: integer
+          minimum: 0
+      required: [status, modality, state, source, category, organization, platform]
     SearchFacets:
       type: object
       properties:
@@ -3567,6 +3678,11 @@ components:
           description: Top 20 plus every organization selected in the request.
           items:
             $ref: "#/components/schemas/FacetBucket"
+        platform:
+          type: array
+          description: Normalized bidding platform (`TenderPlatform.slug`) with its label.
+          items:
+            $ref: "#/components/schemas/FacetBucket"
         groupTotals:
           $ref: "#/components/schemas/FacetGroupTotals"
         valueRange:
@@ -3583,7 +3699,16 @@ components:
                 $ref: "#/components/schemas/ValueHistogramBucket"
           required: [min, max]
       required:
-        [status, modality, state, source, category, organization, valueRange]
+        [
+          status,
+          modality,
+          state,
+          source,
+          category,
+          organization,
+          platform,
+          valueRange,
+        ]
     SearchResponse:
       type: object
       properties:

@@ -14,6 +14,7 @@ import {
   normalizeTenderTitle,
 } from "./title-normalizer";
 import { categoriesFromOfficialTitle } from "../titles/category-rules";
+import { platformFromPublication } from "../catalog/tender-platforms";
 
 const MODALITIES: Record<number, Modality> = {
   1: "leilao",
@@ -72,6 +73,8 @@ export type PublicationDraft = {
   sourceId: string;
   sourceName: string;
   sourceUrl: string | null;
+  platform: string;
+  platformLabel: string;
   categories: TenderCategory[];
   searchText: string;
   titleNorm: string;
@@ -305,6 +308,7 @@ export const mapPublication = (
   const tenderNumberShort = pncpTenderNumberShort(record);
   const objectSummary = summarizeOfficialObject(title);
   const categories = categoriesFromOfficialTitle(title);
+  const platform = platformFromPublication(record);
   const search = buildSearchColumns({
     title,
     displayTitle: normalizedTitle.title,
@@ -350,6 +354,8 @@ export const mapPublication = (
     sourceId: PNCP_SOURCE_ID,
     sourceName: PNCP_SOURCE_NAME,
     sourceUrl: identity ? pncpPublicationUrl(identity) : null,
+    platform: platform.slug,
+    platformLabel: platform.label,
     categories,
     ...search,
     timeline: [

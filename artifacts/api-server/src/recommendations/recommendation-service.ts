@@ -417,6 +417,7 @@ export async function rebuildInterestProfile(
     companySize: profile
       ? (profile.size as "me_epp" | "cooperative" | "other")
       : null,
+    registeredPlatforms: profile?.registeredPlatforms ?? [],
     signalCount,
   };
   await db
@@ -437,6 +438,8 @@ type ScoreCandidate = {
   organizationId: string;
   organizationName: string;
   modality: string;
+  platform: string | null;
+  platformLabel: string | null;
   estimatedValue: string | null;
   proposalDeadline: Date | null;
   publishedAt: Date | null;
@@ -570,6 +573,18 @@ export function scoreRecommendation(
         text: "Valor dentro da faixa dos seus interesses",
       });
   }
+  // Only a tiebreaker: a registered platform never recommends a tender on its own.
+  if (
+    reasons.length > 0 &&
+    candidate.platform &&
+    profile.registeredPlatforms?.includes(candidate.platform)
+  ) {
+    score += 6;
+    reasons.push({
+      kind: "platform",
+      text: `Disputa em plataforma onde você é cadastrado: ${candidate.platformLabel ?? candidate.platform}`,
+    });
+  }
   const days = candidate.proposalDeadline
     ? Math.max(
         0,
@@ -652,6 +667,8 @@ const queryCandidates = async (
       organizationId: tendersTable.organizationId,
       organizationName: tendersTable.organizationName,
       modality: tendersTable.modality,
+      platform: tendersTable.platform,
+      platformLabel: tendersTable.platformLabel,
       estimatedValue: tendersTable.estimatedValue,
       proposalDeadline: tendersTable.proposalDeadline,
       publishedAt: tendersTable.publishedAt,

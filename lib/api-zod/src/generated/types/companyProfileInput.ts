@@ -46,6 +46,12 @@ export interface CompanyProfileInput {
      * @items.maxLength 80
      */
   excludedKeywords: string[];
+  /**
+     * Bidding rooms and SICAF the company is registered in (`ProfilePlatform.slug`). Optional on input (defaults to empty); does not feed the AI fit, so changing only this keeps the profile version.
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  registeredPlatforms?: string[];
   coverage: CompanyCoverage;
   valueRange: CompanyValueRange;
   size: CompanySize;

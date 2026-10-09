@@ -295,12 +295,28 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
       generatedAt: new Date(),
     });
 
+    await db.insert(tenderAiPassagesTable).values({
+      id: `P-${randomUUID()}`,
+      tenderId,
+      documentId,
+      indexVersion: 1,
+      page: 3,
+      passageOrder: 0,
+      text: "Os licitantes deverão estar credenciados no SICAF e no LICITANET até o terceiro dia útil anterior à data da sessão.",
+    });
+    await db.update(tendersTable)
+      .set({ proposalDeadline: new Date("2026-10-15T13:00:00Z") })
+      .where(eq(tendersTable.id, tenderId));
+
     const jevCallsBeforeSheet = jevCalls;
     const [firstSheetRead, concurrentSheetRead] = await Promise.all([
       getTenderSheet(tenderId, userId),
       getTenderSheet(tenderId, userId),
     ]);
     assert.equal(firstSheetRead.status, "ready");
+    assert.deepEqual(firstSheetRead.registrationRequirement?.systems.map(({ slug }) => slug), ["sicaf", "licitanet"]);
+    assert.equal(firstSheetRead.registrationRequirement?.deadline, "2026-10-09");
+    assert.equal(firstSheetRead.registrationRequirement?.evidence.page, 3);
     assert.equal(firstSheetRead.summary, null);
     assert.deepEqual(firstSheetRead.fields, fields);
     assert.deepEqual(concurrentSheetRead.fields, fields);

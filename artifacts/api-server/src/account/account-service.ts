@@ -52,6 +52,7 @@ const summaryCriteria: SearchCriteria = {
   organizationId: [],
   sourceId: [],
   category: [],
+  platform: [],
   sort: "relevance",
   page: 1,
   pageSize: 20,

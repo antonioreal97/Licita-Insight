@@ -40,6 +40,7 @@ const FILTER_KEYS = [
   'organizationId',
   'sourceId',
   'category',
+  'platform',
   'valueMin',
   'valueMax',
   'publishedFrom',

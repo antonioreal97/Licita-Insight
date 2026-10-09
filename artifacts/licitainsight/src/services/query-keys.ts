@@ -34,6 +34,7 @@ export const queryKeys = {
     tenderSheet: (tenderId: string) => ['me', 'tender-sheet', tenderId] as const,
     companyProfile: ['me', 'company-profile'] as const,
     profileCategories: ['me', 'profile-categories'] as const,
+    profilePlatforms: ['me', 'profile-platforms'] as const,
     profileKeywords: (query: string) => ['me', 'profile-keywords', query] as const,
     profileDescription: (description: string) => ['me', 'profile-description', description] as const,
     /** Saving or deleting the profile invalidates every fit (`fit.all`). */

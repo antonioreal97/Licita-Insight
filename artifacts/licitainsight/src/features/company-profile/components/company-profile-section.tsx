@@ -17,6 +17,7 @@ import {
   useDeleteCompanyProfile,
   useProfileCategories,
   useProfileDescriptionSuggestions,
+  useProfilePlatforms,
   useSaveCompanyProfile,
 } from '../hooks/use-company-profile';
 
@@ -33,6 +34,7 @@ type Draft = {
   selectedCategories: string[];
   selectedKeywords: string[];
   excludedKeywords: string[];
+  registeredPlatforms: string[];
   national: boolean;
   states: string[];
   min: string;
@@ -47,6 +49,7 @@ const emptyDraft: Draft = {
   selectedCategories: [],
   selectedKeywords: [],
   excludedKeywords: [],
+  registeredPlatforms: [],
   national: true,
   states: [],
   min: '',
@@ -61,6 +64,7 @@ const toDraft = (profile: CompanyProfile): Draft => ({
   selectedCategories: profile.selectedCategories ?? [],
   selectedKeywords: profile.selectedKeywords ?? [],
   excludedKeywords: profile.excludedKeywords ?? [],
+  registeredPlatforms: profile.registeredPlatforms ?? [],
   national: profile.coverage.scope === 'national',
   states: profile.coverage.scope === 'states' ? profile.coverage.states : [],
   min: profile.valueRange.min === null ? '' : String(profile.valueRange.min),
@@ -103,6 +107,7 @@ const toInput = (draft: Draft): CompanyProfileInput => ({
   selectedCategories: draft.selectedCategories,
   selectedKeywords: draft.selectedKeywords,
   excludedKeywords: draft.excludedKeywords,
+  registeredPlatforms: draft.registeredPlatforms,
   coverage: draft.national ? { scope: 'national' } : { scope: 'states', states: [...draft.states].sort() },
   valueRange: { min: parseReais(draft.min), max: parseReais(draft.max) },
   size: draft.size!,
@@ -127,6 +132,7 @@ function serverErrors(error: unknown): Errors {
       errors.exclusions = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
     else if (field.startsWith('selectedCategories') || field.startsWith('selectedKeywords') || field.startsWith('excludedKeywords'))
       errors.form = 'Revise os filtros inteligentes selecionados.';
+    else if (field.startsWith('registeredPlatforms')) errors.form = 'Revise as plataformas em que a empresa é cadastrada.';
     else if (field.startsWith('coverage')) errors.states = 'Revise a área de atuação.';
     else if (field.startsWith('valueRange')) errors.valueRange = 'Revise a faixa de valor.';
     else if (field.startsWith('size')) errors.size = 'Escolha o porte da empresa.';
@@ -309,6 +315,7 @@ export function CompanyProfileSection() {
   const billing = useBilling();
   const save = useSaveCompanyProfile();
   const categories = useProfileCategories();
+  const platforms = useProfilePlatforms();
   const saved = profile.data?.profile ?? null;
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Errors>({});
@@ -351,8 +358,14 @@ export function CompanyProfileSection() {
       return;
     }
     save.mutate(toInput(draft), {
-      onSuccess: () =>
-        toast({ title: 'Perfil salvo', description: billing.data?.entitled ? 'Os selos de aderência serão recalculados em instantes.' : undefined }),
+      onSuccess: (response) =>
+        toast({
+          title: 'Perfil salvo',
+          description:
+            billing.data?.entitled && response.profile?.version !== saved?.version
+              ? 'Os selos de aderência serão recalculados em instantes.'
+              : undefined,
+        }),
       onError: (error) => setErrors(serverErrors(error)),
     });
   };
@@ -529,6 +542,56 @@ export function CompanyProfileSection() {
                         <span>{category.label}</span>
                       </span>
                       <span className="shrink-0 type-data text-muted-foreground">{category.openTenderCount.toLocaleString('pt-BR')}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset>
+            <legend className="type-meta font-semibold text-muted-foreground">Sou cadastrado em (opcional)</legend>
+            <p className="mt-1 type-meta text-muted-foreground">
+              Plataformas de disputa e SICAF. Editais nessas plataformas sobem nas recomendações, e avisamos quando a disputa for em
+              outra. Não muda os selos de aderência.
+            </p>
+            {platforms.isPending ? (
+              <p className="mt-3 type-meta text-muted-foreground">Carregando plataformas…</p>
+            ) : platforms.isError ? (
+              <p role="alert" className={errorText}>
+                Não foi possível carregar as plataformas. Recarregue a página.
+              </p>
+            ) : (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2" data-testid="profile-platform-list">
+                {platforms.data.data.map((platform) => {
+                  const checked = draft.registeredPlatforms.includes(platform.slug);
+                  return (
+                    <label
+                      key={platform.slug}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2',
+                        checked ? 'border-primary/40 bg-primary-subtle' : 'border-border bg-surface hover:border-border-strong',
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2 type-ui">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            set({
+                              registeredPlatforms: checked
+                                ? draft.registeredPlatforms.filter((slug) => slug !== platform.slug)
+                                : [...draft.registeredPlatforms, platform.slug],
+                            })
+                          }
+                          className="size-4 accent-primary"
+                          data-testid={`checkbox-platform-${platform.slug}`}
+                        />
+                        <span>{platform.label}</span>
+                      </span>
+                      <span className="shrink-0 type-data text-muted-foreground">
+                        {platform.openTenderCount === null ? 'cadastro federal' : platform.openTenderCount.toLocaleString('pt-BR')}
+                      </span>
                     </label>
                   );
                 })}

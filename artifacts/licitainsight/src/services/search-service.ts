@@ -62,7 +62,7 @@ export function isCalendarDate(value: string) {
 export type ResultsView = 'list' | 'table';
 export const resultsViewFromUrl = (search: string): ResultsView => (new URLSearchParams(search).get('view') === 'table' ? 'table' : 'list');
 
-const ARRAY_KEYS = ['status', 'modality', 'state', 'city', 'organizationId', 'sourceId', 'category'] as const;
+const ARRAY_KEYS = ['status', 'modality', 'state', 'city', 'organizationId', 'sourceId', 'category', 'platform'] as const;
 const NUMBER_KEYS = ['valueMin', 'valueMax'] as const;
 const DATE_KEYS = ['publishedFrom', 'publishedTo', 'deadlineFrom', 'deadlineTo'] as const;
 

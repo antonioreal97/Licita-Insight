@@ -18,4 +18,5 @@ export const RecommendationReasonKind = {
   location: 'location',
   organization: 'organization',
   value: 'value',
+  platform: 'platform',
 } as const;

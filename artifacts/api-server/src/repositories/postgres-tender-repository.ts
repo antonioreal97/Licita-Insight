@@ -20,6 +20,7 @@ import type {
 import { db, tendersTable } from "@workspace/db";
 import type { TenderDocumentRecord, TenderItemRecord, TenderTimelineRecord } from "@workspace/db/schema";
 import type { FacetGroup, SearchCriteria } from "../domain/search";
+import { platformKind, platformUrl } from "../catalog/tender-platforms";
 import { normalizeText, queryTokens } from "../domain/normalize";
 import {
   pncpTenderNumberShort,
@@ -136,6 +137,9 @@ export const searchWhereFor = (
       from jsonb_array_elements(${tendersTable.categories}) as cat
       where cat->>'slug' in (${sql.join(criteria.category.map((slug) => sql`${slug}`), sql`, `)})
     )`);
+  }
+  if (skip !== "platform" && criteria.platform.length > 0) {
+    filters.push(inArray(tendersTable.platform, criteria.platform));
   }
   if (skip !== "valueRange" && criteria.valueMin !== undefined) {
     filters.push(sql`${tendersTable.estimatedValue}::float8 >= ${criteria.valueMin}`);
@@ -270,6 +274,14 @@ export const tenderRowToDetail = (row: TenderRow): TenderDetail => {
       cityIbgeCode: row.cityIbgeCode,
     },
     source: { id: row.sourceId, name: row.sourceName, url: row.sourceUrl },
+    platform: row.platform === null
+      ? null
+      : {
+          slug: row.platform,
+          label: row.platformLabel ?? row.platform,
+          kind: platformKind(row.platform),
+          url: platformUrl(row.platform),
+        },
     categories: row.categories,
     relevance: { score: null, highlights: [] },
     updatedAt: row.updatedAt,
@@ -442,12 +454,14 @@ export class PostgresTenderRepository {
       city,
       organization,
       category,
+      platform,
       statusTotal,
       modalityTotal,
       stateTotal,
       sourceTotal,
       categoryTotal,
       organizationTotal,
+      platformTotal,
       valueRows,
     ] = await Promise.all([
       buckets(tendersTable.status, sql<string>`${tendersTable.status}`, searchWhereFor(criteria, "status")),
@@ -461,12 +475,18 @@ export class PostgresTenderRepository {
       this.cityFacet(criteria),
       this.organizationFacet(criteria),
       this.categoryFacet(criteria),
+      buckets(
+        tendersTable.platform,
+        sql<string>`coalesce(${tendersTable.platformLabel}, ${tendersTable.platform})`,
+        searchWhereFor(criteria, "platform"),
+      ),
       countRows(searchWhereFor(criteria, "status")),
       countRows(searchWhereFor(criteria, "modality")),
       countRows(searchWhereFor(criteria, "state")),
       countRows(searchWhereFor(criteria, "source")),
       countRows(searchWhereFor(criteria, "category")),
       countRows(searchWhereFor(criteria, "organization")),
+      countRows(searchWhereFor(criteria, "platform")),
       db
         .select({ value: tendersTable.estimatedValue })
         .from(tendersTable)
@@ -494,6 +514,7 @@ export class PostgresTenderRepository {
       category,
       city,
       organization,
+      platform,
       groupTotals: {
         status: statusTotal,
         modality: modalityTotal,
@@ -501,6 +522,7 @@ export class PostgresTenderRepository {
         source: sourceTotal,
         category: categoryTotal,
         organization: organizationTotal,
+        platform: platformTotal,
       },
       valueRange: {
         min: range?.min ?? null,
@@ -613,6 +635,7 @@ const emptyCriteria = (): SearchCriteria => ({
   organizationId: [],
   sourceId: [],
   category: [],
+  platform: [],
   sort: "relevance",
   page: 1,
   pageSize: 20,

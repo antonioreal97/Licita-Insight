@@ -50,6 +50,8 @@ test("pontuação explica termos, categoria e cobertura e penaliza fora da área
     organizationId: "org-1",
     organizationName: "Hospital",
     modality: "other",
+    platform: null,
+    platformLabel: null,
     estimatedValue: "100000",
     proposalDeadline: new Date("2026-10-20T12:00:00Z"),
     publishedAt: new Date("2026-10-07T12:00:00Z"),
@@ -75,6 +77,39 @@ test("pontuação explica termos, categoria e cobertura e penaliza fora da área
   );
 });
 
+test("plataforma cadastrada desempata, mas não recomenda sozinha", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const candidate = {
+    id: "T3",
+    searchText: "servicos de hemodialise",
+    categories: [],
+    state: "SP",
+    organizationId: "O3",
+    organizationName: "Órgão",
+    modality: "other",
+    platform: "licitanet",
+    platformLabel: "Licitanet",
+    estimatedValue: null,
+    proposalDeadline: new Date("2026-10-20T12:00:00Z"),
+    publishedAt: new Date("2026-10-07T12:00:00Z"),
+    textRank: 0.5,
+  };
+  const registered = { ...profile, registeredPlatforms: ["licitanet", "sicaf"] };
+  const boosted = scoreRecommendation(candidate, registered, [], now);
+  const plain = scoreRecommendation(candidate, profile, [], now);
+  assert.ok(boosted && plain);
+  assert.equal(Number((boosted.score - plain.score).toFixed(5)), 6);
+  assert.ok(boosted.reasons.some(({ kind }) => kind === "platform"));
+
+  const unrelated = scoreRecommendation(
+    { ...candidate, searchText: "material de escritorio", state: null, textRank: 0 },
+    { ...registered, coverageScope: null, coverageStates: [] },
+    [],
+    now,
+  );
+  assert.equal(unrelated, null);
+});
+
 test("exclusões eliminam o candidato", () => {
   const result = scoreRecommendation(
     {
@@ -85,6 +120,8 @@ test("exclusões eliminam o candidato", () => {
       organizationId: "O2",
       organizationName: "Órgão",
       modality: "other",
+      platform: null,
+      platformLabel: null,
       estimatedValue: null,
       proposalDeadline: new Date("2026-10-20"),
       publishedAt: new Date("2026-10-07"),

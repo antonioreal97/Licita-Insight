@@ -14,6 +14,7 @@ export type FacetGroup =
   | "source"
   | "category"
   | "organization"
+  | "platform"
   | "valueRange";
 
 export interface SearchCriteria {
@@ -26,6 +27,7 @@ export interface SearchCriteria {
   organizationId: string[];
   sourceId: string[];
   category: string[];
+  platform: string[];
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: Date;

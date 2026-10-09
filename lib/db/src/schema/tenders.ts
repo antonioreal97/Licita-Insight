@@ -86,6 +86,8 @@ export const tendersTable = pgTable(
     sourceId: text("source_id").notNull(),
     sourceName: text("source_name").notNull(),
     sourceUrl: text("source_url"),
+    platform: text("platform"),
+    platformLabel: text("platform_label"),
     categories: jsonArray("categories").$type<TenderCategory[]>(),
     categorySource: text("category_source").$type<"rules" | "student" | "teacher">(),
     categoryConfidence: real("category_confidence"),
@@ -123,6 +125,7 @@ export const tendersTable = pgTable(
     index("tenders_source_id_idx").on(table.sourceId),
     index("tenders_city_ibge_idx").on(table.cityIbgeCode),
     index("tenders_fetched_at_idx").on(table.fetchedAt),
+    index("tenders_platform_idx").on(table.platform),
     index("tenders_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),

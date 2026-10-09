@@ -5,6 +5,7 @@ import type {
   ProfileCategoriesResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
   TenderSheet,
@@ -21,6 +22,7 @@ export const httpAiAdapter: AiAdapter = {
   saveCompanyProfile: (profile) => sendJson<CompanyProfileResponse>('PUT', '/v1/me/company-profile', profile),
   deleteCompanyProfile: () => sendJson<void>('DELETE', '/v1/me/company-profile'),
   listProfileCategories: (signal) => getJson<ProfileCategoriesResponse>('/v1/profile/categories', {}, signal),
+  listProfilePlatforms: (signal) => getJson<ProfilePlatformsResponse>('/v1/profile/platforms', {}, signal),
   suggestProfileKeywords: (query, signal) => getJson<ProfileKeywordSuggestionsResponse>('/v1/profile/keywords/suggest', { q: query }, signal),
   suggestProfileFiltersFromDescription: (description, signal) =>
     sendJson<ProfileDescriptionSuggestions>('POST', '/v1/profile/keywords/from-description', { description }, signal),

@@ -19,4 +19,6 @@ export interface FacetGroupTotals {
   category: number;
   /** @minimum 0 */
   organization: number;
+  /** @minimum 0 */
+  platform: number;
 }

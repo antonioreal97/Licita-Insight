@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Building2, CalendarDays, MapPin } from 'lucide-react';
 import type { TenderFit, TenderSummary } from '@/api';
 import { FitBadge } from '@/features/company-profile/components/fit-badge';
+import { useRegisteredPlatforms } from '@/features/company-profile/hooks/use-company-profile';
 import { formatDate } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,7 @@ import { formatPlace, highlightFor, shortTenderNumber } from '../lib/tender-disp
 import { DeadlineIndicator } from './deadline-indicator';
 import { HighlightedText } from './highlighted-text';
 import { MetaItem } from './meta-item';
+import { PlatformBadge } from './platform-badge';
 import { RelevanceMeter } from './relevance-meter';
 import { SaveButton } from './save-button';
 import { StatusBadge } from './status-badge';
@@ -42,6 +44,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
   const modality = modalityLabels[tender.modality];
   const number = shortTenderNumber(tender, modality);
   const titleId = `tender-title-${tender.id}`;
+  const registeredPlatforms = useRegisteredPlatforms();
 
   return (
     <article
@@ -99,6 +102,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
               )}
             </MetaItem>
           )}
+          <PlatformBadge platform={tender.platform} registeredPlatforms={registeredPlatforms} />
         </div>
 
         {!compact && snippet && (

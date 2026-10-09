@@ -200,6 +200,13 @@ const applyFilters = (
     ) {
       return false;
     }
+    if (
+      skippedFacet !== "platform" &&
+      criteria.platform.length > 0 &&
+      (tender.platform === null || !criteria.platform.includes(tender.platform.slug))
+    ) {
+      return false;
+    }
     if (skippedFacet !== "valueRange") {
       if (
         criteria.valueMin !== undefined &&
@@ -363,6 +370,7 @@ const createFacets = (
   const bySource = applyFilters(tenders, criteria, "source");
   const byCategory = applyFilters(tenders, criteria, "category");
   const byOrganization = applyFilters(tenders, criteria, "organization");
+  const byPlatform = applyFilters(tenders, criteria, "platform");
   const byValue = applyFilters(tenders, criteria, "valueRange")
     .map((tender) => tender.estimatedValue)
     .filter((value): value is number => value !== null && value >= 0);
@@ -428,6 +436,13 @@ const createFacets = (
       criteria.organizationId,
       tenders,
     ),
+    platform: countBuckets(
+      byPlatform.flatMap((tender) =>
+        tender.platform
+          ? [{ value: tender.platform.slug, label: tender.platform.label }]
+          : [],
+      ),
+    ),
     groupTotals: {
       status: byStatus.length,
       modality: byModality.length,
@@ -435,6 +450,7 @@ const createFacets = (
       source: bySource.length,
       category: byCategory.length,
       organization: byOrganization.length,
+      platform: byPlatform.length,
     },
     valueRange: {
       min: valueRange?.min ?? null,

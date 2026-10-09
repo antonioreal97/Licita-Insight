@@ -6,6 +6,7 @@ import {
   tenderAiDocumentsTable,
   tenderAiIndexesTable,
   tenderAiSheetsTable,
+  tendersTable,
   type AiGeneratedSummary,
   type QualificationItem,
   type TenderSheetDiagnostic,
@@ -48,6 +49,10 @@ import {
   type SummaryAttempt,
 } from "./openai-summary";
 import { documentReadingForTender, type DocumentReadingSummary } from "./document-reading";
+import {
+  detectRegistrationRequirement,
+  type RegistrationRequirement,
+} from "./registration-requirement-policy";
 
 type SheetStatus =
   | "not_started"
@@ -68,6 +73,7 @@ export type TenderSheetResponse = {
   documentReading: DocumentReadingSummary;
   model: string | null;
   generatedAt: string | null;
+  registrationRequirement: RegistrationRequirement | null;
 };
 
 const EMPTY_SUMMARY_ATTEMPT: SummaryAttempt = {
@@ -151,7 +157,62 @@ async function readySheetResponse(
     documentReading: await documentReadingForTender(sheet.tenderId),
     model: sheet.responseModel ?? sheet.requestedModel,
     generatedAt: sheet.generatedAt?.toISOString() ?? null,
+    registrationRequirement: await registrationRequirementFor(
+      sheet.tenderId,
+      sheet.indexVersion,
+    ),
   };
+}
+
+const REGISTRATION_PAGE_LIMIT = 40;
+
+/** Rules over the already-indexed text; recomputed on read so it needs no sheet regeneration or AI call. */
+async function registrationRequirementFor(
+  tenderId: string,
+  indexVersion: number,
+): Promise<RegistrationRequirement | null> {
+  const [tender] = await db
+    .select({ proposalDeadline: tendersTable.proposalDeadline })
+    .from(tendersTable)
+    .where(eq(tendersTable.id, tenderId))
+    .limit(1);
+  const result = await db.execute<QualificationPageRow>(sql`
+    with matching_pages as (
+      select distinct p.document_id, p.page
+      from tender_ai_passages p
+      where p.tender_id = ${tenderId}
+        and p.index_version = ${indexVersion}
+        and p.text ~* '(credenci|cadastr)'
+      order by p.document_id, p.page
+      limit ${REGISTRATION_PAGE_LIMIT}
+    )
+    select p.document_id as "documentId", d.title as "documentTitle",
+           d.source_url as "documentUrl", p.page,
+           p.passage_order as "passageOrder", p.text
+    from matching_pages m
+    join tender_ai_passages p
+      on p.document_id = m.document_id and p.page = m.page
+    join tender_ai_documents d on d.id = p.document_id
+    where p.tender_id = ${tenderId}
+      and p.index_version = ${indexVersion}
+    order by p.document_id, p.page, p.passage_order
+  `);
+  const pages = new Map<string, QualificationPageRow[]>();
+  for (const row of result.rows) {
+    const key = `${row.documentId}:${row.page}`;
+    pages.set(key, [...(pages.get(key) ?? []), row]);
+  }
+  return detectRegistrationRequirement(
+    [...pages.values()].map((passages) => ({
+      documentTitle: passages[0]!.documentTitle,
+      documentUrl: passages[0]!.documentUrl,
+      page: passages[0]!.page,
+      text: stitchIndexedPage(
+        passages.map(({ passageOrder: order, text }) => ({ order, text })),
+      ),
+    })),
+    tender?.proposalDeadline ? dateInSaoPaulo(tender.proposalDeadline) : null,
+  );
 }
 
 export type TenderSheetCalculation = {
@@ -200,6 +261,7 @@ const EMPTY_RESPONSE = (
   documentReading,
   model: null,
   generatedAt: null,
+  registrationRequirement: null,
 });
 
 async function reserveDailySheet(now: Date): Promise<void> {
