@@ -6,7 +6,7 @@
   deploy  (timer, 10 min): git fetch da branch ops/macbook-worker; havendo commits novos, aciona o Albert-CLAUDE
           para puxar e aplicar (seção "Atualização da branch" do ALBERT.md).
   delegate envia uma tarefa ao Albert-CLAUDE ou, se ele estiver sem cota do Claude, ao Codex do servidor
-          (codex exec numa unit systemd, sem terminal) via handoff; o check devolve ao Albert para validar.
+          (Steve-CODEX, terminal Codex fixo no Orca; sem ele, codex exec numa unit systemd) via handoff; o check devolve ao Albert para validar.
   digest  (timer, diário): publica o relatório diário na issue de monitoramento, sem LLM.
   status  imprime as métricas atuais em JSON.
 
@@ -41,6 +41,7 @@ def load_config():
         "MONITOR_ISSUE": "",
         "ORCA_CLI": str(HOME / ".config/orca/linux-orca-cli-shim/orca"),
         "ALBERT_TERMINAL": "",
+        "STEVE_TERMINAL": "",
         "AI_DAILY_BUDGET_USD": "10",
         "MAX_WAKES_PER_DAY": "6",
         "REALERT_HOURS": "6",
@@ -301,9 +302,33 @@ def albert_limited(handle):
     return False
 
 
+# Steve-CODEX: terminal Codex fixo no Orca (kruid-dev), assistente do Albert-CLAUDE. Quando existe, os handoffs vão para
+# ele (visível no Orca); sem ele, o monitor usa o `codex exec` em unit systemd como antes.
+STEVE_DONE = "## Resultado do Codex"
+
+
+def steve_terminal():
+    p = run([CFG["ORCA_CLI"], "terminal", "list", "--json"], timeout=30)
+    try:
+        terms = json.loads(p.stdout)["result"]["terminals"]
+    except (ValueError, KeyError):
+        return None
+    handles = {t["handle"] for t in terms}
+    if CFG["STEVE_TERMINAL"] in handles:
+        return CFG["STEVE_TERMINAL"]
+    named = [t["handle"] for t in terms if "steve" in (t.get("title") or "").lower()]
+    return named[0] if named else None
+
+
+def steve_active():
+    """Handoffs entregues ao Steve-CODEX que ainda não têm o resultado escrito."""
+    return [Path(str(m)[: -len(".steve")]) for m in sorted(HANDOFF.glob("*.md.steve"))
+            if STEVE_DONE not in Path(str(m)[: -len(".steve")]).read_text()]
+
+
 def codex_running():
     p = run(["systemctl", "--user", "list-units", "licita-codex-*", "--state=active", "--no-legend"])
-    return bool(p.stdout.strip())
+    return bool(p.stdout.strip()) or bool(HANDOFF.exists() and steve_active())
 
 
 def new_handoff(task):
@@ -328,6 +353,14 @@ def run_codex(handoff):
         "na issue de monitoramento com o título começando por 'via Codex — aguardando validação do Albert-CLAUDE'. "
         "Commits seguem as regras do runbook (sem trailers de coautoria e sem citar agentes)."
     )
+    steve = steve_terminal()
+    if steve:
+        task = (f"[handoff] {prompt.replace('Você é o Codex do servidor', 'Você é o Steve-CODEX, o Codex do servidor', 1)} "
+                f"Handoff: {handoff}. Ao terminar, responda só 'Steve-CODEX: concluído' e aguarde o próximo handoff.")
+        ok, info = send_to_albert(steve, task)
+        if ok:
+            Path(f"{handoff}.steve").write_text(json.dumps({"terminal": steve, "started": stamp}))
+            return True, f"Steve-CODEX recebeu o handoff {handoff}"
     script = (f'codex exec --dangerously-bypass-approvals-and-sandbox -C "{CFG["REPO_DIR"]}" '
               f'-o "{out}" "$(cat "{handoff}.prompt")" > "{log}" 2>&1')
     Path(f"{handoff}.prompt").write_text(prompt)
@@ -365,6 +398,10 @@ def handoffs_tick():
         handoff = Path(str(queued)[: -len(".queued")])
         queued.unlink()
         busy = run_codex(handoff)[0]
+    for marker in sorted(HANDOFF.glob("*.md.steve")):
+        handoff = Path(str(marker)[: -len(".steve")])
+        if STEVE_DONE in handoff.read_text():
+            marker.rename(f"{handoff}.codex")
     pending = [Path(str(c)[: -len(".codex")]) for c in sorted(HANDOFF.glob("*.md.codex"))]
     if busy or not pending:
         return

@@ -50,7 +50,7 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
      confira `curl -fsS localhost:24252/api/readyz` e `curl -fsS https://abriu-la.vercel.app/api/readyz`. Coletas em andamento são interrompidas; o app as retoma
      sozinho após a janela de heartbeat (PNCP ~11 min, transparência ~2 h).
    - `monitor_ops`: reinstale com `install -m 755 ops/macbook/monitor/licita_monitor.py ~/licita-monitor/`,
-     `install -m 644 ops/macbook/monitor/ALBERT.md ~/licita-monitor/`,
+     `install -m 644 ops/macbook/monitor/ALBERT.md ops/macbook/monitor/STEVE.md ~/licita-monitor/`,
      `install -m 755 ops/macbook/ngrok-vercel-sync.sh ~/.local/bin/licita-ngrok-vercel-sync`,
      `cp ops/macbook/*.service ops/macbook/*.timer ops/macbook/monitor/*.service ops/macbook/monitor/*.timer ~/.config/systemd/user/`,
      `systemctl --user daemon-reload` e `systemctl --user enable --now` para cada `*.timer` copiado, **exceto** `licita-ngrok-vercel-sync.timer` quando `EDGE_URL` estiver definido (borda Oracle ativa): esse fica parado e desabilitado (`systemctl --user disable --now licita-ngrok-vercel-sync.timer`). Em `~/licita-monitor/config.env`, `EDGE_URL=` fica vazio por padrão. Para monitorar a borda Oracle, defina `EDGE_URL=https://137-131-233-192.sslip.io`; nesse modo, `edge:down` verifica `/api/readyz` e o resultado do sincronizador ngrok->Vercel é ignorado.
@@ -83,7 +83,7 @@ limit", "resets at …") ou você perceber que não vai terminar a tarefa atual:
 2. Grave `~/licita-monitor/state/albert-limited.json` com `{"until": <epoch do reset>, "reason": "..."}`.
 3. Rode `python3 ~/licita-monitor/licita_monitor.py delegate --handoff <arquivo.md>` e encerre o turno.
 
-O monitor também repassa sozinho, com handoff próprio, os alertas e deploys que chegarem enquanto você estiver sem
+O repasse vai para o **Steve-CODEX** (terminal Codex fixo no Orca, runbook `~/licita-monitor/STEVE.md`); sem ele, para um `codex exec` em segundo plano. O monitor também repassa sozinho, com handoff próprio, os alertas e deploys que chegarem enquanto você estiver sem
 cota. O Codex trabalha **só** no "O que falta", acrescenta `## Resultado do Codex` ao handoff e comenta na issue
 "via Codex — aguardando validação do Albert-CLAUDE".
 
