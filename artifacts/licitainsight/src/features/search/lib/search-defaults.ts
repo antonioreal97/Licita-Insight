@@ -47,6 +47,7 @@ const FILTER_KEYS = [
   'publishedTo',
   'deadlineFrom',
   'deadlineTo',
+  'newOnly',
 ] as const;
 
 /** "Limpar filtros": back to the default status, keeping the query, sort, mode and page size. */
@@ -58,8 +59,9 @@ export function withoutFilters(params: TenderSearchParams): TenderSearchParams {
 }
 
 /** A saved query without `status` covers every status: say so explicitly instead of opening on the default. */
-export function savedQueryHref(query: string) {
+export function savedQueryHref(query: string, options: { newOnly?: boolean } = {}) {
   const params = new URLSearchParams(query);
   if (!params.has('status')) params.append('status', ALL_STATUSES);
+  if (options.newOnly) params.set('newOnly', 'true');
   return `/search?${params}`;
 }

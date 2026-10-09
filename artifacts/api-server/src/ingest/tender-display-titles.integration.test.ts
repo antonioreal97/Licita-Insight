@@ -49,6 +49,7 @@ const criteria = (query: string) => ({
   sourceId: [],
   category: [],
   platform: [],
+  newOnly: false,
   sort: "relevance" as const,
   page: 1,
   pageSize: 20,

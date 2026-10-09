@@ -11,4 +11,6 @@ export type NotificationTender = {
   title: string;
   /** @nullable */
   tenderNumberShort: string | null;
+  /** Whether the linked tender is still inside the configured new-tender window. */
+  isNew: boolean;
 } | null;

@@ -24,6 +24,7 @@ const allowed = new Set([
   "deadlineFrom",
   "deadlineTo",
   "sort",
+  "newOnly",
 ]);
 
 const appendValues = (
@@ -56,7 +57,7 @@ export const canonicalSearchQuery = (
     }
     parsed[key] = repeated.has(key)
       ? params.getAll(key)
-      : params.get(key) ?? undefined;
+      : (params.get(key) ?? undefined);
   }
   parsed.page = 1;
   parsed.pageSize = 20;
@@ -73,6 +74,7 @@ export const canonicalSearchQuery = (
   appendValues(canonical, "sourceId", criteria.sourceId);
   appendValues(canonical, "category", criteria.category);
   appendValues(canonical, "platform", criteria.platform);
+  if (criteria.newOnly) canonical.set("newOnly", "true");
   if (criteria.valueMin !== undefined)
     canonical.set("valueMin", String(criteria.valueMin));
   if (criteria.valueMax !== undefined)

@@ -13,6 +13,7 @@ export const SortOption = {
   relevance: 'relevance',
   deadline_asc: 'deadline_asc',
   published_desc: 'published_desc',
+  first_seen_desc: 'first_seen_desc',
   value_desc: 'value_desc',
   value_asc: 'value_asc',
 } as const;

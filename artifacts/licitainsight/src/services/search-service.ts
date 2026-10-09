@@ -3,7 +3,7 @@ import { searchAdapter, type Modality, type SearchMode, type SortOption, type Te
 export const DEFAULT_PAGE_SIZE = 20;
 
 const STATUSES: TenderStatus[] = ['open', 'under_review', 'closed', 'suspended', 'cancelled'];
-const SORTS: SortOption[] = ['relevance', 'deadline_asc', 'published_desc', 'value_desc', 'value_asc'];
+const SORTS: SortOption[] = ['relevance', 'deadline_asc', 'published_desc', 'first_seen_desc', 'value_desc', 'value_asc'];
 const MODALITIES: Modality[] = [
   'pregao_eletronico',
   'pregao_presencial',
@@ -78,6 +78,7 @@ export function normalizeSearchParams(params: TenderSearchParams): TenderSearchP
   }
   for (const key of NUMBER_KEYS) if (typeof params[key] === 'number' && Number.isFinite(params[key])) out[key] = params[key];
   for (const key of DATE_KEYS) if (params[key]) out[key] = params[key];
+  if (params.newOnly) out.newOnly = true;
   if (params.sort && params.sort !== 'relevance') out.sort = params.sort;
   if (params.page && params.page > 1) out.page = Math.floor(params.page);
   out.pageSize = Math.min(100, Math.max(1, params.pageSize ?? DEFAULT_PAGE_SIZE));
@@ -106,6 +107,7 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
     const value = url.get(key);
     if (value && isCalendarDate(value)) params[key] = value;
   }
+  if (url.get('newOnly') === 'true') params.newOnly = true;
   const sort = url.get('sort') as SortOption | null;
   if (sort && SORTS.includes(sort)) params.sort = sort;
   const page = Number(url.get('page'));
@@ -134,7 +136,8 @@ export function countActiveFilters(params: TenderSearchParams) {
   return (
     ARRAY_KEYS.reduce((sum, key) => sum + ((params[key] as string[] | undefined)?.length ?? 0), 0) +
     NUMBER_KEYS.filter((key) => params[key] !== undefined).length +
-    DATE_KEYS.filter((key) => params[key] !== undefined).length
+    DATE_KEYS.filter((key) => params[key] !== undefined).length +
+    (params.newOnly ? 1 : 0)
   );
 }
 

@@ -76,6 +76,19 @@ test('busca salva sem status abre com todos os status; com status, abre igual', 
   assert.equal(savedQueryHref('q=limpeza&status=open'), '/search?q=limpeza&status=open');
 });
 
+test('filtro de novos e ordenação pela entrada no Pardal sobrevivem na URL', () => {
+  const params = searchParamsFromUrl('newOnly=true&sort=first_seen_desc');
+  assert.deepEqual(params, { newOnly: true, sort: 'first_seen_desc', pageSize: 20 });
+  assert.equal(savedQueryHref('q=limpeza', { newOnly: true }), '/search?q=limpeza&status=all&newOnly=true');
+  assert.deepEqual(buildFilterChips(params).at(-1), {
+    id: 'newOnly',
+    group: 'Entrada no Pardal',
+    label: 'Novos (24 h)',
+    remove: { newOnly: undefined },
+  });
+  assert.equal(withoutFilters(params).newOnly, undefined);
+});
+
 test('estado da busca permanece na navegação da aba até voltar ao padrão', () => {
   const values = new Map<string, string>();
   const storage = {

@@ -8,6 +8,7 @@ import {
   gt,
   inArray,
   isNull,
+  lte,
   ne,
   sql,
 } from "drizzle-orm";
@@ -35,6 +36,7 @@ import { toSummary } from "../services/search-service";
 import type { SearchCriteria } from "../domain/search";
 import { canonicalSearchQuery } from "./saved-search-query";
 import { participationUpdate, type ParticipationPatch } from './participation';
+import { newTenderCutoff } from "../domain/new-tender";
 
 const MAX_SAVED_TENDERS = 500;
 const MAX_SAVED_SEARCHES = 50;
@@ -53,6 +55,7 @@ const summaryCriteria: SearchCriteria = {
   sourceId: [],
   category: [],
   platform: [],
+  newOnly: false,
   sort: "relevance",
   page: 1,
   pageSize: 20,
@@ -531,6 +534,7 @@ export const markSavedSearchSeen = async (
 
 const toNotification = (
   row: typeof notificationsTable.$inferSelect,
+  newTenderIds: ReadonlySet<string>,
 ): Notification => ({
   id: row.id,
   type: row.type as Notification["type"],
@@ -542,6 +546,7 @@ const toNotification = (
           id: row.tenderId,
           title: row.tenderTitle,
           tenderNumberShort: row.tenderNumberShort,
+          isNew: newTenderIds.has(row.tenderId),
         }
       : null,
   change: row.change ?? null,
@@ -554,6 +559,9 @@ const toNotification = (
         }
       : null,
   matchCount: row.matchCount,
+  newMatchCount: row.tenderIds.length > 0
+    ? row.tenderIds.filter((id) => newTenderIds.has(id)).length
+    : row.tenderId && newTenderIds.has(row.tenderId) ? 1 : 0,
   tenderIds: row.tenderIds,
   profileMatches: row.profileMatches,
 });
@@ -572,6 +580,7 @@ export const listNotifications = async (input: {
   page: number;
   pageSize: number;
 }): Promise<NotificationPage> => {
+  const now = new Date();
   const filter = and(
     eq(notificationsTable.userId, input.userId),
     input.unreadOnly ? isNull(notificationsTable.readAt) : undefined,
@@ -588,8 +597,27 @@ export const listNotifications = async (input: {
     unreadNotificationCount(input.userId),
   ]);
   const total = Number(totalRow?.value ?? 0);
+  const linkedTenderIds = [
+    ...new Set(
+      rows.flatMap((row) => [
+        ...(row.tenderId ? [row.tenderId] : []),
+        ...row.tenderIds,
+      ]),
+    ),
+  ];
+  const newRows = linkedTenderIds.length === 0
+    ? []
+    : await db
+        .select({ id: tendersTable.id })
+        .from(tendersTable)
+        .where(and(
+          inArray(tendersTable.id, linkedTenderIds),
+          gt(tendersTable.createdAt, newTenderCutoff(now)),
+          lte(tendersTable.createdAt, now),
+        ));
+  const newTenderIds = new Set(newRows.map(({ id }) => id));
   return {
-    data: rows.map(toNotification),
+    data: rows.map((row) => toNotification(row, newTenderIds)),
     pagination: pagination(input.page, input.pageSize, total),
     unreadCount,
   };

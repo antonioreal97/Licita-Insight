@@ -65,7 +65,11 @@ function formatChangeValue(n: Notification, value: string | number | null): stri
 
 /** The change itself ("De 05 de out de 2026, 18:00 para 12 de out…"), or `null` when the API sent no details. */
 export function notificationDescription(n: Notification): string | null {
-  if (n.type === 'saved_search_new_matches') return null;
+  if (n.type === 'saved_search_new_matches') {
+    const count = n.newMatchCount ?? n.matchCount ?? n.tenderIds.length;
+    if (count === 0) return 'Os resultados já saíram da janela de 24 horas.';
+    return count === 1 ? '1 resultado entrou no Pardal nas últimas 24 horas.' : `${formatNumber(count)} resultados entraram no Pardal nas últimas 24 horas.`;
+  }
   if (n.type === 'profile_new_matches') {
     return n.profileMatches.length > 1 ? `E mais ${formatNumber(n.profileMatches.length - 1)} em destaque.` : null;
   }
@@ -81,7 +85,7 @@ export function notificationDescription(n: Notification): string | null {
 /** Where a click goes: the tender, or the saved search's results. `null` when the payload has neither. */
 export function notificationHref(n: Notification): string | null {
   if (n.type === 'trial_ending') return BILLING_HREF;
-  if (n.type === 'saved_search_new_matches') return n.savedSearch ? savedQueryHref(n.savedSearch.query) : null;
+  if (n.type === 'saved_search_new_matches') return n.savedSearch ? savedQueryHref(n.savedSearch.query, { newOnly: true }) : null;
   if (n.type === 'profile_new_matches') return n.profileMatches[0] ? `/tenders/${encodeURIComponent(n.profileMatches[0].id)}` : savedQueryHref('');
   return n.tender ? `/tenders/${encodeURIComponent(n.tender.id)}` : null;
 }

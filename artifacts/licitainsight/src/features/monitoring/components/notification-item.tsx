@@ -2,6 +2,7 @@ import { Bell, CalendarClock, CircleDollarSign, FileText, Hourglass, RefreshCw, 
 import { Link } from 'wouter';
 import type { Notification, NotificationType } from '@/api';
 import { cn } from '@/lib/utils';
+import { NewTenderBadge } from '@/features/tenders/components/new-tender-badge';
 import { formatRelativeTime, notificationDescription, notificationHref, notificationSubject, notificationTitle } from '../lib/notification-copy';
 
 const icons: Record<NotificationType, LucideIcon> = {
@@ -51,6 +52,7 @@ export function NotificationItem({
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className={cn('min-w-0 flex-1 type-ui text-foreground', unread ? 'font-semibold' : 'font-medium')}>{notificationTitle(n)}</span>
+          <NewTenderBadge isNew={Boolean(n.tender?.isNew || (n.newMatchCount ?? 0) > 0)} />
           <time dateTime={n.createdAt} className="shrink-0 type-meta text-muted-foreground">
             {formatRelativeTime(n.createdAt)}
           </time>

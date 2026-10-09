@@ -25,6 +25,7 @@ export const sortLabels: Record<SortOption, string> = {
   relevance: 'Relevância',
   deadline_asc: 'Prazo mais próximo',
   published_desc: 'Mais recentes',
+  first_seen_desc: 'Mais recentes no Pardal',
   value_desc: 'Maior valor',
   value_asc: 'Menor valor',
 };
