@@ -260,6 +260,13 @@
       "when": 1791482405000,
       "tag": "0036_service_region",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791482406000,
+      "tag": "0037_tenders_open_by_state_index",
+      "breakpoints": true
     }
   ]
 }

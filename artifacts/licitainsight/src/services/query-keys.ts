@@ -5,6 +5,7 @@ export const queryKeys = {
     all: ['tenders'] as const,
     search: (params: TenderSearchParams) => ['tenders', 'search', params] as const,
     detail: (id: string) => ['tenders', 'detail', id] as const,
+    openByState: ['tenders', 'open-by-state'] as const,
   },
   suggestions: (q: string) => ['suggestions', q] as const,
   transparency: {
