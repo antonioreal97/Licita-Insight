@@ -35,6 +35,7 @@ import { startMetricsServer } from "./metrics";
 import { startRecommendationScheduler } from "./recommendations/recommendation-service";
 import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 import { startPersonalDataRetentionScheduler } from "./account/personal-data-retention";
+import { startNightlyCategoryClassification } from "./titles/nightly-scheduler";
 
 const parsePort = (
   name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
@@ -88,6 +89,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyCultureCollect(),
   startDailyFundingCollect(),
   startDailyCategoryClassify(),
+  startNightlyCategoryClassification(),
   startRecommendationScheduler(),
   startProfileKeywordScheduler(),
   startPersonalDataRetentionScheduler(),

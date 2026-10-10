@@ -174,6 +174,12 @@ export async function upsertPublications(
               when jsonb_array_length(${JSON.stringify(values.categories)}::jsonb) > 0 then ${now}
               else ${tendersTable.categorizedAt}
             end`,
+            // A new official title invalidates the student's confidence, so the night evaluates it again.
+            categoryConfidence: sql`case
+              when ${tendersTable.categorySource} is distinct from 'teacher' and ${tendersTable.title} is distinct from ${values.title}
+                then null
+              else ${tendersTable.categoryConfidence}
+            end`,
             displayTitle: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitle} else ${tendersTable.displayTitle} end`,
             displayTitleSource: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then 'rules' else ${tendersTable.displayTitleSource} end`,
             displayTitleVersion: sql`case when ${tendersTable.displayTitleSource} is null or ${tendersTable.displayTitleSource} = 'rules' then ${values.displayTitleVersion} else ${tendersTable.displayTitleVersion} end`,

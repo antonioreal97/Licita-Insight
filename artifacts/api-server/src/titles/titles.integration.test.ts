@@ -108,6 +108,8 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     delete process.env.TITLE_OPENAI_BUDGET_USD;
     delete process.env.TITLE_OPENAI_BUDGET_DAYS;
     delete process.env.TITLE_BACKFILL_ENABLED;
+    delete process.env.NIGHTLY_CATEGORY_ENABLED;
+    delete process.env.CATEGORY_STUDENT_MIN_CONFIDENCE;
   });
   after(async () => {
     await cleanup();
@@ -644,5 +646,523 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       [[vehicle, medicine, ignored]],
     );
     assert.deepEqual(stored.rows.map(({ tender_id }) => tender_id), [vehicle, medicine].sort());
+  });
+
+  it("com a OpenAI desligada por env, a chave não basta: nada é enfileirado nem consumido e o título fica com as regras", async () => {
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    process.env.TITLE_TEACHER_OPENAI_ENABLED = "false";
+    const [{ pool }, rewrite] = await Promise.all([import("@workspace/db"), import("./title-rewrite")]);
+    assert.equal(rewrite.titleTeacherOpenAiEnabled(), false);
+    assert.equal(rewrite.titleRewriteProviderEnabled("openai"), false, "o worker não consome nem faz backfill");
+    const [fresh] = await insertTenders([[937001, "AQUISIÇÃO DE PNEUS PARA A FROTA MUNICIPAL"]], "open");
+    const jobs = await pool.query("select 1 from ai_jobs where tender_id = $1 and kind = 'title_rewrite'", [fresh]);
+    assert.equal(jobs.rowCount, 0);
+    const row = await pool.query<{ display_title: string; display_title_source: string }>(
+      "select display_title, display_title_source from tenders where id = $1", [fresh],
+    );
+    assert.equal(row.rows[0]?.display_title_source, "rules");
+    assert.ok((row.rows[0]?.display_title ?? "").length > 0);
+
+    // Reversible: the same environment with the flag back on enqueues again.
+    process.env.TITLE_TEACHER_OPENAI_ENABLED = "true";
+    assert.equal(rewrite.titleRewriteProviderEnabled("openai"), true);
+  });
+
+  describe("job noturno de categorias", () => {
+    // Its own status keeps the tenders of the tests above out of the night.
+    const NIGHT_STATUS = "titles_test_n";
+    const EXAMPLES: [string, string][] = [
+      ["Aquisição de extintores ABC", "seguranca-incendio"],
+      ["Recarga de extintores de pó químico", "seguranca-incendio"],
+      ["Manutenção de extintores prediais", "seguranca-incendio"],
+      ["Aquisição de pneus para veículos leves", "veiculos-pecas"],
+      ["Manutenção de veículos da frota", "veiculos-pecas"],
+      ["Revisão de veículo utilitário", "veiculos-pecas"],
+      ["Aquisição de medicamentos básicos", "medicamentos-insumos-saude"],
+      ["Aquisição de medicamentos injetáveis", "medicamentos-insumos-saude"],
+      ["Registro de preços de medicamentos", "medicamentos-insumos-saude"],
+    ];
+    const farDeadline = () => new Date(Date.now() + 6 * 60 * 60 * 1_000);
+
+    type JevAnswer = { category: string; confidence: number; probabilities?: Record<string, number> };
+    const createFakeJev = (answer: (title: string) => JevAnswer | Error) => {
+      const asked: string[] = [];
+      const jev = async (title: string) => {
+        asked.push(title);
+        const result = answer(title);
+        if (result instanceof Error) throw result;
+        return {
+          category: result.category as never,
+          confidence: result.confidence,
+          probabilities: (result.probabilities ?? { [result.category]: result.confidence }) as never,
+          model: "jev-test",
+          inputTokens: 120,
+        };
+      };
+      return { jev, asked };
+    };
+
+    const night = async (overrides: {
+      batch?: number; embedChunk?: number; jev?: Partial<{
+        enabled: boolean; threshold: number; dailyLimit: number; minConfidence: number; concurrency: number;
+      }>;
+    } = {}) => {
+      const { nightlyCategoryConfig } = await import("./nightly-window");
+      const base = nightlyCategoryConfig();
+      return {
+        ...base,
+        batch: overrides.batch ?? 2,
+        embedChunk: overrides.embedChunk ?? 2,
+        minExamples: 1,
+        jev: { enabled: true, threshold: 0.6, dailyLimit: 1_500, minConfidence: 0.5, concurrency: 2, ...overrides.jev },
+      };
+    };
+
+    const tenderRow = async (id: string) => {
+      const { pool } = await import("@workspace/db");
+      return (await pool.query<{
+        categories: { slug: string }[]; category_source: string | null; category_confidence: number | null;
+        categorized_at: Date | null; search_text: string;
+      }>(
+        "select categories, category_source, category_confidence, categorized_at, search_text from tenders where id = $1",
+        [id],
+      )).rows[0]!;
+    };
+
+    const jevUsage = async () => {
+      const { pool } = await import("@workspace/db");
+      return (await pool.query<{ tender_id: string; model: string; input_tokens: number; cost: string }>(
+        `select tender_id, model, input_tokens, estimated_cost_usd::text as cost from ai_title_usage
+         where model like 'jev-teacher/%' order by id`,
+      )).rows;
+    };
+
+    beforeEach(async () => {
+      process.env.CATEGORY_STUDENT_MIN_CONFIDENCE = "0.5";
+      const [{ pool }, { insertTitleExample }] = await Promise.all([import("@workspace/db"), import("./examples")]);
+      await pool.query("delete from ai_title_usage where model like 'jev-teacher/%'");
+      await pool.query("delete from tender_title_examples");
+      await pool.query("delete from tenders where organization_id = $1 and status = $2", [`pncp-${ORG}`, NIGHT_STATUS]);
+      for (const [sourceText, category] of EXAMPLES) {
+        await insertTitleExample({
+          sourceText,
+          tenderId: null,
+          result: { title: null, categories: [category as never], rejection: null },
+          teacherModel: "gpt-test",
+          promptVersion: 1,
+        });
+      }
+      await pool.query("update tender_title_examples set split = 'train'");
+    });
+
+    it("o aluno grava os confiantes, mantém a categoria das regras nos duvidosos e só estes vão ao Jev, que vira exemplo", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }, { upsertPublications }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+        import("../ingest/upsert-tenders"),
+      ]);
+      const [confident, doubtful, unknown, teacherOwned] = await insertTenders([
+        [940001, "Recarga de extintores do hospital"],
+        [940002, "Serviço de buffet para formatura"],
+        [940003, "Contratação de artista circense"],
+        [940004, "Aquisição de extintores para a câmara"],
+      ], NIGHT_STATUS);
+      await pool.query(
+        `update tenders set categories = '[{"slug":"outros","label":"Outros"}]'::jsonb, category_source = 'teacher',
+           categorized_at = now() - interval '1 day' where id = $1`,
+        [teacherOwned],
+      );
+      assert.equal((await tenderRow(doubtful)).category_source, "rules");
+      const { client, calls } = createFakeOllama();
+      const { jev, asked } = createFakeJev((title) =>
+        /buffet/u.test(title) ? { category: "alimentacao", confidence: 0.9 } : { category: "eventos-cultura", confidence: 0.3 });
+
+      const first = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.equal(first.examplesEmbedded, 9, "exemplos rotulados sem vetor são embutidos antes");
+      assert.deepEqual(
+        [first.processed, first.categorized, first.kept, first.lowConfidence],
+        [3, 1, 2, 2],
+      );
+      assert.deepEqual([first.jevSent, first.jevTaught, first.jevRejected, first.jevFailed], [2, 1, 1, 0]);
+      assert.deepEqual(asked.sort(), ["Contratação de artista circense", "Serviço de buffet para formatura"]);
+      assert.equal(first.examplesAdded, 1);
+      assert.ok(Math.abs(first.jevCostUsd - 240 * 0.000000042) < 1e-12);
+      assert.deepEqual(
+        [first.complete, first.stopped, first.skipped, first.jevSkipped, first.pendingTenders, first.jevBacklog, first.jevCallsToday],
+        [true, false, null, null, 0, 0, 2],
+      );
+      assert.equal(first.embedModel, "fake-embed");
+      assert.equal(first.trainExamples, 9);
+
+      const confidentRow = await tenderRow(confident);
+      assert.equal(confidentRow.category_source, "student");
+      assert.deepEqual(confidentRow.categories.map(({ slug }) => slug), ["seguranca-incendio"]);
+      assert.ok((confidentRow.category_confidence ?? 0) >= 0.9);
+
+      const taught = await tenderRow(doubtful);
+      assert.equal(taught.category_source, "teacher");
+      assert.deepEqual(taught.categories.map(({ slug }) => slug), ["alimentacao"]);
+      assert.ok(Math.abs((taught.category_confidence ?? 0) - 0.9) < 1e-6);
+      assert.match(taught.search_text, /alimentacao/u);
+
+      // Jev was not sure: nothing is written, but the paid call is recorded and not repeated.
+      const rejected = await tenderRow(unknown);
+      assert.equal(rejected.category_source, null);
+      assert.deepEqual(rejected.categories, []);
+      assert.ok((rejected.category_confidence ?? 1) < 0.5);
+      assert.ok(rejected.categorized_at instanceof Date);
+
+      const untouched = await tenderRow(teacherOwned);
+      assert.deepEqual([untouched.category_source, untouched.categories[0]?.slug, untouched.category_confidence], ["teacher", "outros", null]);
+
+      const usage = await jevUsage();
+      assert.deepEqual(usage.map(({ tender_id }) => tender_id).sort(), [doubtful, unknown].sort());
+      assert.ok(usage.every(({ model, input_tokens, cost }) =>
+        model === "jev-teacher/jev-test" && input_tokens === 120 && Number(cost) > 0));
+
+      const example = await pool.query<{
+        categories: string[]; teacher_model: string; prompt_version: number; split: string;
+        embedding: number[]; embedding_model: string; teacher_title: string | null;
+      }>("select * from tender_title_examples where tender_id = $1", [doubtful]);
+      assert.equal(example.rowCount, 1, "o caso ensinado vira exemplo");
+      assert.deepEqual(example.rows[0]?.categories, ["alimentacao"]);
+      assert.deepEqual(
+        [example.rows[0]?.teacher_model, example.rows[0]?.prompt_version, example.rows[0]?.teacher_title, example.rows[0]?.embedding_model],
+        ["jev-test", 1, null, "fake-embed"],
+      );
+      assert.equal(example.rows[0]?.embedding.length, 4, "reaproveita o vetor calculado pelo aluno");
+      assert.equal((await pool.query("select 1 from tender_title_examples where tender_id = $1", [unknown])).rowCount, 0);
+
+      // Nothing is pending the second time: no embedding, no Jev call.
+      const embedCalls = calls.embed;
+      const second = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([second.processed, second.jevSent, second.examplesEmbedded, second.complete], [0, 0, 0, true]);
+      assert.equal(calls.embed, embedCalls);
+      assert.equal(asked.length, 2);
+
+      // A new official title makes the student look again, and Jev too.
+      await upsertPublications([publication(940003, "Contratação de artista circense e de palhaços")], new Date("2026-10-03T12:00:00Z"));
+      await pool.query("update tenders set status = $2 where id = $1", [unknown, NIGHT_STATUS]);
+      assert.equal((await tenderRow(unknown)).category_confidence, null);
+      // The example Jev just taught is now this title's nearest neighbour, hence the stricter threshold.
+      const third = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ jev: { threshold: 0.99 } }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.equal(third.processed, 1);
+      assert.ok(asked.includes("Contratação de artista circense e de palhaços"), "o título novo volta ao Jev");
+      assert.equal(asked.filter((title) => title === "Contratação de artista circense").length, 1);
+    });
+
+    it("o limiar de confiança decide o roteamento: acima fica com o aluno, abaixo vai ao Jev depois de gravado", async () => {
+      const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
+      const [extinguisher] = await insertTenders([[941001, "Recarga de extintores da escola"]], NIGHT_STATUS);
+      const { client } = createFakeOllama();
+      const seen: (string | null)[] = [];
+      const { jev, asked } = createFakeJev(() => ({
+        category: "seguranca-incendio",
+        confidence: 0.95,
+        probabilities: { "seguranca-incendio": 0.5, "manutencao-predial": 0.4, outros: 0.1 },
+      }));
+      const observing = async (title: string) => {
+        seen.push((await tenderRow(extinguisher)).category_source);
+        return jev(title);
+      };
+
+      const above = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev: observing, config: await night({ jev: { threshold: 0.6 } }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([above.processed, above.lowConfidence, above.jevSent], [1, 0, 0]);
+      assert.equal((await tenderRow(extinguisher)).category_source, "student");
+
+      // The same tender, now under a stricter threshold, is in the Jev backlog of the next night.
+      const below = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev: observing, config: await night({ jev: { threshold: 0.99 } }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([below.processed, below.jevSent, below.jevTaught], [0, 1, 1]);
+      assert.deepEqual(asked, ["Recarga de extintores da escola"]);
+      assert.deepEqual(seen, ["student"], "o aluno já tinha gravado quando o Jev foi consultado");
+      const row = await tenderRow(extinguisher);
+      assert.equal(row.category_source, "teacher");
+      assert.deepEqual(row.categories.map(({ slug }) => slug), ["seguranca-incendio", "manutencao-predial"]);
+    });
+
+    it("respeita o teto diário do Jev e retoma o excedente no dia seguinte", async () => {
+      const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
+      await insertTenders([
+        [942001, "Contratação de artista circense"],
+        [942002, "Contratação de trupe de malabaristas"],
+        [942003, "Contratação de orquestra sinfônica"],
+        [942004, "Contratação de coral infantil"],
+      ], NIGHT_STATUS);
+      const { client } = createFakeOllama();
+      const { jev, asked } = createFakeJev(() => ({ category: "eventos-cultura", confidence: 0.88 }));
+      const config = await night({ batch: 10, jev: { dailyLimit: 2 } });
+      const run = (now?: () => Date) => runNightlyCategoryClassification({
+        deadline: new Date((now?.() ?? new Date()).getTime() + 6 * 60 * 60 * 1_000),
+        client, jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false, now,
+      });
+
+      const first = await run();
+      assert.deepEqual([first.processed, first.lowConfidence, first.jevSent, first.jevTaught], [4, 4, 2, 2]);
+      assert.deepEqual([first.jevSkipped, first.jevBacklog, first.jevCallsToday], ["daily_limit", 2, 2]);
+
+      const sameDay = await run();
+      assert.deepEqual([sameDay.processed, sameDay.jevSent, sameDay.jevBacklog], [0, 0, 2]);
+      assert.equal(asked.length, 2, "o teto do dia não é furado por outra execução");
+
+      const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1_000);
+      const nextDay = await run(tomorrow);
+      assert.deepEqual([nextDay.processed, nextDay.jevSent, nextDay.jevTaught, nextDay.jevBacklog], [0, 2, 2, 0]);
+      assert.equal(new Set(asked).size, 4, "cada edital duvidoso foi ao Jev uma vez só");
+      assert.equal((await jevUsage()).length, 4);
+    });
+
+    it("para no fim da janela e a execução seguinte retoma só o que faltou", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      const ids = await insertTenders([
+        [943001, "Recarga de extintores do fórum"],
+        [943002, "Aquisição de pneus para a patrulha"],
+        [943003, "Aquisição de medicamentos oncológicos"],
+        [943004, "Manutenção de extintores do ginásio"],
+        [943005, "Aquisição de pneus para tratores"],
+      ], NIGHT_STATUS);
+      const { client, calls } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const config = await night({ batch: 2, embedChunk: 2 });
+      const evaluated = async () => (await pool.query<{ count: number }>(
+        "select count(*)::int as count from tenders where id = any($1::text[]) and category_confidence is not null",
+        [ids],
+      )).rows[0]?.count;
+
+      // The window is already closed: not even the examples are embedded.
+      const closed = await runNightlyCategoryClassification({
+        deadline: new Date(Date.now() - 1_000), client, jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([closed.processed, closed.examplesEmbedded, closed.stopped, closed.complete], [0, 0, true, false]);
+      assert.equal(calls.embed, 0);
+
+      // The clock reaches the end of the window during the first batch of tenders.
+      let closing = false;
+      const deadline = farDeadline();
+      const partial = await runNightlyCategoryClassification({
+        deadline, client, jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+        now: () => (closing ? new Date(deadline.getTime() + 1) : new Date()),
+        signal: {
+          get stopped() {
+            // 9 examples in chunks of 2 are 5 requests; the sixth is the first chunk of tenders.
+            if (calls.embed >= 6) closing = true;
+            return false;
+          },
+        },
+      });
+      assert.deepEqual([partial.processed, partial.stopped, partial.complete, partial.pendingTenders], [2, true, false, 3]);
+      assert.equal(await evaluated(), 2);
+
+      const resumed = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([resumed.processed, resumed.complete, resumed.pendingTenders, resumed.examplesEmbedded], [3, true, 0, 0]);
+      assert.equal(await evaluated(), 5);
+    });
+
+    it("título repetido é embutido uma vez e título já rotulado por um professor não é embutido", async () => {
+      const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
+      const [labelled, firstCopy, secondCopy] = await insertTenders([
+        [947001, "AQUISIÇÃO DE EXTINTORES  ABC"],
+        [947002, "Recarga de extintores da creche"],
+        [947003, "Recarga de extintores da creche"],
+      ], NIGHT_STATUS);
+      const { client, calls } = createFakeOllama();
+      const { jev, asked } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const result = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ batch: 10, embedChunk: 10 }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([result.processed, result.reused, result.categorized, result.lowConfidence], [3, 2, 3, 0]);
+      // One request for the nine examples and one for the single new text.
+      assert.equal(calls.embed, 2);
+      assert.equal(asked.length, 0);
+      const exact = await tenderRow(labelled);
+      assert.deepEqual([exact.category_source, exact.categories[0]?.slug, exact.category_confidence], ["student", "seguranca-incendio", 1]);
+      assert.deepEqual((await tenderRow(firstCopy)).categories, (await tenderRow(secondCopy)).categories);
+      assert.equal((await tenderRow(secondCopy)).category_source, "student");
+    });
+
+    it("a primeira chamada ao Ollama pode estourar o tempo (modelo carregando): o job insiste e segue", async () => {
+      const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
+      await insertTenders([[948001, "Recarga de extintores da biblioteca"]], NIGHT_STATUS);
+      const { client } = createFakeOllama();
+      let failures = 2;
+      const coldStart = {
+        ...client,
+        embed: async (texts: string[]) => {
+          if (failures > 0) {
+            failures -= 1;
+            throw new OllamaError("timeout", "Ollama /api/embed timed out after 60000 ms");
+          }
+          return client.embed(texts);
+        },
+      };
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const result = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client: coldStart, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([result.examplesEmbedded, result.processed, result.complete], [9, 1, true]);
+
+      // A wrong model name is a 4xx: no point insisting, the scheduler waits and tries later.
+      await insertTenders([[948002, "Recarga de extintores do arquivo"]], NIGHT_STATUS);
+      let attempts = 0;
+      const missingModel = {
+        ...client,
+        embed: async () => {
+          attempts += 1;
+          throw new OllamaError("http", "Ollama /api/embed returned HTTP 404", 404);
+        },
+      };
+      await assert.rejects(runNightlyCategoryClassification({
+        deadline: farDeadline(), client: missingModel, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      }), OllamaError);
+      assert.equal(attempts, 1);
+    });
+
+    it("o resumo da noite traz a concordância do aluno com o professor no holdout", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      // One example of each class is held out; a wrong teacher label makes the third one a miss.
+      await pool.query(
+        `update tender_title_examples set split = 'holdout'
+         where source_text = any($1::text[])`,
+        [["Aquisição de extintores ABC", "Aquisição de pneus para veículos leves", "Aquisição de medicamentos básicos"]],
+      );
+      await pool.query(
+        "update tender_title_examples set categories = '{outros}' where source_text = 'Aquisição de medicamentos básicos'",
+      );
+      const { client } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const result = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.equal(result.trainExamples, 6);
+      const { thresholdForShare, ...holdout } = result.holdout!;
+      assert.deepEqual(holdout, {
+        total: 3, agreement: 0.6667, coverage: 1, agreementCovered: 0.6667, belowJevThreshold: 0,
+      });
+      // Every held-out title is confident here, so any share would need a threshold above 0.9.
+      assert.ok(thresholdForShare.p10 > 0.9 && thresholdForShare.p10 <= thresholdForShare.p20);
+    });
+
+    it("o lock deixa uma execução só por vez", async () => {
+      const { tryRunSingletonJob } = await import("../jobs/job-lock");
+      const { NIGHTLY_CATEGORY_JOB_KEY } = await import("./nightly-scheduler");
+      let release: () => void = () => undefined;
+      const holding = tryRunSingletonJob(NIGHTLY_CATEGORY_JOB_KEY, () => new Promise<string>((resolve) => {
+        release = () => resolve("first");
+      }));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const second = await tryRunSingletonJob(NIGHTLY_CATEGORY_JOB_KEY, async () => "second");
+      assert.deepEqual(second, { acquired: false });
+      release();
+      assert.deepEqual(await holding, { acquired: true, value: "first" });
+      assert.deepEqual(await tryRunSingletonJob(NIGHTLY_CATEGORY_JOB_KEY, async () => "third"), { acquired: true, value: "third" });
+    });
+
+    it("troca do modelo de embedding re-embute os exemplos antes de classificar", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      const { client } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const config = await night();
+      const run = (model: string) => runNightlyCategoryClassification({
+        deadline: farDeadline(),
+        client: { ...client, config: { ...client.config, embedModel: model } },
+        jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.equal((await run("fake-embed")).examplesEmbedded, 9);
+      const [tender] = await insertTenders([[944001, "Recarga de extintores do museu"]], NIGHT_STATUS);
+      const switched = await run("outro-modelo");
+      assert.deepEqual([switched.examplesEmbedded, switched.embedModel, switched.trainExamples, switched.processed], [9, "outro-modelo", 9, 1]);
+      const models = await pool.query<{ embedding_model: string }>("select distinct embedding_model from tender_title_examples");
+      assert.deepEqual(models.rows.map(({ embedding_model }) => embedding_model), ["outro-modelo"]);
+      assert.equal((await tenderRow(tender)).category_source, "student");
+    });
+
+    it("sem Jev (desligado, orçamento pausado ou fora do ar) o aluno segue e os duvidosos ficam para depois", async () => {
+      const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
+      await insertTenders([
+        [945001, "Contratação de artista circense"],
+        [945002, "Contratação de trupe de malabaristas"],
+        [945003, "Contratação de orquestra sinfônica"],
+        [945004, "Contratação de coral infantil"],
+        [945005, "Contratação de companhia de dança"],
+        [945006, "Contratação de grupo de teatro"],
+      ], NIGHT_STATUS);
+      const { client } = createFakeOllama();
+      const { jev, asked } = createFakeJev(() => new Error("jev fora do ar"));
+
+      const disabled = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ batch: 10, jev: { enabled: false } }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([disabled.processed, disabled.lowConfidence, disabled.jevSent, disabled.jevSkipped], [6, 6, 0, "disabled"]);
+
+      const paused = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ batch: 10 }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => true,
+      });
+      assert.deepEqual([paused.jevSent, paused.jevSkipped, paused.jevBacklog], [0, "budget_paused", 6]);
+      assert.equal(asked.length, 0);
+
+      const down = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ batch: 10, jev: { concurrency: 1 } }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([down.jevSent, down.jevFailed, down.jevTaught, down.jevSkipped], [5, 5, 0, "unavailable"]);
+      assert.equal(down.jevBacklog, 6, "falha não consome o teto nem tira o edital da fila");
+      assert.equal((await jevUsage()).length, 0);
+    });
+
+    it("sem exemplos embutíveis a noite é pulada, e a classificação pós-coleta fica desligada no modo noturno", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }, { classifyAfterCollect }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+        import("./classify"),
+      ]);
+      await pool.query("delete from tender_title_examples");
+      const [tender] = await insertTenders([[946001, "Contratação de artista circense"]], NIGHT_STATUS);
+      const { client, calls } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const skipped = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual([skipped.skipped, skipped.processed, skipped.complete, skipped.pendingTenders], ["no_examples", 0, false, 1]);
+      assert.equal(calls.embed, 0);
+
+      const attempts = async () => (await pool.query<{ count: number }>(
+        "select count(*)::int as count from job_run_audit where job_key = 'category_classify'",
+      )).rows[0]?.count ?? 0;
+      const before = await attempts();
+      process.env.CATEGORY_STUDENT_ENABLED = "true";
+      process.env.OLLAMA_BASE_URL = "http://127.0.0.1:9";
+      await classifyAfterCollect("test");
+      assert.equal(await attempts(), before, "a coleta deixa os editais para a noite");
+      assert.equal((await tenderRow(tender)).categorized_at, null);
+      process.env.NIGHTLY_CATEGORY_ENABLED = "false";
+      await classifyAfterCollect("test");
+      assert.equal(await attempts(), before + 1, "com o job noturno desligado, volta a classificar após a coleta");
+    });
   });
 });

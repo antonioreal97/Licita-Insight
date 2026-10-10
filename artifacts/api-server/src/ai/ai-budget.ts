@@ -146,11 +146,12 @@ export async function loadAiDailySpend(day: string): Promise<AiDailySpend> {
   return { ask, fit, sheet, title, total: ask + fit + sheet };
 }
 
+/** OpenAI rows only: the Jev category teacher shares the table and has its own daily limit. */
 export async function loadTitleWindowSpend(windowStartedAt: Date): Promise<number> {
   const { pool } = await import("@workspace/db");
   const result = await pool.query<{ cost: string }>(
     `select coalesce(sum(estimated_cost_usd), 0)::text as cost
-     from ai_title_usage where created_at >= $1`,
+     from ai_title_usage where created_at >= $1 and model not like 'jev-teacher/%'`,
     [windowStartedAt],
   );
   return Number(result.rows[0]?.cost ?? 0);
