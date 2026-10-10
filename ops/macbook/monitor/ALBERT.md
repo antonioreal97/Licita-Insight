@@ -119,6 +119,43 @@ issue, e não inicie outras tarefas: o Albert-CLAUDE valida depois.
 - Heartbeat de deploy: `licita-monitor-deploy.timer` (10 min).
 - Memória do projeto: `memory-bank/activeContext.md` no clone.
 
+## Ollama e classificação noturna de categorias
+
+O compose tem o serviço `ollama` (só rede interna, sem porta publicada; `cpus: 2`, `mem_limit: 2g`, volume
+`licita_ollama`) e o one-shot `ollama-pull`, que baixa `OLLAMA_EMBED_MODEL` (padrão `bge-m3`) e termina:
+`exited (0)` nele é o estado normal, não espere `healthy`. O app usa `OLLAMA_BASE_URL=http://ollama:11434`,
+`CATEGORY_STUDENT_ENABLED=true` e `TITLE_TEACHER_OPENAI_ENABLED=false` (a OpenAI fica só para as consultas de
+documentos). O job `nightly_category_classification` roda das 00:00 às 05:30 (America/Sao_Paulo), para antes
+da coleta das 06:00 e retoma na noite seguinte o que faltar. Detalhes: `docs/ops/nightly-category-classification.md`.
+
+**Subir** (é o `app_build` normal; com a borda Oracle, acrescente `-f compose.macbook.tailscale.yml`):
+`docker compose -f compose.macbook.yml up -d --build`. O primeiro start baixa o modelo (~1,2 GB para o
+`bge-m3`); sem internet o `ollama-pull` sai com erro e basta repetir `docker compose -f compose.macbook.yml up -d ollama-pull`.
+
+**Verificar** (somente leitura):
+- `docker compose -f compose.macbook.yml ps ollama` → `healthy`; `docker exec licita-macbook-ollama-1 ollama list`
+  mostra o modelo; `docker port licita-macbook-ollama-1` não lista nada (sem porta publicada).
+- De dentro do app: `docker exec licita-macbook-app-1 node -e "fetch('http://ollama:11434/api/tags').then(r=>r.json()).then(j=>console.log(j.models.map(m=>m.name)))"`.
+- Configuração efetiva: `docker exec licita-macbook-app-1 printenv | grep -E '^(OLLAMA_|CATEGORY_STUDENT|TITLE_TEACHER_OPENAI|JEV_TEACHER|NIGHTLY_)'`
+  (nenhuma dessas variáveis é segredo).
+- Depois da primeira noite: `docker logs --since 10h licita-macbook-app-1 2>&1 | grep -E 'Nightly category (classification summary|batch)' | tail -n 5`
+  (o resumo traz `processed`, `lowConfidence`, `jevSent`, `jevCostUsd`, `pendingTenders` e `holdout.agreement`) e
+  `docker exec licita-macbook-postgres-1 psql -U licita -d licita -Atc "select status, started_at, duration_ms/60000 from job_run_audit where job_key='nightly_category_classification' order by started_at desc limit 5"`.
+- Fora da janela o modelo sai da memória em ~2 min: `docker exec licita-macbook-ollama-1 ollama ps` vazio e
+  `docker stats --no-stream licita-macbook-ollama-1` com poucas dezenas de MB.
+- O relatório diário das 08:00 tem a seção "Classificação noturna (24 h)".
+
+**Trocar o modelo de embedding** (decisão do owner, depois do benchmark): definir `OLLAMA_EMBED_MODEL=<modelo>` no
+`.env` do servidor e `up -d`; o `ollama-pull` baixa o modelo novo e o job re-embute os exemplos nas noites
+seguintes antes de voltar a classificar. Isso é mudança de `.env`: só com pedido do Orchestrator ou do owner.
+
+**Anomalia `nightly:failed`**: seis falhas e nenhuma execução concluída em 24 h. Quase sempre é o `ollama` parado,
+sem o modelo (`ollama list` vazio → `up -d ollama-pull`) ou sem memória (`docker inspect` com `OOMKilled`). O app
+segue normal sem ele: os editais ficam com a categoria das regras até a noite seguinte.
+
+**Voltar atrás**: no `.env`, `CATEGORY_STUDENT_ENABLED=false` desliga o job; `TITLE_TEACHER_OPENAI_ENABLED=true`
+religa o professor OpenAI. Em seguida `up -d` (o `restart` não relê o `.env`).
+
 ## Deploy com borda Oracle
 
 Quando `MACBOOK_TAILSCALE_IP` estiver configurado no `.env` do servidor, todos os

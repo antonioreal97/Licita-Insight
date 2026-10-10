@@ -98,8 +98,8 @@ def collect():
     """)[0]
 
     m["ai"] = sql_json("""
-      select (select count(*) from ai_title_usage where created_at >= date_trunc('day', now())) titles_today,
-             (select coalesce(sum(estimated_cost_usd), 0) from ai_title_usage where created_at >= date_trunc('day', now())) titles_cost_today,
+      select (select count(*) from ai_title_usage where created_at >= date_trunc('day', now()) and model not like 'jev-teacher/%') titles_today,
+             (select coalesce(sum(estimated_cost_usd), 0) from ai_title_usage where created_at >= date_trunc('day', now()) and model not like 'jev-teacher/%') titles_cost_today,
              (select count(*) from ai_ask_requests where created_at >= date_trunc('day', now())) asks_today,
              (select coalesce(sum(coalesce(estimated_cost_usd,0) + coalesce(summary_estimated_cost_usd,0)), 0)
                 from ai_ask_requests where created_at >= date_trunc('day', now())) asks_cost_today,
@@ -111,6 +111,27 @@ def collect():
              (select count(*) from ai_jobs where status = 'failed' and coalesce(finished_at, created_at) > now() - interval '1 hour') jobs_failed_1h
     """)[0]
     m["ai"]["cost_today_usd"] = round(sum(float(m["ai"][k]) for k in ("titles_cost_today", "asks_cost_today", "sheets_cost_today")), 4)
+
+    # Classificação noturna de categorias (aluno local + Jev professor); zeros enquanto estiver desligada.
+    m["nightly"] = sql_json("""
+      select (select count(*) from tenders where category_source = 'student' and categorized_at > now() - interval '24 hours') student_24h,
+             (select count(*) from tenders where category_source = 'teacher' and categorized_at > now() - interval '24 hours') teacher_24h,
+             (select count(*) from tenders where category_source is distinct from 'teacher' and category_confidence < 0.6
+                 and categorized_at > now() - interval '24 hours') low_confidence_24h,
+             (select count(*) from tenders where status in ('open', 'under_review') and category_source is distinct from 'teacher'
+                 and (category_confidence is null or categorized_at is null)) pending,
+             (select count(*) from ai_title_usage where model like 'jev-teacher/%' and created_at > now() - interval '24 hours') jev_calls_24h,
+             (select coalesce(sum(estimated_cost_usd), 0) from ai_title_usage where model like 'jev-teacher/%'
+                 and created_at > now() - interval '24 hours') jev_cost_24h,
+             (select count(*) from tender_title_examples where created_at > now() - interval '24 hours') examples_new_24h,
+             (select count(*) from tender_title_examples where embedding is null) examples_without_embedding,
+             (select count(*) from job_run_audit where job_key = 'nightly_category_classification'
+                 and status = 'succeeded' and started_at > now() - interval '24 hours') runs_ok_24h,
+             (select count(*) from job_run_audit where job_key = 'nightly_category_classification'
+                 and status = 'failed' and started_at > now() - interval '24 hours') runs_failed_24h,
+             (select coalesce(sum(duration_ms), 0) / 60000 from job_run_audit where job_key = 'nightly_category_classification'
+                 and status = 'succeeded' and started_at > now() - interval '24 hours') minutes_24h
+    """)[0]
 
     m["emails"] = sql_json("""
       select (select count(*) from email_deliveries where sent_at > now() - interval '24 hours') sent_24h,
@@ -238,6 +259,9 @@ def anomalies(m, prev):
         add("ai:jobs-failed", "media", f"{m['ai']['jobs_failed_1h']} jobs de IA falharam na última hora")
     if m["ai"]["jobs_queued"] > 500:
         add("ai:queue", "media", f"fila de IA com {m['ai']['jobs_queued']} jobs")
+    night = m.get("nightly") or {}
+    if night.get("runs_failed_24h", 0) >= 6 and night.get("runs_ok_24h", 0) == 0:
+        add("nightly:failed", "media", f"classificação noturna falhou {night['runs_failed_24h']}× e não concluiu nenhuma execução em 24 h (Ollama?)")
     budget = float(CFG["AI_DAILY_BUDGET_USD"])
     if m["ai"]["cost_today_usd"] >= 0.8 * budget:
         add("ai:budget80", "media", f"custo de IA hoje US$ {m['ai']['cost_today_usd']:.2f} (≥ 80% de US$ {budget:.0f})")
@@ -540,6 +564,7 @@ def cmd_deploy():
 
 def render_digest(m):
     u, ai, h, inf, net = m["users"], m["ai"], m["http"], m["infra"], m["net"]
+    night = m.get("nightly") or {}
     app = inf[CFG["APP_CONTAINER"]]
     alerts_24h = [p for p in ALERTS.glob("*.json") if p.stat().st_mtime > dt.datetime.now().timestamp() - 86400] if ALERTS.exists() else []
     lines = [
@@ -557,6 +582,11 @@ def render_digest(m):
         f"- Fichas de edital (24 h): {ai['sheets_24h']}; perguntas ao edital hoje: {ai['asks_today']}; fila de IA: {ai['jobs_queued']}",
         f"- E-mails enviados (24 h): {m['emails']['sent_24h']} (falhas: {m['emails']['failed_24h']})",
         f"- Alertas do monitor (24 h): {len(alerts_24h)}",
+        "",
+        "**Classificação noturna (24 h)**",
+        f"- Aluno: {night.get('student_24h', 0)} editais; baixa confiança (< 0,6): {night.get('low_confidence_24h', 0)}; pendentes: {night.get('pending', 0)}",
+        f"- Jev professor: {night.get('jev_calls_24h', 0)} chamadas, US$ {float(night.get('jev_cost_24h') or 0):.4f}; gravados como professor: {night.get('teacher_24h', 0)}; exemplos novos: {night.get('examples_new_24h', 0)} (sem embedding: {night.get('examples_without_embedding', 0)})",
+        f"- Job: {night.get('runs_ok_24h', 0)} execuções ok ({night.get('minutes_24h', 0)} min), {night.get('runs_failed_24h', 0)} falhas",
         "",
         "**Coletas**",
     ]
