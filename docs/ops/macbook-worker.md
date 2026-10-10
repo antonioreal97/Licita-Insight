@@ -128,12 +128,15 @@ curl -fsS http://localhost:24252/api/readyz
 Abra `http://localhost:24252` no proprio MacBook. Verifique login Google, busca,
 detalhe de edital, `/transparencia` e `/oportunidades`. Veja os primeiros logs com
 `docker compose -f compose.macbook.yml logs --tail=200 app`, sem compartilhamento
-de linhas que contenham segredos. A coleta PNCP comeca ao subir e roda diariamente;
-somente editais novos ou cujo titulo oficial mudou entram na fila OpenAI. A chave
-nao reprocessa o acervo antigo. Os limites iniciais sao 500 titulos/dia e
-US$ 10/dia para o orcamento de IA compartilhado. Ajuste os limites no `.env`
-conforme o uso real. As categorias desses novos editais tambem saem da resposta
-OpenAI; `TITLE_TEACHER_ENABLED` e `CATEGORY_STUDENT_ENABLED` ficam desligados.
+de linhas que contenham segredos. A coleta PNCP comeca ao subir e roda diariamente.
+Titulos e categorias nao usam mais a OpenAI (`TITLE_TEACHER_OPENAI_ENABLED=false`):
+o titulo vem do normalizador por regras e a categoria do aluno local, no job noturno
+(00:00-05:30, servico `ollama` do compose), com o Jev como professor dos casos de
+baixa confianca, ate `JEV_TEACHER_DAILY_LIMIT` (1500) por dia. A OpenAI fica para
+as consultas de documentos, dentro de US$ 10/dia do orcamento de IA compartilhado.
+Como subir e verificar: secao "Ollama e classificacao noturna de categorias" de
+`ops/macbook/monitor/ALBERT.md`. Para voltar ao professor OpenAI, defina
+`TITLE_TEACHER_OPENAI_ENABLED=true` no `.env` e rode `up -d`.
 
 O webhook Asaas nao consegue alcancar um Mac exposto somente em localhost. A busca
 e a consulta publica funcionam, mas assinatura/checkout automatizado precisam de
