@@ -344,6 +344,38 @@ def steve_terminal():
     return named[0] if named else None
 
 
+STEVE_BUSY = re.compile(r"esc to interrupt|Working \(", re.IGNORECASE)
+STEVE_RESEND_AFTER_S = 300
+STEVE_MAX_SENDS = 3
+
+
+def steve_busy(handle):
+    """True se o Codex do Steve está no meio de uma tarefa (mensagens enviadas agora seriam perdidas)."""
+    p = run([CFG["ORCA_CLI"], "terminal", "read", "--terminal", handle, "--screen", "--json"], timeout=30)
+    try:
+        tail = "\n".join(json.loads(p.stdout)["result"]["terminal"]["tail"][-15:])
+    except (ValueError, KeyError):
+        return True  # sem leitura confiável, não arrisca perder o handoff
+    return bool(STEVE_BUSY.search(tail))
+
+
+def send_to_steve(steve, handoff, task):
+    """Entrega o handoff ao Steve só com o terminal livre; registra tentativas para reenviar se ele não começar."""
+    marker = Path(f"{handoff}.steve")
+    state = json.loads(marker.read_text()) if marker.exists() else {"sends": 0}
+    if steve_busy(steve):
+        Path(f"{handoff}.queued").touch()
+        return True, f"[fila] Steve-CODEX ocupado; handoff {handoff} enfileirado"
+    ok, info = send_to_albert(steve, task)
+    if not ok:
+        return False, info
+    state.update({"terminal": steve, "task": task, "sent_at": dt.datetime.now().timestamp(),
+                  "sends": state.get("sends", 0) + 1})
+    marker.write_text(json.dumps(state))
+    Path(f"{handoff}.queued").unlink(missing_ok=True)
+    return True, f"Steve-CODEX recebeu o handoff {handoff} (envio {state['sends']})"
+
+
 def steve_active():
     """Handoffs entregues ao Steve-CODEX que ainda não têm o resultado escrito."""
     return [Path(str(m)[: -len(".steve")]) for m in sorted(HANDOFF.glob("*.md.steve"))
@@ -381,10 +413,9 @@ def run_codex(handoff):
     if steve:
         task = (f"[handoff] {prompt.replace('Você é o Codex do servidor', 'Você é o Steve-CODEX, o Codex do servidor', 1)} "
                 f"Handoff: {handoff}. Ao terminar, responda só 'Steve-CODEX: concluído' e aguarde o próximo handoff.")
-        ok, info = send_to_albert(steve, task)
+        ok, info = send_to_steve(steve, handoff, task)
         if ok:
-            Path(f"{handoff}.steve").write_text(json.dumps({"terminal": steve, "started": stamp}))
-            return True, f"Steve-CODEX recebeu o handoff {handoff}"
+            return True, info
     script = (f'codex exec --dangerously-bypass-approvals-and-sandbox -C "{CFG["REPO_DIR"]}" '
               f'-o "{out}" "$(cat "{handoff}.prompt")" > "{log}" 2>&1')
     Path(f"{handoff}.prompt").write_text(prompt)
@@ -411,10 +442,33 @@ def delegate(task, handoff=None):
     return ok, "[via Codex] " + info
 
 
+def resend_lost_steve_handoffs():
+    """Handoff entregue ao Steve que ele não começou (terminal livre, sem resultado, sem menção na tela): reenvia."""
+    steve = steve_terminal()
+    if not steve:
+        return
+    now = dt.datetime.now().timestamp()
+    for handoff in steve_active():
+        marker = Path(f"{handoff}.steve")
+        try:
+            state = json.loads(marker.read_text())
+        except ValueError:
+            continue
+        if now - state.get("sent_at", now) < STEVE_RESEND_AFTER_S or not state.get("task"):
+            continue
+        if steve_busy(steve):
+            return
+        if state.get("sends", 1) >= STEVE_MAX_SENDS:
+            continue  # já reenviado o bastante: fica para o Orchestrator (aparece no status)
+        send_to_steve(steve, handoff, state["task"])
+        return  # um por ciclo: o próximo só depois que este começar
+
+
 def handoffs_tick():
     """Despacha handoffs enfileirados e devolve ao Albert-CLAUDE os concluídos pelo Codex quando a cota voltar."""
     if not HANDOFF.exists():
         return
+    resend_lost_steve_handoffs()
     busy = codex_running()
     for queued in sorted(HANDOFF.glob("*.md.queued")):
         if busy:
