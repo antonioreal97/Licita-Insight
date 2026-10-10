@@ -3,6 +3,7 @@ import { aiConfig } from "./config";
 import { sheetFieldSpec } from "./tender-sheet-policy";
 import type { TenderSheetFieldId } from "@workspace/db";
 import { jevScheduler, retryAfterMs, type JevLane } from "./jev-scheduler";
+import { TENDER_CATEGORIES, type TenderCategorySlug } from "../catalog/tender-categories";
 import {
   QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD,
   QUALIFICATION_TYPE_CRITERIA,
@@ -57,6 +58,14 @@ export type JevQualificationClassification = {
   type: QualificationClassification;
   typeConfidence: number;
   mentionsLaborInAdditionToFiscal: number | null;
+  model: string;
+  inputTokens: number;
+};
+
+export type JevTenderCategory = {
+  category: TenderCategorySlug;
+  confidence: number;
+  probabilities: Partial<Record<TenderCategorySlug, number>>;
   model: string;
   inputTokens: number;
 };
@@ -365,5 +374,44 @@ export async function classifyQualificationCandidate(
       "Jev qualification-checklist request failed",
       error,
     );
+  }
+}
+
+const CATEGORY_TITLE_MAX_CHARS = 600;
+/** The same official list the title teacher copies its labels from. */
+const CATEGORY_CRITERIA: Record<string, string> = Object.fromEntries(
+  TENDER_CATEGORIES.map(({ slug, label }) => [
+    slug,
+    slug === "outros" ? "Nenhuma das outras categorias descreve o que é comprado." : label,
+  ]),
+);
+
+export async function classifyTenderCategory(
+  officialTitle: string,
+  requestFetch?: typeof fetch,
+): Promise<JevTenderCategory> {
+  const config = aiConfig();
+  const title = officialTitle.normalize("NFC").replace(/\s+/gu, " ").trim().slice(0, CATEGORY_TITLE_MAX_CHARS);
+  try {
+    const result = await jevScheduler.schedule("batch", () => clientFor("batch", requestFetch).systemOne({
+      model: config.model,
+      state: { objeto_da_licitacao: title },
+      questions: {
+        categoria: choice(
+          "Qual categoria descreve o que o órgão compra ou contrata em `objeto_da_licitacao`? Julgue o objeto principal, não o órgão, o município nem os insumos de um serviço.",
+          CATEGORY_CRITERIA,
+        ),
+      },
+    }));
+    const answer = result.answers.categoria;
+    return {
+      category: answer.choice as TenderCategorySlug,
+      confidence: answer.confidence,
+      probabilities: answer.probabilities as Partial<Record<TenderCategorySlug, number>>,
+      model: result.model,
+      inputTokens: result.usage.input_tokens,
+    };
+  } catch (error) {
+    throw new JevUnavailableError("Jev tender-category request failed", error);
   }
 }
