@@ -56,6 +56,9 @@ export const createOpenTendersByStateCache = (
 
 let cache: TimedCache<OpenTendersByStateResponse> | undefined;
 
+/** Makes the next request recompute the aggregate; only reaches the cache of this process. */
+export const clearOpenTendersByStateCache = (): void => cache?.clear();
+
 /** The public landing page reads this: the database is asked at most once per 15 minutes, whatever the traffic. */
 export const getOpenTendersByState = (): Promise<OpenTendersByStateResponse> => {
   cache ??= createOpenTendersByStateCache(async () => {

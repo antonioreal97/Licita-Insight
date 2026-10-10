@@ -20,6 +20,19 @@ const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
 export type TenderCategory = { slug: string; label: string };
 
+/** Why `estimated_value` was judged implausible. `null` in the column means the value raised no doubt. */
+export type EstimatedValueFlag =
+  | "absolute_ceiling"
+  | "dispensa_legal_limit"
+  | "modality_outlier";
+
+/**
+ * No plausibility rule flags a value below this (R$ 100 million), so the daily review job only reads the few
+ * tenders above it, through `tenders_estimated_value_review_idx`. The index predicate repeats this literal:
+ * changing it takes a migration that recreates the index.
+ */
+export const ESTIMATED_VALUE_REVIEW_FLOOR = 100_000_000;
+
 export type TenderItemRecord = {
   id: string;
   description: string;
@@ -77,6 +90,8 @@ export const tendersTable = pgTable(
     processNumber: text("process_number"),
     estimatedValue: numeric("estimated_value", { precision: 18, scale: 2 }),
     estimatedValueStatus: text("estimated_value_status").notNull(),
+    // The official value is never changed: a flag only keeps it out of sums, rankings and value filters.
+    estimatedValueFlag: text("estimated_value_flag").$type<EstimatedValueFlag>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     openingAt: timestamp("opening_at", { withTimezone: true }),
     proposalDeadline: timestamp("proposal_deadline", { withTimezone: true }),
@@ -127,10 +142,15 @@ export const tendersTable = pgTable(
     index("tenders_fetched_at_idx").on(table.fetchedAt),
     index("tenders_created_at_idx").on(table.createdAt),
     index("tenders_platform_idx").on(table.platform),
-    // Covers the public per-state aggregate of open tenders (count, value sum, last fetch) without reading the heap.
-    index("tenders_open_by_state_idx")
-      .on(table.state, table.estimatedValue, table.fetchedAt)
+    // Covers the public per-state aggregate of open tenders (count, sum of the unflagged values, last fetch)
+    // without reading the heap.
+    index("tenders_open_by_state_value_idx")
+      .on(table.state, table.estimatedValue, table.fetchedAt, table.estimatedValueFlag)
       .where(sql`${table.status} = 'open'`),
+    // The only rows a plausibility rule can flag; see ESTIMATED_VALUE_REVIEW_FLOOR.
+    index("tenders_estimated_value_review_idx")
+      .on(table.id)
+      .where(sql`${table.estimatedValue} >= 100000000`),
     index("tenders_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),

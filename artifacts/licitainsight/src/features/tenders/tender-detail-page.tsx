@@ -306,6 +306,8 @@ export default function TenderDetailPage() {
             <ValueDisplay
               value={tender.estimatedValue}
               status={tender.estimatedValueStatus}
+              flag={tender.estimatedValueFlag}
+              flagVariant="explained"
               nullLabel="Sigiloso / não informado"
               className="whitespace-normal text-base"
             />

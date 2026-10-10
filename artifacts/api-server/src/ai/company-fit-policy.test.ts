@@ -200,6 +200,15 @@ test("fingerprint ignora updatedAt operacional e muda com o conteúdo", () => {
     companyFitTenderFingerprint(tender),
     companyFitTenderFingerprint({ ...tender, title: "Aquisição de notebooks" }),
   );
+  // A tender without a value flag keeps the fingerprint it had before the flag existed; a flag changes it.
+  assert.equal(
+    companyFitTenderFingerprint(tender),
+    companyFitTenderFingerprint({ ...tender, estimatedValueFlag: null }),
+  );
+  assert.notEqual(
+    companyFitTenderFingerprint(tender),
+    companyFitTenderFingerprint({ ...tender, estimatedValueFlag: "absolute_ceiling" }),
+  );
 });
 
 test("filtro lexical nasce em shadow e valida os modos explícitos", () => {

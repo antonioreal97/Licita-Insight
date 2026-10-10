@@ -342,7 +342,8 @@ export async function rebuildInterestProfile(
       weight,
       row.saved.monitored ? "monitored" : "saved",
     );
-    if (row.tender.estimatedValue !== null)
+    // A value flagged as implausible would stretch the inferred value range.
+    if (row.tender.estimatedValue !== null && !row.tender.estimatedValueFlag)
       values.push(Number(row.tender.estimatedValue));
     signalCount += row.saved.monitored ? 2 : 1;
   }
@@ -453,6 +454,8 @@ type ScoreCandidate = {
   platform: string | null;
   platformLabel: string | null;
   estimatedValue: string | null;
+  /** Set when the value is implausible: it then counts neither for nor against the value range. */
+  estimatedValueFlag?: string | null;
   proposalDeadline: Date | null;
   publishedAt: Date | null;
   textRank: number;
@@ -610,7 +613,9 @@ export function scoreRecommendation(
     });
   }
   const value =
-    candidate.estimatedValue === null ? null : Number(candidate.estimatedValue);
+    candidate.estimatedValue === null || candidate.estimatedValueFlag
+      ? null
+      : Number(candidate.estimatedValue);
   if (
     value !== null &&
     (profile.valueMin !== null || profile.valueMax !== null)
@@ -723,6 +728,7 @@ const queryCandidates = async (
       platform: tendersTable.platform,
       platformLabel: tendersTable.platformLabel,
       estimatedValue: tendersTable.estimatedValue,
+      estimatedValueFlag: tendersTable.estimatedValueFlag,
       proposalDeadline: tendersTable.proposalDeadline,
       publishedAt: tendersTable.publishedAt,
       textRank,

@@ -3,11 +3,13 @@ import type {
   TenderStatus,
 } from "@workspace/api-zod";
 import type {
+  EstimatedValueFlag,
   TenderCategory,
   TenderDocumentRecord,
   TenderItemRecord,
   TenderTimelineRecord,
 } from "@workspace/db/schema";
+import { assessEstimatedValue } from "../domain/estimated-value-plausibility";
 import { normalizeText } from "../domain/normalize";
 import {
   DISPLAY_TITLE_RULES_VERSION,
@@ -64,6 +66,7 @@ export type PublicationDraft = {
   processNumber: string | null;
   estimatedValue: string | null;
   estimatedValueStatus: "disclosed" | "confidential" | "not_published";
+  estimatedValueFlag: EstimatedValueFlag | null;
   publishedAt: Date | null;
   openingAt: Date | null;
   proposalDeadline: Date | null;
@@ -190,6 +193,10 @@ export const mapEstimatedValue = (
   }
   return { estimatedValue: roundMoney(amount), estimatedValueStatus: "disclosed" };
 };
+
+/** Legal basis of the purchase as the source names it, e.g. "Lei 14.133/2021, Art. 75, II". */
+export const pncpLegalBasis = (record: Record<string, unknown>): string | null =>
+  asString(asRecord(record.amparoLegal)?.nome);
 
 export const mapPncpStatus = (
   situationName: string | null,
@@ -345,6 +352,11 @@ export const mapPublication = (
     processNumber: asString(record.processo),
     estimatedValue: value.estimatedValue,
     estimatedValueStatus: value.estimatedValueStatus,
+    estimatedValueFlag: assessEstimatedValue({
+      value: value.estimatedValue,
+      modality,
+      legalBasis: pncpLegalBasis(record),
+    }),
     publishedAt,
     openingAt,
     proposalDeadline,

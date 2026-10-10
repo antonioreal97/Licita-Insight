@@ -15,7 +15,7 @@ export interface OpenTendersByState {
   /** @minimum 0 */
   openTenders: number;
   /**
-     * Sum of the estimated values that were published; null when no open tender in the state has one
+     * Sum of the estimated values that were published, leaving out the ones flagged as implausible (`estimatedValueFlag`); null when no open tender in the state has a value to add
      * @minimum 0
      * @nullable
      */

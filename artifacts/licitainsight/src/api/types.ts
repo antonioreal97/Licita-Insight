@@ -76,6 +76,9 @@ export type TenderPlatform = {
 
 export type Highlight = { field: 'title' | 'objectSummary' | 'items'; fragments: string[] };
 
+/** Why the estimated value published by the source looks wrong. */
+export type EstimatedValueFlag = 'absolute_ceiling' | 'dispensa_legal_limit' | 'modality_outlier';
+
 export type TenderSummary = {
   id: string;
   title: string;
@@ -93,6 +96,8 @@ export type TenderSummary = {
   estimatedValue: number | null;
   /** v1.1: why the value is null. */
   estimatedValueStatus?: 'disclosed' | 'confidential' | 'not_published';
+  /** Set when the official value looks wrong: it is shown with a warning and left out of sums, value filters and rankings. */
+  estimatedValueFlag?: EstimatedValueFlag | null;
   publishedAt: string | null;
   openingAt: string | null;
   proposalDeadline: string | null;
@@ -344,7 +349,7 @@ export type BillingResponse = {
 export type OpenTendersByState = {
   state: string;
   openTenders: number;
-  /** Sum of the published estimated values; `null` when no open tender in the state has one. */
+  /** Sum of the published estimated values, without the ones flagged as implausible; `null` when the state has none to add. */
   estimatedValueTotal: number | null;
   updatedAt: string | null;
 };

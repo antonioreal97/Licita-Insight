@@ -56,6 +56,10 @@ test(
     await insert("ba-lower", "ba", "open", 300, "2026-10-06T12:00:00Z");
     await insert("no-state", null, "open", 700, "2026-10-09T11:00:00Z");
     await insert("not-a-state", "ZZ", "open", 800, "2026-10-09T11:30:00Z");
+    // One typing error in the source would turn Alagoas into R$ 939 billion: it is counted, not added.
+    await insert("al-1", "AL", "open", 5000, "2026-10-05T10:00:00Z");
+    await insert("al-vest", "AL", "open", 938_761_000_000, "2026-10-05T11:00:00Z");
+    await pool.query("update tenders set estimated_value_flag = 'absolute_ceiling' where id = 'al-vest'");
 
     const first = await fetch(endpoint);
     assert.equal(first.status, 200);
@@ -78,8 +82,14 @@ test(
       estimatedValueTotal: 300,
       updatedAt: "2026-10-06T12:00:00.000Z",
     });
+    assert.deepEqual(state("AL"), {
+      state: "AL",
+      openTenders: 2,
+      estimatedValueTotal: 5000,
+      updatedAt: "2026-10-05T11:00:00.000Z",
+    });
     assert.deepEqual(state("RJ"), { state: "RJ", openTenders: 0, estimatedValueTotal: null, updatedAt: null });
-    assert.equal(body.meta.totalOpenTenders, 5);
+    assert.equal(body.meta.totalOpenTenders, 7);
     assert.equal(body.meta.indexUpdatedAt, "2026-10-09T08:00:00.000Z");
     assert.equal(body.meta.cacheTtlSeconds, 900);
 
@@ -103,7 +113,7 @@ test(
       await client.query("set enable_seqscan = off");
       await client.query("set enable_bitmapscan = off");
       const plan = await client.query<{ "QUERY PLAN": string }>(
-        `explain select state, count(*), sum(estimated_value), max(fetched_at)
+        `explain select state, count(*), sum(estimated_value) filter (where estimated_value_flag is null), max(fetched_at)
          from tenders where status = 'open' and state is not null group by state`,
       );
       assert.match(plan.rows.map((row) => row["QUERY PLAN"]).join("\n"), /Index Only Scan/);

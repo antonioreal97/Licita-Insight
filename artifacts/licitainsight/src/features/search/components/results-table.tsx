@@ -118,7 +118,7 @@ export function ResultsTable({ tenders, isSaved, onToggleSave }: Props) {
                   </div>
                 </th>
                 <td className={cn(td, 'text-right')}>
-                  <ValueDisplay value={t.estimatedValue} status={t.estimatedValueStatus} />
+                  <ValueDisplay value={t.estimatedValue} status={t.estimatedValueStatus} flag={t.estimatedValueFlag} flagVariant="icon" />
                 </td>
                 <td className={td}>
                   <DeadlineIndicator deadline={t.proposalDeadline} status={t.status} variant="table" />
