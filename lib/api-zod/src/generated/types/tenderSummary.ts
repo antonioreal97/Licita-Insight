@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { Category } from './category';
+import type { EstimatedValueFlag } from './estimatedValueFlag';
 import type { EstimatedValueStatus } from './estimatedValueStatus';
 import type { Location } from './location';
 import type { Modality } from './modality';
@@ -40,6 +41,8 @@ export interface TenderSummary {
   /** @nullable */
   estimatedValue: number | null;
   estimatedValueStatus?: EstimatedValueStatus;
+  /** Set when the official `estimatedValue` is implausible; null otherwise. The value is still returned as published, but it is left out of sums, value facets and value filters, and sorted last by value. */
+  estimatedValueFlag?: EstimatedValueFlag | null;
   /** @nullable */
   publishedAt: Date | null;
   /** @nullable */

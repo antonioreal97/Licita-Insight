@@ -394,6 +394,8 @@ export type FitTenderFingerprintInput = {
   description: string | null;
   organizationName: string;
   estimatedValue: string | null;
+  /** Only present in the fingerprint when set, so tenders without a flag keep the fingerprint they had. */
+  estimatedValueFlag?: string | null;
   state: string | null;
   items: unknown;
   categories?: unknown;
@@ -415,6 +417,7 @@ export const companyFitTenderFingerprint = (
         items: tender.items,
         categories: tender.categories,
         searchText: tender.searchText,
+        estimatedValueFlag: tender.estimatedValueFlag ?? undefined,
       }),
     )
     .digest("hex");

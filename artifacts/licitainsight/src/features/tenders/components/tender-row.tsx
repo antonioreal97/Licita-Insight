@@ -129,7 +129,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
         <div className="min-w-0">
           <dt className="sr-only">Valor estimado</dt>
           <dd>
-            <ValueDisplay value={tender.estimatedValue} status={tender.estimatedValueStatus} className="text-sm" />
+            <ValueDisplay value={tender.estimatedValue} status={tender.estimatedValueStatus} flag={tender.estimatedValueFlag} className="text-sm" />
           </dd>
         </div>
         <div className="min-w-0">

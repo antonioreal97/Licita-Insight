@@ -94,6 +94,10 @@ const asModality = (value: string): Modality => {
   return value as Modality;
 };
 
+const plausibleValue = sql`${tendersTable.estimatedValueFlag} is null`;
+// Tenders with a flagged value go last in both directions, after the ones without a value.
+const flaggedValueLast = sql`(${tendersTable.estimatedValueFlag} is not null) asc`;
+
 export const searchWhereFor = (
   criteria: SearchCriteria,
   skip?: FacetGroup,
@@ -218,6 +222,13 @@ export const searchWhereFor = (
       sql`${tendersTable.estimatedValue}::float8 <= ${criteria.valueMax}`,
     );
   }
+  // A value flagged as implausible is treated as unknown: like a missing value, it matches no value range.
+  if (
+    skip !== "valueRange" &&
+    (criteria.valueMin !== undefined || criteria.valueMax !== undefined)
+  ) {
+    filters.push(plausibleValue);
+  }
   if (criteria.publishedFrom) {
     filters.push(
       onOrAfterSaoPauloDate(tendersTable.publishedAt, criteria.publishedFrom),
@@ -275,9 +286,9 @@ const orderBy = (criteria: SearchCriteria, tokens: string[]): SQL[] => {
     case "first_seen_desc":
       return [desc(tendersTable.createdAt), id];
     case "value_desc":
-      return [sql`${tendersTable.estimatedValue} desc nulls last`, id];
+      return [flaggedValueLast, sql`${tendersTable.estimatedValue} desc nulls last`, id];
     case "value_asc":
-      return [sql`${tendersTable.estimatedValue} asc nulls last`, id];
+      return [flaggedValueLast, sql`${tendersTable.estimatedValue} asc nulls last`, id];
     case "relevance":
       return tokens.length > 0
         ? [sql`${scoreSql(tokens)} desc`, published, id]
@@ -420,6 +431,7 @@ export const tenderRowToDetail = (
     estimatedValue,
     estimatedValueStatus:
       row.estimatedValueStatus as TenderDetail["estimatedValueStatus"],
+    estimatedValueFlag: row.estimatedValueFlag,
     publishedAt: row.publishedAt,
     openingAt: row.openingAt,
     proposalDeadline: row.proposalDeadline,
@@ -656,7 +668,7 @@ export class PostgresTenderRepository {
           ${tendersTable.categories} as categories,
           ${tendersTable.platform} as platform,
           coalesce(${tendersTable.platformLabel}, ${tendersTable.platform}) as platform_label,
-          ${tendersTable.estimatedValue} as estimated_value,
+          case when ${plausibleValue} then ${tendersTable.estimatedValue} end as estimated_value,
           ${tendersTable.createdAt} as created_at
         from ${tendersTable}
         ${where ? sql`where ${where}` : sql``}
@@ -861,7 +873,7 @@ export class PostgresTenderRepository {
       db
         .select({ value: tendersTable.estimatedValue })
         .from(tendersTable)
-        .where(searchWhereFor(criteria, "valueRange", now)),
+        .where(and(searchWhereFor(criteria, "valueRange", now), plausibleValue)),
       countRows(
         and(
           searchWhereFor(criteria, "new", now),

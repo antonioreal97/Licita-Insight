@@ -76,6 +76,45 @@ const criteria = (patch: Partial<SearchCriteria> = {}): SearchCriteria => ({
   ...patch,
 });
 
+describe("implausible estimated values", () => {
+  const now = new Date("2026-10-08T15:00:00.000Z");
+  const valued = (id: string, estimatedValue: number | null, flag: TenderDetail["estimatedValueFlag"] = null) => ({
+    ...detail(id, firstSeenAt),
+    estimatedValue,
+    estimatedValueStatus: estimatedValue === null ? ("not_published" as const) : ("disclosed" as const),
+    estimatedValueFlag: flag,
+  });
+  const tenders = [
+    valued("vest", 938_761_000_000, "absolute_ceiling"),
+    valued("concession", 24_000_000_000),
+    valued("ordinary", 48_500),
+    valued("unpublished", null),
+    valued("bus-passes", 10_700_000_000, "modality_outlier"),
+  ];
+  const service = new SearchService(
+    { findAll: () => tenders, findById: (id) => tenders.find((tender) => tender.id === id), getIndexUpdatedAt: () => now },
+    () => now,
+  );
+  const ids = (patch: Partial<SearchCriteria>) => service.search(criteria(patch)).data.map(({ id }) => id);
+
+  it("sorts flagged values last in both directions and still returns them with the official value", () => {
+    assert.deepEqual(ids({ sort: "value_desc" }), ["concession", "ordinary", "unpublished", "vest", "bus-passes"]);
+    assert.deepEqual(ids({ sort: "value_asc" }), ["ordinary", "concession", "unpublished", "bus-passes", "vest"]);
+    const vest = service.search(criteria({ sort: "value_desc" })).data.find(({ id }) => id === "vest");
+    assert.equal(vest?.estimatedValue, 938_761_000_000);
+    assert.equal(vest?.estimatedValueFlag, "absolute_ceiling");
+  });
+
+  it("keeps flagged values out of the value facet and of every value range", () => {
+    const { facets } = service.search(criteria());
+    assert.equal(facets?.valueRange.min, 48_500);
+    assert.equal(facets?.valueRange.max, 24_000_000_000);
+    assert.equal(facets?.valueRange.histogram?.reduce((total, { count }) => total + count, 0), 2);
+    assert.deepEqual(ids({ sort: "value_desc", valueMin: 1_000_000_000 }), ["concession"]);
+    assert.deepEqual(ids({ sort: "value_desc", valueMax: 1_000_000_000_000 }), ["concession", "ordinary"]);
+  });
+});
+
 describe("search response semantics", () => {
   it("uses the canonical Portuguese facet labels", () => {
     assert.deepEqual(statusLabels, {

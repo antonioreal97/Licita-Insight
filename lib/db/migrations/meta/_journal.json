@@ -267,6 +267,13 @@
       "when": 1791482406000,
       "tag": "0037_tenders_open_by_state_index",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791482407000,
+      "tag": "0038_estimated_value_flag",
+      "breakpoints": true
     }
   ]
 }

@@ -94,7 +94,7 @@ type SearchMode = "keyword" | "semantic" | "hybrid";
 | `category`                      | string[]                | —           | slugs de categoria                                                                                          |
 | `newOnly`                       | boolean                 | `false`     | somente editais inseridos pela primeira vez no Pardal dentro de `NEW_TENDER_WINDOW_HOURS` (24 h por padrão) |
 | `myRegion`                      | boolean                 | `false`     | exige sessão e aplica a região salva no perfil, incluindo raio e categorias remotas                         |
-| `valueMin` / `valueMax`         | number                  | —           | sobre `estimatedValue`; registros com valor `null` são excluídos quando um dos dois é enviado               |
+| `valueMin` / `valueMax`         | number                  | —           | sobre `estimatedValue`; registros com valor `null` ou marcado como implausível (`estimatedValueFlag`) são excluídos quando um dos dois é enviado |
 | `publishedFrom` / `publishedTo` | date                    | —           | sobre `publishedAt`, inclusivo, horário de Brasília                                                         |
 | `deadlineFrom` / `deadlineTo`   | date                    | —           | sobre `proposalDeadline`, inclusivo, horário de Brasília                                                    |
 | `sort`                          | SortOption              | `relevance` |                                                                                                             |
@@ -434,6 +434,69 @@ Com `facets=true`, `facets.platform: FacetBucket[]` (label = `platform.label`) e
 ignora apenas o próprio filtro `platform`. Buscas salvas preservam o parâmetro.
 
 ---
+
+## Aditivo — valor estimado fora da curva
+
+O PNCP às vezes traz valores estimados com erro de várias ordens de grandeza (uma dispensa de coletes
+balísticos de R$ 938.761.000.000). Um único registro assim domina qualquer soma ou ranking. O valor oficial
+nunca é corrigido nem escondido: a API marca o registro e deixa o valor fora das contas.
+
+```ts
+type EstimatedValueFlag = "absolute_ceiling" | "dispensa_legal_limit" | "modality_outlier";
+// TenderSummary e TenderDetail
+{
+  estimatedValueFlag?: EstimatedValueFlag | null; // null: nenhuma dúvida sobre o valor
+}
+```
+
+### Regra
+
+Função pura `assessEstimatedValue` (`artifacts/api-server/src/domain/estimated-value-plausibility.ts`),
+da afirmação mais forte para a mais fraca. Prefere deixar passar um erro a acusar um valor legítimo:
+
+| Motivo                 | Marca quando                                                                                   | Limite                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `absolute_ceiling`     | qualquer modalidade acima do teto                                                              | R$ 100 bilhões                           |
+| `dispensa_legal_limit` | dispensa com amparo legal por valor (Lei 14.133/2021, art. 75, I ou II) mil vezes acima do limite legal | 1.000 × R$ 125.451,15 ≈ R$ 125 milhões |
+| `modality_outlier`     | valor acima de 1.000 × o p99 da modalidade                                                     | dispensa R$ 1,3 bi; inexigibilidade R$ 6 bi; pregão presencial R$ 15 bi; credenciamento R$ 30 bi; pregão eletrônico R$ 80 bi |
+
+- Concorrência, diálogo competitivo, leilão e "outra" só têm o teto absoluto: é por elas que saem as
+  concessões de dezenas de bilhões.
+- Dispensa por emergência e pelos demais incisos do art. 75 não tem limite legal: só o limite da modalidade.
+  O amparo vem de `amparoLegal.nome` da publicação; sem amparo reconhecido, o limite legal não se aplica.
+- Valor ausente, sigiloso, zero ou negativo nunca é marcado.
+- Falsos negativos aceitos: erro de poucas ordens de grandeza dentro de uma modalidade com cauda legítima
+  longa (um pregão de R$ 5 bi não se distingue, só pela modalidade, de um registro de preços nacional).
+
+Os p99 de referência saíram de uma amostra **sintética** (`estimated-value-sample.ts`), moldada pelos
+quantis medidos nos editais abertos; `pnpm --filter @workspace/api-server run calibrate:estimated-value`
+imprime a amostra, os limites, os casos conhecidos e a simulação de Alagoas. Para recalibrar com dados
+reais: `select modality, percentile_cont(0.99) within group (order by estimated_value) from tenders where
+estimated_value > 0 group by modality`. Nenhum limite pode ficar abaixo de R$ 100 milhões
+(`ESTIMATED_VALUE_REVIEW_FLOOR`), que é o predicado do índice lido pelo job; um teste garante isso.
+
+### Efeito
+
+| Onde                                             | Edital com `estimatedValueFlag`                                         |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| Resultados da busca e detalhe                    | continua aparecendo, com `estimatedValue` oficial e o flag              |
+| `sort=value_desc` / `value_asc`                  | vai para o fim, depois dos editais sem valor                            |
+| `valueMin` / `valueMax`                          | não casa com nenhuma faixa, como um valor ausente                       |
+| `facets.valueRange` (mín., máx., histograma)     | fica fora                                                               |
+| `GET /api/v1/public/tenders/by-state`            | conta em `openTenders`, não soma em `estimatedValueTotal`               |
+| Recomendações                                    | não alarga a faixa inferida dos salvos; não pontua a favor nem contra   |
+| Aderência ao perfil (`out_of_value_range`)       | não elimina o edital                                                    |
+
+### Preenchimento
+
+A coleta marca o que coleta (e limpa o flag quando a fonte corrige o valor). O histórico e as mudanças de
+limite ficam com o job `tender_estimated_value_review` da própria API (papéis que rodam jobs): ao subir e
+diariamente às 01:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. Lê só os
+editais com valor a partir de R$ 100 milhões (índice parcial `tenders_estimated_value_review_idx`), por `id`
+em lotes de 1.000 com pausa de 1 s, e só grava onde o flag muda — uma segunda execução não grava nada e uma
+execução interrompida é simplesmente repetida. `ESTIMATED_VALUE_REVIEW_BATCH_SIZE` ajusta o lote (1–5000) e
+`ESTIMATED_VALUE_REVIEW_DAILY=false` desliga o agendamento. Para uso local,
+`pnpm --filter @workspace/api-server run review:estimated-values` executa o mesmo percurso sem pausa.
 
 ## Performance esperada
 

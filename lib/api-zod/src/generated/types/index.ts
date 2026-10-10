@@ -84,6 +84,7 @@ export * from './emailUnsubscribeResponse';
 export * from './emailUnsubscribeScope';
 export * from './errorDetail';
 export * from './errorResponse';
+export * from './estimatedValueFlag';
 export * from './estimatedValueStatus';
 export * from './facetBucket';
 export * from './facetGroupTotals';
