@@ -7,6 +7,7 @@ import {
 } from "./collect-pncp";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { inProgressRetry } from "./in-progress-retry";
+import { nightlyCategoryEnabled } from "../titles/nightly-window";
 
 const TZ = "America/Sao_Paulo";
 
@@ -312,9 +313,13 @@ export function startDailyTransparencyCollect(): () => void {
   };
 }
 
-/** Classifies with the category student whatever the post-collect hook left pending, one hour after the PNCP collect. */
+/**
+ * Classifies with the category student whatever the post-collect hook left pending, one hour after
+ * the PNCP collect. Off while the nightly job owns the classification (`NIGHTLY_CATEGORY_ENABLED`).
+ */
 export function startDailyCategoryClassify(): () => void {
   if (process.env.CATEGORY_STUDENT_ENABLED !== "true") return () => undefined;
+  if (nightlyCategoryEnabled()) return () => undefined;
   if (!process.env.DATABASE_URL) {
     logger.error(
       "DATABASE_URL is not set; daily category classification will not start",

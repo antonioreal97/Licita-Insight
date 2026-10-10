@@ -4,6 +4,7 @@ import { toTenderCategories } from "../catalog/tender-categories";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { logger } from "../lib/logger";
 import { loadStudent, type LoadedStudent } from "./examples";
+import { nightlyCategoryEnabled } from "./nightly-window";
 import { NEVER_STOP, type Progress, type StopSignal } from "./progress";
 import { buildTenderSearchText, studentText } from "./text";
 
@@ -117,6 +118,15 @@ export async function classifyPendingTenders(options: {
     progress?.advance(rows.length);
   }
   return result;
+}
+
+/**
+ * Daytime classification right after a collect. With the nightly job on (the default once the
+ * student is enabled) the collector leaves the tenders for the night.
+ */
+export async function classifyAfterCollect(reason: string): Promise<void> {
+  if (nightlyCategoryEnabled()) return;
+  await classifyPendingInBackground(reason);
 }
 
 /** Hook for the collector and the daily scheduler. Never throws; no-op unless the student is enabled. */

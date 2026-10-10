@@ -109,7 +109,13 @@ isso rotula uma amostra uma vez e reescreve sob demanda só os títulos que as p
 | Variável | Padrão | Efeito |
 |---|---|---|
 | `TITLE_TEACHER_ENABLED` | `false` | enfileira e executa reescritas `title_rewrite` |
-| `CATEGORY_STUDENT_ENABLED` | `false` | classifica após cada coleta e no agendador diário |
+| `CATEGORY_STUDENT_ENABLED` | `false` | liga o aluno; por padrão ele roda no job noturno |
+| `NIGHTLY_CATEGORY_ENABLED` | `true` | `false` volta à classificação após cada coleta e no agendador diário |
+| `NIGHTLY_CATEGORY_WINDOW_START` / `_END` | `00:00` / `05:30` | janela do job em America/Sao_Paulo |
+| `JEV_TEACHER_CONFIDENCE_THRESHOLD` | `0.6` | confiança do aluno abaixo da qual o edital vai ao Jev |
+| `JEV_TEACHER_DAILY_LIMIT` | `1500` | chamadas ao Jev professor por dia (America/Sao_Paulo) |
+| `JEV_TEACHER_MIN_CONFIDENCE` | `0.5` | confiança mínima do Jev para gravar a categoria e o exemplo |
+| `JEV_TEACHER_ENABLED` | `true` | `false` deixa o aluno sozinho; exige `JEV_API_KEY` |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | no compose: `http://host.docker.internal:11434` |
 | `OLLAMA_TEACHER_MODEL` | `gemma4:12b` | modelo do professor |
 | `OLLAMA_EMBED_MODEL` | `bge-m3` | modelo de embedding do aluno |
@@ -176,6 +182,30 @@ A classificação grava `categories`, `category_source = student`, `category_con
 com `category_source = student` e exemplos mais novos que `categorized_at`, e nunca sobrescreve
 `teacher`.
 
+### Job noturno
+
+Com `CATEGORY_STUDENT_ENABLED=true`, o job `nightly_category_classification` é quem classifica
+(detalhes de operação em `docs/ops/nightly-category-classification.md`). Ele roda dentro da janela,
+com lock de execução única, e a cada noite:
+
+1. embute os exemplos sem vetor ou com vetor de outro `OLLAMA_EMBED_MODEL`;
+2. mede a concordância do aluno com os rótulos do `holdout`;
+3. manda ao Jev os duvidosos que sobraram de noites anteriores;
+4. passa o aluno por todo edital `open`/`under_review` que não é `teacher` e ainda não tem
+   `category_confidence` (os mais novos primeiro), e manda ao Jev os duvidosos de cada lote.
+
+Neste fluxo `category_confidence` é sempre a confiança da última avaliação: a do aluno, ou a do Jev
+quando `category_source = teacher` veio dele. Com confiança abaixo de
+`CATEGORY_STUDENT_MIN_CONFIDENCE`, o aluno grava só a confiança e `categorized_at` e **mantém a
+categoria que já estava lá** (a das regras, se houver). Título oficial alterado na coleta zera
+`category_confidence` de quem não é `teacher`, e o edital volta para a noite seguinte.
+
+O Jev responde uma pergunta `choice` sobre a lista de `TENDER_CATEGORIES` (a mesma do professor),
+pela lane `batch` do `jev-scheduler`. A resposta grava `category_source = teacher` e entra em
+`tender_title_examples` (`teacher_model` = modelo do Jev, `teacher_title` nulo), já com o vetor
+calculado pelo aluno. Cada chamada vira uma linha em `ai_title_usage` com `model` prefixado por
+`jev-teacher/`; é ela que conta o teto diário e impede perguntar duas vezes sobre o mesmo título.
+
 ### Scripts
 
 Todos são retomáveis, mostram progresso e ETA no stderr e param com segurança no Ctrl-C (o segundo
@@ -203,7 +233,8 @@ pnpm --filter @workspace/api-server run titles:classify -- --status open,under_r
 
 Só com as flags ligadas:
 
-- **Classificação:** depois de cada coleta do PNCP o aluno classifica os pendentes `open` e
+- **Classificação:** o job noturno, descrito acima. Só com `NIGHTLY_CATEGORY_ENABLED=false` vale
+  o fluxo antigo: depois de cada coleta do PNCP o aluno classifica os pendentes `open` e
   `under_review`; o agendador diário (uma hora depois de `PNCP_DAILY_HOUR`) pega o que ficou. Os
   dois usam o mesmo lock singleton. Falha só gera log e não derruba a coleta.
 - **Reescrita sob demanda:** quando um edital com `display_title_source = rules` e
@@ -225,6 +256,11 @@ cada edital novo ou com título alterado. O backfill ocupa somente a capacidade 
 na fila, prioriza linhas sem categoria e pausa na hora da coleta das 06:00. O dedupe é por edital,
 versão do prompt e hash do título oficial, então cada nova versão do título gera um job e repetições
 da mesma versão não geram.
+
+Com `TITLE_TEACHER_OPENAI_ENABLED=false` (o padrão do código e, a partir do job noturno, o de
+produção) nada disso acontece: a coleta não enfileira, o worker não consome a fila nem faz backfill,
+e o título exibido é o do normalizador por regras. Títulos `model` já gravados continuam como estão,
+e jobs OpenAI antigos ficam `queued` sem custo; religar a flag retoma a fila.
 
 O prompt tem o mesmo texto do professor local (instruções no `system`, itens no `user`), com JSON
 Schema estrito (`additionalProperties: false`, `temperature` 0.1, `store: false`) e a mesma
