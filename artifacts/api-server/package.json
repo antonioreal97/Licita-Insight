@@ -24,6 +24,8 @@
     "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
     "backfill:display-titles": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-display-titles.ts",
     "backfill:platform": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-platform.ts",
+    "review:estimated-values": "node --env-file-if-exists=../../.env --import tsx scripts/review-estimated-values.ts",
+    "calibrate:estimated-value": "node --import tsx scripts/calibrate-estimated-value.ts",
     "titles:teacher-sample": "node --env-file-if-exists=../../.env --import tsx scripts/titles-teacher-sample.ts",
     "titles:embed-examples": "node --env-file-if-exists=../../.env --import tsx scripts/titles-embed-examples.ts",
     "titles:eval": "node --env-file-if-exists=../../.env --import tsx scripts/titles-eval.ts",

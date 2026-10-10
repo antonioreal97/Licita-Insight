@@ -50,6 +50,39 @@ describe("PNCP publication mapping", () => {
     assert.equal(draft.platformLabel, "BLL Compras");
   });
 
+  it("flags an implausible estimated value and keeps the official number", () => {
+    assert.equal(mapPublication(publication, now).estimatedValueFlag, null);
+    const vest = mapPublication(
+      {
+        ...publication,
+        modalidadeId: 8,
+        modalidadeNome: "Dispensa",
+        valorTotalEstimado: 938_761_000_000,
+        amparoLegal: { codigo: 19, nome: "Lei 14.133/2021, Art. 75, II" },
+      },
+      now,
+    );
+    assert.equal(vest.estimatedValue, "938761000000.00");
+    assert.equal(vest.estimatedValueFlag, "absolute_ceiling");
+    const byValue = { ...publication, modalidadeId: 8, valorTotalEstimado: 300_000_000 };
+    assert.equal(
+      mapPublication({ ...byValue, amparoLegal: { nome: "Lei 14.133/2021, Art. 75, II" } }, now).estimatedValueFlag,
+      "dispensa_legal_limit",
+    );
+    assert.equal(
+      mapPublication({ ...byValue, amparoLegal: { nome: "Lei 14.133/2021, Art. 75, VIII" } }, now).estimatedValueFlag,
+      null,
+      "an emergency dispensa has no legal limit",
+    );
+    assert.equal(mapPublication(byValue, now).estimatedValueFlag, null, "without a legal basis, no legal limit");
+    assert.equal(
+      mapPublication({ ...publication, valorTotalEstimado: 938_761_000_000, orcamentoSigilosoCodigo: 2 }, now)
+        .estimatedValueFlag,
+      null,
+      "a confidential budget stores no value to judge",
+    );
+  });
+
   it("maps a publication into the tender shape the API already serves", () => {
     const draft = mapPublication(publication, now);
 

@@ -37,6 +37,7 @@ import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { useTenderSearch } from '@/features/search/hooks/use-tender-search';
+import { ValueDisplay } from '@/features/tenders/components/value-display';
 import { formatCurrency, formatCurrencyPrecise, formatDateTime, formatNumber } from '@/lib/format';
 import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
@@ -315,7 +316,11 @@ function HeroRadar() {
                 </div>
                 <div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <span className="truncate">{t.organization.name}</span>
-                  <span className="shrink-0 type-data text-xs font-bold text-primary">{formatCurrency(t.estimatedValue)}</span>
+                  {t.estimatedValueFlag ? (
+                    <ValueDisplay value={t.estimatedValue} flag={t.estimatedValueFlag} flagVariant="icon" className="type-data text-xs" />
+                  ) : (
+                    <span className="shrink-0 type-data text-xs font-bold text-primary">{formatCurrency(t.estimatedValue)}</span>
+                  )}
                 </div>
               </div>
             ))}

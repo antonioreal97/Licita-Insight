@@ -77,6 +77,37 @@ test("pontuação explica termos, categoria e cobertura e penaliza fora da área
   );
 });
 
+test("valor suspeito não conta a favor nem contra a faixa de valor", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const candidate = {
+    id: "T-value",
+    searchText: "servicos de hemodialise",
+    categories: [],
+    state: "SP",
+    organizationId: "O-value",
+    organizationName: "Órgão",
+    modality: "dispensa",
+    platform: null,
+    platformLabel: null,
+    proposalDeadline: new Date("2026-10-20T12:00:00Z"),
+    publishedAt: new Date("2026-10-07T12:00:00Z"),
+    textRank: 0.5,
+  };
+  const unknown = scoreRecommendation({ ...candidate, estimatedValue: null }, profile, [], now);
+  const inside = scoreRecommendation({ ...candidate, estimatedValue: "100000" }, profile, [], now);
+  const outside = scoreRecommendation({ ...candidate, estimatedValue: "938761000000.00" }, profile, [], now);
+  const flagged = scoreRecommendation(
+    { ...candidate, estimatedValue: "938761000000.00", estimatedValueFlag: "absolute_ceiling" },
+    profile,
+    [],
+    now,
+  );
+  assert.ok(unknown && inside && outside && flagged);
+  assert.ok(inside.score > unknown.score && unknown.score > outside.score);
+  assert.equal(flagged.score, unknown.score);
+  assert.ok(!flagged.reasons.some(({ kind }) => kind === "value"));
+});
+
 test("plataforma cadastrada desempata, mas não recomenda sozinha", () => {
   const now = new Date("2026-10-08T12:00:00Z");
   const candidate = {

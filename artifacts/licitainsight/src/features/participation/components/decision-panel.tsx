@@ -230,7 +230,7 @@ export function DecisionPanel({ tender }: { tender: TenderDetail }) {
           <DeadlineIndicator deadline={tender.proposalDeadline} status={tender.status} variant="inline" />
         </Row>
         <Row label="Valor estimado" testId="decision-row-value">
-          <ValueDisplay value={tender.estimatedValue} status={tender.estimatedValueStatus} nullLabel="Sigiloso / não informado" className="type-ui" />
+          <ValueDisplay value={tender.estimatedValue} status={tender.estimatedValueStatus} flag={tender.estimatedValueFlag} nullLabel="Sigiloso / não informado" className="type-ui" />
           {companyProfile && <ProvenanceLabel kind="profile">{profileRange(companyProfile.valueRange)}</ProvenanceLabel>}
           {companyProfile &&
             valueReasons.map((reason) => (

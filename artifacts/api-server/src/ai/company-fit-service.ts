@@ -230,6 +230,7 @@ type TenderRow = Pick<
   | "description"
   | "organizationName"
   | "estimatedValue"
+  | "estimatedValueFlag"
   | "state"
   | "cityIbgeCode"
   | "items"
@@ -290,7 +291,7 @@ const normalizeProfileText = (value: string): string =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-BR");
 
-function explicitFilter(
+export function explicitFilter(
   profile: CompanyProfile,
   tender: TenderRow,
 ): FitReasonRecord[] {
@@ -313,7 +314,8 @@ function explicitFilter(
     if (!region.matches)
       return [{ kind: "out_of_coverage", state: tender.state }];
   }
-  if (tender.estimatedValue !== null) {
+  // A value flagged as implausible says nothing about the real size of the contract: it filters nothing out.
+  if (tender.estimatedValue !== null && !tender.estimatedValueFlag) {
     const value = Number(tender.estimatedValue);
     if (
       (profile.valueRange.min !== null && value < profile.valueRange.min) ||
@@ -574,6 +576,7 @@ export async function executeCompanyFitJob(fitId: string): Promise<void> {
         description: tendersTable.description,
         organizationName: tendersTable.organizationName,
         estimatedValue: tendersTable.estimatedValue,
+        estimatedValueFlag: tendersTable.estimatedValueFlag,
         state: tendersTable.state,
         cityIbgeCode: tendersTable.cityIbgeCode,
         items: tendersTable.items,
@@ -834,6 +837,7 @@ export async function getTenderFits(
       description: tendersTable.description,
       organizationName: tendersTable.organizationName,
       estimatedValue: tendersTable.estimatedValue,
+      estimatedValueFlag: tendersTable.estimatedValueFlag,
       state: tendersTable.state,
       cityIbgeCode: tendersTable.cityIbgeCode,
       items: tendersTable.items,

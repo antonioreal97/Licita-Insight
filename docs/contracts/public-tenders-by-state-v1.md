@@ -26,18 +26,22 @@ oportunidades agora" da página inicial.
 |---|---|
 | `data` | sempre as 27 UFs, em ordem de sigla; UF sem edital aberto vem com `0`, `null`, `null` |
 | `openTenders` | editais com `status = open`, o mesmo critério do filtro "Abertos" da busca |
-| `estimatedValueTotal` | soma dos valores estimados publicados; `null` quando nenhum edital aberto da UF publicou valor |
+| `estimatedValueTotal` | soma dos valores estimados publicados, sem os marcados como implausíveis (`estimatedValueFlag`); `null` quando a UF não tem valor a somar |
 | `updatedAt` | coleta mais recente entre os editais abertos da UF |
 | `meta.generatedAt` | quando o agregado foi calculado |
 | `meta.indexUpdatedAt` | coleta mais recente entre todos os editais contados |
 
 A sigla é normalizada (sem espaços, maiúscula). Editais sem UF ou com valor que não é uma UF ficam fora da
-contagem, então `totalOpenTenders` pode ser menor que o total de abertos da busca. A soma usa os valores como o
-PNCP os publica, sem tratar valores fora da curva.
+contagem, então `totalOpenTenders` pode ser menor que o total de abertos da busca.
+
+Um edital com valor estimado implausível (ver "Aditivo — valor estimado fora da curva" em
+[search-v1.md](search-v1.md)) continua contado em `openTenders`, mas o valor dele não entra em
+`estimatedValueTotal`: um único erro de digitação na fonte (uma dispensa de R$ 938 bilhões) chegava a
+definir a soma de uma UF inteira.
 
 ## Custo e cache
 
-- Uma consulta agrupada, respondida só pelo índice parcial `tenders_open_by_state_idx`
+- Uma consulta agrupada, respondida só pelo índice parcial `tenders_open_by_state_value_idx`
   (`state, estimated_value, fetched_at` onde `status = 'open'`), criado na migração `0037`.
 - O resultado fica **15 minutos** em memória, por processo. Requisições que chegam durante o cálculo esperam o
   mesmo cálculo. Se o banco falhar na renovação, o último resultado continua sendo servido (com o `generatedAt`

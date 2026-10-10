@@ -150,7 +150,7 @@ export interface OpenTendersByState {
   /** @minimum 0 */
   openTenders: number;
   /**
-     * Sum of the estimated values that were published; null when no open tender in the state has one
+     * Sum of the estimated values that were published, leaving out the ones flagged as implausible (`estimatedValueFlag`); null when no open tender in the state has a value to add
      * @minimum 0
      * @nullable
      */
@@ -1256,6 +1256,18 @@ export const EstimatedValueStatus = {
   not_published: 'not_published',
 } as const;
 
+/**
+ * Why the estimated value published by the source looks wrong. `absolute_ceiling`: above R$ 100 billion. `dispensa_legal_limit`: a "dispensa" by value (Lei 14.133/2021, art. 75, I or II) more than a thousand times above its legal limit. `modality_outlier`: more than a thousand times the 99th percentile of the modality.
+ */
+export type EstimatedValueFlag = typeof EstimatedValueFlag[keyof typeof EstimatedValueFlag];
+
+
+export const EstimatedValueFlag = {
+  absolute_ceiling: 'absolute_ceiling',
+  dispensa_legal_limit: 'dispensa_legal_limit',
+  modality_outlier: 'modality_outlier',
+} as const;
+
 export type Modality = typeof Modality[keyof typeof Modality];
 
 
@@ -1399,6 +1411,8 @@ export interface TenderSummary {
   /** @nullable */
   estimatedValue: number | null;
   estimatedValueStatus?: EstimatedValueStatus;
+  /** Set when the official `estimatedValue` is implausible; null otherwise. The value is still returned as published, but it is left out of sums, value facets and value filters, and sorted last by value. */
+  estimatedValueFlag?: EstimatedValueFlag | null;
   /** @nullable */
   publishedAt: string | null;
   /** @nullable */

@@ -217,17 +217,17 @@ const applyFilters = (
       return false;
     }
     if (skippedFacet !== "valueRange") {
+      // A value flagged as implausible is treated as unknown: like a missing value, it matches no value range.
+      const value = plausibleValue(tender);
       if (
         criteria.valueMin !== undefined &&
-        (tender.estimatedValue === null ||
-          tender.estimatedValue < criteria.valueMin)
+        (value === null || value < criteria.valueMin)
       ) {
         return false;
       }
       if (
         criteria.valueMax !== undefined &&
-        (tender.estimatedValue === null ||
-          tender.estimatedValue > criteria.valueMax)
+        (value === null || value > criteria.valueMax)
       ) {
         return false;
       }
@@ -383,7 +383,7 @@ const createFacets = (
   const byPlatform = applyFilters(tenders, criteria, "platform", now);
   const byNew = applyFilters(tenders, criteria, "new", now);
   const byValue = applyFilters(tenders, criteria, "valueRange", now)
-    .map((tender) => tender.estimatedValue)
+    .map(plausibleValue)
     .filter((value): value is number => value !== null && value >= 0);
   const valueRange = numberRange(byValue);
   const allOrganizationBuckets = countBuckets(
@@ -493,6 +493,20 @@ const compareNullableDates = (
     direction,
   );
 
+/** The estimated value for sums, ranges and rankings: `null` when absent or flagged as implausible. */
+export const plausibleValue = (
+  tender: Pick<TenderSummary, "estimatedValue" | "estimatedValueFlag">,
+): number | null => (tender.estimatedValueFlag ? null : tender.estimatedValue);
+
+/** Flagged values go last in both directions, after the tenders without a value. */
+const compareByValue = (
+  left: TenderSummary,
+  right: TenderSummary,
+  direction: "asc" | "desc",
+): number =>
+  Number(Boolean(left.estimatedValueFlag)) - Number(Boolean(right.estimatedValueFlag)) ||
+  compareNullableNumbers(left.estimatedValue, right.estimatedValue, direction);
+
 export const toSummary = (
   tender: TenderDetail,
   criteria: SearchCriteria,
@@ -580,17 +594,9 @@ export class SearchService {
         case "first_seen_desc":
           return right.firstSeenAt.getTime() - left.firstSeenAt.getTime();
         case "value_desc":
-          return compareNullableNumbers(
-            left.estimatedValue,
-            right.estimatedValue,
-            "desc",
-          );
+          return compareByValue(left, right, "desc");
         case "value_asc":
-          return compareNullableNumbers(
-            left.estimatedValue,
-            right.estimatedValue,
-            "asc",
-          );
+          return compareByValue(left, right, "asc");
         case "relevance":
           return tokens.length > 0
             ? (right.relevance.score ?? 0) - (left.relevance.score ?? 0) ||
