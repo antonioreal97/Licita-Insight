@@ -42,7 +42,9 @@ import { statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { buttonClass } from '@/components/common/action-button';
 import { LegalLinks } from '@/features/legal/legal-content';
+import { OPPORTUNITY_MAP_ID, OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
+import { useOpenTendersByState } from '@/features/landing/hooks/use-open-tenders-by-state';
 import {
   Accordion,
   AccordionContent,
@@ -188,6 +190,8 @@ function HeroRadar() {
   const [viewMode, setViewMode] = useState<'tenders' | 'globe'>('tenders');
   const preview = useTenderSearch({ pageSize: 3, status: ['open'], facets: false });
   const tenders = preview.data?.data ?? [];
+  // Same query as the map section, so this costs no extra request. The link only exists when the section does.
+  const mapAvailable = (useOpenTendersByState().data?.meta.totalOpenTenders ?? 0) > 0;
   return (
     <div className="relative min-w-0">
       {/* Precision telemetry frame */}
@@ -245,6 +249,11 @@ function HeroRadar() {
               <div className="mt-2 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5 font-semibold text-foreground">
                   <span className="size-1.5 rounded-full bg-primary" /> 27 UFs monitoradas
+                  {mapAvailable && (
+                    <a href={`#${OPPORTUNITY_MAP_ID}`} data-testid="link-globe-map" className="text-primary underline underline-offset-2">
+                      ver no mapa
+                    </a>
+                  )}
                 </span>
                 <span className="italic">Gire o cursor para interagir em 3D</span>
               </div>
@@ -1107,6 +1116,7 @@ export default function LandingPage() {
           <HeroRadar />
         </section>
 
+        <OpportunityMapSection />
         <PerformanceComparisonSection />
         <ServicesSection />
         <EvidenceSection />

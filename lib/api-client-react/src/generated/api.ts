@@ -58,6 +58,7 @@ import type {
   NotFoundResponse,
   NotificationPage,
   NotificationPreferences,
+  OpenTendersByStateResponse,
   OpportunitySearchResponse,
   OpportunitySummary,
   ProfileCategoriesResponse,
@@ -365,6 +366,84 @@ export function useSearchTenders<TData = Awaited<ReturnType<typeof searchTenders
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchTendersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOpenTendersByStateUrl = () => {
+
+
+
+
+  return `/api/v1/public/tenders/by-state`
+}
+
+/**
+ * Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes and served from memory in between.
+ * @summary Count open tenders and sum their estimated values by state
+ */
+export const getOpenTendersByState = async ( options?: Parameters<typeof customFetch>[1]): Promise<OpenTendersByStateResponse> => {
+
+  return customFetch<OpenTendersByStateResponse>(getGetOpenTendersByStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpenTendersByStateQueryKey = () => {
+    return [
+    `/api/v1/public/tenders/by-state`
+    ] as const;
+    }
+
+
+export const getGetOpenTendersByStateQueryOptions = <TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpenTendersByStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpenTendersByState>>> = ({ signal }) => getOpenTendersByState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpenTendersByStateQueryResult = NonNullable<Awaited<ReturnType<typeof getOpenTendersByState>>>
+export type GetOpenTendersByStateQueryError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Count open tenders and sum their estimated values by state
+ */
+
+export function useGetOpenTendersByState<TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpenTendersByStateQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

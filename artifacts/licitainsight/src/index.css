@@ -161,6 +161,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-mapa-vazio: var(--mapa-vazio);
+  --color-mapa-1: var(--mapa-1);
+  --color-mapa-2: var(--mapa-2);
+  --color-mapa-3: var(--mapa-3);
+  --color-mapa-4: var(--mapa-4);
+  --color-mapa-5: var(--mapa-5);
 
   /* ── Sidebar (follows the page theme: fundo-alt) ─────────────── */
   --color-sidebar: var(--sidebar);
@@ -370,6 +376,15 @@
   --chart-4: var(--salvia);
   --chart-5: var(--nevoa);
 
+  /* Choropleth of open tenders by state: the foco ink mixed into the page in five even steps, so more volume
+   * always means more ink (darker on Creme, brighter on Petróleo). A state without open tenders is fundo-alt. */
+  --mapa-vazio: var(--fundo-alt);
+  --mapa-1: color-mix(in srgb, var(--foco) 20%, var(--fundo));
+  --mapa-2: color-mix(in srgb, var(--foco) 40%, var(--fundo));
+  --mapa-3: color-mix(in srgb, var(--foco) 60%, var(--fundo));
+  --mapa-4: color-mix(in srgb, var(--foco) 80%, var(--fundo));
+  --mapa-5: var(--foco);
+
   /* Sidebar: fundo-alt, so the logo matches the page theme (petroleo on Creme, lima on Petróleo). */
   --sidebar: var(--fundo-alt);
   --sidebar-foreground: var(--texto);
@@ -452,6 +467,10 @@
   --primary-active: var(--oliva);
   --inverse-hover: var(--creme);
   --warning: var(--oliva);
+  --mapa-1: color-mix(in srgb, var(--foco) 20%, var(--fundo));
+  --mapa-2: color-mix(in srgb, var(--foco) 40%, var(--fundo));
+  --mapa-3: color-mix(in srgb, var(--foco) 60%, var(--fundo));
+  --mapa-4: color-mix(in srgb, var(--foco) 80%, var(--fundo));
   --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
   --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
 }

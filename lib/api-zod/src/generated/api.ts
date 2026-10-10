@@ -254,6 +254,40 @@ export const SearchTendersResponse = zod.object({
 
 
 /**
+ * Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes and served from memory in between.
+ * @summary Count open tenders and sum their estimated values by state
+ */
+export const getOpenTendersByStateResponseDataItemStateRegExp = new RegExp('^[A-Z]{2}$');
+export const getOpenTendersByStateResponseDataItemOpenTendersMin = 0;
+
+export const getOpenTendersByStateResponseDataItemEstimatedValueTotalMin = 0;
+
+export const getOpenTendersByStateResponseDataMin = 27;
+export const getOpenTendersByStateResponseDataMax = 27;
+
+export const getOpenTendersByStateResponseMetaTotalOpenTendersMin = 0;
+
+export const getOpenTendersByStateResponseMetaCacheTtlSecondsMin = 0;
+
+
+
+export const GetOpenTendersByStateResponse = zod.object({
+  "data": zod.array(zod.object({
+  "state": zod.string().regex(getOpenTendersByStateResponseDataItemStateRegExp).describe('State code (UF)'),
+  "openTenders": zod.number().int().min(getOpenTendersByStateResponseDataItemOpenTendersMin),
+  "estimatedValueTotal": zod.number().min(getOpenTendersByStateResponseDataItemEstimatedValueTotalMin).nullable().describe('Sum of the estimated values that were published; null when no open tender in the state has one'),
+  "updatedAt": zod.coerce.date().nullable().describe('Most recent fetch among the open tenders of the state; null when it has none')
+})).min(getOpenTendersByStateResponseDataMin).max(getOpenTendersByStateResponseDataMax),
+  "meta": zod.object({
+  "totalOpenTenders": zod.number().int().min(getOpenTendersByStateResponseMetaTotalOpenTendersMin),
+  "generatedAt": zod.coerce.date().describe('When the aggregate was computed'),
+  "indexUpdatedAt": zod.coerce.date().nullable().describe('Most recent fetch among all counted tenders'),
+  "cacheTtlSeconds": zod.number().int().min(getOpenTendersByStateResponseMetaCacheTtlSecondsMin)
+})
+})
+
+
+/**
  * @summary Get a tender by id
  */
 

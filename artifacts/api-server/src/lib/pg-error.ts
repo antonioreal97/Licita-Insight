@@ -19,3 +19,18 @@ export const pgErrorCode = (error: unknown): string | undefined => {
 };
 
 export const isUniqueViolation = (error: unknown): boolean => pgErrorCode(error) === "23505";
+
+const UNAVAILABLE_CODES = new Set([
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "57P01",
+  "28P01",
+  "3D000",
+  "42P01",
+  "08006",
+  "08001",
+]);
+
+/** The database cannot answer right now (down, unreachable, not provisioned or not migrated). */
+export const isDatabaseUnavailable = (error: unknown): boolean => UNAVAILABLE_CODES.has(pgErrorCode(error) ?? "");

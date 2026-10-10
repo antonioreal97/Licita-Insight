@@ -340,6 +340,21 @@ export type BillingResponse = {
   source?: BillingSource | null;
 };
 
+/** One state in public `GET /api/v1/public/tenders/by-state` — contract: docs/contracts/public-tenders-by-state-v1.md. */
+export type OpenTendersByState = {
+  state: string;
+  openTenders: number;
+  /** Sum of the published estimated values; `null` when no open tender in the state has one. */
+  estimatedValueTotal: number | null;
+  updatedAt: string | null;
+};
+
+/** Always the 27 states. The server recomputes it at most once every 15 minutes. */
+export type OpenTendersByStateResponse = {
+  data: OpenTendersByState[];
+  meta: { totalOpenTenders: number; generatedAt: string; indexUpdatedAt: string | null; cacheTtlSeconds: number };
+};
+
 /** Public `GET /api/v1/billing/plan` (no session): the single plan and the trial length. */
 export type PublicPlan = { monthlyBrl: number | null; trialDays: number; currency: 'BRL' };
 
