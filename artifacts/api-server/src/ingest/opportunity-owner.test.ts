@@ -10,6 +10,7 @@ import {
   looksLikePersonName,
   mentionsPublicCall,
   redactContacts,
+  resolveOwner,
 } from "./opportunity-owner";
 
 const now = new Date("2026-10-11T12:00:00-03:00");
@@ -351,4 +352,24 @@ describe("re-evaluating a stored payload", () => {
     assert.equal(legacy?.raw.ownerReview.sourceChecked, false);
     assert.equal(legacy?.organizationName, NEUTRAL);
   });
+});
+
+it("public bodies registered as an Individual agent keep their name", () => {
+  const installation = { name: "Mapa Cultural do Ceará" };
+  const texts = { title: "Edital de chamamento público nº 01/2026", summary: null };
+  for (const name of ["Secretaria Municipal de Cultura de Pindoretama", "Prefeitura de Aracati", "Fundação Cultural de Viana", "Coordenadoria de Patrimônio Cultural"]) {
+    const resolved = resolveOwner({ owner: { id: 7, name, type: { id: 1, name: "Individual" } } }, installation, texts);
+    assert.equal(resolved.organizationName, name, name);
+    assert.equal(resolved.review.nameWithheld, false, name);
+  }
+});
+
+it("a person registered as an Individual agent still has the name withheld", () => {
+  const installation = { name: "Mapa Cultural do Ceará" };
+  const texts = { title: "Edital de chamamento público nº 01/2026", summary: null };
+  for (const name of ["Barbara Rodrigues Pereira Teofilo", "Antônia Almeida", "Secretário João Silva Produções"]) {
+    const resolved = resolveOwner({ owner: { id: 8, name, type: { id: 1, name: "Individual" } } }, installation, texts);
+    assert.equal(resolved.organizationName, "Proponente individual (Mapa Cultural do Ceará)", name);
+    assert.equal(resolved.review.nameWithheld, true, name);
+  }
 });
