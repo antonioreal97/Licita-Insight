@@ -41,7 +41,7 @@ traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
    em `memory-bank/`, fique com a versão do commit (`git checkout HEAD -- memory-bank && git stash drop`) e cite no
    relatório; em `docker-compose.yml` (stack de dev, não usada), mantenha a do stash.
 3. Conforme `kinds`:
-   - `app_build`: `docker compose -f compose.macbook.yml up -d --build` (todos os serviços do compose, para incluir
+   - `app_build`: `docker compose up -d --build` (sem `-f`: o `.env` define `COMPOSE_FILE=compose.macbook.yml:compose.macbook.tailscale.yml`; nunca passe só `-f compose.macbook.yml`) (todos os serviços do compose, para incluir
      serviços novos como o proxy; o Compose só recria o que mudou e o `db-setup` fica fora por estar no profile
      `setup`; nunca `down`, `-v`, `db-setup` ou `migrate`). Em seguida rode `docker exec licita-macbook-proxy-1
      nginx -s reload` como redundância operacional. Desde a correção do incidente de 08/10, o Nginx re-resolve
@@ -157,6 +157,9 @@ segue normal sem ele: os editais ficam com a categoria das regras até a noite s
 religa o professor OpenAI. Em seguida `up -d` (o `restart` não relê o `.env`).
 
 ## Deploy com borda Oracle
+
+O `.env` do servidor define `COMPOSE_FILE=compose.macbook.yml:compose.macbook.tailscale.yml`: rode `docker compose ...` **sem `-f`**. Depois de qualquer recriação confira `docker port licita-macbook-proxy-1 8080` — precisa listar `100.76.192.116:24252`. O monitor checa isso a cada 5 min (anomalia `proxy:tailscale-port`) e, se faltar, recria só o proxy sozinho; você está autorizado a fazer o mesmo (`docker compose up -d --no-deps proxy` + `nginx -s reload`) ao ver esse alerta.
+
 
 Quando `MACBOOK_TAILSCALE_IP` estiver configurado no `.env` do servidor, todos os
 comandos Compose de deploy/recriacao devem usar

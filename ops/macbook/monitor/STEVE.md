@@ -16,6 +16,10 @@ chega enquanto ele está sem cota.
    começando por `via Steve-CODEX — aguardando validação do Albert-CLAUDE`.
 5. Responda só `Steve-CODEX: concluído` e aguarde. Quando a cota voltar, o Albert-CLAUDE valida o seu resultado.
 
+## Compose
+
+No servidor rode `docker compose ...` **sem `-f`** (o `.env` define `COMPOSE_FILE` com os dois arquivos). Nunca use só `-f compose.macbook.yml`: o proxy perde a porta do Tailscale e o site cai (502). Ao ver o alerta `proxy:tailscale-port`, você pode recriar só o proxy (`docker compose up -d --no-deps proxy` + `nginx -s reload`).
+
 ## Limites
 
 - Os mesmos do Albert-CLAUDE: fora da seção "Atualização da branch" do `ALBERT.md`, nada de `docker compose

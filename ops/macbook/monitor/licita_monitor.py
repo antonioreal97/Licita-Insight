@@ -42,6 +42,8 @@ def load_config():
         "ORCA_CLI": str(HOME / ".config/orca/linux-orca-cli-shim/orca"),
         "ALBERT_TERMINAL": "",
         "STEVE_TERMINAL": "",
+        "PROXY_CONTAINER": "licita-macbook-proxy-1",
+        "TAILSCALE_IP": "100.76.192.116",
         "AI_DAILY_BUDGET_USD": "10",
         "MAX_WAKES_PER_DAY": "6",
         "REALERT_HOURS": "6",
@@ -58,8 +60,8 @@ def load_config():
 CFG = load_config()
 
 
-def run(cmd, timeout=60, check=False):
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+def run(cmd, timeout=60, check=False, cwd=None):
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd)
     if check and p.returncode != 0:
         raise RuntimeError(f"{cmd[0]} falhou: {p.stderr.strip()[:300]}")
     return p
@@ -207,6 +209,9 @@ def collect():
     else:
         p = run(["systemctl", "--user", "show", "licita-ngrok-vercel-sync.service", "-p", "Result", "--value"])
         net["vercel_sync_result"] = p.stdout.strip()
+    # Com a borda Oracle, o proxy precisa estar publicado no IP do Tailscale; só em 127.0.0.1 a borda dá 502.
+    ports = run(["docker", "port", CFG["PROXY_CONTAINER"], "8080"], timeout=20).stdout
+    net["proxy_ports"] = sorted(line.strip() for line in ports.splitlines() if line.strip())
     m["net"] = net
     return m
 
@@ -233,6 +238,11 @@ def anomalies(m, prev):
             add("edge:down", "critica", f"{CFG['EDGE_URL']}/api/readyz falhou ({m['net']['edge_readyz'][1]})")
     elif not m["net"]["ngrok_url"]:
         add("ngrok:down", "critica", "ngrok sem túnel https ativo")
+    if CFG["EDGE_URL"] and CFG["TAILSCALE_IP"] and not any(
+            p.startswith(CFG["TAILSCALE_IP"] + ":") for p in m["net"].get("proxy_ports", [])):
+        add("proxy:tailscale-port", "critica",
+            f"proxy sem publicação no Tailscale ({', '.join(m['net'].get('proxy_ports', [])) or 'sem portas'}); "
+            "a borda Oracle não alcança o servidor")
     if not m["net"]["public_readyz"][0]:
         add("readyz:public", "critica", f"{CFG['PUBLIC_URL']}/api/readyz falhou ({m['net']['public_readyz'][1]})")
     if not CFG["EDGE_URL"] and m["net"]["vercel_sync_result"] not in ("success", ""):
@@ -502,6 +512,20 @@ def wake_albert(alert_path, alerts):
     return delegate(prompt)
 
 
+def heal_proxy_tailscale(found):
+    """Correção autorizada pelo owner: recria só o proxy com os dois arquivos de compose (COMPOSE_FILE do .env)."""
+    files = ["-f", "compose.macbook.yml", "-f", "compose.macbook.tailscale.yml"]
+    p = run(["docker", "compose", *files, "up", "-d", "--no-deps", "proxy"], timeout=180, cwd=CFG["REPO_DIR"])
+    run(["docker", "exec", CFG["PROXY_CONTAINER"], "nginx", "-s", "reload"], timeout=30)
+    ports = run(["docker", "port", CFG["PROXY_CONTAINER"], "8080"], timeout=20).stdout
+    healed = (CFG["TAILSCALE_IP"] + ":") in ports
+    for a in found:
+        if a["key"] == "proxy:tailscale-port":
+            a["text"] += (" — corrigido automaticamente (proxy recriado com os dois composes)"
+                          if healed else f" — correção automática FALHOU: {(p.stderr or p.stdout)[-200:]}")
+    print(f"proxy:tailscale-port: autocorreção {'ok' if healed else 'falhou'}")
+
+
 def cmd_check():
     for d in (STATE, ALERTS, REPORTS):
         d.mkdir(parents=True, exist_ok=True)
@@ -510,6 +534,8 @@ def cmd_check():
     prev = json.loads(prev_path.read_text()) if prev_path.exists() else {}
     m = collect()
     found = anomalies(m, prev)
+    if any(a["key"] == "proxy:tailscale-port" for a in found):
+        heal_proxy_tailscale(found)
     prev_path.write_text(json.dumps(m, default=str, indent=1))
 
     seen_path = STATE / "seen.json"
