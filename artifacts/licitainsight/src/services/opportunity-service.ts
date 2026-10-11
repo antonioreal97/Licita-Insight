@@ -13,7 +13,7 @@ export const OPPORTUNITY_PAGE_SIZE = 20;
 const STATUSES: OpportunityStatus[] = ['open', 'upcoming', 'closed', 'undated'];
 const PROGRAMS: OpportunityProgram[] = ['audiovisual', 'lpg', 'fac', 'fsa'];
 const KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership'];
-const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes'];
+const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic'];
 export const OPPORTUNITY_AREAS: OpportunityArea[] = [
   'audiovisual',
   'musica',

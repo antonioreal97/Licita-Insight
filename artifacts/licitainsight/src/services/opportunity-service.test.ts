@@ -55,3 +55,10 @@ test('valores desconhecidos de tipo e fonte são descartados', () => {
   assert.deepEqual(parsed.kind, ['funding']);
   assert.deepEqual(parsed.source, ['capes']);
 });
+
+test('fontes federais de cultura passam pelo filtro de fonte', () => {
+  const url = '?source=transferegov&source=funarte&source=minc&source=salic';
+  const parsed = opportunityParamsFromUrl(url);
+  assert.deepEqual(parsed.source, ['transferegov', 'funarte', 'minc', 'salic']);
+  assert.equal(opportunityParamsToUrl(parsed), url);
+});

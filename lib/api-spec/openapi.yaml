@@ -3778,7 +3778,7 @@ components:
       enum: [culture, funding, innovation, partnership]
     OpportunitySource:
       type: string
-      enum: [mapas, finep, cnpq, capes]
+      enum: [mapas, finep, cnpq, capes, transferegov, funarte, minc, salic]
     OpportunityDocument:
       type: object
       properties:

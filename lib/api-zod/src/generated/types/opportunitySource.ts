@@ -14,4 +14,8 @@ export const OpportunitySource = {
   finep: 'finep',
   cnpq: 'cnpq',
   capes: 'capes',
+  transferegov: 'transferegov',
+  funarte: 'funarte',
+  minc: 'minc',
+  salic: 'salic',
 } as const;
