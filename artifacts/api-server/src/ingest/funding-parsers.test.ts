@@ -113,3 +113,19 @@ test("coleta mockada respeita robots e agrega as três fontes", async () => {
     ),
   );
 });
+
+test("LGPD: fomento grava a instituição da fonte e só o endereço da chamada no payload", async () => {
+  const rows = [
+    ...parseCnpqOpportunities(await fixture("cnpq"), now),
+    ...parseCapesOpportunities(await fixture("capes"), now),
+    ...parseFinepOpportunities(await fixture("finep"), now),
+  ];
+  const [finep] = parseFinepOpportunities(await fixture("finep"), now);
+  rows.push(enrichFinepOpportunity(finep!, await fixture("finep-detail"), now));
+  assert.ok(rows.length >= 4);
+  for (const row of rows) {
+    assert.ok(["CNPq", "CAPES", "FINEP"].includes(row.organizationName));
+    // The text of the page is not kept: a call page can name people.
+    assert.deepEqual(Object.keys(row.raw), ["sourceUrl"]);
+  }
+});

@@ -25,6 +25,7 @@ export type FundingOpportunityDraft = {
   status: OpportunityStatus;
   sourceUrl: string;
   searchText: string;
+  /** Where the call was read from. The text of the page is not kept: it can name people. */
   raw: Record<string, unknown>;
 };
 
@@ -207,7 +208,7 @@ export const parseCnpqOpportunities = (
         documents: pdfDocuments(content, link.url),
         registrationFrom: parseBrazilianDate(dates?.[1]),
         registrationTo: parseBrazilianDate(dates?.[2]),
-        raw: { sourceUrl: link.url, text },
+        raw: { sourceUrl: link.url },
         now,
       }),
     ];
@@ -325,6 +326,6 @@ export const enrichFinepOpportunity = (
         .filter(Boolean)
         .join(" "),
     ),
-    raw: { sourceUrl: opportunity.sourceUrl, text },
+    raw: { sourceUrl: opportunity.sourceUrl },
   };
 };

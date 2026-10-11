@@ -6,6 +6,12 @@ import {
   resolveAreas,
   type OpportunityArea,
 } from "./opportunity-areas";
+import {
+  redactContacts,
+  resolveOwner,
+  type OwnerKind,
+  type OwnerReview,
+} from "./opportunity-owner";
 
 export { matchesAudiovisualText } from "./opportunity-areas";
 
@@ -26,13 +32,34 @@ export type MapasOpportunity = {
   registrationTo?: unknown;
   singleUrl?: unknown;
   continuousFlow?: unknown;
-  owner?: { id?: unknown; name?: unknown } | null;
-  ownerEntity?: { id?: unknown; name?: unknown } | null;
+  owner?: { id?: unknown; name?: unknown; type?: unknown } | null;
+  ownerEntity?: { id?: unknown; name?: unknown; type?: unknown } | null;
   type?: unknown;
   terms?: unknown;
   parent?: unknown;
   isModel?: unknown;
+  /** Present only on a record read back from `raw_payload`. */
+  ownerReview?: unknown;
 };
+
+/** What is stored in `raw_payload`: the fields below, the owner as `resolveOwner` allows and its review. */
+export type StoredMapasOpportunity = Record<string, unknown> & {
+  ownerReview: OwnerReview;
+};
+
+/** Source fields copied to `raw_payload` as they came. Anything else the API sends is left out. */
+const RAW_FIELDS = [
+  "id",
+  "registrationFrom",
+  "registrationTo",
+  "singleUrl",
+  "continuousFlow",
+  "type",
+  "terms",
+  "parent",
+  "isModel",
+  "@entityType",
+] as const;
 
 export type OpportunityDraft = {
   id: string;
@@ -52,9 +79,12 @@ export type OpportunityDraft = {
   areaTerms: string[];
   opportunityType: string | null;
   originName: string | null;
+  ownerKind: OwnerKind;
+  /** Published by a person, with no sign of a public call. The hub leaves it out unless asked. */
+  individualListing: boolean;
   sourceUrl: string | null;
   searchText: string;
-  raw: MapasOpportunity;
+  raw: StoredMapasOpportunity;
 };
 
 const keywordPattern = (word: string): RegExp =>
@@ -145,10 +175,16 @@ const sourceUrlFor = (
   return `${base}/oportunidade/${externalId}/`;
 };
 
+export type MapOpportunityOptions = {
+  /** False when the record is a stored `raw_payload`, not an answer of the source. */
+  fromSource?: boolean;
+};
+
 export const mapOpportunity = (
   record: MapasOpportunity,
   installation: MapasInstallation,
   now: Date,
+  options: MapOpportunityOptions = {},
 ): OpportunityDraft | null => {
   const externalId =
     typeof record.id === "number" && Number.isInteger(record.id)
@@ -156,15 +192,23 @@ export const mapOpportunity = (
       : typeof record.id === "string" && /^\d+$/.test(record.id)
         ? record.id
         : null;
-  const title = asText(record.name);
-  if (!externalId || !title) return null;
+  const sourceTitle = asText(record.name);
+  if (!externalId || !sourceTitle) return null;
   // Later phases of a call and call templates are not calls of their own.
   if (isSet(record.parent) || isSet(record.isModel)) return null;
 
-  const summary = asText(record.shortDescription);
-  const ownerName =
-    record.owner && typeof record.owner === "object" ? asText(record.owner.name) : null;
-  const organizationName = ownerName ?? installation.name;
+  const sourceSummary = asText(record.shortDescription);
+  const owner = resolveOwner(
+    record,
+    installation,
+    { title: sourceTitle, summary: sourceSummary },
+    options,
+  );
+  // A person's listing often carries their own phone or e-mail in the text.
+  const title = owner.personal ? redactContacts(sourceTitle) : sourceTitle;
+  const summary =
+    sourceSummary && owner.personal ? redactContacts(sourceSummary) : sourceSummary;
+  const { organizationName, originName } = owner;
   const registrationFrom = parseMapasDate(record.registrationFrom);
   const closing = parseMapasDate(record.registrationTo);
   const continuousFlow = isContinuous(record.continuousFlow) || isSentinel(closing);
@@ -176,8 +220,7 @@ export const mapOpportunity = (
   const state = installation.uf === "BR" ? null : installation.uf;
   const city = installation.city ?? null;
   const opportunityType = nameOf(record.type);
-  const ownerEntityName = nameOf(record.ownerEntity);
-  const originName = ownerEntityName && ownerEntityName !== title ? ownerEntityName : null;
+  const source = record as Record<string, unknown>;
 
   return {
     id: `${installation.id}-${externalId}`,
@@ -197,6 +240,8 @@ export const mapOpportunity = (
     areaTerms,
     opportunityType,
     originName,
+    ownerKind: owner.review.ownerKind,
+    individualListing: owner.review.individualListing,
     sourceUrl: sourceUrlFor(record, installation, externalId),
     searchText: normalizeText(
       [
@@ -215,6 +260,18 @@ export const mapOpportunity = (
         .filter(Boolean)
         .join(" "),
     ),
-    raw: record,
+    raw: {
+      ...Object.fromEntries(
+        RAW_FIELDS.filter((field) => source[field] !== undefined).map((field) => [
+          field,
+          source[field],
+        ]),
+      ),
+      name: title,
+      shortDescription: summary,
+      owner: owner.owner,
+      ownerEntity: owner.ownerEntity,
+      ownerReview: owner.review,
+    },
   };
 };
