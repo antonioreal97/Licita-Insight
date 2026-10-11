@@ -13,6 +13,7 @@
     "collect:transparency": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-transparency.ts",
     "collect:opportunities": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-opportunities.ts",
     "collect:funding": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-funding.ts",
+    "collect:culture-federal": "node --env-file-if-exists=../../.env --import tsx src/ingest/collect-culture-federal.ts",
     "calibrate:jev": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-jev.ts",
     "calibrate:company-fit": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-company-fit.ts",
     "calibrate:tender-sheet": "node --env-file-if-exists=../../.env --import tsx scripts/calibrate-tender-sheet.ts",

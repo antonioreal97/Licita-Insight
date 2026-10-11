@@ -42,6 +42,17 @@ const sourceDefinitions = [
 
 const productToken = FUNDING_USER_AGENT.split("/", 1)[0]!.toLowerCase();
 
+/** A rule path is a prefix; `*` stands for any run of characters and a final `$` anchors the end (RFC 9309). */
+const robotsPathPattern = (rulePath: string): RegExp => {
+  const anchored = rulePath.endsWith("$");
+  const body = anchored ? rulePath.slice(0, -1) : rulePath;
+  const source = body
+    .split("*")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${source}${anchored ? "$" : ""}`);
+};
+
 export const robotsAllows = (
   robots: string,
   url: string,
@@ -79,10 +90,11 @@ export const robotsAllows = (
   const applicable = groups.filter(({ agents }) =>
     agents.some((value) => value === "*" || agent.includes(value)),
   );
-  const path = new URL(url).pathname;
+  const target = new URL(url);
+  const path = `${target.pathname}${target.search}`;
   const matching = applicable
     .flatMap(({ rules }) => rules)
-    .filter((rule) => path.startsWith(rule.path.replace(/\*.*$/, "")))
+    .filter((rule) => robotsPathPattern(rule.path).test(path))
     .sort(
       (a, b) =>
         b.path.length - a.path.length || Number(b.allow) - Number(a.allow),

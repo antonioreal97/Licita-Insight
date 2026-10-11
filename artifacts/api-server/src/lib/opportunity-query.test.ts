@@ -19,3 +19,12 @@ test("opportunity query rejects an unknown source", () => {
     /source received an unknown value/,
   );
 });
+
+test("opportunity query accepts the federal culture sources", () => {
+  const query = parseOpportunityQuery({
+    source: ["transferegov", "funarte", "minc", "salic"],
+    kind: "partnership",
+  });
+  assert.deepEqual(query.source, ["transferegov", "funarte", "minc", "salic"]);
+  assert.deepEqual(query.kind, ["partnership"]);
+});

@@ -24,6 +24,10 @@ export const OPPORTUNITY_SOURCES = [
   "finep",
   "cnpq",
   "capes",
+  "transferegov",
+  "funarte",
+  "minc",
+  "salic",
 ] as const satisfies readonly OpportunitySource[];
 
 const UFS = [

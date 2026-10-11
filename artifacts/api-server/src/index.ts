@@ -9,10 +9,12 @@ import { devEntitlementEnabled } from "./billing/billing-access";
 import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { abandonStaleFundingRuns } from "./ingest/collect-funding";
+import { abandonStaleCultureFederalRuns } from "./ingest/collect-culture-federal";
 import { abandonStaleTransparencyRuns } from "./ingest/collect-transparency";
 import {
   startDailyCategoryClassify,
   startDailyCultureCollect,
+  startDailyCultureFederalCollect,
   startDailyFundingCollect,
   startDailyPncpCollect,
   startDailyTransparencyCollect,
@@ -88,6 +90,7 @@ const startSchedulers = (): Array<() => void> => [
   startEstimatedValueReviewScheduler(),
   startDailyCultureCollect(),
   startDailyFundingCollect(),
+  startDailyCultureFederalCollect(),
   startDailyCategoryClassify(),
   startNightlyCategoryClassification(),
   startRecommendationScheduler(),
@@ -117,6 +120,7 @@ const start = async (): Promise<void> => {
         await abandonStalePncpRuns();
         await abandonStaleCultureRuns();
         await abandonStaleFundingRuns();
+        await abandonStaleCultureFederalRuns();
         await abandonStaleTransparencyRuns();
       });
     } catch (error) {

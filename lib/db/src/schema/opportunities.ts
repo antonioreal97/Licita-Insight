@@ -13,7 +13,15 @@ import { sql } from "drizzle-orm";
 
 export type OpportunityKind =
   "culture" | "funding" | "innovation" | "partnership";
-export type OpportunitySource = "mapas" | "finep" | "cnpq" | "capes";
+export type OpportunitySource =
+  | "mapas"
+  | "finep"
+  | "cnpq"
+  | "capes"
+  | "transferegov"
+  | "funarte"
+  | "minc"
+  | "salic";
 export type OpportunityDocument = {
   title: string;
   url: string;
@@ -99,7 +107,7 @@ export const culturalOpportunitiesTable = pgTable(
     ),
     check(
       "cultural_opportunities_source_check",
-      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes')`,
+      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic')`,
     ),
     check(
       "cultural_opportunities_amount_check",
