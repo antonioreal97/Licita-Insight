@@ -49,6 +49,10 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   finep: "FINEP",
   cnpq: "CNPq",
   capes: "CAPES",
+  transferegov: "Transferegov.br",
+  funarte: "Funarte",
+  minc: "Ministério da Cultura",
+  salic: "Lei Rouanet (Salic)",
 };
 
 export const opportunityStatusLabels: Record<OpportunityStatus, string> = {

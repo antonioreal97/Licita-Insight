@@ -1,0 +1,300 @@
+{
+ "data": [
+  {
+   "id_programa": 181,
+   "ano_programa": 2026,
+   "cd_programa": "2026 - 00076",
+   "tp_instrumento": "Lei de incentivo à Saúde do Ministério da Saúde (PRONON e PRONAS)",
+   "cd_tipo_instrumento": "RENUNCIA SAUDE",
+   "sg_ente_superior": "MS",
+   "nm_ente_superior": "Ministério da Saúde",
+   "sg_nome_ente_superior": "MS - Ministério da Saúde",
+   "sg_ente_repassador": "SE",
+   "nm_ente_repassador": "Secretaria-Executiva",
+   "sg_nome_ente_repassador": "SE - Secretaria-Executiva",
+   "nm_programa": "Pronas/PCD - Formação, qualificação e aperfeiçoamento de recursos humanos em todos os níveis de atenção",
+   "qualificacao_beneficiario": "Beneficiário Espontâneo",
+   "ds_objetivo": "Fortalecer as políticas de saúde para pessoas com deficiência, ampliando a oferta de serviços médico-assistenciais, apoiando a formação e treinamento de recursos humanos, e promovendo pesquisas clínicas, epidemiológicas e socioantropológicas. As instituições participantes devem ser sem fins lucrativos e atuar na prevenção, diagnóstico, tratamento, reabilitação, ou habilitação de pessoas com deficiência.",
+   "ds_problema": "Ampliar o fomento de projetos que contribuam com a política de saúde temática, visando um melhor direcionamento de recursos captados, por meio de ações e serviços de saúde ofertados pela sociedade civil de forma complementar ao Sistema Único de Saúde (SUS).",
+   "ds_publico_alvo": "Pessoa com deficiência",
+   "ds_resultado_esperado": "Promover a melhoria na qualidade dos serviços de prevenção e reabilitação das pessoas com deficiência; contribuir para a ampliação do acesso às ações e serviços de atenção integral à saúde da pessoa com deficiência.",
+   "dt_inicio_beneficiario_espontaneo": "2026-10-05",
+   "dt_fim_beneficiario_espontaneo": "2026-10-26",
+   "expiracao_prog_beneficiario_espotaneo": "expiracao_prog_prox",
+   "pc_meia_entrada": null,
+   "situacao_programa": "Disponibilizado",
+   "sn_tem_meta_padrao": 0,
+   "sn_permite_meta_proponente": 1,
+   "sn_tem_visao_produto": 0,
+   "sn_exige_plano_distribuicao": 0,
+   "sn_dispensa_plano_trabalho": 0,
+   "dt_inicio_beneficiario_especifico": null,
+   "dt_fim_beneficiario_especifico": null,
+   "expiracao_prog_beneficiario_especifico": null,
+   "sn_vinc_indicadores_resultados_esperados": 0,
+   "sn_sazonalidade_plano_trabalho": 0,
+   "sn_existe_publico_alvo_padrao": 1,
+   "sn_utiliza_cauc_na_habilitacao": 0,
+   "nr_vlr_global": null,
+   "sn_permite_anexo_tipo_outros": 1,
+   "dt_inicio_beneficiario_emenda": null,
+   "dt_fim_beneficiario_emenda": null,
+   "expiracao_prog_beneficiario_emenda": null,
+   "nr_prazo_captacao": 345,
+   "sn_todos_cnaes": 1,
+   "in_finalidade": null,
+   "vincula_resultados_esperados_indicadores_progama": "NÃO",
+   "sn_projeto_estruturante_calamidade": "NÃO",
+   "modalidade_projeto": null,
+   "ds_justificativa_tipo_projeto": null,
+   "ufs_habilitadas": [],
+   "programa_atende_a": [
+    {
+     "tp_atende_a": "Terceiro Setor"
+    }
+   ],
+   "categorias_despesa": [
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Materiais"
+    },
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Serviços"
+    },
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Equipamentos"
+    }
+   ],
+   "resultados_esperados": [],
+   "indicadores_programa": []
+  },
+  {
+   "id_programa": 97,
+   "ano_programa": 2025,
+   "cd_programa": "2025 - 00090",
+   "tp_instrumento": "Lei de incentivo à Saúde do Ministério da Saúde (PRONON e PRONAS)",
+   "cd_tipo_instrumento": "RENUNCIA SAUDE",
+   "sg_ente_superior": "MS",
+   "nm_ente_superior": "Ministério da Saúde",
+   "sg_nome_ente_superior": "MS - Ministério da Saúde",
+   "sg_ente_repassador": "SE",
+   "nm_ente_repassador": "Secretaria-Executiva",
+   "sg_nome_ente_repassador": "SE - Secretaria-Executiva",
+   "nm_programa": "Pronon - Formação, Capacitação e Aperfeiçoamento de Recursos Humanos",
+   "qualificacao_beneficiario": "Beneficiário Espontâneo",
+   "ds_objetivo": "Fortalecer as políticas de saúde para pacientes oncológicos, ampliando a oferta de serviços médico-assistenciais, apoiando a formação e treinamento de recursos humanos, e promovendo pesquisas clínicas, epidemiológicas e socioantropológicas. As instituições participantes devem ser sem fins lucrativos e atuar na prevenção, diagnóstico e tratamento das pessoas com câncer.",
+   "ds_problema": "Ampliar o fomento de projetos que contribuam com a política de saúde temática, visando um melhor direcionamento de recursos captados, por meio de ações e serviços de saúde ofertados pela sociedade civil de forma complementar ao Sistema Único de Saúde (SUS).",
+   "ds_publico_alvo": "Pessoas que demandem de atenção oncológica.",
+   "ds_resultado_esperado": "Promover a melhoria na qualidade dos serviços de atenção oncológica; contribuir para a ampliação do acesso às ações e serviços de de atenção oncológica.",
+   "dt_inicio_beneficiario_espontaneo": "2025-10-07",
+   "dt_fim_beneficiario_espontaneo": "2025-11-12",
+   "expiracao_prog_beneficiario_espotaneo": "prog_expirado",
+   "pc_meia_entrada": null,
+   "situacao_programa": "Disponibilizado",
+   "sn_tem_meta_padrao": 0,
+   "sn_permite_meta_proponente": 1,
+   "sn_tem_visao_produto": 0,
+   "sn_exige_plano_distribuicao": 0,
+   "sn_dispensa_plano_trabalho": 0,
+   "dt_inicio_beneficiario_especifico": null,
+   "dt_fim_beneficiario_especifico": null,
+   "expiracao_prog_beneficiario_especifico": null,
+   "sn_vinc_indicadores_resultados_esperados": 0,
+   "sn_sazonalidade_plano_trabalho": 0,
+   "sn_existe_publico_alvo_padrao": 0,
+   "sn_utiliza_cauc_na_habilitacao": 0,
+   "nr_vlr_global": null,
+   "sn_permite_anexo_tipo_outros": 1,
+   "dt_inicio_beneficiario_emenda": null,
+   "dt_fim_beneficiario_emenda": null,
+   "expiracao_prog_beneficiario_emenda": null,
+   "nr_prazo_captacao": 343,
+   "sn_todos_cnaes": 1,
+   "in_finalidade": "PRONON",
+   "vincula_resultados_esperados_indicadores_progama": "NÃO",
+   "sn_projeto_estruturante_calamidade": "NÃO",
+   "modalidade_projeto": null,
+   "ds_justificativa_tipo_projeto": null,
+   "ufs_habilitadas": [],
+   "programa_atende_a": [
+    {
+     "tp_atende_a": "Terceiro Setor"
+    }
+   ],
+   "categorias_despesa": [
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Materiais"
+    },
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Serviços"
+    },
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Equipamentos"
+    }
+   ],
+   "resultados_esperados": [],
+   "indicadores_programa": []
+  },
+  {
+   "id_programa": 72,
+   "ano_programa": 2025,
+   "cd_programa": "2025 - 00065",
+   "tp_instrumento": "Transferências Fundo a Fundo da Saúde",
+   "cd_tipo_instrumento": "FAF SAUDE",
+   "sg_ente_superior": "MS",
+   "nm_ente_superior": "Ministério da Saúde",
+   "sg_nome_ente_superior": "MS - Ministério da Saúde",
+   "sg_ente_repassador": "MS",
+   "nm_ente_repassador": "Ministério da Saúde",
+   "sg_nome_ente_repassador": "MS - Ministério da Saúde",
+   "nm_programa": "ATENÇÃO ESPECIALIZADA EM SAÚDE - Rede Alyne - Banco de Leite Humano (BLH)",
+   "qualificacao_beneficiario": "Beneficiário de Emenda Parlamentar",
+   "ds_objetivo": "Ampliar a oferta e o acesso às ações e aos serviços da Atenção Especializada, conforme as necessidades de saúde da população, reduzindo as desigualdades de raça/etnia, de gênero, regionais e sociais, e promovendo a integridade do cuidado.",
+   "ds_problema": "Estrutura inadequada e equipamentos obsoletos ou insuficientes que comprometem a qualidade e a oferta do leite materno pasteurizado, essencial para a sobrevivência de recém-nascidos de alto risco, além de limitar a expansão do serviço.",
+   "ds_publico_alvo": "Publico alvo será informado no Plano de Trabalho.",
+   "ds_resultado_esperado": "\"Aplicação de recursos para melhoria da infraestrutura e equipamentos modernos para coleta, armazenamento e processamento do leite humano assegurando boas práticas de manejo, processamento e controle de qualidade.Resultados Esperados:• Ampliação da capacidade de coleta e distribuição de leite materno pasteurizado.• Modernização dos equipamentos dos bancos de leite.• Garantia da qualidade e segurança do leite oferecido.• Aumento das taxas de aleitamento materno exclusivo em unidades neonatais.• Redução da morbimortalidade neonatal em grupos de risco.\"",
+   "dt_inicio_beneficiario_espontaneo": null,
+   "dt_fim_beneficiario_espontaneo": null,
+   "expiracao_prog_beneficiario_espotaneo": null,
+   "pc_meia_entrada": null,
+   "situacao_programa": "Disponibilizado",
+   "sn_tem_meta_padrao": 0,
+   "sn_permite_meta_proponente": 1,
+   "sn_tem_visao_produto": 0,
+   "sn_exige_plano_distribuicao": 0,
+   "sn_dispensa_plano_trabalho": 0,
+   "dt_inicio_beneficiario_especifico": null,
+   "dt_fim_beneficiario_especifico": null,
+   "expiracao_prog_beneficiario_especifico": null,
+   "sn_vinc_indicadores_resultados_esperados": 0,
+   "sn_sazonalidade_plano_trabalho": 0,
+   "sn_existe_publico_alvo_padrao": 0,
+   "sn_utiliza_cauc_na_habilitacao": 0,
+   "nr_vlr_global": null,
+   "sn_permite_anexo_tipo_outros": 1,
+   "dt_inicio_beneficiario_emenda": "2025-06-07",
+   "dt_fim_beneficiario_emenda": "2025-12-31",
+   "expiracao_prog_beneficiario_emenda": "prog_expirado",
+   "nr_prazo_captacao": null,
+   "sn_todos_cnaes": null,
+   "in_finalidade": null,
+   "vincula_resultados_esperados_indicadores_progama": "NÃO",
+   "sn_projeto_estruturante_calamidade": "NÃO",
+   "modalidade_projeto": null,
+   "ds_justificativa_tipo_projeto": null,
+   "ufs_habilitadas": [],
+   "programa_atende_a": [],
+   "categorias_despesa": [
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Equipamentos"
+    }
+   ],
+   "resultados_esperados": [],
+   "indicadores_programa": []
+  },
+  {
+   "id_programa": 9,
+   "ano_programa": 2025,
+   "cd_programa": "2025 - 00002",
+   "tp_instrumento": "Multa Ambiental - Acordo de Implementação",
+   "cd_tipo_instrumento": "MMA MULTA",
+   "sg_ente_superior": "MMA",
+   "nm_ente_superior": "Ministério do Meio Ambiente",
+   "sg_nome_ente_superior": "MMA - Ministério do Meio Ambiente",
+   "sg_ente_repassador": "MMA",
+   "nm_ente_repassador": "Ministério do Meio Ambiente",
+   "sg_nome_ente_repassador": "MMA - Ministério do Meio Ambiente",
+   "nm_programa": "Multa Ambiental - Gestão de Resíduos Sólidos em Consórcios Públicos de MG",
+   "qualificacao_beneficiario": "Beneficiário Espontâneo",
+   "ds_objetivo": "O programa tem como objeto a seleção de propostas que contemplem a execução dos programas, projetos e ações dos planos de resíduos sólidos apresentados pelos proponentes, para a melhoria da gestão de resíduos sólidos em seus territórios, em conformidade com as temáticas financiáveis indicadas no capítulo 3 do Edital, a serem executados por consórcios públicos situados no estado de Minas Gerais.",
+   "ds_problema": "Este programa visa disponibilizar recursos provenientes de multa ambiental para a mitigar ou solucionar os problemas ambientais, sociais e econômicos decorrentes da destinação inadequada de resíduos sólidos erm municípios de Minas Gerais.Para isso, o Edital de Chamamento Público SQA nº 01/2024 elenca as seguintes temáticas financiáveis:1 - Coleta seletiva de resíduos recicláveis secos e/ou orgânicos;2 - Triagem e beneficiamento de resíduos recicláveis;3 - Transbordo para unidades de destinação ambientalmente adequada de resíduos;4 - Estruturação e fortalecimento de associações, cooperativas ou outras formas de organização de catadoras e catadores;5 - Estudos e projetos para inclusão de catadores autônomos em ações conjuntas com organizações de catadores, prefeituras ou outros arranjos;6 - Ações de prevenção ao desperdício de alimentos;7 - Reciclagem da fração orgânica dos resíduos sólidos urbanos (compostagem e/ou biodigestão anaeróbica), incluindo o fomento à agricultura urbana e periurbana;8 - Coleta e reciclagem de resíduos da construção civil (RCC).",
+   "ds_publico_alvo": "Consórcios Públicos Municipais com finalidade de gestão de resíduos sólidos, situados no estado de Minas Gerais",
+   "ds_resultado_esperado": "Os resultados esperados das propostas devem descrever o cenário futuro que se espera com a execução do projeto. Se no campo “problema a ser resolvido” da proposta o proponente informou corretamente a situação enfrentada e demonstrou com dados a situação existente, nos resultados esperados deve ser informado qual a melhora esperada em relação ao problema. O problema será totalmente resolvido com a execução do projeto? Ou existirá uma diminuição porcentual do problema informado? De quanto será essa melhora esperada? Deve-se descrever os benefícios, de preferência de forma quantitativa.",
+   "dt_inicio_beneficiario_espontaneo": "2025-04-11",
+   "dt_fim_beneficiario_espontaneo": "2025-07-10",
+   "expiracao_prog_beneficiario_espotaneo": "prog_expirado",
+   "pc_meia_entrada": null,
+   "situacao_programa": "Disponibilizado",
+   "sn_tem_meta_padrao": 1,
+   "sn_permite_meta_proponente": 0,
+   "sn_tem_visao_produto": 0,
+   "sn_exige_plano_distribuicao": 0,
+   "sn_dispensa_plano_trabalho": 0,
+   "dt_inicio_beneficiario_especifico": null,
+   "dt_fim_beneficiario_especifico": null,
+   "expiracao_prog_beneficiario_especifico": null,
+   "sn_vinc_indicadores_resultados_esperados": 0,
+   "sn_sazonalidade_plano_trabalho": 0,
+   "sn_existe_publico_alvo_padrao": 0,
+   "sn_utiliza_cauc_na_habilitacao": 1,
+   "nr_vlr_global": 100000000.0,
+   "sn_permite_anexo_tipo_outros": 1,
+   "dt_inicio_beneficiario_emenda": null,
+   "dt_fim_beneficiario_emenda": null,
+   "expiracao_prog_beneficiario_emenda": null,
+   "nr_prazo_captacao": null,
+   "sn_todos_cnaes": null,
+   "in_finalidade": null,
+   "vincula_resultados_esperados_indicadores_progama": "NÃO",
+   "sn_projeto_estruturante_calamidade": "NÃO",
+   "modalidade_projeto": null,
+   "ds_justificativa_tipo_projeto": null,
+   "ufs_habilitadas": [
+    {
+     "nm_uf": "MINAS GERAIS",
+     "sg_uf": "MG",
+     "cd_ibge": 31
+    }
+   ],
+   "programa_atende_a": [
+    {
+     "tp_atende_a": "Consórcio Público"
+    },
+    {
+     "tp_atende_a": "Administração Pública Estadual ou do Distrito Federal"
+    },
+    {
+     "tp_atende_a": "Administração Pública Municipal"
+    }
+   ],
+   "categorias_despesa": [
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Materiais"
+    },
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Serviços"
+    },
+    {
+     "categoria_despesa_programa": "Custeio",
+     "subcategoria_despesa_programa": "Serviços de Reforma"
+    },
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Equipamentos"
+    },
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Obra"
+    },
+    {
+     "categoria_despesa_programa": "Investimento",
+     "subcategoria_despesa_programa": "Serviços de Engenharia"
+    }
+   ],
+   "resultados_esperados": [],
+   "indicadores_programa": []
+  }
+ ],
+ "total_pages": 1,
+ "total_items": 4,
+ "page_number": 1,
+ "page_size": 200
+}

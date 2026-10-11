@@ -1,7 +1,12 @@
-import { db, culturalOpportunitiesTable } from "@workspace/db";
+import {
+  db,
+  culturalOpportunitiesTable,
+  type OpportunitySource,
+} from "@workspace/db";
 import { sql } from "drizzle-orm";
 import type { OpportunityDraft } from "./opportunity-map";
 import type { FundingOpportunityDraft } from "./funding-parsers";
+import type { FederalOpportunityDraft } from "./federal-draft";
 
 export async function upsertOpportunities(
   drafts: OpportunityDraft[],
@@ -69,8 +74,20 @@ export async function upsertOpportunities(
   return drafts.length;
 }
 
+/** Culture fields a federal draft carries and a funding draft leaves at the column defaults. */
+type CultureFields = Pick<
+  FederalOpportunityDraft,
+  | "city"
+  | "continuousFlow"
+  | "program"
+  | "areas"
+  | "areaTerms"
+  | "opportunityType"
+  | "originName"
+>;
+
 export async function upsertFundingOpportunities(
-  drafts: FundingOpportunityDraft[],
+  drafts: Array<FundingOpportunityDraft & Partial<CultureFields>>,
   now: Date,
 ): Promise<number> {
   for (const draft of drafts) {
@@ -90,7 +107,13 @@ export async function upsertFundingOpportunities(
       registrationFrom: draft.registrationFrom,
       registrationTo: draft.registrationTo,
       status: draft.status,
-      program: null,
+      program: draft.program ?? null,
+      city: draft.city ?? null,
+      continuousFlow: draft.continuousFlow ?? false,
+      areas: draft.areas ?? [],
+      areaTerms: draft.areaTerms ?? [],
+      opportunityType: draft.opportunityType ?? null,
+      originName: draft.originName ?? null,
       sourceUrl: draft.sourceUrl,
       searchText: draft.searchText,
       rawPayload: draft.raw,
@@ -117,6 +140,13 @@ export async function upsertFundingOpportunities(
           registrationFrom: values.registrationFrom,
           registrationTo: values.registrationTo,
           status: values.status,
+          program: values.program,
+          city: values.city,
+          continuousFlow: values.continuousFlow,
+          areas: values.areas,
+          areaTerms: values.areaTerms,
+          opportunityType: values.opportunityType,
+          originName: values.originName,
           sourceUrl: values.sourceUrl,
           searchText: values.searchText,
           rawPayload: values.rawPayload,
@@ -151,6 +181,35 @@ export async function closeMissingOpportunities(
     .where(
       sql`${culturalOpportunitiesTable.installationId} = ${installationId}
         and ${culturalOpportunitiesTable.source} = 'mapas'
+        and ${culturalOpportunitiesTable.status} in ('open', 'upcoming')
+        ${stillListed}`,
+    )
+    .returning({ id: culturalOpportunitiesTable.id });
+  return closed.length;
+}
+
+/**
+ * Closes the calls of one federal source that its complete official listing no longer shows. A call with
+ * no closing date of its own leaves the hub the day it leaves the "open" page of the source.
+ */
+export async function closeMissingSourceOpportunities(
+  source: OpportunitySource,
+  listedExternalIds: string[],
+  now: Date,
+): Promise<number> {
+  const stillListed =
+    listedExternalIds.length > 0
+      ? sql`and ${culturalOpportunitiesTable.externalId} not in (${sql.join(
+          listedExternalIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : sql``;
+  const closed = await db
+    .update(culturalOpportunitiesTable)
+    .set({ status: "closed", updatedAt: now })
+    .where(
+      sql`${culturalOpportunitiesTable.installationId} = ${source}
+        and ${culturalOpportunitiesTable.source} = ${source}
         and ${culturalOpportunitiesTable.status} in ('open', 'upcoming')
         ${stillListed}`,
     )

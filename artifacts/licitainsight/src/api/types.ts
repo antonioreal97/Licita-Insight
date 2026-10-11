@@ -726,7 +726,7 @@ export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
 export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership';
-export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes';
+export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic';
 /** Canonical cultural areas (docs/contracts/opportunities-v1.md). */
 export type OpportunityArea =
   | 'audiovisual'
