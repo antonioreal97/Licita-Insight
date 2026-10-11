@@ -1,0 +1,143 @@
+[
+  {
+    "id": 3402,
+    "name": "EDITAL DE CHAMAMENTO PÚBLICO Nº 025/2026 17º FESTIVAL DE CINEMA DE TRIUNFO - 2026",
+    "shortDescription": "Constitui objeto deste Edital a seleção de obras audiovisuais brasileiras e pernambucanas para composição da programação oficial das mostras do 17º Festival de Cinema de Triunfo e a posterior premiação cultural das obras vencedoras, conforme as categorias, os critérios, a metodologia e os valores estabelecidos neste instrumento e em seus anexos.\n",
+    "registrationFrom": {
+      "date": "2026-10-01 09:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "registrationTo": {
+      "date": "2026-10-15 16:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "continuousFlow": null,
+    "owner": {
+      "id": 11,
+      "name": "Secretaria de Cultura do Estado de Pernambuco",
+      "@entityType": "agent"
+    },
+    "ownerEntity": {
+      "id": 3550,
+      "name": "SECULT-PE 2026",
+      "@entityType": "project"
+    },
+    "parent": null,
+    "terms": {
+      "tag": [],
+      "area": [
+        "Cinema"
+      ]
+    },
+    "singleUrl": "https://www.mapacultural.pe.gov.br/oportunidade/3402/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "isModel": null,
+    "@entityType": "opportunity"
+  },
+  {
+    "id": 3207,
+    "name": "EDITAL DE CHAMAMENTO PÚBLICO Nº 007/2026 CADASTRO AFIRMATIVO DA CULTURA DA SECRETARIA DE CULTURA DO ESTADO DE PERNAMBUCO (CAC SECULT/PE)",
+    "shortDescription": "Cadastro permanente destinado a agentes culturais que se enquadrem nos critérios de ações afirmativas da Secretaria de Cultura de Pernambuco (SECULT/PE), para registro, verificação e certificação de pertencimentos afirmativos, possibilitando o acesso às políticas afirmativas previstas nos mecanismos de fomento cultural do Estado.",
+    "registrationFrom": {
+      "date": "2026-06-16 09:30:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "registrationTo": {
+      "date": "2028-06-16 16:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "continuousFlow": {
+      "date": "2111-01-01 00:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "owner": {
+      "id": 11,
+      "name": "Secretaria de Cultura do Estado de Pernambuco",
+      "@entityType": "agent"
+    },
+    "ownerEntity": {
+      "id": 3550,
+      "name": "SECULT-PE 2026",
+      "@entityType": "project"
+    },
+    "parent": null,
+    "terms": {
+      "tag": [],
+      "area": [
+        "Outra"
+      ]
+    },
+    "singleUrl": "https://www.mapacultural.pe.gov.br/oportunidade/3207/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "isModel": null,
+    "@entityType": "opportunity"
+  },
+  {
+    "id": 2571,
+    "name": "Edital de Credenciamento Nacional de Pareceristas - Funcultura",
+    "shortDescription": "Este Edital tem como objetivo credenciar profissionais, pessoas físicas e/ou MEIs, residentes ou não em Pernambuco, para integrar o banco de pareceristas. Os selecionados poderão atuar na análise, classificação e emissão de parecer técnico sobre projetos culturais dos Editais do Funcultura, desde que atendam aos requisitos deste Instrumento Convocatório.",
+    "registrationFrom": {
+      "date": "2025-03-17 09:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "registrationTo": {
+      "date": "2027-03-17 16:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Recife"
+    },
+    "continuousFlow": null,
+    "owner": {
+      "id": 11,
+      "name": "Secretaria de Cultura do Estado de Pernambuco",
+      "@entityType": "agent"
+    },
+    "ownerEntity": {
+      "id": 2990,
+      "name": "FUNCULTURA 2024/2025",
+      "@entityType": "project"
+    },
+    "parent": null,
+    "terms": {
+      "tag": [],
+      "area": [
+        "Audiovisual e Mídias Interativas",
+        "Artes Visuais",
+        "Artesanato",
+        "Circo",
+        "Culturas Populares",
+        "Cultura dos Povos Originários",
+        "Cultura Digital",
+        "Cultura LGBTQIAPN+",
+        "Dança",
+        "Design",
+        "Design de Moda",
+        "Fotografia",
+        "Gastronomia",
+        "Literatura",
+        "Música",
+        "Patrimônio Cultural",
+        "Teatro",
+        "Ópera"
+      ]
+    },
+    "singleUrl": "https://www.mapacultural.pe.gov.br/oportunidade/2571/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "isModel": null,
+    "@entityType": "opportunity"
+  }
+]

@@ -22,6 +22,11 @@ import type {
   OpportunityProgram,
   OpportunityStatus,
 } from "../ingest/opportunity-map";
+import {
+  OPPORTUNITY_AREAS,
+  opportunityAreaLabels,
+  type OpportunityArea,
+} from "../ingest/opportunity-areas";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
 import {
@@ -76,13 +81,27 @@ export type OpportunitySummary = {
   registrationFrom: string | null;
   registrationTo: string | null;
   state: string | null;
-  installation: { id: string; name: string; uf: string };
+  city: string | null;
+  continuousFlow: boolean;
+  /** Canonical areas, for filtering. `areaTerms` are the terms as the source published them. */
+  areas: OpportunityArea[];
+  areaTerms: string[];
+  opportunityType: string | null;
+  originName: string | null;
+  installation: {
+    id: string;
+    name: string;
+    uf: string;
+    city: string | null;
+  };
   sourceUrl: string | null;
   updatedAt: string;
   profileMatch: { score: number; reasons: string[] } | null;
 };
 
 export type FacetBucket = { value: string; label: string; count: number };
+/** A municipality bucket also says its UF, so the client can filter by both and tell homonyms apart. */
+export type CityFacetBucket = FacetBucket & { state: string | null };
 
 export type OpportunitySearchResponse = {
   data: OpportunitySummary[];
@@ -100,6 +119,9 @@ export type OpportunitySearchResponse = {
     program: FacetBucket[];
     kind: FacetBucket[];
     source: FacetBucket[];
+    area: FacetBucket[];
+    city: CityFacetBucket[];
+    organization: FacetBucket[];
   } | null;
   meta: {
     query: string | null;
@@ -135,9 +157,28 @@ const requireNumber = (value: unknown, field: string): number => {
 const iso = (value: Date | null): string | null =>
   value ? value.toISOString() : null;
 
+type FacetName =
+  | "status"
+  | "state"
+  | "installation"
+  | "program"
+  | "kind"
+  | "source"
+  | "area"
+  | "city"
+  | "organization";
+
+const ORGANIZATION_FACET_LIMIT = 100;
+
+const textArray = (values: string[]): SQL =>
+  sql`array[${sql.join(
+    values.map((value) => sql`${value}`),
+    sql`, `,
+  )}]::text[]`;
+
 const whereFor = (
   criteria: OpportunityCriteria,
-  skip?: "status" | "state" | "installation" | "program" | "kind" | "source",
+  skip?: FacetName,
 ): SQL | undefined => {
   const filters: SQL[] = [];
   for (const token of queryTokens(criteria.query)) {
@@ -164,6 +205,22 @@ const whereFor = (
   }
   if (skip !== "program" && criteria.program.length > 0) {
     filters.push(inArray(culturalOpportunitiesTable.program, criteria.program));
+  }
+  if (skip !== "area" && criteria.area.length > 0) {
+    filters.push(
+      sql`${culturalOpportunitiesTable.areas} && ${textArray(criteria.area)}`,
+    );
+  }
+  if (skip !== "city" && criteria.city.length > 0) {
+    filters.push(inArray(culturalOpportunitiesTable.city, criteria.city));
+  }
+  if (skip !== "organization" && criteria.organization.length > 0) {
+    filters.push(
+      inArray(
+        culturalOpportunitiesTable.organizationName,
+        criteria.organization,
+      ),
+    );
   }
   if (skip !== "kind" && criteria.kind.length > 0) {
     filters.push(inArray(culturalOpportunitiesTable.kind, criteria.kind));
@@ -224,10 +281,17 @@ const toSummary = (
     registrationFrom: iso(row.registrationFrom),
     registrationTo: iso(row.registrationTo),
     state: row.state,
+    city: row.city,
+    continuousFlow: row.continuousFlow,
+    areas: OPPORTUNITY_AREAS.filter((area) => row.areas.includes(area)),
+    areaTerms: row.areaTerms,
+    opportunityType: row.opportunityType,
+    originName: row.originName,
     installation: {
       id: row.installationId,
       name: installation?.name ?? opportunitySourceLabels[row.source],
       uf: installation?.uf ?? row.state ?? "",
+      city: row.city,
     },
     sourceUrl: row.sourceUrl,
     updatedAt: row.updatedAt.toISOString(),
@@ -270,6 +334,63 @@ const labeledBuckets = async (
   });
 };
 
+/** A call counts once in every area it has, so the area counts add up to more than the total. */
+const areaBuckets = async (where: SQL | undefined): Promise<FacetBucket[]> => {
+  const result = await db.execute<{ value: string; count: number }>(sql`
+    select listed.area as value, count(*)::int as count
+    from ${culturalOpportunitiesTable}
+    cross join lateral unnest(${culturalOpportunitiesTable.areas}) as listed(area)
+    ${where ? sql`where ${where}` : sql``}
+    group by listed.area
+  `);
+  const counts = new Map(
+    result.rows.map((row) => [
+      row.value,
+      requireNumber(row.count, "facet count"),
+    ]),
+  );
+  return OPPORTUNITY_AREAS.flatMap((area) => {
+    const count = counts.get(area);
+    return count
+      ? [{ value: area, label: opportunityAreaLabels[area], count }]
+      : [];
+  }).sort((left, right) => right.count - left.count);
+};
+
+const cityBuckets = async (
+  where: SQL | undefined,
+): Promise<CityFacetBucket[]> => {
+  const rows = await db
+    .select({
+      city: culturalOpportunitiesTable.city,
+      state: culturalOpportunitiesTable.state,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(culturalOpportunitiesTable)
+    .where(and(where, sql`${culturalOpportunitiesTable.city} is not null`))
+    .groupBy(culturalOpportunitiesTable.city, culturalOpportunitiesTable.state)
+    .orderBy(asc(culturalOpportunitiesTable.city));
+  return rows.flatMap((row) =>
+    row.city
+      ? [
+          {
+            value: row.city,
+            label: row.state ? `${row.city} (${row.state})` : row.city,
+            count: requireNumber(row.count, "facet count"),
+            state: row.state,
+          },
+        ]
+      : [],
+  );
+};
+
+const organizationBuckets = async (
+  where: SQL | undefined,
+): Promise<FacetBucket[]> =>
+  (
+    await labeledBuckets(culturalOpportunitiesTable.organizationName, {}, where)
+  ).slice(0, ORGANIZATION_FACET_LIMIT);
+
 const latestCoverage = async (): Promise<InstallationCoverage[]> => {
   const [run] = await db
     .select({ details: ingestRunsTable.details })
@@ -285,9 +406,13 @@ const eqSource = () => sql`${ingestRunsTable.source} = ${INGEST_SOURCE}`;
 const coverageMeta = (coverage: InstallationCoverage[]) => ({
   installationIssues: coverage.flatMap((row) => {
     if (
-      !["failed", "degraded", "blocked", "vocabulary_fallback"].includes(
-        row.outcome,
-      )
+      ![
+        "failed",
+        "degraded",
+        "blocked",
+        "disabled",
+        "vocabulary_fallback",
+      ].includes(row.outcome)
     )
       return [];
     return [
@@ -374,6 +499,11 @@ export async function searchOpportunities(
           culturalOpportunitiesTable.source,
           opportunitySourceLabels,
           whereFor(criteria, "source"),
+        ),
+        area: await areaBuckets(whereFor(criteria, "area")),
+        city: await cityBuckets(whereFor(criteria, "city")),
+        organization: await organizationBuckets(
+          whereFor(criteria, "organization"),
         ),
       }
     : null;

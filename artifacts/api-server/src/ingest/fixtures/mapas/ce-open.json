@@ -1,0 +1,95 @@
+[
+  {
+    "id": 7688,
+    "name": "MECENAS DO CEARÁ 2026",
+    "shortDescription": "O presente Edital apresenta-se em observância ao Plano Estadual da Cultura (PEC) e busca garantir o fortalecimento das políticas culturais democráticas, inovadoras, plurais, sustentáveis e inclusivas, por meio do apoio a projetos artísticos e culturais e do fomento à cultura. \nO Mecenato Estadual é o mecanismo de fomento às atividades culturais por meio da renúncia fiscal, no qual os contribuintes do Imposto sobre Operações Relativas à Circulação de Mercadorias e sobre a Prestação de Serviços de Transporte Interestadual e Intermunicipal e de Comunicação (ICMS) incentivam projetos culturais mediante doação ou investimento, deduzindo o percentual legal do imposto devido, no limite de até 2% (dois por cento) do ICMS a ser recolhido mensalmente, na forma estabelecida em Lei.\n\nO primeiro passo para inscrição neste Edital é criar e/ou atualizar seus perfis de agente individual (Pessoa Física Proponente ou Responsável pelo Projeto da Pessoa Jurídica Proponente) e/ou coletivo (Pessoa Jurídica Proponente).\nATENÇÃO: não esquecer de vincular o coletivo referente à pessoa jurídica proponente na ficha de inscrição.\n\nHá a possibilidade de salvar rascunho e retomar a inscrição posteriormente, mas vale destacar que somente serão consideradas válidas as inscrições finalizadas até o horário e data limite estipulada neste Edital. \n\nA Secult-CE disponibilizará suporte aos proponentes em dias úteis, das 8h às 12h e das 13h às 17h, durante o período de inscrição, através do e-mail editalmecenas@secult.ce.gov.br ou pelo telefone (85) 98109-2950.\n\nPara mais informações e acompanhamento desta política acesse:  https://www.secult.ce.gov.br/mecenas/.",
+    "registrationFrom": {
+      "date": "2026-04-28 00:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "registrationTo": {
+      "date": "2026-10-31 23:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "owner": {
+      "id": 120334,
+      "name": "Coordenadoria de Economia Criativa e Fomento Cultural | COEF | SecultCE"
+    },
+    "parent": null,
+    "terms": {
+      "tag": []
+    },
+    "singleUrl": "https://mapacultural.secult.ce.gov.br/oportunidade/7688/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "continuousFlow": null,
+    "isModel": null,
+    "ownerEntity": null
+  },
+  {
+    "id": 8086,
+    "name": "1º EDITAL DE CIRCULAÇÃO E INTERCÂMBIO CULTURAL",
+    "shortDescription": "Edital de Circulação e Intercâmbio Cultural visa selecionar e apoiar propostas para apoio cultural e financeiro no custeio de despesas com locomoção e ajuda de custo de profissionais do setor cultural - artistas, técnicos, pesquisadores, curadores, entre outros agentes culturais do Estado do Ceará",
+    "registrationFrom": {
+      "date": "2026-07-27 00:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "registrationTo": {
+      "date": "2027-05-31 23:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "owner": {
+      "id": 5975,
+      "name": "Secretaria da Cultura do Estado do Ceará - SECULTCE"
+    },
+    "parent": null,
+    "terms": {
+      "tag": []
+    },
+    "singleUrl": "https://mapacultural.secult.ce.gov.br/oportunidade/8086/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "continuousFlow": null,
+    "isModel": null,
+    "ownerEntity": null
+  },
+  {
+    "id": 8263,
+    "name": "1º EDITAL DE CHAMAMENTO PÚBLICO PARA REALIZAÇÃO DO PROGRAMA DE ARTE  E CULTURA DIGITAL NO CEARÁ",
+    "shortDescription": "Período de conhecimento pública:\nDe 28 de agosto a 28 de setembro de 2026.\nPeríodo de inscrição:\nDe 29 de setembro a 14 de outubro de 2026.\n--\n1º EDITAL DE CHAMAMENTO PÚBLICO PARA REALIZAÇÃO DO PROGRAMA DE ARTE E CULTURA DIGITAL NO CEARÁ",
+    "registrationFrom": {
+      "date": "2026-09-29 00:00:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "registrationTo": {
+      "date": "2026-10-14 23:59:00.000000",
+      "timezone_type": 3,
+      "timezone": "America/Fortaleza"
+    },
+    "owner": {
+      "id": 5975,
+      "name": "Secretaria da Cultura do Estado do Ceará - SECULTCE"
+    },
+    "parent": null,
+    "terms": {
+      "tag": []
+    },
+    "singleUrl": "https://mapacultural.secult.ce.gov.br/oportunidade/8263/",
+    "type": {
+      "id": 9,
+      "name": "Edital"
+    },
+    "continuousFlow": null,
+    "isModel": null,
+    "ownerEntity": null
+  }
+]
