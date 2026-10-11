@@ -8,6 +8,7 @@ import {
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { inProgressRetry } from "./in-progress-retry";
 import { nightlyCategoryEnabled } from "../titles/nightly-window";
+import { cultureFederalSchedule } from "./culture-federal-schedule";
 
 const TZ = "America/Sao_Paulo";
 
@@ -244,6 +245,72 @@ export function startDailyFundingCollect(): () => void {
       () => void run("schedule").finally(arm),
       msUntilHour(hour),
     );
+    timer.unref();
+  };
+  arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+
+export function startDailyCultureFederalCollect(): () => void {
+  const schedule = cultureFederalSchedule();
+  if (!schedule.enabled) {
+    logger.info("Daily federal culture opportunities collect is disabled");
+    return () => undefined;
+  }
+  if (!process.env.DATABASE_URL) {
+    logger.error(
+      "DATABASE_URL is not set; daily federal culture opportunities collect will not start",
+    );
+    return () => undefined;
+  }
+
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const run = async (reason: string) => {
+    try {
+      const { collectCultureFederal } =
+        await import("./collect-culture-federal");
+      const locked = await tryRunSingletonJob("culture_federal_collect", () =>
+        collectCultureFederal(),
+      );
+      if (locked.acquired)
+        logger.info(
+          {
+            reason,
+            runId: locked.value.runId,
+            upserted: locked.value.upserted,
+            closed: locked.value.closed,
+          },
+          "Daily federal culture opportunities collected",
+        );
+    } catch (error) {
+      const { CultureFederalIngestInProgressError } =
+        await import("./collect-culture-federal");
+      if (error instanceof CultureFederalIngestInProgressError) {
+        logger.info(
+          { reason },
+          "Daily federal culture opportunities collect skipped because one is already running",
+        );
+        return;
+      }
+      logger.error(
+        { err: error, reason },
+        "Daily federal culture opportunities collect failed",
+      );
+    }
+  };
+  // No run at startup: a restart must not add requests to the sources.
+  const arm = () => {
+    if (stopped) return;
+    const delay = msUntilHour(schedule.hour);
+    logger.info(
+      { hour: schedule.hour, delayMs: delay },
+      "Next federal culture opportunities collect scheduled",
+    );
+    timer = setTimeout(() => void run("schedule").finally(arm), delay);
     timer.unref();
   };
   arm();

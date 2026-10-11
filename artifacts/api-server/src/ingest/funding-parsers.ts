@@ -68,7 +68,7 @@ export const textFromHtml = (value: string): string =>
 const absoluteUrl = (href: string, baseUrl: string): string =>
   new URL(decodeHtml(href), baseUrl).toString();
 
-const linksFromHtml = (
+export const linksFromHtml = (
   html: string,
   baseUrl: string,
 ): Array<{ title: string; url: string }> =>
