@@ -6,7 +6,7 @@ import { ErrorState } from '@/components/common/query-states';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { buttonClass } from '@/components/common/action-button';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
-import { OpportunityStatusBadge, opportunityKindLabels, opportunityProgramLabels } from './components/opportunity-status';
+import { OpportunityStatusBadge, opportunityAreaLabels, opportunityKindLabels, opportunityProgramLabels } from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 
 function DetailSkeleton() {
@@ -69,9 +69,13 @@ function OpportunityDetail() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <OpportunityStatusBadge status={opportunity.status} />
         <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
-        <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
-        {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
-        <span className="type-label text-muted-foreground">{opportunity.state ?? 'Nacional'}</span>
+        <span className="type-label text-muted-foreground">{opportunity.opportunityType ?? opportunityKindLabels[opportunity.kind]}</span>
+        {opportunity.program && opportunity.program !== 'audiovisual' && (
+          <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>
+        )}
+        <span className="type-label text-muted-foreground">
+          {opportunity.city && opportunity.state ? `${opportunity.city} (${opportunity.state})` : (opportunity.state ?? 'Nacional')}
+        </span>
       </div>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <h1 className="max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
@@ -92,7 +96,9 @@ function OpportunityDetail() {
           </div>
           <div>
             <dt className="type-label text-muted-foreground">Encerramento</dt>
-            <dd className="mt-1 type-ui">{formatDate(opportunity.registrationTo)}</dd>
+            <dd className="mt-1 type-ui">
+              {opportunity.continuousFlow && !opportunity.registrationTo ? 'Fluxo contínuo, sem data de encerramento' : formatDate(opportunity.registrationTo)}
+            </dd>
           </div>
           <div>
             <dt className="type-label text-muted-foreground">Fonte</dt>
@@ -115,6 +121,23 @@ function OpportunityDetail() {
               <div>
                 <dt className="type-label text-muted-foreground">Valor informado</dt>
                 <dd className="mt-1 type-ui">{formatCurrency(opportunity.amount)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {(opportunity.originName || opportunity.areas.length > 0) && (
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            {opportunity.originName && (
+              <div>
+                <dt className="type-label text-muted-foreground">Projeto de origem</dt>
+                <dd className="mt-1 type-ui">{opportunity.originName}</dd>
+              </div>
+            )}
+            {opportunity.areas.length > 0 && (
+              <div data-testid="opportunity-areas">
+                <dt className="type-label text-muted-foreground">Áreas culturais</dt>
+                <dd className="mt-1 type-ui">{opportunity.areas.map((area) => opportunityAreaLabels[area]).join(', ')}</dd>
+                {opportunity.areaTerms.length > 0 && <dd className="mt-1 type-meta text-muted-foreground">Na fonte: {opportunity.areaTerms.join(', ')}</dd>}
               </div>
             )}
           </dl>

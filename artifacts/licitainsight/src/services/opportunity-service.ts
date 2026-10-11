@@ -1,5 +1,6 @@
 import {
   opportunityAdapter,
+  type OpportunityArea,
   type OpportunityProgram,
   type OpportunityKind,
   type OpportunitySource,
@@ -13,6 +14,24 @@ const STATUSES: OpportunityStatus[] = ['open', 'upcoming', 'closed', 'undated'];
 const PROGRAMS: OpportunityProgram[] = ['audiovisual', 'lpg', 'fac', 'fsa'];
 const KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership'];
 const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes'];
+export const OPPORTUNITY_AREAS: OpportunityArea[] = [
+  'audiovisual',
+  'musica',
+  'teatro',
+  'danca',
+  'circo',
+  'artes-visuais',
+  'literatura',
+  'patrimonio',
+  'culturas-populares',
+  'artesanato',
+  'cultura-digital',
+  'gastronomia',
+  'gestao-producao',
+  'formacao',
+  'diversidade',
+  'outras',
+];
 const UFS = [
   'AC',
   'AL',
@@ -50,6 +69,12 @@ const keep = <T extends string>(values: string[], allowed: readonly T[]): T[] | 
   return picked.length > 0 ? picked : undefined;
 };
 
+/** Names typed by the source (municipality, institution): trimmed, capped at what the API accepts. */
+const names = (values: string[]): string[] | undefined => {
+  const picked = [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0 && value.length <= 200))].slice(0, 20);
+  return picked.length > 0 ? picked : undefined;
+};
+
 const date = (value: string | null): string | undefined => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined);
 
 export function opportunityParamsFromUrl(search: string): OpportunitySearchParams {
@@ -67,6 +92,9 @@ export function opportunityParamsFromUrl(search: string): OpportunitySearchParam
     program: keep(list(params, 'program'), PROGRAMS),
     kind: keep(list(params, 'kind'), KINDS),
     source: keep(list(params, 'source'), SOURCES),
+    area: keep(list(params, 'area'), OPPORTUNITY_AREAS),
+    city: names(list(params, 'city')),
+    organization: names(list(params, 'organization')),
     deadlineFrom: date(params.get('deadlineFrom')),
     deadlineTo: date(params.get('deadlineTo')),
     page: Number.isInteger(page) && page > 1 ? page : undefined,
@@ -82,6 +110,9 @@ export function opportunityParamsToUrl(params: OpportunitySearchParams): string 
   params.program?.forEach((program) => search.append('program', program));
   params.kind?.forEach((kind) => search.append('kind', kind));
   params.source?.forEach((source) => search.append('source', source));
+  params.area?.forEach((area) => search.append('area', area));
+  params.city?.forEach((city) => search.append('city', city));
+  params.organization?.forEach((organization) => search.append('organization', organization));
   if (params.deadlineFrom) search.set('deadlineFrom', params.deadlineFrom);
   if (params.deadlineTo) search.set('deadlineTo', params.deadlineTo);
   if (params.page && params.page > 1) search.set('page', String(params.page));

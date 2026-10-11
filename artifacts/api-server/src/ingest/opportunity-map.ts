@@ -1,5 +1,13 @@
 import { normalizeText } from "../domain/normalize";
 import type { MapasInstallation } from "./cultural-installations";
+import {
+  matchesAudiovisualText,
+  opportunityAreaLabels,
+  resolveAreas,
+  type OpportunityArea,
+} from "./opportunity-areas";
+
+export { matchesAudiovisualText } from "./opportunity-areas";
 
 export const OPPORTUNITY_STATUSES = ["open", "upcoming", "closed", "undated"] as const;
 export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];
@@ -7,17 +15,8 @@ export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];
 export const OPPORTUNITY_PROGRAMS = ["audiovisual", "lpg", "fac", "fsa"] as const;
 export type OpportunityProgram = (typeof OPPORTUNITY_PROGRAMS)[number];
 
-const AUDIOVISUAL_KEYWORDS = [
-  "audiovisual",
-  "cinema",
-  "filme",
-  "filmes",
-  "documentario",
-  "curta",
-  "curta-metragem",
-  "longa",
-  "longa-metragem",
-];
+/** Continuous-flow calls carry a far-future sentinel (2111-01-01) as the closing date. */
+const SENTINEL_YEAR = 2100;
 
 export type MapasOpportunity = {
   id?: unknown;
@@ -27,7 +26,12 @@ export type MapasOpportunity = {
   registrationTo?: unknown;
   singleUrl?: unknown;
   continuousFlow?: unknown;
-  owner?: { name?: unknown } | null;
+  owner?: { id?: unknown; name?: unknown } | null;
+  ownerEntity?: { id?: unknown; name?: unknown } | null;
+  type?: unknown;
+  terms?: unknown;
+  parent?: unknown;
+  isModel?: unknown;
 };
 
 export type OpportunityDraft = {
@@ -38,10 +42,16 @@ export type OpportunityDraft = {
   summary: string | null;
   organizationName: string;
   state: string | null;
+  city: string | null;
   registrationFrom: Date | null;
   registrationTo: Date | null;
+  continuousFlow: boolean;
   status: OpportunityStatus;
-  program: OpportunityProgram;
+  program: OpportunityProgram | null;
+  areas: OpportunityArea[];
+  areaTerms: string[];
+  opportunityType: string | null;
+  originName: string | null;
   sourceUrl: string | null;
   searchText: string;
   raw: MapasOpportunity;
@@ -50,23 +60,16 @@ export type OpportunityDraft = {
 const keywordPattern = (word: string): RegExp =>
   new RegExp(`(?:^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[^a-z0-9]|$)`);
 
-export const matchesAudiovisualText = (
-  title: string,
-  summary: string | null,
-): boolean => {
-  const text = normalizeText(`${title} ${summary ?? ""}`);
-  return AUDIOVISUAL_KEYWORDS.some((word) => keywordPattern(normalizeText(word)).test(text));
-};
-
+/** Named funds first; a call with no named fund is `audiovisual` only when its text says so. */
 export const programFromText = (
   title: string,
   summary: string | null,
-): OpportunityProgram => {
+): OpportunityProgram | null => {
   const text = normalizeText(`${title} ${summary ?? ""}`);
   if (text.includes("fundo setorial") || keywordPattern("fsa").test(text)) return "fsa";
   if (text.includes("lei paulo gustavo") || keywordPattern("lpg").test(text)) return "lpg";
   if (text.includes("fundo de apoio a cultura") || keywordPattern("fac").test(text)) return "fac";
-  return "audiovisual";
+  return matchesAudiovisualText(title, summary) ? "audiovisual" : null;
 };
 
 /** Mapas dates without an offset are Brasília local time. Some installs send `{ date, timezone }`. */
@@ -87,8 +90,36 @@ const asText = (value: unknown): string | null => {
   return trimmed === "" ? null : trimmed;
 };
 
-const isContinuous = (value: unknown): boolean =>
-  value === true || value === 1 || value === "1" || value === "true";
+/** `continuousFlow` is a datetime on current installs (set when the call has no closing date) and a flag on older ones. */
+const isContinuous = (value: unknown): boolean => {
+  if (!isSet(value)) return false;
+  if (value === true || value === 1 || value === "1" || value === "true") return true;
+  return parseMapasDate(value) !== null;
+};
+
+const isSentinel = (date: Date | null): boolean =>
+  date !== null && date.getUTCFullYear() >= SENTINEL_YEAR;
+
+const isSet = (value: unknown): boolean =>
+  value !== null && value !== undefined && value !== false && value !== 0 && value !== "0" && value !== "";
+
+/** Mapas sends `terms` as `{ area: [...], tag: [...] }`; installs with no terms send `[]`. */
+export const areaTermsOf = (terms: unknown): string[] => {
+  if (!terms || typeof terms !== "object" || Array.isArray(terms)) return [];
+  const area = (terms as { area?: unknown }).area;
+  if (!Array.isArray(area)) return [];
+  const seen = new Set<string>();
+  for (const term of area) {
+    const text = asText(term);
+    if (text) seen.add(text);
+  }
+  return [...seen];
+};
+
+const nameOf = (value: unknown): string | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? asText((value as { name?: unknown }).name)
+    : null;
 
 export const opportunityStatus = (
   from: Date | null,
@@ -127,15 +158,26 @@ export const mapOpportunity = (
         : null;
   const title = asText(record.name);
   if (!externalId || !title) return null;
+  // Later phases of a call and call templates are not calls of their own.
+  if (isSet(record.parent) || isSet(record.isModel)) return null;
 
   const summary = asText(record.shortDescription);
   const ownerName =
     record.owner && typeof record.owner === "object" ? asText(record.owner.name) : null;
   const organizationName = ownerName ?? installation.name;
   const registrationFrom = parseMapasDate(record.registrationFrom);
-  const registrationTo = parseMapasDate(record.registrationTo);
-  const program = programFromText(title, summary);
+  const closing = parseMapasDate(record.registrationTo);
+  const continuousFlow = isContinuous(record.continuousFlow) || isSentinel(closing);
+  const registrationTo = isSentinel(closing) ? null : closing;
+  const areaTerms = areaTermsOf(record.terms);
+  const areas = resolveAreas(areaTerms, title, summary);
+  const program =
+    programFromText(title, summary) ?? (areas.includes("audiovisual") ? "audiovisual" : null);
   const state = installation.uf === "BR" ? null : installation.uf;
+  const city = installation.city ?? null;
+  const opportunityType = nameOf(record.type);
+  const ownerEntityName = nameOf(record.ownerEntity);
+  const originName = ownerEntityName && ownerEntityName !== title ? ownerEntityName : null;
 
   return {
     id: `${installation.id}-${externalId}`,
@@ -145,13 +187,33 @@ export const mapOpportunity = (
     summary,
     organizationName,
     state,
+    city,
     registrationFrom,
     registrationTo,
-    status: opportunityStatus(registrationFrom, registrationTo, isContinuous(record.continuousFlow), now),
+    continuousFlow,
+    status: opportunityStatus(registrationFrom, registrationTo, continuousFlow, now),
     program,
+    areas,
+    areaTerms,
+    opportunityType,
+    originName,
     sourceUrl: sourceUrlFor(record, installation, externalId),
     searchText: normalizeText(
-      [title, summary, organizationName, installation.name, program, state].filter(Boolean).join(" "),
+      [
+        title,
+        summary,
+        organizationName,
+        installation.name,
+        program,
+        state,
+        city,
+        opportunityType,
+        originName,
+        ...areas.map((area) => opportunityAreaLabels[area]),
+        ...areaTerms,
+      ]
+        .filter(Boolean)
+        .join(" "),
     ),
     raw: record,
   };

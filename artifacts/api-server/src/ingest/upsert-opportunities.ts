@@ -18,10 +18,16 @@ export async function upsertOpportunities(
       summary: draft.summary,
       organizationName: draft.organizationName,
       state: draft.state,
+      city: draft.city,
       registrationFrom: draft.registrationFrom,
       registrationTo: draft.registrationTo,
+      continuousFlow: draft.continuousFlow,
       status: draft.status,
       program: draft.program,
+      areas: draft.areas,
+      areaTerms: draft.areaTerms,
+      opportunityType: draft.opportunityType,
+      originName: draft.originName,
       sourceUrl: draft.sourceUrl,
       searchText: draft.searchText,
       rawPayload: draft.raw,
@@ -41,10 +47,16 @@ export async function upsertOpportunities(
           summary: values.summary,
           organizationName: values.organizationName,
           state: values.state,
+          city: values.city,
           registrationFrom: values.registrationFrom,
           registrationTo: values.registrationTo,
+          continuousFlow: values.continuousFlow,
           status: values.status,
           program: values.program,
+          areas: values.areas,
+          areaTerms: values.areaTerms,
+          opportunityType: values.opportunityType,
+          originName: values.originName,
           sourceUrl: values.sourceUrl,
           searchText: values.searchText,
           rawPayload: values.rawPayload,
@@ -114,6 +126,36 @@ export async function upsertFundingOpportunities(
       });
   }
   return drafts.length;
+}
+
+/**
+ * Closes the calls of one install that a complete listing no longer returns: the source unpublished them or
+ * moved the closing date into the past. Without this a continuous-flow call, which has no closing date,
+ * would stay open here forever.
+ */
+export async function closeMissingOpportunities(
+  installationId: string,
+  listedExternalIds: string[],
+  now: Date,
+): Promise<number> {
+  const stillListed =
+    listedExternalIds.length > 0
+      ? sql`and ${culturalOpportunitiesTable.externalId} not in (${sql.join(
+          listedExternalIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`
+      : sql``;
+  const closed = await db
+    .update(culturalOpportunitiesTable)
+    .set({ status: "closed", updatedAt: now })
+    .where(
+      sql`${culturalOpportunitiesTable.installationId} = ${installationId}
+        and ${culturalOpportunitiesTable.source} = 'mapas'
+        and ${culturalOpportunitiesTable.status} in ('open', 'upcoming')
+        ${stillListed}`,
+    )
+    .returning({ id: culturalOpportunitiesTable.id });
+  return closed.length;
 }
 
 /** Closes calls whose registration ended and opens ones whose window has started. */

@@ -727,6 +727,24 @@ export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
 export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership';
 export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes';
+/** Canonical cultural areas (docs/contracts/opportunities-v1.md). */
+export type OpportunityArea =
+  | 'audiovisual'
+  | 'musica'
+  | 'teatro'
+  | 'danca'
+  | 'circo'
+  | 'artes-visuais'
+  | 'literatura'
+  | 'patrimonio'
+  | 'culturas-populares'
+  | 'artesanato'
+  | 'cultura-digital'
+  | 'gastronomia'
+  | 'gestao-producao'
+  | 'formacao'
+  | 'diversidade'
+  | 'outras';
 
 export type OpportunitySearchParams = {
   q?: string;
@@ -736,6 +754,11 @@ export type OpportunitySearchParams = {
   program?: OpportunityProgram[];
   kind?: OpportunityKind[];
   source?: OpportunitySource[];
+  area?: OpportunityArea[];
+  /** Municipality names. The UI sends the UF in `state` along with it. */
+  city?: string[];
+  /** Publishing institution names, exactly as listed in the `organization` facet. */
+  organization?: string[];
   deadlineFrom?: string;
   deadlineTo?: string;
   page?: number;
@@ -759,11 +782,24 @@ export type OpportunitySummary = {
   registrationFrom: string | null;
   registrationTo: string | null;
   state: string | null;
-  installation: { id: string; name: string; uf: string };
+  /** Municipality, for calls collected from a municipal source. */
+  city: string | null;
+  /** No closing date: the call takes registrations continuously. */
+  continuousFlow: boolean;
+  areas: OpportunityArea[];
+  /** Area terms as the source published them. */
+  areaTerms: string[];
+  /** Source type of the call: "Edital", "Oficina", "Festival"… */
+  opportunityType: string | null;
+  /** Project or programme the call belongs to at the source. */
+  originName: string | null;
+  installation: { id: string; name: string; uf: string; city: string | null };
   sourceUrl: string | null;
   updatedAt: string;
   profileMatch: { score: number; reasons: string[] } | null;
 };
+
+export type OpportunityCityBucket = FacetBucket & { state: string | null };
 
 export type OpportunitySearchResponse = {
   data: OpportunitySummary[];
@@ -775,6 +811,10 @@ export type OpportunitySearchResponse = {
     program: FacetBucket[];
     kind: FacetBucket[];
     source: FacetBucket[];
+    /** A call counts once in each of its areas. */
+    area: FacetBucket[];
+    city: OpportunityCityBucket[];
+    organization: FacetBucket[];
   } | null;
   meta: {
     query: string | null;

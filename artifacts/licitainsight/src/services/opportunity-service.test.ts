@@ -18,10 +18,36 @@ test('filtros de tipo e fonte sobrevivem ao round-trip da URL', () => {
     program: undefined,
     kind: ['innovation'],
     source: ['finep', 'cnpq'],
+    area: undefined,
+    city: undefined,
+    organization: undefined,
     deadlineFrom: undefined,
     deadlineTo: undefined,
     page: undefined,
   });
+});
+
+test('filtros de área, UF, município e instituição sobrevivem ao round-trip da URL', () => {
+  const url = opportunityParamsToUrl({
+    state: ['RN'],
+    area: ['audiovisual', 'musica'],
+    city: ['Natal'],
+    organization: ['Secretaria de Cultura de Natal'],
+  });
+  assert.equal(url, '?state=RN&area=audiovisual&area=musica&city=Natal&organization=Secretaria+de+Cultura+de+Natal');
+  const parsed = opportunityParamsFromUrl(url);
+  assert.deepEqual(parsed.state, ['RN']);
+  assert.deepEqual(parsed.area, ['audiovisual', 'musica']);
+  assert.deepEqual(parsed.city, ['Natal']);
+  assert.deepEqual(parsed.organization, ['Secretaria de Cultura de Natal']);
+  assert.equal(opportunityParamsToUrl(parsed), url);
+});
+
+test('área desconhecida e nomes vazios ou longos demais são descartados', () => {
+  const parsed = opportunityParamsFromUrl(`?area=cinema&area=teatro&city=+&city=Natal&city=Natal&organization=${'x'.repeat(201)}`);
+  assert.deepEqual(parsed.area, ['teatro']);
+  assert.deepEqual(parsed.city, ['Natal']);
+  assert.equal(parsed.organization, undefined);
 });
 
 test('valores desconhecidos de tipo e fonte são descartados', () => {

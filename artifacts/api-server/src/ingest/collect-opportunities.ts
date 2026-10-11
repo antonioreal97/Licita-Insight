@@ -1,22 +1,33 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, ne } from "drizzle-orm";
 import { db, ingestRunsTable, pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { isUniqueViolation } from "../lib/pg-error";
+import type { MapasInstallation } from "./cultural-installations";
 import {
-  CULTURAL_INSTALLATIONS,
-  mapasInstallations,
-  type CulturalInstallation,
-} from "./cultural-installations";
-import { fetchAudiovisualOpportunities } from "./mapas-client";
-import { publicInstallationFailure } from "./mapas-errors";
+  collectInstallations,
+  coverageFromDetails,
+  cultureLookbackDays,
+  pendingCoverage,
+  type InstallationCoverage,
+  type StoredInstallation,
+} from "./collect-installations";
+import type { FetchOpportunitiesResult } from "./mapas-client";
 import {
+  closeMissingOpportunities,
   refreshOpportunityStatuses,
   upsertOpportunities,
 } from "./upsert-opportunities";
 
+export {
+  coverageFromDetails,
+  cultureLookbackDays,
+  pendingCoverage,
+  type InstallationCoverage,
+} from "./collect-installations";
+
 const SOURCE = "mapas-culturais";
 export const STALE_AFTER_MS = 30 * 60 * 1000;
-const DEFAULT_LOOKBACK_DAYS = 30;
+const PREVIOUS_RUNS_READ = 5;
 
 export class CultureIngestInProgressError extends Error {
   constructor() {
@@ -25,97 +36,52 @@ export class CultureIngestInProgressError extends Error {
   }
 }
 
-export type InstallationCoverage = {
-  id: string;
-  uf: string;
-  name: string;
-  kind: "mapas" | "gap";
-  url: string | null;
-  outcome:
-    | "ok"
-    | "gap"
-    | "failed"
-    | "degraded"
-    | "blocked"
-    | "vocabulary_fallback"
-    | "pending";
-  upserted: number;
-  message: string | null;
-};
-
-const positiveInt = (value: string | undefined, fallback: number): number => {
-  if (value === undefined || value.trim() === "") return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new Error(
-      `CULTURE_LOOKBACK_DAYS must be a positive integer, received "${value}"`,
-    );
-  }
-  return parsed;
-};
-
-export const cultureLookbackDays = (): number =>
-  positiveInt(process.env.CULTURE_LOOKBACK_DAYS, DEFAULT_LOOKBACK_DAYS);
-
 const windowFor = (now: Date, days: number): { from: Date; to: Date } => {
   const start = new Date(now);
   start.setUTCDate(start.getUTCDate() - (days - 1));
   return { from: start, to: now };
 };
 
-const gapCoverage = (
-  installation: CulturalInstallation,
-): InstallationCoverage => ({
-  id: installation.id,
-  uf: installation.uf,
-  name: installation.name,
-  kind: "gap",
-  url: null,
-  outcome: "gap",
-  upserted: 0,
-  message: installation.kind === "gap" ? installation.reason : null,
-});
+/** Latest coverage row per install over the last few runs: an abandoned run records only part of them. */
+async function previousCoverage(
+  runId: string,
+): Promise<Map<string, InstallationCoverage>> {
+  const runs = await db
+    .select({ details: ingestRunsTable.details })
+    .from(ingestRunsTable)
+    .where(
+      and(eq(ingestRunsTable.source, SOURCE), ne(ingestRunsTable.id, runId)),
+    )
+    .orderBy(desc(ingestRunsTable.startedAt))
+    .limit(PREVIOUS_RUNS_READ);
+  const latest = new Map<string, InstallationCoverage>();
+  for (const run of runs) {
+    for (const row of coverageFromDetails(run.details) ?? []) {
+      if (!latest.has(row.id) && row.outcome !== "pending")
+        latest.set(row.id, row);
+    }
+  }
+  return latest;
+}
 
-export const pendingCoverage = (): InstallationCoverage[] =>
-  CULTURAL_INSTALLATIONS.map((installation) =>
-    installation.kind === "gap"
-      ? gapCoverage(installation)
-      : {
-          id: installation.id,
-          uf: installation.uf,
-          name: installation.name,
-          kind: "mapas",
-          url: installation.baseUrl,
-          outcome: "pending",
-          upserted: 0,
-          message: null,
-        },
-  );
-
-const isCoverage = (value: unknown): value is InstallationCoverage => {
-  if (!value || typeof value !== "object") return false;
-  const row = value as InstallationCoverage;
-  return typeof row.id === "string" && typeof row.outcome === "string";
-};
-
-export const coverageFromDetails = (
-  details: unknown,
-): InstallationCoverage[] | null => {
-  if (!details || typeof details !== "object" || !("installations" in details))
-    return null;
-  const installations = (details as { installations: unknown }).installations;
-  if (!Array.isArray(installations) || !installations.every(isCoverage))
-    return null;
-  return installations;
-};
+async function storeInstallation(
+  installation: MapasInstallation,
+  result: FetchOpportunitiesResult,
+  now: Date,
+): Promise<StoredInstallation> {
+  const upserted = await upsertOpportunities(result.drafts, now);
+  const closed = result.complete
+    ? await closeMissingOpportunities(
+        installation.id,
+        result.drafts.map((draft) => draft.externalId),
+        now,
+      )
+    : 0;
+  return { upserted, closed };
+}
 
 async function execute(runId: string, now: Date): Promise<void> {
-  const days = cultureLookbackDays();
-  const coverage: InstallationCoverage[] = [];
-  let pagesRead = 0;
-  let upserted = 0;
-  let refreshErrors = 0;
-  const failures: string[] = [];
+  let coverage: InstallationCoverage[] = [];
 
   try {
     const refreshed = await refreshOpportunityStatuses(now);
@@ -124,85 +90,51 @@ async function execute(runId: string, now: Date): Promise<void> {
       .set({ refreshed, heartbeatAt: new Date() })
       .where(eq(ingestRunsTable.id, runId));
 
-    for (const installation of CULTURAL_INSTALLATIONS) {
-      if (installation.kind === "gap") {
-        coverage.push(gapCoverage(installation));
-        continue;
-      }
+    const summary = await collectInstallations(now, {
+      previous: await previousCoverage(runId),
+      store: (installation, result) =>
+        storeInstallation(installation, result, now),
+      onProgress: async (progress) => {
+        coverage = progress.coverage;
+        await db
+          .update(ingestRunsTable)
+          .set({
+            pagesRead: progress.pagesRead,
+            upserted: progress.upserted,
+            refreshed: refreshed + progress.closed,
+            refreshErrors: progress.failed,
+            heartbeatAt: new Date(),
+            details: { installations: progress.coverage },
+          })
+          .where(eq(ingestRunsTable.id, runId));
+      },
+    });
+    coverage = summary.coverage;
 
-      try {
-        const result = await fetchAudiovisualOpportunities(
-          installation,
-          now,
-          days,
-        );
-        const stored = await upsertOpportunities(result.drafts, now);
-        pagesRead += result.pagesRead;
-        upserted += stored;
-        const vocabularyMessage = result.vocabularyFallback
-          ? "A instalação não publica o termo Audiovisual. A coleta usou palavras do título e do resumo."
-          : null;
-        coverage.push({
-          id: installation.id,
-          uf: installation.uf,
-          name: installation.name,
-          kind: "mapas",
-          url: installation.baseUrl,
-          outcome: result.vocabularyFallback ? "vocabulary_fallback" : "ok",
-          upserted: stored,
-          message:
-            [vocabularyMessage, result.warning].filter(Boolean).join(" ") ||
-            null,
-        });
-      } catch (error) {
-        refreshErrors += 1;
-        const publicFailure = publicInstallationFailure(error, installation);
-        failures.push(`${installation.name}: ${publicFailure.message}`);
-        logger.error(
-          { err: error, installationId: installation.id },
-          "Mapas Culturais installation failed; continuing",
-        );
-        coverage.push({
-          id: installation.id,
-          uf: installation.uf,
-          name: installation.name,
-          kind: "mapas",
-          url: installation.baseUrl,
-          outcome: publicFailure.outcome,
-          upserted: 0,
-          message: publicFailure.message,
-        });
-      }
-
-      await db
-        .update(ingestRunsTable)
-        .set({
-          pagesRead,
-          upserted,
-          refreshErrors,
-          heartbeatAt: new Date(),
-          details: { installations: coverage },
-        })
-        .where(eq(ingestRunsTable.id, runId));
-    }
-
-    const mapasCount = mapasInstallations().length;
-    const allFailed = refreshErrors === mapasCount;
+    const allFailed =
+      summary.attempted > 0 && summary.failed === summary.attempted;
     await db
       .update(ingestRunsTable)
       .set({
         status: allFailed ? "failed" : "complete",
-        pagesRead,
-        upserted,
-        refreshErrors,
-        error: failures.length > 0 ? failures.join("\n") : null,
+        pagesRead: summary.pagesRead,
+        upserted: summary.upserted,
+        refreshed: refreshed + summary.closed,
+        refreshErrors: summary.failed,
+        error: summary.failures.length > 0 ? summary.failures.join("\n") : null,
         details: { installations: coverage },
         finishedAt: new Date(),
         heartbeatAt: new Date(),
       })
       .where(eq(ingestRunsTable.id, runId));
     logger.info(
-      { runId, pagesRead, upserted, refreshErrors },
+      {
+        runId,
+        pagesRead: summary.pagesRead,
+        upserted: summary.upserted,
+        closed: summary.closed,
+        refreshErrors: summary.failed,
+      },
       "Cultural opportunities ingest finished",
     );
   } catch (error) {

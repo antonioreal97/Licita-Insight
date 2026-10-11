@@ -1,4 +1,5 @@
 import {
+  boolean,
   check,
   index,
   jsonb,
@@ -44,6 +45,23 @@ export const culturalOpportunitiesTable = pgTable(
     registrationTo: timestamp("registration_to", { withTimezone: true }),
     status: text("status").notNull(),
     program: text("program"),
+    /** Canonical area slugs (`OPPORTUNITY_AREAS` in the API); the filter and the facet read this column. */
+    areas: text("areas")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Area terms exactly as the source published them (Mapas `terms.area`). */
+    areaTerms: text("area_terms")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** Source type of the call: "Edital", "Oficina", "Festival"… */
+    opportunityType: text("opportunity_type"),
+    /** Project, agent, space or event the call belongs to at the source. */
+    originName: text("origin_name"),
+    /** Municipality, set only for municipal installations. */
+    city: text("city"),
+    continuousFlow: boolean("continuous_flow").notNull().default(false),
     sourceUrl: text("source_url"),
     searchText: text("search_text").notNull(),
     rawPayload: jsonb("raw_payload").notNull(),
@@ -68,6 +86,8 @@ export const culturalOpportunitiesTable = pgTable(
       table.registrationTo,
     ),
     index("cultural_opportunities_installation_idx").on(table.installationId),
+    index("cultural_opportunities_areas_idx").using("gin", table.areas),
+    index("cultural_opportunities_city_idx").on(table.city),
     index("cultural_opportunities_fetched_at_idx").on(table.fetchedAt),
     index("cultural_opportunities_search_text_trgm_idx").using(
       "gin",
