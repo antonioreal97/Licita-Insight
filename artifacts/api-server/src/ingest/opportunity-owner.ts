@@ -8,7 +8,7 @@ import type { MapasInstallation } from "./cultural-installations";
  */
 
 /** Bump to make the stored-row review re-evaluate every Mapas row with the current rules. */
-export const OWNER_REVIEW_VERSION = 1;
+export const OWNER_REVIEW_VERSION = 2;
 
 export type OwnerKind = "individual" | "collective" | "unknown";
 
@@ -178,6 +178,47 @@ const matches = (pattern: RegExp, value: string): boolean => {
   return pattern.test(value);
 };
 
+/**
+ * First word of a public body's name. Some secretariats and city halls are registered in Mapas as an
+ * "Individual" agent; a name that starts like this is an institution, not a person, so it may be stored.
+ */
+const PUBLIC_BODY_PREFIXES = new Set([
+  "secretaria",
+  "secult",
+  "prefeitura",
+  "municipio",
+  "governo",
+  "fundacao",
+  "instituto",
+  "coordenadoria",
+  "coordenacao",
+  "conselho",
+  "camara",
+  "departamento",
+  "diretoria",
+  "superintendencia",
+  "gerencia",
+  "assessoria",
+  "ministerio",
+  "fundo",
+  "sistema",
+  "museu",
+  "biblioteca",
+  "arquivo",
+  "centro",
+  "teatro",
+  "universidade",
+  "autarquia",
+  "agencia",
+  "orgao",
+]);
+
+/** A name that opens with a public body word ("Secretaria Municipal de…", "Prefeitura de…"). */
+export const startsAsPublicBody = (name: string): boolean => {
+  const first = normalizeText(name).split(/[^a-z0-9]+/).find(Boolean);
+  return first !== undefined && PUBLIC_BODY_PREFIXES.has(first);
+};
+
 /** CPF, e-mail or phone inside a name: a sole proprietor registered with their own documents. */
 export const hasPersonalIdentifier = (value: string): boolean =>
   matches(CPF, value) || matches(EMAIL, value) || matches(PHONE, value);
@@ -307,7 +348,9 @@ export const resolveOwner = (
     name !== null &&
     !hasPersonalIdentifier(name) &&
     (kind === "collective" ||
-      (kind === "unknown" && hasOrganizationSignal(name)));
+      (kind === "unknown" && hasOrganizationSignal(name)) ||
+      // Public bodies registered as an "Individual" agent keep their name.
+      (kind === "individual" && startsAsPublicBody(name)));
   // A row minimized before carries no name: what was decided then still stands.
   const nameWithheld = name !== null ? !kept : prior?.nameWithheld === true;
   const personal = kind === "individual" || nameWithheld;
