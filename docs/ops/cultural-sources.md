@@ -74,6 +74,11 @@ O canal oficial publicado pelo Ministério da Cultura é
 O pedido deve informar o User-Agent acima, IP de saída do ambiente de produção,
 rota `/api/opportunity/find`, volume baixo e finalidade de reutilização pública.
 
+O rascunho do pedido está em [`pedido-liberacao-mapa-cultura.md`](./pedido-liberacao-mapa-cultura.md).
+Enquanto ele não é atendido, as chamadas federais vêm das páginas de editais do MinC e da Funarte e do
+Transferegov.br (`CULTURE_FEDERAL_COLLECT=true`; ver "Fontes federais de cultura" em
+`docs/contracts/opportunities-v1.md`).
+
 Não foi encontrada alternativa oficial equivalente para **oportunidades**. O portal
 de dados da Cultura documenta recursos antigos do Mapa principalmente para espaços,
 agentes, eventos e projetos; e a página atual do SNIIC informa que o padrão de dados

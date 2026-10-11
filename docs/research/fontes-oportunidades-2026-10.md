@@ -98,6 +98,21 @@ O Portal Brasileiro de Dados Abertos expõe API REST/Swagger para listar e detal
 | Querido Diário | `public_notices` (nova; ou `funding_opportunities` após classificação) | `id=territory_id+gazette_id+hash`; `title` e `organizationName` extraídos do excerto/documento; `state` via território IBGE; `publishedAt=date`; `proposalDeadline` somente quando extraído com confiança; `sourceUrl=file_url`; `documents[]` com original/TXT; guardar `excerpt`, `edition_number`, `rawPayload`. Não preencher valor ausente. |
 | FINEP + CNPq + CAPES | `funding_opportunities` (nova) | `id=org+numero+ano`; `title`; `summary/objective`; `organizationName`; `state` nulo ou UF do programa; `registrationFrom/To`; `amount`/faixa; `audience`; `sourceUrl`; `documents[]` PDF/FAQ/retificações; `status=open/upcoming/closed`; `rawPayload`. `cultural_opportunities` só se a chamada for especificamente audiovisual/cultural. |
 
+## Fase 2 — fontes federais de cultura (verificação de 11/10/2026)
+
+O Mapa da Cultura federal (`mapa.cultura.gov.br`) responde 403 com desafio do Cloudflare e não é contornado. No lugar dele entraram as fontes abaixo, verificadas com o User-Agent do coletor. Contrato e regras em `docs/contracts/opportunities-v1.md`.
+
+| Fonte | O que existe hoje | Robots / termos | Decisão |
+|---|---|---|---|
+| Transferegov.br — API Gestão de Parcerias | `api-publica.transferegov.gestao.gov.br/parcerias` (OpenAPI em `/parcerias/openapi.json`), sem autenticação. `/programa` tem situação e janelas por tipo de beneficiário. 182 programas, 92 disponibilizados: fundo a fundo da saúde, PRONON/PRONAS, Lei de Incentivo à Reciclagem. Nenhum de cultura no dia. | Sem `robots.txt` (404). Dados abertos, Decreto 8.777/2016. | **Integrada** |
+| Transferegov.br — CSV Discricionárias e Legais | `…/downloads/dadosgov/siconv_programa.zip`, 11 MB (353 MB e 1,26 milhão de linhas ao abrir), atualizado todo dia. Traz órgão superior, nome, situação, datas de recebimento de proposta, modalidade, natureza jurídica do proponente e UF. Não traz objeto, valor nem município. | Idem. | **Integrada** (propostas voluntárias de programas disponibilizados) |
+| Transferegov.br — página do programa | A consulta de programa em `discricionarias.transferegov.sistema.gov.br` passou a exigir login gov.br; o antigo acesso livre responde um formulário SAML. | Login. | Não usada; o link oficial é o portal |
+| SALIC — `api.salic.cultura.gov.br` | Documentação em `/docs`, sem autenticação: `projetos`, `propostas`, `proponentes`, `incentivadores`, `fornecedores`. São projetos já apresentados ou aprovados. Não há recurso de editais, chamadas ou prazos de apresentação. O Versalic está "em migração" para o SalicComparar. | `robots.txt` libera tudo. | **Descartada como fonte de chamadas.** Chamadas da Lei Rouanet vêm da lista do MinC |
+| MinC — editais | `gov.br/cultura/pt-br/assuntos/editais/inscricoes-abertas`, cartões com link para a página de cada edital (texto livre, cronograma e anexos). | `www.gov.br/robots.txt` e `…/cultura/robots.txt` liberam as páginas (bloqueiam só formulários). Conteúdo CC BY-ND 3.0. | **Integrada** |
+| Funarte — editais | `gov.br/funarte/pt-br/editais/editais-abertos`, cartões. Parte deles é página de programa com uma chamada por cartão (caixa "Informações" com situação, datas e anexos); parte redireciona para sites de parceiros ou para o Mapa da Cultura. | Idem, `…/funarte/robots.txt`. | **Integrada**; destinos fora do gov.br não são requisitados |
+
+Não ficou coberto: o prazo anual de apresentação de propostas ao mecanismo de incentivo da Lei Rouanet, definido em instrução normativa e sem fonte estruturada; chamadas estaduais e municipais da PNAB, que estão nos Mapas estaduais e municipais já coletados; e o `CADASTRADO` do Transferegov (programa ainda não disponibilizado para propostas).
+
 ## Observações de compliance e operação
 
 - User-Agent de pesquisa usado: `PardalDigital/pesquisa (+https://pardaldigital.com; contato@pardaldigital.com)`; não foram criadas contas, feitos logins ou resolvidos CAPTCHAs.
