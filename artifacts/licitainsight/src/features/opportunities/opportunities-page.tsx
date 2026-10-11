@@ -10,8 +10,11 @@ import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
 import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
+import { OpportunityFilters } from './components/opportunity-filters';
+import { statePatch, stateOptions } from './lib/opportunity-filters';
 import {
   OpportunityStatusBadge,
+  opportunityAreaLabels,
   opportunityKindLabels,
   opportunityProgramLabels,
   opportunitySourceLabels,
@@ -55,27 +58,50 @@ const SOURCES = Object.keys(opportunitySourceLabels) as OpportunitySource[];
 const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
+/** At most this many areas on a row; a call can list dozens. */
+const AREAS_ON_ROW = 3;
+
+const placeOf = (opportunity: OpportunitySummary): string =>
+  opportunity.city && opportunity.state ? `${opportunity.city} (${opportunity.state})` : (opportunity.state ?? 'Nacional');
+
+const registrationPeriod = (opportunity: OpportunitySummary): string =>
+  opportunity.continuousFlow && !opportunity.registrationTo
+    ? `Inscrições desde ${formatDate(opportunity.registrationFrom)} · fluxo contínuo`
+    : `Inscrições ${formatDate(opportunity.registrationFrom)} – ${formatDate(opportunity.registrationTo)}`;
+
 function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
-  const place = opportunity.state ?? 'Nacional';
+  const place = placeOf(opportunity);
+  const areas = opportunity.areas.filter((area) => area !== 'outras');
+  const hiddenAreas = areas.length - AREAS_ON_ROW;
   return (
     <li className="border-b border-border-subtle last:border-0">
       <div className="grid gap-3 px-4 py-4 transition-colors duration-fast ease-standard hover:bg-muted/60 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <OpportunityStatusBadge status={opportunity.status} />
           <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{opportunity.sourceName}</span>
-          <span className="type-label text-muted-foreground">{opportunityKindLabels[opportunity.kind]}</span>
-          {opportunity.program && <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>}
+          <span className="type-label text-muted-foreground">{opportunity.opportunityType ?? opportunityKindLabels[opportunity.kind]}</span>
+          {opportunity.program && opportunity.program !== 'audiovisual' && (
+            <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>
+          )}
           <span className="type-label text-muted-foreground">{place}</span>
           {opportunity.profileMatch && <span className="type-label font-semibold text-primary">Combina com seu perfil</span>}
         </div>
+        {areas.length > 0 && (
+          <ul aria-label="Áreas culturais" className="flex flex-wrap gap-1.5">
+            {areas.slice(0, AREAS_ON_ROW).map((area) => (
+              <li key={area} className="rounded-pill border border-border-subtle bg-surface-sunken px-2 py-0.5 type-meta">
+                {opportunityAreaLabels[area]}
+              </li>
+            ))}
+            {hiddenAreas > 0 && <li className="px-1 py-0.5 type-meta text-muted-foreground">+{hiddenAreas}</li>}
+          </ul>
+        )}
         <Link href={`/oportunidades/${encodeURIComponent(opportunity.id)}`} data-testid={`opportunity-${opportunity.id}`}>
           <h2 className="type-section text-foreground hover:text-primary">{opportunity.title}</h2>
           <p className="mt-2 type-meta text-muted-foreground">{opportunity.organizationName}</p>
           {opportunity.summary && <p className="mt-2 line-clamp-2 type-body text-muted-foreground">{opportunity.summary}</p>}
         </Link>
-        <p className="type-meta text-muted-foreground">
-          Inscrições {formatDate(opportunity.registrationFrom)} – {formatDate(opportunity.registrationTo)}
-        </p>
+        <p className="type-meta text-muted-foreground">{registrationPeriod(opportunity)}</p>
         {opportunity.sourceUrl && (
           <a
             href={opportunity.sourceUrl}
@@ -96,7 +122,7 @@ export default function OpportunitiesPage() {
     <>
       <PageTitle
         title="Hub de oportunidades"
-        description="Chamadas de cultura, fomento e inovação publicadas por fontes oficiais. Licitações do PNCP continuam em Explorar editais."
+        description="Chamadas de cultura de todas as áreas, fomento e inovação publicadas por fontes oficiais. Licitações do PNCP continuam em Explorar editais."
       />
       <OpportunityAccessGate>
         <OpportunitySearch />
@@ -121,14 +147,15 @@ function OpportunitySearch() {
     update({ q: q || undefined });
   };
 
-  const setState = (value: string) => update({ state: value ? [value] : undefined });
+  const facets = response?.facets ?? null;
+  const setState = (value: string) => update(statePatch(value, facets, params));
   const setStatus = (value: string) => update({ status: value ? [value as OpportunityStatus] : undefined });
   const setKind = (value: string) => update({ kind: value ? [value as OpportunityKind] : undefined });
   const setSource = (value: string) => update({ source: value ? [value as OpportunitySource] : undefined });
 
   return (
     <>
-      <form onSubmit={onSearch} className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Buscar chamadas</span>
           <input
@@ -181,9 +208,9 @@ function OpportunitySearch() {
             onChange={(event) => setState(event.target.value)}
           >
             <option value="">Todos os estados</option>
-            {UFS.map((uf) => (
-              <option key={uf} value={uf}>
-                {uf}
+            {stateOptions(UFS, facets).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -206,9 +233,15 @@ function OpportunitySearch() {
         </label>
       </form>
 
+      <OpportunityFilters params={params} facets={facets} onChange={update} />
+
       {response && response.meta.installationIssues.length > 0 && (
-        <div data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
-          <p className="font-semibold">Algumas fontes não responderam por completo.</p>
+        <details data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
+          <summary className="cursor-pointer font-semibold">
+            {response.meta.installationIssues.length === 1
+              ? '1 fonte não respondeu por completo.'
+              : `${formatNumber(response.meta.installationIssues.length)} fontes não responderam por completo.`}
+          </summary>
           <ul className="mt-2 space-y-1">
             {response.meta.installationIssues.map((issue) => (
               <li key={issue.installationId}>
@@ -216,13 +249,13 @@ function OpportunitySearch() {
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {response && response.meta.gaps.length > 0 && (
         <p data-testid="banner-gaps" className="mb-4 type-meta text-muted-foreground">
-          {response.meta.gaps.length} estados ainda não publicam no Mapas Culturais e ficam de fora desta lista:{' '}
-          {response.meta.gaps.map((gap) => gap.uf).join(', ')}.
+          {response.meta.gaps.length} estados não têm instalação estadual do Mapas Culturais: {response.meta.gaps.map((gap) => gap.uf).join(', ')}. Neles só
+          entram chamadas de municípios com instalação própria.
         </p>
       )}
 

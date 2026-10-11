@@ -7,28 +7,34 @@ import {
   MapasClientError,
   transportMapasError,
 } from "./mapas-errors";
+import { parseMapasListing } from "./mapas-response";
 import { dispatcherForUrl } from "./mapas-tls";
 import {
   mapOpportunity,
-  matchesAudiovisualText,
   type MapasOpportunity,
   type OpportunityDraft,
 } from "./opportunity-map";
 
-const SELECT =
-  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,continuousFlow,owner.{id,name}";
+/** Areas (`terms`), type and origin (`ownerEntity`) come in the same listing; no extra request per call. */
+const RICH_SELECT =
+  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,continuousFlow,type,terms,parent,isModel,owner.{id,name},ownerEntity.{id,name}";
+/** Fields every Mapas version answers. Used when an install rejects the rich selection. */
+const BASIC_SELECT =
+  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,owner.{id,name}";
 const PAGE_SIZE = 50;
-const USER_AGENT =
-  "PardalDigital/0.1 (+https://pardaldigital.com; contato@pardaldigital.com)";
-/** `term:linguagem` returns 500 or HTML on the live installs. Keyword search does not. */
-const KEYWORDS = ["audiovisual", "cinema", "filme", "documentario"] as const;
+const DEFAULT_MAX_PAGES = 20;
+/** A longer `Retry-After` is honored by leaving the install for the next cycle, not by holding the run. */
+const MAX_RETRY_WAIT_MS = 60_000;
+
+export const MAPAS_USER_AGENT = `PardalDigital/${process.env.npm_package_version ?? "0.0.0"} (+https://pardaldigital.com; contato@pardaldigital.com)`;
 
 export { MapasClientError } from "./mapas-errors";
 
 export type FetchOpportunitiesResult = {
   drafts: OpportunityDraft[];
   pagesRead: number;
-  vocabularyFallback: boolean;
+  /** False when the listing stopped early (page cap, a broken later page) or was narrowed by a keyword. */
+  complete: boolean;
   warning: string | null;
 };
 
@@ -36,10 +42,20 @@ export type MapasFetchResponse = {
   status: number;
   body: string;
   metadata: string | null;
+  contentType?: string | null;
   retryAfterMs?: number | null;
 };
 
 export type MapasFetcher = (url: string) => Promise<MapasFetchResponse>;
+
+export type FetchOpportunitiesOptions = {
+  fetcher?: MapasFetcher;
+  maxPages?: number;
+  /** Extra calendar days before today, for backfills. The daily run collects calls that close today or later. */
+  lookbackDays?: number;
+  /** Optional `@keyword` narrowing, kept for one-off runs. The daily collection sends none. */
+  keyword?: string;
+};
 
 const sleep = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -71,7 +87,7 @@ export const retryAfterMilliseconds = (
 let lastLiveRequestAt = 0;
 
 const waitForPace = async (): Promise<void> => {
-  const minimumDelay = positiveInteger("CULTURE_PAGE_DELAY_MS", 500);
+  const minimumDelay = positiveInteger("CULTURE_PAGE_DELAY_MS", 1_000);
   const remaining = lastLiveRequestAt + minimumDelay - Date.now();
   if (remaining > 0) await sleep(remaining);
   lastLiveRequestAt = Date.now();
@@ -92,6 +108,7 @@ const addCalendarDays = (isoDate: string, days: number): string => {
     .slice(0, 10);
 };
 
+/** First day of a window of `days` calendar days that ends today in Brasília. `days = 1` is today. */
 export const lookbackStart = (now: Date, days: number): string =>
   addCalendarDays(saoPauloDate(now), -(days - 1));
 
@@ -100,43 +117,16 @@ const query = (params: Record<string, string>): string =>
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join("&");
 
-const pageCount = (
-  metadata: string | null,
-  received: number,
-): number | null => {
-  if (!metadata) return received < PAGE_SIZE ? 1 : null;
+const reportedPages = (metadata: string | null): number | null => {
+  if (!metadata) return null;
   try {
     const parsed = JSON.parse(metadata) as { numPages?: unknown };
-    return typeof parsed.numPages === "number" && parsed.numPages >= 1
+    return typeof parsed.numPages === "number" && parsed.numPages >= 0
       ? parsed.numPages
       : null;
   } catch {
     return null;
   }
-};
-
-const asRecords = (body: string, url: string): MapasOpportunity[] => {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(body);
-  } catch (error) {
-    throw new MapasClientError(
-      `Mapas Culturais returned invalid JSON for ${url}: ${error instanceof Error ? error.message : String(error)}`,
-      200,
-      "invalid_response",
-    );
-  }
-  if (!Array.isArray(parsed)) {
-    throw new MapasClientError(
-      `Mapas Culturais listing was not an array: ${url}`,
-      200,
-      "invalid_response",
-    );
-  }
-  return parsed.filter(
-    (item): item is MapasOpportunity =>
-      item !== null && typeof item === "object",
-  );
 };
 
 export async function defaultMapasFetch(
@@ -149,18 +139,21 @@ export async function defaultMapasFetch(
     await waitForPace();
     const response = await undiciFetch(url, {
       dispatcher: dispatcherForUrl(url),
-      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      headers: { Accept: "application/json", "User-Agent": MAPAS_USER_AGENT },
       signal: timeoutSignal("MAPAS_HTTP_TIMEOUT_MS", 30_000),
     });
     const retryAfterMs = retryAfterMilliseconds(
       response.headers.get("Retry-After"),
     );
     const retriable = response.status === 429 || response.status >= 500;
-    if (!retriable || attempt >= retries) {
+    const waitTooLong =
+      retryAfterMs !== null && retryAfterMs > MAX_RETRY_WAIT_MS;
+    if (!retriable || attempt >= retries || waitTooLong) {
       return {
         status: response.status,
         body: await response.text(),
         metadata: response.headers.get("API-Metadata"),
+        contentType: response.headers.get("Content-Type"),
         retryAfterMs,
       };
     }
@@ -187,168 +180,161 @@ async function getJson(
   }
 }
 
+type Listing = {
+  records: MapasOpportunity[];
+  pagesRead: number;
+  complete: boolean;
+  warnings: string[];
+};
+
+const recordKey = (record: MapasOpportunity): string => String(record.id);
+
+/**
+ * Reads the listing page by page. The first page decides whether the install answers at all, so its failure
+ * is thrown. A later page that fails keeps what was already read and marks the listing incomplete.
+ */
 async function listPages(
   baseUrl: string,
   params: Record<string, string>,
   fetcher: MapasFetcher,
   maxPages: number,
-): Promise<{
-  records: MapasOpportunity[];
-  pagesRead: number;
-  truncated: boolean;
-}> {
+): Promise<Listing> {
   const root = baseUrl.replace(/\/$/, "");
   const records: MapasOpportunity[] = [];
+  const seen = new Set<string>();
+  const warnings: string[] = [];
   let pagesRead = 0;
-  let totalPages = 1;
 
-  for (let page = 1; page <= totalPages; page += 1) {
+  for (let page = 1; ; page += 1) {
     if (pagesRead >= maxPages) {
-      return { records, pagesRead, truncated: true };
+      warnings.push(`A listagem parou no limite de ${maxPages} páginas.`);
+      return { records, pagesRead, complete: false, warnings };
     }
     const url = `${root}/api/opportunity/find?${query({ ...params, "@page": String(page) })}`;
-    const response = await getJson(fetcher, url);
-    pagesRead += 1;
-    if (response.status !== 200) {
-      throw httpMapasError(response.status, url, response.retryAfterMs ?? null);
+    let batch: MapasOpportunity[];
+    let metadata: string | null;
+    try {
+      const response = await getJson(fetcher, url);
+      pagesRead += 1;
+      if (response.status !== 200) {
+        throw httpMapasError(
+          response.status,
+          url,
+          response.retryAfterMs ?? null,
+        );
+      }
+      const parsed = parseMapasListing(response, url);
+      if (parsed.recovered) {
+        logger.warn(
+          { url },
+          "Mapas Culturais printed noise before the JSON listing; it was skipped",
+        );
+      }
+      batch = parsed.records;
+      metadata = response.metadata;
+    } catch (error) {
+      if (page === 1) throw error;
+      warnings.push(
+        `A página ${page} da listagem falhou e as anteriores foram mantidas: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return { records, pagesRead, complete: false, warnings };
     }
-    const batch = asRecords(response.body, url);
-    records.push(...batch);
-    const reported = pageCount(response.metadata, batch.length);
-    if (reported === null && batch.length === PAGE_SIZE) {
-      totalPages = page + 1;
-    } else {
-      totalPages = reported ?? page;
-    }
+
+    const fresh = batch.filter((record) => !seen.has(recordKey(record)));
+    for (const record of fresh) seen.add(recordKey(record));
+    records.push(...fresh);
+
+    // Past the last page the API answers `[]`. An install that ignores `@page` repeats the same records.
+    if (batch.length === 0 || fresh.length === 0) break;
+    const total = reportedPages(metadata);
+    if (total !== null ? page >= total : batch.length < PAGE_SIZE) break;
   }
 
-  return { records, pagesRead, truncated: false };
+  return { records, pagesRead, complete: true, warnings };
 }
 
-export async function fetchAudiovisualOpportunities(
+const isSelectionRejection = (error: unknown): boolean =>
+  error instanceof MapasClientError &&
+  (error.kind === "invalid_response" ||
+    (error.kind === "http" && (error.status === 400 || error.status >= 500)));
+
+/**
+ * Every call of an install whose registration closes today or later. Continuous-flow calls are in the same
+ * listing: Mapas stores them with a far-future `registrationTo`. Filtering on `continuousFlow` itself is not
+ * possible with a boolean: the column is a datetime and `EQ(true)` makes the install answer an HTML error page.
+ */
+export async function fetchOpenOpportunities(
   installation: MapasInstallation,
   now: Date,
-  lookbackDays: number,
-  options: { fetcher?: MapasFetcher; maxPages?: number } = {},
+  options: FetchOpportunitiesOptions = {},
 ): Promise<FetchOpportunitiesResult> {
   const fetcher = options.fetcher ?? defaultMapasFetch;
-  const maxPages = options.maxPages ?? 20;
-  const since = lookbackStart(now, lookbackDays);
-  const baseParams = {
+  const maxPages =
+    options.maxPages ?? positiveInteger("CULTURE_MAX_PAGES", DEFAULT_MAX_PAGES);
+  const since = lookbackStart(now, options.lookbackDays ?? 1);
+  const keyword = options.keyword?.trim();
+  const paramsFor = (select: string): Record<string, string> => ({
     registrationTo: `GTE(${since})`,
-    "@select": SELECT,
+    "@select": select,
+    "@order": "registrationTo ASC",
     "@limit": String(PAGE_SIZE),
-  };
+    ...(keyword ? { "@keyword": keyword } : {}),
+  });
 
-  const datedRecords: MapasOpportunity[] = [];
-  let pagesRead = 0;
-  let truncated = false;
-  const keywordErrors: unknown[] = [];
-  for (const keyword of KEYWORDS) {
+  let listing: Listing;
+  try {
+    listing = await listPages(
+      installation.baseUrl,
+      paramsFor(RICH_SELECT),
+      fetcher,
+      maxPages,
+    );
+  } catch (error) {
+    if (!isSelectionRejection(error)) throw error;
+    logger.warn(
+      { err: error, installationId: installation.id },
+      "Mapas Culturais rejected the rich selection; retrying with basic fields",
+    );
     try {
-      const page = await listPages(
+      listing = await listPages(
         installation.baseUrl,
-        { ...baseParams, "@keyword": keyword },
+        paramsFor(BASIC_SELECT),
         fetcher,
         maxPages,
       );
-      datedRecords.push(...page.records);
-      pagesRead += page.pagesRead;
-      truncated = truncated || page.truncated;
-    } catch (error) {
-      if (
-        error instanceof MapasClientError &&
-        [
-          "blocked",
-          "rate_limited",
-          "tls_expired",
-          "tls_name_mismatch",
-          "tls_self_signed",
-          "tls_untrusted_ca",
-          "tls_incomplete_chain",
-          "tls_pin_mismatch",
-        ].includes(error.kind)
-      ) {
-        throw error;
-      }
-      keywordErrors.push(error);
-      logger.error(
-        { err: error, installationId: installation.id, keyword },
-        "Mapas Culturais keyword search failed",
-      );
+    } catch {
+      // The first answer is the one that says what the install returned.
+      throw error;
     }
-  }
-  if (datedRecords.length === 0 && keywordErrors.length === KEYWORDS.length) {
-    const first = keywordErrors[0];
-    if (first instanceof Error) throw first;
-    throw new MapasClientError(
-      "Mapas Culturais keyword search failed",
-      0,
-      "network",
+    listing.warnings.unshift(
+      "A instalação não respondeu à consulta com áreas e tipo; as chamadas foram coletadas com os campos básicos.",
     );
   }
-
-  let continuousWarning: string | null = null;
-  const continuous = await listPages(
-    installation.baseUrl,
-    {
-      continuousFlow: "EQ(true)",
-      "@keyword": "audiovisual",
-      "@select": SELECT,
-      "@limit": String(PAGE_SIZE),
-    },
-    fetcher,
-    maxPages,
-  ).catch((error: unknown) => {
-    continuousWarning =
-      error instanceof Error
-        ? error.message
-        : "A listagem de fluxo contínuo falhou";
-    logger.error(
-      { err: error, installationId: installation.id },
-      "Continuous-flow listing failed; dated opportunities are kept",
-    );
-    return {
-      records: [] as MapasOpportunity[],
-      pagesRead: 0,
-      truncated: false,
-    };
-  });
 
   const seen = new Set<string>();
   const drafts: OpportunityDraft[] = [];
-  for (const record of [...datedRecords, ...continuous.records]) {
+  for (const record of listing.records) {
     const draft = mapOpportunity(record, installation, now);
     if (!draft || seen.has(draft.id)) continue;
-    if (!matchesAudiovisualText(draft.title, draft.summary)) continue;
     seen.add(draft.id);
     drafts.push(draft);
   }
 
-  const warnings = [
-    keywordErrors.length > 0
-      ? keywordErrors
-          .map((error) =>
-            error instanceof Error ? error.message : String(error),
-          )
-          .join(" ")
-      : null,
-    continuousWarning,
-    truncated || continuous.truncated
-      ? `A listagem parou no limite de ${maxPages} páginas.`
-      : null,
-  ].filter((warning): warning is string => Boolean(warning));
-  if (truncated || continuous.truncated) {
+  if (!listing.complete) {
     logger.error(
-      { installationId: installation.id, maxPages },
-      "Mapas Culturais listing hit the page cap",
+      {
+        installationId: installation.id,
+        pagesRead: listing.pagesRead,
+        warnings: listing.warnings,
+      },
+      "Mapas Culturais listing is incomplete",
     );
   }
 
   return {
     drafts,
-    pagesRead: pagesRead + continuous.pagesRead,
-    vocabularyFallback: false,
-    warning: warnings.length > 0 ? warnings.join(" ") : null,
+    pagesRead: listing.pagesRead,
+    complete: listing.complete && !keyword,
+    warning: listing.warnings.length > 0 ? listing.warnings.join(" ") : null,
   };
 }

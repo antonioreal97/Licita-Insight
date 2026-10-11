@@ -1,4 +1,23 @@
-import type { OpportunityKind, OpportunityProgram, OpportunitySource, OpportunityStatus } from '@/api';
+import type { OpportunityArea, OpportunityKind, OpportunityProgram, OpportunitySource, OpportunityStatus } from '@/api';
+
+export const opportunityAreaLabels: Record<OpportunityArea, string> = {
+  audiovisual: 'Audiovisual',
+  musica: 'Música',
+  teatro: 'Teatro',
+  danca: 'Dança',
+  circo: 'Circo',
+  'artes-visuais': 'Artes visuais',
+  literatura: 'Livro e literatura',
+  patrimonio: 'Patrimônio e memória',
+  'culturas-populares': 'Culturas populares e tradicionais',
+  artesanato: 'Artesanato',
+  'cultura-digital': 'Cultura digital e games',
+  gastronomia: 'Gastronomia',
+  'gestao-producao': 'Gestão e produção cultural',
+  formacao: 'Formação e pesquisa',
+  diversidade: 'Diversidade e direitos',
+  outras: 'Outras áreas',
+};
 
 export const opportunityStatusLabels: Record<OpportunityStatus, string> = {
   open: 'Inscrições abertas',

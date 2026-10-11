@@ -97,6 +97,13 @@ export type PublicInstallationFailure = {
   message: string;
 };
 
+const siteOwner = (installation: MapasInstallation): string =>
+  installation.scope === "municipal"
+    ? "da prefeitura"
+    : installation.scope === "federal"
+      ? "do governo federal"
+      : "do governo estadual";
+
 export const publicInstallationFailure = (
   error: unknown,
   installation: MapasInstallation,
@@ -104,6 +111,7 @@ export const publicInstallationFailure = (
   if (!(error instanceof MapasClientError)) {
     return { outcome: "failed", message: "Não foi possível conectar à fonte." };
   }
+  const site = `site ${siteOwner(installation)}`;
   switch (error.kind) {
     case "blocked":
       return {
@@ -127,40 +135,48 @@ export const publicInstallationFailure = (
       return {
         outcome: "degraded",
         message: formatted
-          ? `O certificado do site do governo estadual expirou em ${formatted}; tentaremos novamente no próximo ciclo.`
-          : "O certificado do site do governo estadual expirou; tentaremos novamente no próximo ciclo.",
+          ? `O certificado do ${site} expirou em ${formatted}; tentaremos novamente no próximo ciclo.`
+          : `O certificado do ${site} expirou; tentaremos novamente no próximo ciclo.`,
       };
     }
     case "tls_name_mismatch":
       return {
         outcome: "degraded",
-        message:
-          "O certificado do site do governo estadual pertence a outro endereço; a fonte não foi aceita.",
+        message: `O certificado do ${site} pertence a outro endereço; a fonte não foi aceita.`,
       };
     case "tls_self_signed":
       return {
         outcome: "degraded",
         message: installation.tlsDiagnosis?.alsoWrongName
-          ? "O site do governo estadual usa certificado autoassinado e de outro endereço; a fonte não foi aceita."
-          : "O site do governo estadual usa certificado autoassinado; a fonte não foi aceita.",
+          ? `O ${site} usa certificado autoassinado e de outro endereço; a fonte não foi aceita.`
+          : `O ${site} usa certificado autoassinado; a fonte não foi aceita.`,
       };
     case "tls_untrusted_ca":
       return {
         outcome: "degraded",
-        message:
-          "A autoridade certificadora do site do governo estadual não é reconhecida; a fonte não foi aceita.",
+        message: `A autoridade certificadora do ${site} não é reconhecida; a fonte não foi aceita.`,
       };
     case "tls_incomplete_chain":
       return {
         outcome: "degraded",
-        message:
-          "O site do governo estadual enviou uma cadeia de certificados incompleta; a fonte não foi aceita.",
+        message: `O ${site} enviou uma cadeia de certificados incompleta; a fonte não foi aceita.`,
       };
     case "tls_pin_mismatch":
       return {
         outcome: "degraded",
         message:
           "O certificado da fonte mudou e não corresponde à impressão digital autorizada; a fonte não foi aceita.",
+      };
+    case "invalid_response":
+      return {
+        outcome: "failed",
+        message:
+          "A fonte respondeu com uma página em vez dos dados; tentaremos novamente no próximo ciclo.",
+      };
+    case "http":
+      return {
+        outcome: "failed",
+        message: `A fonte respondeu com erro (HTTP ${error.status}); tentaremos novamente no próximo ciclo.`,
       };
     default:
       return {

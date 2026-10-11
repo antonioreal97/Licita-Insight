@@ -1,11 +1,21 @@
-/** Official Mapas Culturais installs. State URLs come from the project README; UFs absent there stay as gaps. */
+/**
+ * Official Mapas Culturais installs. Every URL comes from the "Instalações" list in the project README
+ * (https://github.com/mapasculturais/mapasculturais, read on 2026-10-10). UFs with no state install stay as gaps.
+ */
+
+export type InstallationScope = "federal" | "state" | "municipal";
 
 export type MapasInstallation = {
   id: string;
   uf: string;
   name: string;
   kind: "mapas";
+  scope: InstallationScope;
+  /** Municipality, for municipal installs only. */
+  city?: string;
   baseUrl: string;
+  /** The official list publishes this install without TLS and the host does not answer on 443. */
+  plainHttp?: true;
   tlsDiagnosis?: {
     observedOn: string;
     expiresOn?: string;
@@ -18,6 +28,7 @@ export type GapInstallation = {
   uf: string;
   name: string;
   kind: "gap";
+  scope: "state";
   reason: string;
 };
 
@@ -35,6 +46,7 @@ const mapas = (
   uf,
   name,
   kind: "mapas",
+  scope: "state",
   baseUrl,
 });
 
@@ -43,7 +55,31 @@ const gap = (uf: string, name: string): GapInstallation => ({
   uf,
   name,
   kind: "gap",
+  scope: "state",
   reason: GAP_REASON,
+});
+
+const slug = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const municipal = (
+  uf: string,
+  city: string,
+  baseUrl: string,
+): MapasInstallation => ({
+  id: `${uf.toLowerCase()}-${slug(city)}`,
+  uf,
+  name: `Mapa Cultural de ${city}`,
+  kind: "mapas",
+  scope: "municipal",
+  city,
+  baseUrl,
+  ...(baseUrl.startsWith("http://") ? { plainHttp: true as const } : {}),
 });
 
 export const FEDERAL_INSTALLATION: MapasInstallation = {
@@ -51,6 +87,7 @@ export const FEDERAL_INSTALLATION: MapasInstallation = {
   uf: "BR",
   name: "Mapa da Cultura",
   kind: "mapas",
+  scope: "federal",
   baseUrl: "https://mapa.cultura.gov.br",
 };
 
@@ -111,9 +148,73 @@ export const STATE_INSTALLATIONS: CulturalInstallation[] = [
   },
 ];
 
+/**
+ * The municipal installs of the official list, in its order. Ribeirão das Neves and Santa Luzia are listed
+ * with `http://` and redirect to HTTPS, so they are stored as HTTPS. Aracaju and Bento Gonçalves answer on
+ * port 80 only. An install that stops answering is switched off by the collector, not removed from here.
+ */
+export const MUNICIPAL_INSTALLATIONS: MapasInstallation[] = [
+  municipal("GO", "Anápolis", "https://culturaemrede.anapolis.go.gov.br"),
+  municipal(
+    "GO",
+    "Aparecida de Goiânia",
+    "https://portaldacultura.aparecida.go.gov.br",
+  ),
+  municipal("PR", "Apucarana", "https://cultura.apucarana.pr.gov.br"),
+  municipal("SE", "Aracaju", "http://mapa.cultura.aracaju.se.gov.br"),
+  municipal("MG", "Belo Horizonte", "https://mapaculturalbh.pbh.gov.br"),
+  municipal(
+    "RS",
+    "Bento Gonçalves",
+    "http://mapacultural.bentogoncalves.rs.gov.br",
+  ),
+  municipal("PR", "Campo Mourão", "https://mapas.campomourao.pr.gov.br"),
+  municipal(
+    "RJ",
+    "Campos dos Goytacazes",
+    "https://mapasculturais.campos.rj.gov.br",
+  ),
+  municipal("BA", "Camaçari", "https://mapacultural.camacari.ba.gov.br"),
+  municipal("SP", "Campinas", "https://mapacultural.campinas.sp.gov.br"),
+  municipal("CE", "Chorozinho", "https://mapacultural.chorozinho.ce.gov.br"),
+  municipal("PR", "Cianorte", "https://cultura.cianorte.pr.gov.br"),
+  municipal("RS", "Gravataí", "https://mapacultural.gravatai.rs.gov.br"),
+  municipal("CE", "Iguatu", "http://mapacultural.iguatu.ce.gov.br"),
+  municipal("PB", "João Pessoa", "https://jpcultura.joaopessoa.pb.gov.br"),
+  municipal("MG", "Lagoa Santa", "https://mapacultural.lagoasanta.mg.gov.br"),
+  municipal("PR", "Londrina", "https://londrinacultura.londrina.pr.gov.br"),
+  municipal("PR", "Maringá", "https://maringacultura.maringa.pr.gov.br"),
+  municipal("SP", "Mauá", "https://mapacultural.maua.sp.gov.br"),
+  municipal("RN", "Natal", "https://mapacultural.natal.rn.gov.br"),
+  municipal("MG", "Nova Lima", "https://mapacultural.novalima.mg.gov.br"),
+  municipal("PA", "Parauapebas", "https://mapacultural.parauapebas.pa.gov.br"),
+  municipal("PE", "Petrolina", "https://mapacultural.petrolina.pe.gov.br"),
+  municipal("MG", "Ribeirão das Neves", "https://mapaculturaneves.com.br"),
+  municipal("MG", "Santa Luzia", "https://mapacultural.santaluzia.mg.gov.br"),
+  municipal(
+    "SP",
+    "Santo Anastácio",
+    "https://cultura.santoanastacio.sp.gov.br",
+  ),
+  municipal("SP", "Santo André", "https://culturaz.santoandre.sp.gov.br"),
+  municipal(
+    "CE",
+    "São Gonçalo do Amarante",
+    "https://mapacultural.saogoncalodoamarante.ce.gov.br",
+  ),
+  municipal(
+    "SP",
+    "São Bernardo do Campo",
+    "https://mapacultural.saobernardo.sp.gov.br",
+  ),
+  municipal("PR", "Sarandi", "https://cultura.sarandi.pr.gov.br"),
+  municipal("PR", "Toledo", "https://cultura.toledo.pr.gov.br"),
+];
+
 export const CULTURAL_INSTALLATIONS: CulturalInstallation[] = [
   FEDERAL_INSTALLATION,
   ...STATE_INSTALLATIONS,
+  ...MUNICIPAL_INSTALLATIONS,
 ];
 
 export const mapasInstallations = (): MapasInstallation[] =>

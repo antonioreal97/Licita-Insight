@@ -3,13 +3,12 @@
  * viewer (a function of the scroll progress of a moment). No DOM, no three.js — the component only applies the result.
  */
 
+import type { PardalEasing } from './pardal-flight-easing';
+
 const rad = (degrees: number) => (degrees * Math.PI) / 180;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
-const smoothstep = (edge0: number, edge1: number, x: number) => {
-  const t = clamp01((x - edge0) / (edge1 - edge0));
-  return t * t * (3 - 2 * t);
-};
+const phase = (from: number, to: number, progress: number) => clamp01((progress - from) / (to - from));
 
 /** The wing swings higher above level than it reaches below it, like a small bird's. */
 export const WING_UP = rad(52);
@@ -123,6 +122,10 @@ export type PardalFlight = WingDrive & {
   ink: number;
   /** Opacity of the body fill, which carries the next section's color. */
   fill: number;
+  /** The tapered ribbon follows the same path, disappearing before the full-screen zoom. */
+  ribbon: number;
+  /** Body banks through the S-curve, returning flat for the cover. */
+  bank: number;
   /** True while the wings are worth animating over time. */
   flying: boolean;
 };
@@ -131,39 +134,61 @@ export type PardalFlight = WingDrive & {
  * Approach of one moment, from its scroll progress (`localProgress` of `resolvePardalScroll`: 0..1 approach and cover,
  * 1..2 fade). Position-driven, so it scrubs the same in both scroll directions.
  */
-export function resolveFlight(localProgress: number): PardalFlight {
+export function resolveFlight(localProgress: number, easing: PardalEasing): PardalFlight {
   const approach = clamp01(localProgress / APPROACH_END);
-  const fade = 1 - clamp01(localProgress - 1);
-  const ink = 1 - smoothstep(0.78, 0.97, approach);
+  const fade = 1 - easing.exit(clamp01(localProgress - 1));
+  const ink = 1 - easing.exit(phase(0.78, 0.97, approach));
+  // Start the turn while still descending, so the trail has no cusp where the dive joins the S.
+  const travel = easing.standard(phase(0.12, 0.84, approach));
+  const settle = easing.emphasized(phase(0.72, 1, approach));
   return {
     approach,
     // Away from the viewer first, then at the camera: slow while far, fast once near.
-    depth: Math.pow(approach, 2.2) - 0.04 * Math.sin(Math.PI * clamp01(approach / 0.4)),
-    heading: smoothstep(0, 0.16, approach) * (1 - smoothstep(0.66, 0.9, approach)),
-    band: smoothstep(0, 0.42, approach),
-    travel: smoothstep(0.16, 0.9, approach),
-    settle: smoothstep(0.6, 1, approach),
-    spread: smoothstep(0, 0.1, approach),
+    depth: easing.exit(approach) - 0.04 * Math.sin(Math.PI * clamp01(approach / 0.4)),
+    heading: easing.emphasized(phase(0, 0.16, approach)) * (1 - easing.standard(phase(0.66, 0.9, approach))),
+    band: easing.standard(phase(0, 0.2, approach)),
+    travel,
+    settle,
+    spread: easing.emphasized(phase(0, 0.1, approach)),
     amplitude: 1,
-    glide: smoothstep(0.42, 0.6, approach),
+    glide: easing.standard(phase(0.42, 0.6, approach)),
     flick: 0,
-    beatHz: lerp(BEAT_HZ_START, BEAT_HZ_NEAR, smoothstep(0.05, 0.45, approach)),
+    beatHz: lerp(BEAT_HZ_START, BEAT_HZ_NEAR, easing.standard(phase(0.05, 0.45, approach))),
     ink,
-    fill: smoothstep(0.1, 0.45, approach) * fade,
+    fill: easing.emphasized(phase(0.1, 0.45, approach)) * fade,
+    ribbon: easing.emphasized(phase(0.12, 0.28, approach)) * (1 - easing.standard(phase(0.66, 0.82, approach))),
+    bank: rad(14) * Math.sin(travel * Math.PI * 2) * (1 - settle),
     flying: localProgress > 0.002 && ink > 0.01,
   };
 }
 
 type Point = { x: number; y: number };
+export type FlightAnchors = {
+  start: Point;
+  end: Point;
+  bandY: number;
+  centerX: number;
+  curveHeight: number;
+};
 
 /**
- * Screen position of the bird during the approach. It dives to the empty band at the section boundary and runs along
- * it, so it never hovers over text, and ends at `end`, where the body covers the screen.
+ * Dive into the boundary's padding, trace an S across it, then zoom into the body. The central waypoint stays fixed
+ * while the cover anchor moves with scale, so the ribbon doesn't stretch towards the zoomed body's offscreen origin.
  */
-export function resolveFlightPoint(flight: PardalFlight, anchors: { start: Point; end: Point; bandY: number }): Point {
-  const { start, end, bandY } = anchors;
+export function resolveFlightPoint(flight: PardalFlight, anchors: FlightAnchors): Point {
+  const { start, end, bandY, centerX, curveHeight } = anchors;
+  const wave = Math.sin(flight.travel * Math.PI * 2) * curveHeight;
   return {
-    x: lerp(start.x, end.x, flight.travel),
-    y: lerp(lerp(start.y, bandY, flight.band), end.y, flight.settle),
+    x: lerp(lerp(start.x, centerX, flight.travel), end.x, flight.settle),
+    y: lerp(lerp(start.y, bandY, flight.band) - wave, end.y, flight.settle),
   };
+}
+
+/** A short tail rather than a permanent line across the page; deterministic when scrolling in reverse. */
+export function resolveFlightRibbon(flight: PardalFlight, anchors: FlightAnchors, easing: PardalEasing, segments = 48) {
+  const from = Math.max(0, flight.approach - 0.32);
+  return Array.from({ length: segments + 1 }, (_, index) => {
+    const progress = lerp(from, flight.approach, index / segments);
+    return resolveFlightPoint(resolveFlight(progress * APPROACH_END, easing), anchors);
+  });
 }

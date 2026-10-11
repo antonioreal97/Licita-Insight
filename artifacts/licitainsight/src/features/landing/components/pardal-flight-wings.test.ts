@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { createPardalEasing } from './pardal-flight-easing';
 import {
   advanceWingPhase,
   APPROACH_END,
@@ -12,8 +14,9 @@ import {
   REST_BEAT_HZ,
   REST_LIFT,
   REST_SWING,
-  resolveFlight,
+  resolveFlight as resolveFlightWithEasing,
   resolveFlightPoint,
+  resolveFlightRibbon,
   resolveRestDrive,
   resolveWingBeat,
   resolveWingPose,
@@ -22,6 +25,10 @@ import {
   WING_SWEEP,
   WING_UP,
 } from './pardal-flight-wings';
+
+const css = readFileSync(new URL('../../../index.css', import.meta.url), 'utf8');
+const easing = createPardalEasing((name) => css.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1] ?? '');
+const resolveFlight = (progress: number) => resolveFlightWithEasing(progress, easing);
 
 const near = (actual: number, expected: number, tolerance = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} não está a ${tolerance} de ${expected}`);
@@ -155,7 +162,7 @@ describe('Pardal flight by scroll progress', () => {
     const closing = flights.filter((flight) => flight.approach >= 0.4);
     closing.slice(1).forEach((flight, index) => assert.ok(flight.depth > closing[index].depth));
     near(resolveFlight(APPROACH_END).depth, 1);
-    assert.ok(resolveFlight(APPROACH_END / 2).depth < 0.3);
+    assert.ok(resolveFlight(APPROACH_END / 2).depth < 0.35);
   });
 
   it('beats faster at the start and inside the 3–5 Hz range', () => {
@@ -189,7 +196,7 @@ describe('Pardal flight by scroll progress', () => {
     assert.equal(covered.fill, 1);
     assert.equal(covered.flying, false);
     assert.equal(resolveFlight(1).fill, 1);
-    near(resolveFlight(1.5).fill, 0.5);
+    near(resolveFlight(1.5).fill, 1 - easing.exit(0.5));
     assert.equal(resolveFlight(2).fill, 0);
     assert.equal(resolveFlight(2).flying, false);
   });
@@ -202,7 +209,7 @@ describe('Pardal flight by scroll progress', () => {
 });
 
 describe('Pardal flight path', () => {
-  const anchors = { start: { x: 60, y: 340 }, end: { x: 700, y: 430 }, bandY: 780 };
+  const anchors = { start: { x: 60, y: 340 }, end: { x: 700, y: 430 }, bandY: 780, centerX: 700, curveHeight: 80 };
   const pointAt = (approach: number) => resolveFlightPoint(resolveFlight(approach * APPROACH_END), anchors);
 
   it('leaves from the resting spot and ends on the cover position', () => {
@@ -213,11 +220,11 @@ describe('Pardal flight path', () => {
   });
 
   it('dives to the boundary band before crossing the content column', () => {
-    const diving = pointAt(0.16);
+    const diving = pointAt(0.08);
     assert.equal(diving.x, anchors.start.x);
     assert.ok(diving.y > anchors.start.y);
-    const onBand = pointAt(0.42);
-    near(onBand.y, anchors.bandY);
+    const onBand = pointAt(0.12);
+    assert.ok(onBand.y <= anchors.bandY && onBand.y > anchors.bandY - 60);
     assert.ok(onBand.x < (anchors.start.x + anchors.end.x) / 2);
   });
 
@@ -230,5 +237,59 @@ describe('Pardal flight path', () => {
     const flight = resolveFlight(0.5 * APPROACH_END);
     const higher = resolveFlightPoint(flight, { ...anchors, bandY: anchors.bandY - 100 });
     near(resolveFlightPoint(flight, anchors).y - higher.y, 100);
+  });
+
+  it('draws an S on both sides of the boundary without exceeding its padding', () => {
+    const points = steps(200).map((step) => pointAt(0.2 + step * 0.52));
+    assert.ok(points.some((point) => point.y < anchors.bandY - 60));
+    assert.ok(points.some((point) => point.y > anchors.bandY + 60));
+    points.forEach((point) => assert.ok(Math.abs(point.y - anchors.bandY) <= anchors.curveHeight + 1e-9));
+  });
+
+  it('mirrors the flight from the other gutter, including on narrow screens', () => {
+    for (const width of [390, 1440]) {
+      const left = { ...anchors, start: { x: width * 0.12, y: 300 }, end: { x: width / 2, y: 400 }, centerX: width / 2 };
+      const right = { ...left, start: { ...left.start, x: width - left.start.x } };
+      for (const progress of steps(50)) {
+        const flight = resolveFlight(progress * APPROACH_END);
+        const a = resolveFlightPoint(flight, left);
+        const b = resolveFlightPoint(flight, right);
+        near(a.x + b.x, width);
+        near(a.y, b.y);
+      }
+    }
+  });
+
+  it('keeps the ribbon attached to the bird and restores its path when reversing scroll', () => {
+    const progresses = [0, 0.1, 0.3, 0.5, 0.7, 0.9, 1, 1.5, 2];
+    const ribbonAt = (progress: number) => resolveFlightRibbon(resolveFlight(progress), anchors, easing);
+    assert.deepEqual(progresses.map(ribbonAt), [...progresses].reverse().map(ribbonAt).reverse());
+    for (const progress of progresses) {
+      const flight = resolveFlight(progress);
+      const ribbon = ribbonAt(progress);
+      assert.equal(ribbon.length, 49);
+      ribbon.forEach((point) => assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y)));
+      const head = ribbon.at(-1)!;
+      const bird = resolveFlightPoint(flight, anchors);
+      near(head.x, bird.x);
+      near(head.y, bird.y);
+    }
+    assert.equal(resolveFlight(0).ribbon, 0);
+    assert.equal(resolveFlight(APPROACH_END).ribbon, 0);
+    assert.equal(resolveFlight(2).ribbon, 0);
+  });
+});
+
+describe('Pardal design-system easing', () => {
+  it('uses the CSS curves with exact endpoints and no overshoot', () => {
+    for (const curve of Object.values(easing)) {
+      near(curve(0), 0);
+      near(curve(1), 1);
+      const samples = steps(100).map(curve);
+      samples.forEach((value) => assert.ok(value >= 0 && value <= 1));
+      samples.slice(1).forEach((value, index) => assert.ok(value >= samples[index]));
+    }
+    assert.ok(easing.emphasized(0.5) > easing.standard(0.5));
+    assert.ok(easing.standard(0.5) > easing.exit(0.5));
   });
 });

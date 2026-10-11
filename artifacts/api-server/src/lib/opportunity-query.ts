@@ -1,5 +1,9 @@
 import { CULTURAL_INSTALLATIONS } from "../ingest/cultural-installations";
 import {
+  OPPORTUNITY_AREAS,
+  type OpportunityArea,
+} from "../ingest/opportunity-areas";
+import {
   OPPORTUNITY_PROGRAMS,
   OPPORTUNITY_STATUSES,
   type OpportunityProgram,
@@ -64,6 +68,11 @@ export type OpportunityCriteria = {
   source: OpportunitySource[];
   status: OpportunityStatus[];
   program: OpportunityProgram[];
+  area: OpportunityArea[];
+  /** Municipality names, exactly as stored. Pair with `state` to tell homonyms apart. */
+  city: string[];
+  /** Publishing institution names, exactly as stored. */
+  organization: string[];
   deadlineFrom?: Date;
   deadlineTo?: Date;
   page: number;
@@ -91,6 +100,31 @@ const parseEnumList = <T extends string>(
       invalid(field, "invalid_enum", `${field} received an unknown value`);
     }
     return item as T;
+  });
+};
+
+const MAX_NAME_FILTERS = 20;
+const MAX_NAME_LENGTH = 200;
+
+/** Free-text equality filters (`city`, `organization`): bounded so a request cannot grow the query at will. */
+const parseNameList = (field: string, value: unknown): string[] => {
+  const items = asList(value);
+  if (items.length > MAX_NAME_FILTERS) {
+    invalid(
+      field,
+      "out_of_range",
+      `${field} accepts at most ${MAX_NAME_FILTERS} values`,
+    );
+  }
+  return items.map((item) => {
+    if (
+      typeof item !== "string" ||
+      item.trim() === "" ||
+      item.length > MAX_NAME_LENGTH
+    ) {
+      invalid(field, "invalid_type", `${field} must be a non-empty name`);
+    }
+    return (item as string).trim();
   });
 };
 
@@ -172,6 +206,9 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
     source: parseEnumList("source", query.source, OPPORTUNITY_SOURCES),
     status: parseEnumList("status", query.status, OPPORTUNITY_STATUSES),
     program: parseEnumList("program", query.program, OPPORTUNITY_PROGRAMS),
+    area: parseEnumList("area", query.area, OPPORTUNITY_AREAS),
+    city: parseNameList("city", query.city),
+    organization: parseNameList("organization", query.organization),
     deadlineFrom,
     deadlineTo,
     page,

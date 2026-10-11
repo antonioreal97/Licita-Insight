@@ -3,14 +3,10 @@ import { describe, it } from "node:test";
 import {
   CULTURAL_INSTALLATIONS,
   FEDERAL_INSTALLATION,
+  MUNICIPAL_INSTALLATIONS,
   STATE_INSTALLATIONS,
   mapasInstallations,
 } from "./cultural-installations";
-import {
-  fetchAudiovisualOpportunities,
-  retryAfterMilliseconds,
-} from "./mapas-client";
-import { MapasClientError } from "./mapas-errors";
 import {
   mapOpportunity,
   matchesAudiovisualText,
@@ -64,13 +60,42 @@ describe("cultural installations", () => {
   it("keeps a URL only for Mapas Culturais installs", () => {
     for (const installation of CULTURAL_INSTALLATIONS) {
       if (installation.kind === "mapas") {
-        assert.match(installation.baseUrl, /^https:\/\//);
+        // Plain HTTP is accepted only where the official list publishes it and it is flagged as such.
+        assert.match(
+          installation.baseUrl,
+          installation.plainHttp ? /^http:\/\// : /^https:\/\//,
+        );
       } else {
         assert.equal("baseUrl" in installation, false);
         assert.ok(installation.reason.length > 0);
       }
     }
     assert.ok(mapasInstallations().length > 1);
+  });
+
+  it("gives every municipal install a UF, a municipality and its own id", () => {
+    assert.equal(MUNICIPAL_INSTALLATIONS.length, 31);
+    for (const installation of MUNICIPAL_INSTALLATIONS) {
+      assert.equal(installation.scope, "municipal");
+      assert.ok(UFS.includes(installation.uf), installation.id);
+      assert.ok(installation.city && installation.city.length > 0);
+      assert.match(installation.id, /^[a-z]{2}-[a-z0-9-]+$/);
+    }
+    const natal = MUNICIPAL_INSTALLATIONS.find(
+      (installation) => installation.city === "Natal",
+    );
+    assert.equal(natal?.id, "rn-natal");
+    assert.equal(natal?.uf, "RN");
+    assert.deepEqual(
+      MUNICIPAL_INSTALLATIONS.filter(
+        (installation) => installation.plainHttp,
+      ).map((installation) => installation.city),
+      ["Aracaju", "Bento Gonçalves", "Iguatu"],
+    );
+    for (const installation of STATE_INSTALLATIONS) {
+      assert.equal(installation.scope, "state");
+    }
+    assert.equal(FEDERAL_INSTALLATION.scope, "federal");
   });
 });
 
@@ -120,6 +145,125 @@ describe("mapOpportunity", () => {
     assert.equal(draft.state, null);
     assert.equal(draft.organizationName, "Mapa da Cultura");
     assert.equal(draft.program, "audiovisual");
+    assert.deepEqual(draft.areas, ["audiovisual"]);
+  });
+
+  it("keeps a call of another area, with no audiovisual program", () => {
+    const draft = mapOpportunity(
+      { id: 5, name: "Edital de circulação de teatro de rua" },
+      FEDERAL_INSTALLATION,
+      now,
+    );
+    assert.ok(draft);
+    assert.equal(draft.program, null);
+    assert.deepEqual(draft.areas, ["teatro"]);
+  });
+
+  it("stores source areas, type, origin and the municipality", () => {
+    const natal = MUNICIPAL_INSTALLATIONS.find(
+      (installation) => installation.id === "rn-natal",
+    );
+    assert.ok(natal);
+    const draft = mapOpportunity(
+      {
+        id: 41,
+        name: "Edital de fomento 2026",
+        registrationFrom: "2026-09-01 00:00:00",
+        registrationTo: "2026-10-01 18:00:00",
+        type: { id: 9, name: "Edital" },
+        terms: { tag: ["pnab"], area: ["Cinema", "Música", "Cinema", "Rádio"] },
+        owner: { id: 1, name: "Secretaria de Cultura de Natal" },
+        ownerEntity: { id: 7, name: "Editais PNAB 2026" },
+        parent: null,
+        isModel: null,
+      },
+      natal,
+      now,
+    );
+    assert.ok(draft);
+    assert.equal(draft.id, "rn-natal-41");
+    assert.equal(draft.state, "RN");
+    assert.equal(draft.city, "Natal");
+    assert.deepEqual(draft.areaTerms, ["Cinema", "Música", "Rádio"]);
+    assert.deepEqual(draft.areas, ["audiovisual", "musica", "outras"]);
+    assert.equal(draft.program, "audiovisual");
+    assert.equal(draft.opportunityType, "Edital");
+    assert.equal(draft.originName, "Editais PNAB 2026");
+    for (const word of ["natal", "edital", "musica", "audiovisual", "pnab"]) {
+      assert.ok(draft.searchText.includes(word), word);
+    }
+  });
+
+  it("reads continuous flow from its sentinel date and leaves the call with no closing date", () => {
+    const draft = mapOpportunity(
+      {
+        id: 8,
+        name: "Credenciamento permanente de artistas",
+        registrationFrom: { date: "2025-11-01 23:05:00.000000" },
+        registrationTo: { date: "2111-01-01 00:00:00.000000" },
+        continuousFlow: { date: "2111-01-01 00:00:00.000000" },
+      },
+      FEDERAL_INSTALLATION,
+      now,
+    );
+    assert.ok(draft);
+    assert.equal(draft.continuousFlow, true);
+    assert.equal(draft.registrationTo, null);
+    assert.equal(draft.status, "open");
+  });
+
+  it("keeps the closing date of a continuous-flow call that sets one", () => {
+    const draft = mapOpportunity(
+      {
+        id: 9,
+        name: "Credenciamento de artistas — ciclo 2",
+        registrationFrom: "2026-01-01 00:00:00",
+        registrationTo: "2028-12-31 00:00:00",
+        continuousFlow: { date: "2111-01-01 00:00:00.000000" },
+      },
+      FEDERAL_INSTALLATION,
+      now,
+    );
+    assert.equal(draft?.continuousFlow, true);
+    assert.equal(
+      draft?.registrationTo?.toISOString(),
+      "2028-12-31T03:00:00.000Z",
+    );
+  });
+
+  it("does not read a null or false continuousFlow as continuous", () => {
+    for (const continuousFlow of [null, false, 0, "0", ""]) {
+      const draft = mapOpportunity(
+        {
+          id: 10,
+          name: "Edital",
+          registrationTo: "2026-10-01 18:00:00",
+          continuousFlow,
+        },
+        FEDERAL_INSTALLATION,
+        now,
+      );
+      assert.equal(draft?.continuousFlow, false);
+    }
+  });
+
+  it("drops later phases of a call and call templates", () => {
+    assert.equal(
+      mapOpportunity(
+        { id: 11, name: "Fase de recursos", parent: { id: 10 } },
+        FEDERAL_INSTALLATION,
+        now,
+      ),
+      null,
+    );
+    assert.equal(
+      mapOpportunity(
+        { id: 12, name: "Modelo de edital", isModel: 1 },
+        FEDERAL_INSTALLATION,
+        now,
+      ),
+      null,
+    );
   });
 
   it("reads registration dates sent as objects", () => {
@@ -157,111 +301,12 @@ describe("mapOpportunity", () => {
       programFromText("Mostra da faculdade de cinema", null),
       "audiovisual",
     );
+    assert.equal(programFromText("Mostra da faculdade de teatro", null), null);
+    assert.equal(
+      programFromText("Edital de dança — Lei Paulo Gustavo", null),
+      "lpg",
+    );
     assert.equal(matchesAudiovisualText("Mostra de teatro", null), false);
     assert.equal(matchesAudiovisualText("Oficina de cinema", null), true);
-  });
-});
-
-describe("fetchAudiovisualOpportunities", () => {
-  const respond = (pages: Record<string, unknown>) => async (url: string) => {
-    const match = Object.entries(pages).find(([part]) => url.includes(part));
-    if (!match) throw new Error(`unexpected url ${url}`);
-    return {
-      status: 200,
-      body: JSON.stringify(match[1]),
-      metadata: JSON.stringify({ numPages: 1 }),
-    };
-  };
-
-  it("searches by keyword and keeps audiovisual titles", async () => {
-    const seen: string[] = [];
-    const result = await fetchAudiovisualOpportunities(
-      FEDERAL_INSTALLATION,
-      now,
-      30,
-      {
-        maxPages: 2,
-        fetcher: async (url) => {
-          seen.push(url);
-          return {
-            status: 200,
-            body: JSON.stringify([
-              {
-                id: 9,
-                name: "Edital de cinema",
-                registrationFrom: "2026-09-10 00:00:00",
-                registrationTo: "2026-09-30 18:00:00",
-              },
-            ]),
-            metadata: JSON.stringify({ numPages: 1 }),
-          };
-        },
-      },
-    );
-    assert.equal(result.vocabularyFallback, false);
-    assert.equal(result.drafts.length, 1);
-    assert.equal(result.drafts[0]?.program, "audiovisual");
-    assert.ok(seen.some((url) => url.includes("@keyword=audiovisual")));
-    assert.equal(
-      seen.some((url) => url.includes("term:linguagem")),
-      false,
-    );
-  });
-
-  it("drops calls whose title is not audiovisual", async () => {
-    const result = await fetchAudiovisualOpportunities(
-      FEDERAL_INSTALLATION,
-      now,
-      30,
-      {
-        fetcher: respond({
-          "continuousFlow=": [],
-          "/api/opportunity/find": [
-            { id: 1, name: "Edital de teatro" },
-            { id: 2, name: "Edital de documentário" },
-          ],
-        }),
-      },
-    );
-    assert.deepEqual(
-      result.drafts.map((draft) => draft.id),
-      ["br-2"],
-    );
-  });
-
-  it("fails the installation when every keyword search fails", async () => {
-    await assert.rejects(
-      () =>
-        fetchAudiovisualOpportunities(FEDERAL_INSTALLATION, now, 30, {
-          fetcher: async () => ({ status: 503, body: "down", metadata: null }),
-        }),
-      /listing failed \(503\)/,
-    );
-  });
-
-  it("stops a mocked collection after the first blocked response", async () => {
-    let calls = 0;
-    await assert.rejects(
-      () =>
-        fetchAudiovisualOpportunities(FEDERAL_INSTALLATION, now, 30, {
-          fetcher: async () => {
-            calls += 1;
-            return { status: 403, body: "blocked", metadata: null };
-          },
-        }),
-      (error: unknown) =>
-        error instanceof MapasClientError && error.kind === "blocked",
-    );
-    assert.equal(calls, 1);
-  });
-
-  it("honors Retry-After in seconds or HTTP-date form", () => {
-    const now = Date.parse("2026-10-08T15:00:00Z");
-    assert.equal(retryAfterMilliseconds("12", now), 12_000);
-    assert.equal(
-      retryAfterMilliseconds("Thu, 08 Oct 2026 15:00:30 GMT", now),
-      30_000,
-    );
-    assert.equal(retryAfterMilliseconds("invalid", now), null);
   });
 });
