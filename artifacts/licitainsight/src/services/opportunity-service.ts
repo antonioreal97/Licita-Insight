@@ -97,6 +97,7 @@ export function opportunityParamsFromUrl(search: string): OpportunitySearchParam
     organization: names(list(params, 'organization')),
     deadlineFrom: date(params.get('deadlineFrom')),
     deadlineTo: date(params.get('deadlineTo')),
+    includeIndividual: params.get('individual') === '1' ? true : undefined,
     page: Number.isInteger(page) && page > 1 ? page : undefined,
   };
 }
@@ -115,6 +116,7 @@ export function opportunityParamsToUrl(params: OpportunitySearchParams): string 
   params.organization?.forEach((organization) => search.append('organization', organization));
   if (params.deadlineFrom) search.set('deadlineFrom', params.deadlineFrom);
   if (params.deadlineTo) search.set('deadlineTo', params.deadlineTo);
+  if (params.includeIndividual) search.set('individual', '1');
   if (params.page && params.page > 1) search.set('page', String(params.page));
   const text = search.toString();
   return text ? `?${text}` : '';

@@ -83,6 +83,12 @@ export function organizationOptions(facets: Facets, params: OpportunitySearchPar
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'pt-BR'));
 }
 
+/** What the "individual listings" switch says: how many the current filters leave out, when it is off. */
+export function individualListingsLabel(hidden: number, included: boolean): string {
+  const base = 'Incluir anúncios de proponentes individuais';
+  return !included && hidden > 0 ? `${base} (${formatNumber(hidden)})` : base;
+}
+
 /** UFs with calls first is not needed: the list is short. Counts are shown where the facet has them. */
 export function stateOptions(ufs: readonly string[], facets: Facets): FilterOption[] {
   const counts = new Map((facets?.state ?? []).map((bucket) => [bucket.value, bucket.count]));

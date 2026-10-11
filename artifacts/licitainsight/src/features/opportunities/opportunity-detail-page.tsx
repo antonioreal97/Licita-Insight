@@ -6,7 +6,13 @@ import { ErrorState } from '@/components/common/query-states';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { buttonClass } from '@/components/common/action-button';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
-import { OpportunityStatusBadge, opportunityAreaLabels, opportunityKindLabels, opportunityProgramLabels } from './components/opportunity-status';
+import {
+  IndividualListingBadge,
+  OpportunityStatusBadge,
+  opportunityAreaLabels,
+  opportunityKindLabels,
+  opportunityProgramLabels,
+} from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 
 function DetailSkeleton() {
@@ -87,6 +93,12 @@ function OpportunityDetail() {
         )}
       </div>
       <p className="mt-3 type-body text-muted-foreground">{opportunity.organizationName}</p>
+      {opportunity.individualListing && (
+        <p data-testid="notice-individual-listing" className="mt-3 flex flex-wrap items-center gap-2 type-meta text-muted-foreground">
+          <IndividualListingBadge />
+          Publicado por uma pessoa física no Mapas Culturais, sem edital ou órgão público identificado. Confira na fonte antes de se inscrever.
+        </p>
+      )}
       <section className="mt-6 rounded-xl border border-border bg-card p-5 sm:p-7">
         <h2 className="type-section text-foreground">Inscrições</h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">

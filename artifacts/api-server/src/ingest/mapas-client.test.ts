@@ -7,7 +7,9 @@ import {
 } from "./cultural-installations";
 import {
   MAPAS_USER_AGENT,
+  MAX_IDS_PER_REQUEST,
   fetchOpenOpportunities,
+  fetchOpportunitiesByIds,
   lookbackStart,
   retryAfterMilliseconds,
   type MapasFetchResponse,
@@ -68,9 +70,19 @@ describe("fetchOpenOpportunities", () => {
     assert.equal(url.searchParams.has("@keyword"), false);
     // Regression: `continuousFlow=EQ(true)` made eight installs answer an HTML error page.
     assert.equal(url.searchParams.has("continuousFlow"), false);
-    for (const field of ["terms", "type", "ownerEntity.{id,name}"]) {
+    for (const field of [
+      "terms",
+      "type",
+      "owner.{id,name,type}",
+      "ownerEntity.{id,name,type}",
+    ]) {
       assert.ok(url.searchParams.get("@select")?.includes(field), field);
     }
+    // LGPD: nothing about an agent beyond id, name and type is ever requested.
+    assert.doesNotMatch(
+      url.searchParams.get("@select") ?? "",
+      /email|telefone|documento|cpf|endereco|En_|location|nomeCompleto/i,
+    );
 
     assert.equal(result.complete, true);
     assert.equal(result.warning, null);
@@ -332,6 +344,85 @@ describe("fetchOpenOpportunities", () => {
     assert.equal(url.searchParams.get("@keyword"), "audiovisual");
     assert.equal(url.searchParams.get("registrationTo"), "GTE(2026-09-11)");
     assert.equal(result.complete, false);
+  });
+});
+
+describe("fetchOpportunitiesByIds", () => {
+  const INDIVIDUAL = { id: 1, name: "Individual" };
+
+  it("asks one install for the given calls, with the owner type, in one request", async () => {
+    const seen: string[] = [];
+    const drafts = await fetchOpportunitiesByIds(
+      state("ce"),
+      ["8", "9", "9", "abc"],
+      now,
+      {
+        fetcher: async (url) => {
+          seen.push(url);
+          return ok([
+            {
+              id: 8,
+              name: "Aulas de capoeira",
+              owner: {
+                id: 70,
+                name: "Fulana Exemplo da Silva",
+                type: INDIVIDUAL,
+              },
+            },
+            // An install that ignored the filter would send calls nobody asked for.
+            {
+              id: 500,
+              name: "Outro edital",
+              owner: { id: 1, name: "Secretaria" },
+            },
+          ]);
+        },
+      },
+    );
+
+    assert.equal(seen.length, 1);
+    const url = new URL(seen[0]!);
+    assert.equal(url.origin, "https://mapacultural.secult.ce.gov.br");
+    assert.equal(url.searchParams.get("id"), "IN(8,9)");
+    assert.ok(
+      url.searchParams.get("@select")?.includes("owner.{id,name,type}"),
+    );
+    assert.deepEqual([...drafts.keys()], ["8"]);
+    assert.equal(
+      drafts.get("8")?.organizationName,
+      "Proponente individual (Mapa Cultural do Ceará)",
+    );
+    assert.equal(drafts.get("8")?.raw.ownerReview.sourceChecked, true);
+  });
+
+  it("makes no request with nothing to ask and refuses more than one page of ids", async () => {
+    const fetcher: MapasFetcher = async () => {
+      throw new Error("no request expected");
+    };
+    assert.equal(
+      (await fetchOpportunitiesByIds(state("ce"), [], now, { fetcher })).size,
+      0,
+    );
+    await assert.rejects(
+      fetchOpportunitiesByIds(
+        state("ce"),
+        Array.from({ length: MAX_IDS_PER_REQUEST + 1 }, (_, index) =>
+          String(index + 1),
+        ),
+        now,
+        { fetcher },
+      ),
+      /at most/,
+    );
+  });
+
+  it("fails, so the rows stay pending, when the install does not answer", async () => {
+    await assert.rejects(
+      fetchOpportunitiesByIds(state("ce"), ["8"], now, {
+        fetcher: async () => ({ status: 403, body: "", metadata: null }),
+      }),
+      MapasClientError,
+    );
   });
 });
 

@@ -21,6 +21,10 @@ import {
 } from "./federal-fixtures";
 import { robotsAllows } from "./funding-client";
 import {
+  hasPersonalIdentifier,
+  looksLikePersonName,
+} from "./opportunity-owner";
+import {
   parseGovbrCallPage,
   parseGovbrCards,
   registrationWindowFromText,
@@ -522,4 +526,37 @@ test("flag: desligada por padrão, 09:00 quando ligada e nunca na janela noturna
   assert.deepEqual(cultureFederalSchedule({ CULTURE_FEDERAL_HOUR: "3" }), {
     enabled: false,
   });
+});
+
+test("LGPD: nenhuma fonte federal grava pessoa física como instituição nem dado pessoal no payload", async () => {
+  const { fetcher } = recorder(await sourcesFromFixtures());
+  const results = await collectFederalOnce({ now, delayMs: 0, fetcher });
+  const drafts = results.flatMap((result) => result.drafts);
+  assert.ok(drafts.length > 0);
+  const keys = (value: unknown): string[] =>
+    value && typeof value === "object"
+      ? Object.entries(value).flatMap(([key, inner]) => [key, ...keys(inner)])
+      : [];
+  for (const draft of drafts) {
+    // The institution is always the public body that runs the programme.
+    assert.equal(
+      looksLikePersonName(draft.organizationName),
+      false,
+      draft.organizationName,
+    );
+    // `originName` is the title of a programme card on the official portal, never an agent.
+    if (draft.originName) assert.equal(draft.source, "funarte", draft.id);
+    assert.equal(
+      hasPersonalIdentifier(JSON.stringify(draft.raw)),
+      false,
+      draft.id,
+    );
+    for (const key of keys(draft.raw)) {
+      assert.doesNotMatch(
+        key,
+        /cpf|e_?mail|telefone|celular|endereco|(?:nm|nome)_(?:responsavel|proponente|pessoa|dirigente)/i,
+        `${draft.id}: ${key}`,
+      );
+    }
+  }
 });

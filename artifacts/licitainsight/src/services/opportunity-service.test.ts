@@ -23,8 +23,18 @@ test('filtros de tipo e fonte sobrevivem ao round-trip da URL', () => {
     organization: undefined,
     deadlineFrom: undefined,
     deadlineTo: undefined,
+    includeIndividual: undefined,
     page: undefined,
   });
+});
+
+test('anúncios de proponentes individuais ficam de fora, a menos que a URL peça', () => {
+  assert.equal(opportunityParamsFromUrl('?state=CE').includeIndividual, undefined);
+  assert.equal(opportunityParamsFromUrl('?individual=0').includeIndividual, undefined);
+  const parsed = opportunityParamsFromUrl('?state=CE&individual=1');
+  assert.equal(parsed.includeIndividual, true);
+  assert.equal(opportunityParamsToUrl(parsed), '?state=CE&individual=1');
+  assert.equal(opportunityParamsToUrl({ ...parsed, includeIndividual: undefined }), '?state=CE');
 });
 
 test('filtros de área, UF, município e instituição sobrevivem ao round-trip da URL', () => {

@@ -27,6 +27,7 @@ import {
   opportunityAreaLabels,
   type OpportunityArea,
 } from "../ingest/opportunity-areas";
+import { storedOwnerReview } from "../ingest/opportunity-owner";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
 import {
@@ -92,6 +93,8 @@ export type OpportunitySummary = {
   areaTerms: string[];
   opportunityType: string | null;
   originName: string | null;
+  /** Published by a person, with no sign of a public call. Only returned when the search asks for them. */
+  individualListing: boolean;
   installation: {
     id: string;
     name: string;
@@ -137,8 +140,13 @@ export type OpportunitySearchResponse = {
       message: string;
     }[];
     gaps: { uf: string; name: string }[];
+    /** Individual listings the same filters would add with `includeIndividual=true`. */
+    hiddenIndividualListings: number;
   };
 };
+
+/** Decided at collection and kept in `raw_payload.ownerReview` (`ingest/opportunity-owner.ts`). */
+const individualListing = sql`coalesce(${culturalOpportunitiesTable.rawPayload} #>> '{ownerReview,individualListing}', 'false') = 'true'`;
 
 type OpportunityRow = typeof culturalOpportunitiesTable.$inferSelect;
 
@@ -183,8 +191,12 @@ const textArray = (values: string[]): SQL =>
 const whereFor = (
   criteria: OpportunityCriteria,
   skip?: FacetName,
+  individual: "as-asked" | "only" = "as-asked",
 ): SQL | undefined => {
   const filters: SQL[] = [];
+  if (individual === "only") filters.push(individualListing);
+  else if (!criteria.includeIndividual)
+    filters.push(sql`not ${individualListing}`);
   for (const token of queryTokens(criteria.query)) {
     filters.push(like(culturalOpportunitiesTable.searchText, token));
   }
@@ -291,6 +303,8 @@ const toSummary = (
     areaTerms: row.areaTerms,
     opportunityType: row.opportunityType,
     originName: row.originName,
+    individualListing:
+      storedOwnerReview(row.rawPayload)?.individualListing === true,
     installation: {
       id: row.installationId,
       name: installation?.name ?? opportunitySourceLabels[row.source],
@@ -462,6 +476,9 @@ export async function searchOpportunities(
     })
     .from(culturalOpportunitiesTable);
   const coverage = await latestCoverage();
+  const hiddenIndividualListings = criteria.includeIndividual
+    ? 0
+    : await countRows(whereFor(criteria, undefined, "only"));
   const [profile] = userId
     ? await db
         .select()
@@ -529,6 +546,7 @@ export async function searchOpportunities(
         ? new Date(updated.indexUpdatedAt).toISOString()
         : null,
       ...coverageMeta(coverage),
+      hiddenIndividualListings,
     },
   };
 }

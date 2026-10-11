@@ -11,6 +11,10 @@ no repositório. Só entram registros publicados por órgãos públicos.
 | `es-continuous-flow-error.html` | Corpo devolvido com status 200 e `text/html` para `continuousFlow=EQ(true)` — primeiros 700 caracteres de ~500 kB |
 | `ce-continuous-flow-500.html`   | Corpo completo devolvido com status 500 para a mesma consulta                                                     |
 
+As gravações são anteriores a `owner.{id,name,type}`: os donos vêm sem o tipo do agente, como nas linhas
+antigas do banco. Registros de agente individual (pessoa física) não entram em fixture; os testes usam nomes
+inventados.
+
 `continuousFlow` é uma coluna de data no Mapas Culturais. O filtro booleano antigo fazia o banco da instalação
 recusar a consulta (`invalid input syntax for type timestamp: "true"`), e o servidor respondia a página de erro
 em HTML no lugar do JSON.
