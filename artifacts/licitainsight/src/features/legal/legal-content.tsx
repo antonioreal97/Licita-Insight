@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
 export const LEGAL_DRAFT_NOTICE = 'Versão preliminar — sujeita a revisão jurídica';
-export const LEGAL_UPDATED_AT = '8 de outubro de 2026';
+export const LEGAL_UPDATED_AT = '11 de outubro de 2026';
 
 export function LegalLinks({ className }: { className?: string }) {
   return (
@@ -85,6 +85,13 @@ export function PrivacyPage() {
           Bases: legítimo interesse, prevenção a fraude e, quando aplicável, obrigação legal.
         </li>
       </ul>
+      <p>
+        <strong>Dados de fontes públicas:</strong> as chamadas de cultura e fomento vêm de fontes oficiais abertas (Mapas Culturais, Transferegov.br, portais
+        gov.br, CNPq, CAPES e FINEP). Guardamos o nome do órgão ou da organização que publicou a chamada. Quando quem publicou é uma pessoa física, não
+        armazenamos nome, CPF, e-mail, telefone nem endereço: mostramos um rótulo neutro e o link da fonte. Título e resumo são os publicados na fonte. Se
+        você encontrar um dado pessoal seu em um registro, escreva para <a href="mailto:contato@pardaldigital.com">contato@pardaldigital.com</a> e nós o
+        removemos.
+      </p>
 
       <h2>3. Operadores e transferência internacional</h2>
       <p>Usamos fornecedores somente para as finalidades abaixo. Alguns processam dados fora do Brasil:</p>
