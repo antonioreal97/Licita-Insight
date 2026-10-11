@@ -9,6 +9,7 @@ import { tryRunSingletonJob } from "../jobs/job-lock";
 import { inProgressRetry } from "./in-progress-retry";
 import { nightlyCategoryEnabled } from "../titles/nightly-window";
 import { cultureFederalSchedule } from "./culture-federal-schedule";
+import { internationalSchedule } from "./international-schedule";
 
 const TZ = "America/Sao_Paulo";
 
@@ -309,6 +310,72 @@ export function startDailyCultureFederalCollect(): () => void {
     logger.info(
       { hour: schedule.hour, delayMs: delay },
       "Next federal culture opportunities collect scheduled",
+    );
+    timer = setTimeout(() => void run("schedule").finally(arm), delay);
+    timer.unref();
+  };
+  arm();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+
+export function startDailyInternationalCollect(): () => void {
+  const schedule = internationalSchedule();
+  if (!schedule.enabled) {
+    logger.info("Daily international opportunities collect is disabled");
+    return () => undefined;
+  }
+  if (!process.env.DATABASE_URL) {
+    logger.error(
+      "DATABASE_URL is not set; daily international opportunities collect will not start",
+    );
+    return () => undefined;
+  }
+
+  let timer: NodeJS.Timeout | undefined;
+  let stopped = false;
+  const run = async (reason: string) => {
+    try {
+      const { collectInternational } = await import("./collect-international");
+      const locked = await tryRunSingletonJob("international_collect", () =>
+        collectInternational(),
+      );
+      if (locked.acquired)
+        logger.info(
+          {
+            reason,
+            runId: locked.value.runId,
+            upserted: locked.value.upserted,
+            closed: locked.value.closed,
+            translation: locked.value.translation,
+          },
+          "Daily international opportunities collected",
+        );
+    } catch (error) {
+      const { InternationalIngestInProgressError } =
+        await import("./collect-international");
+      if (error instanceof InternationalIngestInProgressError) {
+        logger.info(
+          { reason },
+          "Daily international opportunities collect skipped because one is already running",
+        );
+        return;
+      }
+      logger.error(
+        { err: error, reason },
+        "Daily international opportunities collect failed",
+      );
+    }
+  };
+  // No run at startup: a restart must not add requests to the sources.
+  const arm = () => {
+    if (stopped) return;
+    const delay = msUntilHour(schedule.hour);
+    logger.info(
+      { hour: schedule.hour, delayMs: delay },
+      "Next international opportunities collect scheduled",
     );
     timer = setTimeout(() => void run("schedule").finally(arm), delay);
     timer.unref();

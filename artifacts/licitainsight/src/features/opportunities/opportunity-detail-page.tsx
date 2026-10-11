@@ -14,6 +14,8 @@ import {
   opportunityProgramLabels,
 } from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
+import { BrazilProjectBadge, EligibilityBadge, FundingBadge, OfficialNoticeBanner } from './components/international';
+import { amountTexts, deadlineTexts, originalTitle, placeLabel } from './lib/international';
 
 function DetailSkeleton() {
   return (
@@ -67,10 +69,18 @@ function OpportunityDetail() {
 
   if (!opportunity) return null;
 
+  const international = opportunity.international;
+  const original = international ? originalTitle(opportunity.title, international) : null;
+  const deadline = international ? deadlineTexts(international.deadline) : null;
+  const amount = international ? amountTexts(international, false) : null;
+
   return (
     <article data-testid="opportunity-detail">
-      <Link href="/oportunidades" className="type-meta font-semibold text-primary hover:underline">
-        Chamadas culturais
+      <Link
+        href={international ? '/oportunidades?scope=international' : '/oportunidades'}
+        className="type-meta font-semibold text-primary hover:underline"
+      >
+        {international ? 'Oportunidades internacionais' : 'Chamadas culturais'}
       </Link>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <OpportunityStatusBadge status={opportunity.status} />
@@ -80,8 +90,13 @@ function OpportunityDetail() {
           <span className="type-label text-muted-foreground">{opportunityProgramLabels[opportunity.program]}</span>
         )}
         <span className="type-label text-muted-foreground">
-          {opportunity.city && opportunity.state ? `${opportunity.city} (${opportunity.state})` : (opportunity.state ?? 'Nacional')}
+          {international
+            ? placeLabel(international)
+            : opportunity.city && opportunity.state
+              ? `${opportunity.city} (${opportunity.state})`
+              : (opportunity.state ?? 'Nacional')}
         </span>
+        {international?.brazilProject && <BrazilProjectBadge />}
       </div>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <h1 className="max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
@@ -92,7 +107,49 @@ function OpportunityDetail() {
           </a>
         )}
       </div>
+      {original && (
+        <p data-testid="text-opportunity-original-title" className="mt-2 max-w-3xl type-meta text-muted-foreground">
+          <span className="font-semibold">Título original{international?.languageName ? ` (${international.languageName.toLowerCase()})` : ''}:</span>{' '}
+          <span lang={international?.language ?? undefined}>{original}</span>
+          {international?.translationSource === 'model' && ' · tradução automática'}
+        </p>
+      )}
       <p className="mt-3 type-body text-muted-foreground">{opportunity.organizationName}</p>
+      {international && (
+        <section
+          aria-labelledby="opportunity-eligibility"
+          data-testid="section-opportunity-eligibility"
+          className="mt-6 rounded-xl border border-border bg-card p-5 sm:p-7"
+        >
+          <h2 id="opportunity-eligibility" className="type-section text-foreground">
+            Brasileiros podem participar?
+          </h2>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+            {international.brazilEligibility && (
+              <div>
+                <dt className="type-label text-muted-foreground">Pode participar</dt>
+                <dd className="mt-2">
+                  <EligibilityBadge answer={international.brazilEligibility} />
+                  {international.brazilEligibility.reason && <p className="mt-2 type-ui">{international.brazilEligibility.reason}</p>}
+                </dd>
+              </div>
+            )}
+            {international.brazilFunding && (
+              <div>
+                <dt className="type-label text-muted-foreground">Recebe financiamento</dt>
+                <dd className="mt-2">
+                  <FundingBadge answer={international.brazilFunding} />
+                  {international.brazilFunding.reason && <p className="mt-2 type-ui">{international.brazilFunding.reason}</p>}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <OfficialNoticeBanner className="mt-5" />
+          {international.eligibilityCheckedAt && (
+            <p className="mt-3 type-meta text-muted-foreground">Regra aplicada em {formatDateTime(international.eligibilityCheckedAt)}.</p>
+          )}
+        </section>
+      )}
       {opportunity.individualListing && (
         <p data-testid="notice-individual-listing" className="mt-3 flex flex-wrap items-center gap-2 type-meta text-muted-foreground">
           <IndividualListingBadge />
@@ -100,18 +157,40 @@ function OpportunityDetail() {
         </p>
       )}
       <section className="mt-6 rounded-xl border border-border bg-card p-5 sm:p-7">
-        <h2 className="type-section text-foreground">Inscrições</h2>
+        <h2 className="type-section text-foreground">{international ? 'Prazo e valor' : 'Inscrições'}</h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <dt className="type-label text-muted-foreground">Abertura</dt>
+            <dt className="type-label text-muted-foreground">{international ? 'Publicação ou abertura' : 'Abertura'}</dt>
             <dd className="mt-1 type-ui">{formatDate(opportunity.registrationFrom)}</dd>
           </div>
-          <div>
-            <dt className="type-label text-muted-foreground">Encerramento</dt>
-            <dd className="mt-1 type-ui">
-              {opportunity.continuousFlow && !opportunity.registrationTo ? 'Fluxo contínuo, sem data de encerramento' : formatDate(opportunity.registrationTo)}
-            </dd>
-          </div>
+          {deadline ? (
+            <div data-testid="opportunity-deadline">
+              <dt className="type-label text-muted-foreground">Prazo (horário de Brasília)</dt>
+              <dd className="mt-1 type-ui font-semibold">{deadline.brasilia}</dd>
+              {deadline.original && <dd className="mt-1 type-meta text-muted-foreground">No original: {deadline.original}</dd>}
+              {deadline.note && <dd className="mt-1 type-meta text-muted-foreground">{deadline.note}</dd>}
+            </div>
+          ) : (
+            <div>
+              <dt className="type-label text-muted-foreground">Encerramento</dt>
+              <dd className="mt-1 type-ui">
+                {opportunity.continuousFlow && !opportunity.registrationTo ? 'Fluxo contínuo, sem data de encerramento' : formatDate(opportunity.registrationTo)}
+              </dd>
+            </div>
+          )}
+          {amount && (
+            <div data-testid="opportunity-amount">
+              <dt className="type-label text-muted-foreground">Valor na moeda original</dt>
+              <dd className="mt-1 type-ui font-semibold">{amount.original}</dd>
+              {amount.approx ? (
+                <dd className="mt-1 type-meta text-muted-foreground">
+                  {amount.approx}, pela {amount.quote} do Banco Central. Valor aproximado.
+                </dd>
+              ) : (
+                <dd className="mt-1 type-meta text-muted-foreground">Sem cotação PTAX para converter.</dd>
+              )}
+            </div>
+          )}
           <div>
             <dt className="type-label text-muted-foreground">Fonte</dt>
             <dd className="mt-1 type-ui">{opportunity.sourceName}</dd>
@@ -152,6 +231,16 @@ function OpportunityDetail() {
                 {opportunity.areaTerms.length > 0 && <dd className="mt-1 type-meta text-muted-foreground">Na fonte: {opportunity.areaTerms.join(', ')}</dd>}
               </div>
             )}
+          </dl>
+        )}
+        {international && international.details.length > 0 && (
+          <dl data-testid="opportunity-source-details" className="mt-4 grid gap-4 sm:grid-cols-2">
+            {international.details.map((detail) => (
+              <div key={detail.label}>
+                <dt className="type-label text-muted-foreground">{detail.label}</dt>
+                <dd className="mt-1 type-ui">{detail.value}</dd>
+              </div>
+            ))}
           </dl>
         )}
         {opportunity.summary && <p className="mt-6 type-body text-foreground">{opportunity.summary}</p>}

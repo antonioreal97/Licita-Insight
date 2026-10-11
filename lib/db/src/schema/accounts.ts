@@ -47,6 +47,10 @@ export const usersTable = pgTable(
     recommendationPersonalizationEnabled: boolean("recommendation_personalization_enabled")
       .notNull()
       .default(false),
+    /** Opt-in: international calls only enter profile matching and recommendations when this is on. */
+    showInternationalOpportunities: boolean("show_international_opportunities")
+      .notNull()
+      .default(false),
     recommendationPreferencesUpdatedAt: timestamp(
       "recommendation_preferences_updated_at",
       { withTimezone: true },

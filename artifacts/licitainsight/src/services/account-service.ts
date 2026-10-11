@@ -94,8 +94,12 @@ export const accountService = {
   getNotificationPreferences: (signal?: AbortSignal) => accountAdapter.getNotificationPreferences(signal),
   updateNotificationPreferences: (body: UpdateNotificationPreferencesBody) => accountAdapter.updateNotificationPreferences(body),
   getRecommendationPreferences: (signal?: AbortSignal) => accountAdapter.getRecommendationPreferences(signal),
-  updateRecommendationPreferences: (personalizationEnabled: boolean, deleteHistory = !personalizationEnabled) =>
-    accountAdapter.updateRecommendationPreferences({ personalizationEnabled, deleteHistory }),
+  updateRecommendationPreferences: (personalizationEnabled: boolean, deleteHistory = !personalizationEnabled, showInternationalOpportunities?: boolean) =>
+    accountAdapter.updateRecommendationPreferences({
+      personalizationEnabled,
+      deleteHistory,
+      ...(showInternationalOpportunities === undefined ? {} : { showInternationalOpportunities }),
+    }),
   deleteRecommendationHistory: () => accountAdapter.deleteRecommendationHistory(),
   listRecommendations: (params: { page?: number; pageSize?: number }, signal?: AbortSignal) => accountAdapter.listRecommendations(params, signal),
   dismissRecommendation: (tenderId: string) => accountAdapter.dismissRecommendation(tenderId),

@@ -18,4 +18,6 @@ export const OpportunitySource = {
   funarte: 'funarte',
   minc: 'minc',
   salic: 'salic',
+  worldbank: 'worldbank',
+  eu_ft: 'eu_ft',
 } as const;

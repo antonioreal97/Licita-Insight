@@ -67,6 +67,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           emailImmediateCritical: usersTable.emailImmediateCritical,
           profileAlerts: usersTable.profileAlerts,
           recommendationPersonalizationEnabled: usersTable.recommendationPersonalizationEnabled,
+          showInternationalOpportunities: usersTable.showInternationalOpportunities,
           recommendationPreferencesUpdatedAt: usersTable.recommendationPreferencesUpdatedAt,
           emailPreferencesUpdatedAt: usersTable.emailPreferencesUpdatedAt,
           createdAt: usersTable.createdAt,

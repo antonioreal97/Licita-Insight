@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 import {
   Bell,
   Bookmark,
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Clapperboard,
   FileSearch,
+  Globe,
   LayoutDashboard,
   Landmark,
   LogOut,
@@ -51,6 +52,9 @@ import { cn } from '@/lib/utils';
 
 type NavItem = { href: string; label: string; icon: LucideIcon; testId: string };
 
+/** The international tab of the hub: same page as the cultural calls, told apart by the query string. */
+const INTERNATIONAL_HREF = '/oportunidades?scope=international';
+
 /** `title` is shown above the group; `label` names the <nav> for screen readers. */
 const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
   {
@@ -59,6 +63,7 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
       { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard, testId: 'link-nav-visão-geral' },
       { href: '/search', label: 'Explorar editais', icon: Search, testId: 'link-nav-explorar-editais' },
       { href: '/oportunidades', label: 'Chamadas culturais', icon: Clapperboard, testId: 'link-nav-chamadas-culturais' },
+      { href: INTERNATIONAL_HREF, label: 'Internacionais', icon: Globe, testId: 'link-nav-internacionais' },
       { href: '/transparencia', label: 'Transparência', icon: Landmark, testId: 'link-nav-transparencia' },
       { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark, testId: 'link-nav-buscas-salvas' },
       { href: '/saved-tenders', label: 'Editais salvos', icon: FileSearch, testId: 'link-nav-editais-salvos' },
@@ -93,6 +98,7 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   // Cultural calls need access (trial or subscription): say so on the nav item before the user clicks.
   const access = useOpportunityAccess();
   const opportunitiesLocked = access.state === 'anonymous' || access.state === 'no-access';
+  const internationalScope = new URLSearchParams(useSearch()).get('scope') === 'international';
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
@@ -106,12 +112,14 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
               : group.title && <div className={`mb-3 px-3 type-eyebrow text-sidebar-subtle-foreground ${index > 0 ? 'mt-10' : ''}`}>{group.title}</div>}
             <nav aria-label={group.label} className="space-y-1">
               {group.items.map(({ href, label, icon: Icon, testId }) => {
-                const locked = href === '/oportunidades' && opportunitiesLocked;
+                const locked = href.startsWith('/oportunidades') && opportunitiesLocked;
                 const name = locked && collapsed ? `${label} (incluso no acesso)` : label;
                 const active =
-                  location === href ||
-                  (href === '/search' && location.startsWith('/tenders/')) ||
-                  (href === '/oportunidades' && location.startsWith('/oportunidades/'));
+                  href === INTERNATIONAL_HREF
+                    ? location === '/oportunidades' && internationalScope
+                    : (location === href && !(href === '/oportunidades' && internationalScope)) ||
+                      (href === '/search' && location.startsWith('/tenders/')) ||
+                      (href === '/oportunidades' && location.startsWith('/oportunidades/'));
                 const link = (
                   <Link
                     key={href}

@@ -244,6 +244,8 @@ export interface NotificationPreferences {
 
 export interface RecommendationPreferences {
   personalizationEnabled: boolean;
+  /** Off by default. International calls enter recommendations and profile matching only when on. */
+  showInternationalOpportunities: boolean;
   /** @nullable */
   updatedAt: string | null;
 }
@@ -252,6 +254,8 @@ export interface UpdateRecommendationPreferencesRequest {
   personalizationEnabled: boolean;
   /** Applies when disabling; defaults to true so turning opt-in off erases the event history. */
   deleteHistory?: boolean;
+  /** Kept as it is when omitted. */
+  showInternationalOpportunities?: boolean;
 }
 
 export type RecommendationEventRequest = {
@@ -326,6 +330,7 @@ export interface AccountExportUser {
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
   recommendationPersonalizationEnabled: boolean;
+  showInternationalOpportunities: boolean;
   /** @nullable */
   recommendationPreferencesUpdatedAt: string | null;
   /** @nullable */
@@ -1907,6 +1912,7 @@ export const OpportunityKind = {
   funding: 'funding',
   innovation: 'innovation',
   partnership: 'partnership',
+  procurement: 'procurement',
 } as const;
 
 export type OpportunitySource = typeof OpportunitySource[keyof typeof OpportunitySource];
@@ -1921,7 +1927,169 @@ export const OpportunitySource = {
   funarte: 'funarte',
   minc: 'minc',
   salic: 'salic',
+  worldbank: 'worldbank',
+  eu_ft: 'eu_ft',
 } as const;
+
+/**
+ * Reach of the call, not its nature. An international call still has a `kind`.
+ */
+export type OpportunityScope = typeof OpportunityScope[keyof typeof OpportunityScope];
+
+
+export const OpportunityScope = {
+  national: 'national',
+  international: 'international',
+} as const;
+
+export type OpportunityScopeFilter = typeof OpportunityScopeFilter[keyof typeof OpportunityScopeFilter];
+
+
+export const OpportunityScopeFilter = {
+  national: 'national',
+  international: 'international',
+  all: 'all',
+} as const;
+
+export type InternationalRegion = typeof InternationalRegion[keyof typeof InternationalRegion];
+
+
+export const InternationalRegion = {
+  'america-latina': 'america-latina',
+  africa: 'africa',
+  europa: 'europa',
+  asia: 'asia',
+  'oriente-medio': 'oriente-medio',
+  global: 'global',
+} as const;
+
+export type BrazilEligibility = typeof BrazilEligibility[keyof typeof BrazilEligibility];
+
+
+export const BrazilEligibility = {
+  yes: 'yes',
+  conditional: 'conditional',
+  no: 'no',
+  unknown: 'unknown',
+} as const;
+
+export interface OpportunityEligibilityAnswer {
+  status: BrazilEligibility;
+  label: string;
+  /**
+     * Readable sentence of the rule that decided. Indicative; the official notice prevails.
+     * @nullable
+     */
+  reason: string | null;
+  /**
+     * Slug of the rule. Present on `brazilEligibility` only.
+     * @nullable
+     */
+  rule?: string | null;
+}
+
+export interface InternationalOpportunityDetail {
+  label: string;
+  value: string;
+}
+
+/**
+ * With `date` only the day is known; an hour in `original` was not converted.
+ * @nullable
+ */
+export type InternationalOpportunityDeadlinePrecision = typeof InternationalOpportunityDeadlinePrecision[keyof typeof InternationalOpportunityDeadlinePrecision] | null;
+
+
+export const InternationalOpportunityDeadlinePrecision = {
+  datetime: 'datetime',
+  date: 'date',
+} as const;
+
+export interface InternationalOpportunityDeadline {
+  /**
+     * Same instant as `registrationTo`.
+     * @nullable
+     */
+  at: string | null;
+  /**
+     * With `date` only the day is known; an hour in `original` was not converted.
+     * @nullable
+     */
+  precision: InternationalOpportunityDeadlinePrecision;
+  /**
+     * IANA zone of the wall clock the source published.
+     * @nullable
+     */
+  timeZone: string | null;
+  /**
+     * The deadline as the source wrote it, in its own wall clock.
+     * @nullable
+     */
+  original: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type InternationalOpportunityTranslationSource = typeof InternationalOpportunityTranslationSource[keyof typeof InternationalOpportunityTranslationSource] | null;
+
+
+export const InternationalOpportunityTranslationSource = {
+  source: 'source',
+  model: 'model',
+} as const;
+
+export interface InternationalOpportunity {
+  /** @nullable */
+  agency: string | null;
+  /**
+     * ISO 3166-1 alpha-2 of the country where the call is executed.
+     * @nullable
+     */
+  country: string | null;
+  /** @nullable */
+  countryName: string | null;
+  region: InternationalRegion | null;
+  /** @nullable */
+  regionName: string | null;
+  brazilProject: boolean;
+  /** @nullable */
+  language: string | null;
+  /** @nullable */
+  languageName: string | null;
+  /** @nullable */
+  titleOriginal: string | null;
+  /** @nullable */
+  titlePt: string | null;
+  /** @nullable */
+  translationSource: InternationalOpportunityTranslationSource;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  amountOriginal: number | null;
+  /**
+     * ISO 4217 code of `amountOriginal`.
+     * @nullable
+     */
+  currency: string | null;
+  /**
+     * `amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.
+     * @minimum 0
+     * @nullable
+     */
+  amountBrlApprox: number | null;
+  /** @nullable */
+  fxRate: number | null;
+  /** @nullable */
+  fxDate: string | null;
+  deadline: InternationalOpportunityDeadline;
+  brazilEligibility: OpportunityEligibilityAnswer | null;
+  brazilFunding: OpportunityEligibilityAnswer | null;
+  /** @nullable */
+  eligibilityCheckedAt: string | null;
+  details: InternationalOpportunityDetail[];
+}
 
 export interface OpportunityDocument {
   title: string;
@@ -1975,6 +2143,9 @@ export interface OpportunitySummary {
   sourceUrl: string | null;
   updatedAt: string;
   profileMatch: OpportunityProfileMatch | null;
+  scope: OpportunityScope;
+  /** Set on international calls only. */
+  international: InternationalOpportunity | null;
 }
 
 export interface FacetBucket {
@@ -1991,6 +2162,12 @@ export interface OpportunityFacets {
   program: FacetBucket[];
   kind: FacetBucket[];
   source: FacetBucket[];
+  agency: FacetBucket[];
+  region: FacetBucket[];
+  language: FacetBucket[];
+  opportunityType: FacetBucket[];
+  eligibility: FacetBucket[];
+  funding: FacetBucket[];
 }
 
 export interface OpportunityInstallationIssue {
@@ -2013,6 +2190,9 @@ export interface OpportunitySearchMeta {
   indexUpdatedAt: string | null;
   installationIssues: OpportunityInstallationIssue[];
   gaps: OpportunityGap[];
+  scope: OpportunityScopeFilter;
+  /** The account preference. International calls enter profile matching only when on. */
+  internationalInProfile: boolean;
 }
 
 export interface OpportunitySearchResponse {
@@ -2501,6 +2681,45 @@ status?: OpportunityStatus[];
 program?: OpportunityProgram[];
 kind?: OpportunityKind[];
 source?: OpportunitySource[];
+/**
+ * Reach of the calls. Without it only national calls are returned.
+ */
+scope?: OpportunityScopeFilter;
+/**
+ * Funding body of an international call, exactly as returned in the facet.
+ * @maxItems 20
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+agency?: string[];
+region?: InternationalRegion[];
+/**
+ * ISO 3166-1 alpha-2 code of the country where the call is executed.
+ * @maxItems 20
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+country?: string[];
+/**
+ * BCP 47 language code of the notice at the source.
+ * @maxItems 20
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+language?: string[];
+/**
+ * Type of the call at the source, exactly as returned in the facet.
+ * @maxItems 20
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+opportunityType?: string[];
+/**
+ * Whether an entity or person from Brazil can take part.
+ */
+eligibility?: BrazilEligibility[];
+/**
+ * Whether the funder pays a participant from Brazil.
+ */
+funding?: BrazilEligibility[];
 /**
  * Inclusive lower date in America/Sao_Paulo.
  */

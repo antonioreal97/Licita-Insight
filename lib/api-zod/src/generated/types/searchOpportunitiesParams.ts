@@ -5,9 +5,12 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { BrazilEligibility } from './brazilEligibility';
 import type { FacetsParameter } from './facetsParameter';
+import type { InternationalRegion } from './internationalRegion';
 import type { OpportunityKind } from './opportunityKind';
 import type { OpportunityProgram } from './opportunityProgram';
+import type { OpportunityScopeFilter } from './opportunityScopeFilter';
 import type { OpportunitySource } from './opportunitySource';
 import type { OpportunityStatus } from './opportunityStatus';
 import type { PageParameter } from './pageParameter';
@@ -24,6 +27,45 @@ status?: OpportunityStatus[];
 program?: OpportunityProgram[];
 kind?: OpportunityKind[];
 source?: OpportunitySource[];
+/**
+ * Reach of the calls. Without it only national calls are returned.
+ */
+scope?: OpportunityScopeFilter;
+/**
+ * Funding body of an international call, exactly as returned in the facet.
+ * @maxItems 20
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+agency?: string[];
+region?: InternationalRegion[];
+/**
+ * ISO 3166-1 alpha-2 code of the country where the call is executed.
+ * @maxItems 20
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+country?: string[];
+/**
+ * BCP 47 language code of the notice at the source.
+ * @maxItems 20
+ * @items.pattern ^[A-Za-z]{2}$
+ */
+language?: string[];
+/**
+ * Type of the call at the source, exactly as returned in the facet.
+ * @maxItems 20
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+opportunityType?: string[];
+/**
+ * Whether an entity or person from Brazil can take part.
+ */
+eligibility?: BrazilEligibility[];
+/**
+ * Whether the funder pays a participant from Brazil.
+ */
+funding?: BrazilEligibility[];
 /**
  * Inclusive lower date in America/Sao_Paulo.
  */

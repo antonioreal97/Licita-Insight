@@ -9,15 +9,24 @@ import {
   type OpportunityProgram,
   type OpportunityStatus,
 } from "../ingest/opportunity-map";
+import {
+  INTERNATIONAL_REGIONS,
+  type InternationalRegion,
+} from "../ingest/international-countries";
 import { InvalidParameterError } from "./api-error";
 import { parseDateParameter } from "./sao-paulo-date";
-import type { OpportunityKind, OpportunitySource } from "@workspace/db";
+import type {
+  BrazilEligibility,
+  OpportunityKind,
+  OpportunitySource,
+} from "@workspace/db";
 
 export const OPPORTUNITY_KINDS = [
   "culture",
   "funding",
   "innovation",
   "partnership",
+  "procurement",
 ] as const satisfies readonly OpportunityKind[];
 export const OPPORTUNITY_SOURCES = [
   "mapas",
@@ -28,7 +37,18 @@ export const OPPORTUNITY_SOURCES = [
   "funarte",
   "minc",
   "salic",
+  "worldbank",
+  "eu_ft",
 ] as const satisfies readonly OpportunitySource[];
+/** `national` is the default, so a client that never heard of international calls keeps its results. */
+export const OPPORTUNITY_SCOPES = ["national", "international", "all"] as const;
+export type OpportunityScopeFilter = (typeof OPPORTUNITY_SCOPES)[number];
+export const BRAZIL_ELIGIBILITIES = [
+  "yes",
+  "conditional",
+  "no",
+  "unknown",
+] as const satisfies readonly BrazilEligibility[];
 
 const UFS = [
   "AC",
@@ -77,6 +97,20 @@ export type OpportunityCriteria = {
   city: string[];
   /** Publishing institution names, exactly as stored. */
   organization: string[];
+  scope: OpportunityScopeFilter;
+  /** Funding body names, exactly as stored ("Banco Mundial"). International calls only. */
+  agency: string[];
+  region: InternationalRegion[];
+  /** ISO 3166-1 alpha-2 codes of the country where the call is executed. */
+  country: string[];
+  /** BCP 47 language codes of the notice. */
+  language: string[];
+  /** Type of the call at the source ("Bens", "Obras", "Consultoria", "Subvenção"…), exactly as stored. */
+  opportunityType: string[];
+  /** Whether an entity from Brazil can take part. */
+  eligibility: BrazilEligibility[];
+  /** Whether the funder pays a participant from Brazil. */
+  funding: BrazilEligibility[];
   deadlineFrom?: Date;
   deadlineTo?: Date;
   /** Also return listings published by a person with no sign of a public call. Off unless asked. */
@@ -134,6 +168,28 @@ const parseNameList = (field: string, value: unknown): string[] => {
   });
 };
 
+const parseCodeList = (
+  field: string,
+  value: unknown,
+  pattern: RegExp,
+  normalize: (code: string) => string,
+): string[] => {
+  const items = asList(value);
+  if (items.length > MAX_NAME_FILTERS) {
+    invalid(
+      field,
+      "out_of_range",
+      `${field} accepts at most ${MAX_NAME_FILTERS} values`,
+    );
+  }
+  return items.map((item) => {
+    if (typeof item !== "string" || !pattern.test(item)) {
+      invalid(field, "invalid_enum", `${field} received an unknown value`);
+    }
+    return normalize(item as string);
+  });
+};
+
 const parseDate = (field: string, value: unknown): Date | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== "string") {
@@ -183,6 +239,13 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
     return item as string;
   });
 
+  const scope =
+    query.scope === undefined
+      ? "national"
+      : parseEnumList("scope", query.scope, OPPORTUNITY_SCOPES)[0];
+  if (scope === undefined || asList(query.scope).length > 1)
+    invalid("scope", "invalid_enum", "scope accepts a single value");
+
   const page = query.page === undefined ? 1 : Number(query.page);
   const pageSize = query.pageSize === undefined ? 20 : Number(query.pageSize);
   if (!Number.isInteger(page) || page < 1)
@@ -223,6 +286,25 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
     area: parseEnumList("area", query.area, OPPORTUNITY_AREAS),
     city: parseNameList("city", query.city),
     organization: parseNameList("organization", query.organization),
+    scope: scope as OpportunityScopeFilter,
+    agency: parseNameList("agency", query.agency),
+    region: parseEnumList("region", query.region, INTERNATIONAL_REGIONS),
+    country: parseCodeList("country", query.country, /^[A-Za-z]{2}$/, (code) =>
+      code.toUpperCase(),
+    ),
+    language: parseCodeList(
+      "language",
+      query.language,
+      /^[A-Za-z]{2}$/,
+      (code) => code.toLowerCase(),
+    ),
+    opportunityType: parseNameList("opportunityType", query.opportunityType),
+    eligibility: parseEnumList(
+      "eligibility",
+      query.eligibility,
+      BRAZIL_ELIGIBILITIES,
+    ),
+    funding: parseEnumList("funding", query.funding, BRAZIL_ELIGIBILITIES),
     deadlineFrom,
     deadlineTo,
     includeIndividual,
