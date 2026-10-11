@@ -1,7 +1,16 @@
 import React from 'react';
 import type { OpportunityArea, OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { formatNumber } from '@/lib/format';
-import { areaCounts, areaOptions, cityOptions, cityPatch, organizationOptions, selectedCityValue, type FilterOption } from '../lib/opportunity-filters';
+import {
+  areaCounts,
+  areaOptions,
+  cityOptions,
+  cityPatch,
+  individualListingsLabel,
+  organizationOptions,
+  selectedCityValue,
+  type FilterOption,
+} from '../lib/opportunity-filters';
 
 const selectClass =
   'h-10 w-full min-w-0 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -9,6 +18,8 @@ const selectClass =
 type Props = {
   params: OpportunitySearchParams;
   facets: OpportunitySearchResponse['facets'];
+  /** Individual listings the current filters leave out. */
+  hiddenIndividualListings: number;
   onChange: (patch: Partial<OpportunitySearchParams>) => void;
 };
 
@@ -42,8 +53,8 @@ function FilterSelect({
   );
 }
 
-/** Area, municipality and institution filters, plus the count of calls in each area. */
-export function OpportunityFilters({ params, facets, onChange }: Props) {
+/** Area, municipality and institution filters, the individual listings switch and the count of calls in each area. */
+export function OpportunityFilters({ params, facets, hiddenIndividualListings, onChange }: Props) {
   const selectedArea = params.area?.[0];
   const counts = areaCounts(facets);
   const toggleArea = (area: OpportunityArea) => onChange({ area: selectedArea === area ? undefined : [area] });
@@ -76,6 +87,19 @@ export function OpportunityFilters({ params, facets, onChange }: Props) {
           onChange={(value) => onChange({ organization: value ? [value] : undefined })}
         />
       </div>
+      <label className="flex w-fit items-start gap-2 type-meta text-muted-foreground">
+        <input
+          type="checkbox"
+          data-testid="checkbox-opportunity-individual"
+          className="mt-0.5 size-4 rounded border-input accent-primary"
+          checked={params.includeIndividual === true}
+          onChange={(event) => onChange({ includeIndividual: event.target.checked ? true : undefined })}
+        />
+        <span>
+          <span className="font-semibold text-foreground">{individualListingsLabel(hiddenIndividualListings, params.includeIndividual === true)}</span>
+          <span className="block">Aulas, oficinas e testes publicados por pessoas físicas no Mapas Culturais, sem edital ou órgão público.</span>
+        </span>
+      </label>
       {counts.length > 0 && (
         <div data-testid="list-opportunity-areas" role="group" aria-label="Chamadas por área cultural" className="flex flex-wrap gap-2">
           {counts.map(({ area, label, count }) => {

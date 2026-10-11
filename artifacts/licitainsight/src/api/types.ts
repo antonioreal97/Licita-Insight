@@ -761,6 +761,8 @@ export type OpportunitySearchParams = {
   organization?: string[];
   deadlineFrom?: string;
   deadlineTo?: string;
+  /** Also list what a person published with no sign of a public call (classes, private workshops). */
+  includeIndividual?: boolean;
   page?: number;
   pageSize?: number;
   facets?: boolean;
@@ -793,6 +795,8 @@ export type OpportunitySummary = {
   opportunityType: string | null;
   /** Project or programme the call belongs to at the source. */
   originName: string | null;
+  /** Published by a person, with no sign of a public call. Listed only with `includeIndividual`. */
+  individualListing: boolean;
   installation: { id: string; name: string; uf: string; city: string | null };
   sourceUrl: string | null;
   updatedAt: string;
@@ -822,5 +826,7 @@ export type OpportunitySearchResponse = {
     indexUpdatedAt: string | null;
     installationIssues: { installationId: string; name: string; message: string }[];
     gaps: { uf: string; name: string }[];
+    /** Individual listings the same filters would add with `includeIndividual`. */
+    hiddenIndividualListings: number;
   };
 };

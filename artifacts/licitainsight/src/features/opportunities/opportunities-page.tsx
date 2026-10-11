@@ -13,6 +13,7 @@ import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityFilters } from './components/opportunity-filters';
 import { statePatch, stateOptions } from './lib/opportunity-filters';
 import {
+  IndividualListingBadge,
   OpportunityStatusBadge,
   opportunityAreaLabels,
   opportunityKindLabels,
@@ -85,6 +86,7 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
           )}
           <span className="type-label text-muted-foreground">{place}</span>
           {opportunity.profileMatch && <span className="type-label font-semibold text-primary">Combina com seu perfil</span>}
+          {opportunity.individualListing && <IndividualListingBadge />}
         </div>
         {areas.length > 0 && (
           <ul aria-label="Áreas culturais" className="flex flex-wrap gap-1.5">
@@ -233,7 +235,7 @@ function OpportunitySearch() {
         </label>
       </form>
 
-      <OpportunityFilters params={params} facets={facets} onChange={update} />
+      <OpportunityFilters params={params} facets={facets} hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0} onChange={update} />
 
       {response && response.meta.installationIssues.length > 0 && (
         <details data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
