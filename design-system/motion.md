@@ -33,8 +33,11 @@ interface has to feel instant. Every animation must pass one test: would the UI 
 
 The public landing (`artifacts/licitainsight/src/features/landing/`) is a brand surface, not a work surface, so it may perform. Only there:
 
-- **Scroll-driven 3D pardal** (`pardal-flight-3d.tsx`): extruded from `public/brand/pardal-silhueta.svg`. Near each section boundary
-  it flies at the camera, its body (`corpo-cheio`) filling with the next section's background, until that color covers the screen;
+- **Scroll-driven 3D pardal** (`pardal-flight-3d.tsx`): extruded from `public/brand/pardal-silhueta.svg`. At the opted-in boundaries
+  (`data-pardal-momento`, currently IA and Plano), it dives into the section padding and follows an S-shaped path with a tapered
+  ribbon in the brand ink. The ribbon follows the same path in reverse when scrolling up and fades before the zoom. The flight
+  reads `--ease-standard` for travel, `--ease-emphasized` for opening/settling, and `--ease-exit` for approach/exit directly from CSS.
+  It then flies at the camera, its body (`corpo-cheio`) filling with the next section's background, until that color covers the screen;
   a curtain in the same color then lifts with the boundary and reveals the next section in place. The transition runs at every
   width; resting in the side gutters between boundaries only from 1360px, where they fit it without covering text. It renders on
   demand (scroll, resize, theme), never in an idle loop. Colors come from the sections' own computed backgrounds, so they stay in

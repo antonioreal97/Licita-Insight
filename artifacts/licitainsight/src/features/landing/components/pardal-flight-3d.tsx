@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 import silhouetteSvg from '../../../../public/brand/pardal-silhueta.svg?raw';
 import { cn } from '@/lib/utils';
+import { createPardalEasing } from './pardal-flight-easing';
 import { createPardalScrollMemory, PARDAL_MOMENT_ATTRIBUTE, resolvePardalScroll, type PardalScrollMemory } from './pardal-flight-scroll';
 import {
   advanceWingPhase,
@@ -10,6 +11,7 @@ import {
   REST_BEAT_HZ,
   resolveFlight,
   resolveFlightPoint,
+  resolveFlightRibbon,
   resolveRestDrive,
   resolveWingBeat,
   resolveWingPose,
@@ -157,6 +159,8 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const tokens = getComputedStyle(document.documentElement);
+    const easing = createPardalEasing((name) => tokens.getPropertyValue(name));
 
     const isDark = () => document.documentElement.classList.contains('dark');
     const ink = inkFor(isDark());
@@ -165,10 +169,27 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     const fillMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
     const coverMaterial = new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false });
     const coverGeometry = new THREE.PlaneGeometry(1, 1);
+    // A reusable triangle strip: the trail is drawn in the same WebGL canvas as the bird, with no DOM animation.
+    const ribbonSegments = 128;
+    const ribbonGeometry = new THREE.BufferGeometry();
+    const ribbonPositions = new THREE.BufferAttribute(new Float32Array((ribbonSegments + 1) * 6), 3);
+    ribbonPositions.setUsage(THREE.DynamicDrawUsage);
+    ribbonGeometry.setAttribute('position', ribbonPositions);
+    ribbonGeometry.setIndex(Array.from({ length: ribbonSegments }, (_, i) => {
+      const vertex = i * 2;
+      return [vertex, vertex + 1, vertex + 2, vertex + 1, vertex + 3, vertex + 2];
+    }).flat());
+    const ribbonMaterial = new THREE.MeshBasicMaterial({
+      color: ink.face, side: THREE.DoubleSide, transparent: true, depthTest: false, depthWrite: false,
+    });
+    const ribbon = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
+    ribbon.renderOrder = -0.5;
+    ribbon.frustumCulled = false;
+    ribbon.visible = false;
     const { bird, wings, poseWings, zoomCenter, geometries } = buildBird(faceMaterial, sideMaterial, fillMaterial);
     const disposeAll = () => {
-      [...geometries, coverGeometry].forEach((g) => g.dispose());
-      [faceMaterial, sideMaterial, fillMaterial, coverMaterial].forEach((m) => m.dispose());
+      [...geometries, coverGeometry, ribbonGeometry].forEach((g) => g.dispose());
+      [faceMaterial, sideMaterial, fillMaterial, coverMaterial, ribbonMaterial].forEach((m) => m.dispose());
     };
 
     let renderer: THREE.WebGLRenderer;
@@ -185,7 +206,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     const scene = new THREE.Scene();
     const cover = new THREE.Mesh(coverGeometry, coverMaterial);
     cover.renderOrder = -1;
-    scene.add(cover, bird);
+    scene.add(cover, ribbon, bird);
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 10000);
 
     let width = 0;
@@ -284,6 +305,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     const approaching = () => state.section !== null && state.progress > 0.002 && state.progress < 1.998;
 
     const place = (goal: Goal, flight: PardalFlight | null, beat: WingBeat) => {
+      ribbon.visible = false;
       cover.visible = goal.curtain !== null;
       if (goal.curtain) {
         coverMaterial.color.copy(goal.curtain.color);
@@ -312,11 +334,34 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         bird.updateMatrix();
         const zoomOffset = zoomCenter.clone().applyMatrix4(bird.matrix);
         const bandY = Math.min(height - BAND_MARGIN, section.getBoundingClientRect().top + BAND_OFFSET);
-        const point = resolveFlightPoint(flight, {
-          start: wide ? { x: goal.x, y: goal.y } : { x: width / 2, y: bandY },
+        const anchors = {
+          start: wide ? { x: goal.x, y: goal.y } : { x: width * (goal.facing > 0 ? 0.12 : 0.88), y: bandY },
           end: { x: width / 2 - zoomOffset.x, y: height / 2 + zoomOffset.y },
           bandY,
-        });
+          centerX: width / 2,
+          curveHeight: Math.min(88, height * 0.1, width * 0.14),
+        };
+        const point = resolveFlightPoint(flight, anchors);
+        if (flight.ribbon > 0.001) {
+          const points = resolveFlightRibbon(flight, anchors, easing, ribbonSegments);
+          const thickness = Math.min(52, width * 0.04) * (0.5 + flight.approach);
+          points.forEach((point, index) => {
+            const before = points[Math.max(0, index - 1)];
+            const after = points[Math.min(ribbonSegments, index + 1)];
+            const dx = after.x - before.x;
+            const dy = after.y - before.y;
+            const length = Math.hypot(dx, dy) || 1;
+            const half = thickness * Math.sin(index / ribbonSegments * Math.PI / 2) / 2;
+            const nx = -dy / length * half;
+            const ny = dx / length * half;
+            ribbonPositions.setXYZ(index * 2, point.x + nx, -point.y - ny, 0);
+            ribbonPositions.setXYZ(index * 2 + 1, point.x - nx, -point.y + ny, 0);
+          });
+          ribbonPositions.needsUpdate = true;
+          ribbonMaterial.color.copy(faceMaterial.color);
+          ribbonMaterial.opacity = flight.ribbon;
+          ribbon.visible = true;
+        }
         const bob = BEAT_BOB * VIEWBOX_HEIGHT * scale * beat.heave * flight.spread * (1 - flight.glide);
         bird.position.set(point.x, bob - point.y, 0);
         bird.visible = true;
@@ -354,7 +399,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         state.progress = 0;
       }
       const local = state.progress;
-      const flight = approaching() ? resolveFlight(local) : null;
+      const flight = approaching() ? resolveFlight(local, easing) : null;
 
       // While the screen is covered, the gutter bird jumps to its new side unseen and fades back in afterwards.
       const hidden = state.section !== null && local > 0.9;
@@ -384,7 +429,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         bird.rotation.set(
           HEADING_TILT * flight.heading,
           (facing > 0 ? 0 : Math.PI) - facing * HEADING_YAW * flight.heading,
-          BEAT_ROCK * beat.heave * flight.spread * (1 - flight.glide),
+          facing * flight.bank + BEAT_ROCK * beat.heave * flight.spread * (1 - flight.glide),
         );
       } else {
         bird.rotation.y += turn * follow;
@@ -464,5 +509,5 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
     };
   }, [reducedMotion, wide]);
 
-  return <div ref={containerRef} aria-hidden className={cn('pointer-events-none inset-x-0 top-0 z-raised h-[100dvh]', reducedMotion ? 'absolute' : 'fixed')} />;
+  return <div ref={containerRef} aria-hidden data-testid="pardal-flight" className={cn('pointer-events-none inset-x-0 top-0 z-raised h-[100dvh]', reducedMotion ? 'absolute' : 'fixed')} />;
 }
