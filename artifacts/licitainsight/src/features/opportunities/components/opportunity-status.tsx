@@ -69,3 +69,15 @@ export function OpportunityStatusBadge({ status }: { status: OpportunityStatus }
     </span>
   );
 }
+
+/** Marks what a person published with no sign of a public call, so nobody takes it for an official notice. */
+export function IndividualListingBadge() {
+  return (
+    <span
+      data-testid="badge-individual-listing"
+      className="rounded-pill border border-warning/40 bg-warning-subtle px-2.5 py-1 text-xs font-semibold text-warning-subtle-foreground"
+    >
+      Anúncio individual
+    </span>
+  );
+}

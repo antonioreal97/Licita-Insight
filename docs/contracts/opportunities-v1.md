@@ -11,7 +11,9 @@ O endpoint preserva o contrato cultural original e passa a reunir oportunidades 
 - `areas`: lista de áreas canônicas — `audiovisual`, `musica`, `teatro`, `danca`, `circo`, `artes-visuais`, `literatura`, `patrimonio`, `culturas-populares`, `artesanato`, `cultura-digital`, `gastronomia`, `gestao-producao`, `formacao`, `diversidade`, `outras`. Vem dos termos de área da fonte (`areaTerms`, `terms.area` no Mapas Culturais), cada termo em uma área; termo fora do vocabulário cai em `outras`. Audiovisual também é lido do título e do resumo. Instalações que não publicam termos de área (Ceará, Aracaju) são classificadas só pelo texto, e a lista pode ficar vazia.
 - `areaTerms`: os termos de área exatamente como a fonte publicou.
 - `opportunityType`: tipo da chamada na fonte ("Edital", "Oficina", "Festival"…) ou `null`.
-- `originName`: projeto, agente ou espaço ao qual a chamada pertence na fonte (por exemplo "Editais Funcultura 2026") ou `null`.
+- `organizationName`: instituição que publicou a chamada. Nunca é o nome de uma pessoa física: quando o dono da chamada no Mapas Culturais é um agente individual, vale o projeto, espaço ou organização vinculado e, sem vínculo, o rótulo `Proponente individual (<instalação>)`. Regra completa em `docs/compliance/minimizacao-fontes-publicas.md`.
+- `originName`: projeto, espaço, evento ou organização ao qual a chamada pertence na fonte (por exemplo "Editais Funcultura 2026") ou `null`. Um agente pessoa física nunca aparece aqui.
+- `individualListing`: `true` quando a chamada foi publicada por pessoa física e o texto não cita edital, lei de fomento nem órgão público (aulas, oficinas particulares, testes do formulário). Só vem na busca com `includeIndividual=true`; no detalhe vem sempre.
 - `city`: município, só para chamadas de instalações municipais; `null` nas estaduais.
 - `continuousFlow`: `true` em chamada de fluxo contínuo. Sem data de encerramento própria, `registrationTo` é `null` (o Mapas Culturais grava 01/01/2111 como marcador; esse valor não é exposto).
 - `audience`, `amount` e datas são `null` quando a fonte não os publica de forma explícita.
@@ -24,15 +26,18 @@ A migração `0031_opportunities_hub.sql` é não destrutiva: mantém `cultural_
 
 A migração `0039_opportunity_areas.sql` também é não destrutiva: adiciona `areas`, `area_terms`, `opportunity_type`, `origin_name`, `city` e `continuous_flow` (defaults constantes, sem reescrita da tabela), marca como `audiovisual` as linhas do Mapas que já existiam (até então a coleta só guardava audiovisual) e cria dois índices. A tabela tem centenas de linhas; nada trava de forma perceptível. Roda pelo `pnpm --filter @workspace/db run migrate` normal.
 
+A minimização de dados pessoais (11/10/2026) não tem migração: tipo do dono e marcação de anúncio individual ficam em `raw_payload.ownerReview`, e as linhas antigas são revisadas pelo job `opportunity_owner_review` ao subir.
+
 A migração `0040_opportunity_federal_sources.sql` só amplia a lista de valores aceitos em `source`; não toca em nenhuma linha. É manual em produção e deve ser aplicada antes de ligar a coleta federal (`docs/migrations/0040-opportunity-federal-sources.md`).
 
 ## `GET /api/v1/opportunities`
 
-Filtros: `q`, `state`, `city`, `installation`, `organization`, `area`, `status`, `program`, `kind`, `source`, `deadlineFrom`, `deadlineTo`, `page`, `pageSize` e `facets`. Arrays usam parâmetros repetidos. O contrato de busca do Pardal Digital permanece `q`, que também encontra área, tipo, origem e município.
+Filtros: `q`, `state`, `city`, `installation`, `organization`, `area`, `status`, `program`, `kind`, `source`, `deadlineFrom`, `deadlineTo`, `includeIndividual`, `page`, `pageSize` e `facets`. Arrays usam parâmetros repetidos. O contrato de busca do Pardal Digital permanece `q`, que também encontra área, tipo, origem e município.
 
 - `area`: uma ou mais áreas canônicas; a chamada entra se tiver qualquer uma delas. Audiovisual é um filtro (`area=audiovisual`), não mais a regra de coleta. `program=audiovisual` e `q=audiovisual` continuam respondendo.
 - `city`: nome do município como aparece na faceta. Mande `state` junto para separar homônimos.
 - `organization`: nome da instituição que publicou a chamada, como aparece na faceta. Até 20 valores de até 200 caracteres em `city` e em `organization`.
+- `includeIndividual`: `true` ou `false` (padrão `false`). Sem ele, anúncios individuais ficam fora dos resultados, do total e das facetas; `meta.hiddenIndividualListings` diz quantos os mesmos filtros deixaram de fora. Na tela é o parâmetro `individual=1` da URL.
 
 Facetas: `status`, `state`, `installation`, `program`, `kind`, `source`, `area`, `city` e `organization`. Em `area` a chamada conta uma vez em cada área que tem, então a soma passa do total. Cada item de `city` traz `state`. `organization` devolve as 100 instituições com mais chamadas. A ordenação continua: abertas, futuras, sem data e encerradas; depois prazo e título.
 
@@ -47,10 +52,11 @@ Retorna o mesmo `OpportunitySummary` da busca, incluindo documentos oficiais e a
 ## Coleta
 
 - Cultura: `pnpm --filter @workspace/api-server run collect:opportunities`; `CULTURE_DAILY_COLLECT` mantém o comportamento anterior.
-  - Cada instalação recebe uma consulta: `GET /api/opportunity/find?registrationTo=GTE(<hoje>)`, sem palavra-chave, com áreas (`terms`), tipo e origem no mesmo `@select`, 50 por página, até `CULTURE_MAX_PAGES` páginas (padrão 20). Chamadas de fluxo contínuo vêm na mesma listagem. `CULTURE_LOOKBACK_DAYS` (padrão 1, hoje) recua a data para reler chamadas encerradas há pouco.
+  - Cada instalação recebe uma consulta: `GET /api/opportunity/find?registrationTo=GTE(<hoje>)`, sem palavra-chave, com áreas (`terms`), tipo, origem e o tipo do agente dono (`owner.{id,name,type}`) no mesmo `@select`, 50 por página, até `CULTURE_MAX_PAGES` páginas (padrão 20). Chamadas de fluxo contínuo vêm na mesma listagem. `CULTURE_LOOKBACK_DAYS` (padrão 1, hoje) recua a data para reler chamadas encerradas há pouco.
   - Não há filtro por `continuousFlow`: a coluna é uma data, e `continuousFlow=EQ(true)` fazia a instalação responder uma página de erro em HTML — a origem do antigo "invalid JSON".
   - Resposta que não é JSON vira falha `invalid_response` com status, content-type e o início do corpo. BOM e aviso de PHP antes do JSON são ignorados. Se a primeira página falha com a seleção completa, a consulta é refeita com os campos básicos. Se uma página seguinte falha, as anteriores ficam e a listagem é marcada como incompleta.
   - Quando a listagem vem completa, as chamadas abertas daquela instalação que não apareceram mais são encerradas.
+  - Do agente só se pede id, nome e tipo. O nome de agente individual (pessoa física) não é gravado em nenhuma coluna nem em `raw_payload`, que guarda uma lista fechada de campos da fonte.
   - Instalações: a federal, as 12 estaduais e as 31 municipais da lista oficial do projeto (`README` de `mapasculturais/mapasculturais`). Aracaju e Bento Gonçalves só respondem por HTTP sem TLS, como publicado na lista.
   - Uma instalação municipal que falha em 3 coletas seguidas é desativada automaticamente e testada de novo depois de 7 dias; se responder, volta sozinha. Federal e estaduais nunca são desativadas. Limite de taxa (429) não conta como falha.
   - Intervalo mínimo entre requisições: `CULTURE_PAGE_DELAY_MS` (padrão 1000). `Retry-After` é respeitado; acima de 60 s a instalação fica para o próximo ciclo. Bloqueio (403) e certificado inválido são registrados e a fonte não é contornada.

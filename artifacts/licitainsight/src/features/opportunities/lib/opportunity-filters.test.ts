@@ -4,7 +4,17 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { OpportunityFilters } from '../components/opportunity-filters';
-import { areaCounts, areaOptions, cityOptions, cityPatch, organizationOptions, selectedCityValue, stateOptions, statePatch } from './opportunity-filters';
+import {
+  areaCounts,
+  areaOptions,
+  cityOptions,
+  cityPatch,
+  individualListingsLabel,
+  organizationOptions,
+  selectedCityValue,
+  stateOptions,
+  statePatch,
+} from './opportunity-filters';
 
 const facets: NonNullable<OpportunitySearchResponse['facets']> = {
   status: [],
@@ -35,8 +45,8 @@ const facets: NonNullable<OpportunitySearchResponse['facets']> = {
 };
 
 const noop = () => undefined;
-const render = (params: OpportunitySearchParams, withFacets: typeof facets | null = facets) =>
-  renderToStaticMarkup(createElement(OpportunityFilters, { params, facets: withFacets, onChange: noop }));
+const render = (params: OpportunitySearchParams, withFacets: typeof facets | null = facets, hiddenIndividualListings = 0) =>
+  renderToStaticMarkup(createElement(OpportunityFilters, { params, facets: withFacets, hiddenIndividualListings, onChange: noop }));
 
 test('áreas aparecem com contagem, da maior para a menor; empates seguem a ordem canônica e "Outras áreas" fecha a lista', () => {
   assert.deepEqual(
@@ -132,4 +142,16 @@ test('sem facetas a faixa de áreas não aparece e os filtros ficam só com a op
   assert.match(html, /Todas as áreas/);
   assert.match(html, /Todos os municípios/);
   assert.match(html, /Todas as instituições/);
+});
+
+test('anúncios de proponentes individuais: desligado por padrão, com a contagem do que ficou de fora', () => {
+  assert.equal(individualListingsLabel(0, false), 'Incluir anúncios de proponentes individuais');
+  assert.equal(individualListingsLabel(1240, false), 'Incluir anúncios de proponentes individuais (1.240)');
+  assert.equal(individualListingsLabel(7, true), 'Incluir anúncios de proponentes individuais');
+
+  const off = render({}, facets, 7);
+  assert.match(off, /data-testid="checkbox-opportunity-individual"/);
+  assert.doesNotMatch(off, /data-testid="checkbox-opportunity-individual"[^>]*checked/);
+  assert.match(off, /Incluir anúncios de proponentes individuais \(7\)/);
+  assert.match(render({ includeIndividual: true }, facets, 0), /data-testid="checkbox-opportunity-individual"[^>]*checked/);
 });

@@ -25,6 +25,9 @@ test('privacy draft covers the controller, operators, rights, cookies, retention
     'Configurações',
     'licita_session',
     'ANPD',
+    'Dados de fontes públicas',
+    'Mapas Culturais',
+    'rótulo neutro',
   ]) {
     assert.match(html, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }

@@ -79,6 +79,8 @@ export type OpportunityCriteria = {
   organization: string[];
   deadlineFrom?: Date;
   deadlineTo?: Date;
+  /** Also return listings published by a person with no sign of a public call. Off unless asked. */
+  includeIndividual: boolean;
   page: number;
   pageSize: number;
   facets: boolean;
@@ -143,6 +145,17 @@ const parseDate = (field: string, value: unknown): Date | undefined => {
   return date;
 };
 
+const parseFlag = (
+  field: string,
+  value: unknown,
+  fallback: boolean,
+): boolean => {
+  if (value === undefined) return fallback;
+  if (value === "true" || value === true) return true;
+  if (value === "false" || value === false) return false;
+  return invalid(field, "invalid_type", `${field} must be true or false`);
+};
+
 export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
   const query =
     raw !== null && typeof raw === "object"
@@ -178,15 +191,12 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
     invalid("pageSize", "out_of_range", "pageSize must be between 1 and 100");
   }
 
-  let facets = true;
-  if (query.facets === "false" || query.facets === false) facets = false;
-  else if (
-    query.facets !== undefined &&
-    query.facets !== "true" &&
-    query.facets !== true
-  ) {
-    invalid("facets", "invalid_type", "facets must be true or false");
-  }
+  const facets = parseFlag("facets", query.facets, true);
+  const includeIndividual = parseFlag(
+    "includeIndividual",
+    query.includeIndividual,
+    false,
+  );
 
   const deadlineFrom = parseDate("deadlineFrom", query.deadlineFrom);
   const deadlineTo = parseDate("deadlineTo", query.deadlineTo);
@@ -215,6 +225,7 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
     organization: parseNameList("organization", query.organization),
     deadlineFrom,
     deadlineTo,
+    includeIndividual,
     page,
     pageSize,
     facets,

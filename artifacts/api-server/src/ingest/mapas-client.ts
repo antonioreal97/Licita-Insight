@@ -15,12 +15,16 @@ import {
   type OpportunityDraft,
 } from "./opportunity-map";
 
-/** Areas (`terms`), type and origin (`ownerEntity`) come in the same listing; no extra request per call. */
+/**
+ * Areas (`terms`), type and origin (`ownerEntity`) come in the same listing; no extra request per call.
+ * `owner.type` says whether the publisher is a person (1, "Individual") or an organization (2, "Coletivo"):
+ * the name of a person is not stored. No contact, document or address field of an agent is ever requested.
+ */
 const RICH_SELECT =
-  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,continuousFlow,type,terms,parent,isModel,owner.{id,name},ownerEntity.{id,name}";
+  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,continuousFlow,type,terms,parent,isModel,owner.{id,name,type},ownerEntity.{id,name,type}";
 /** Fields every Mapas version answers. Used when an install rejects the rich selection. */
 const BASIC_SELECT =
-  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,owner.{id,name}";
+  "id,name,shortDescription,registrationFrom,registrationTo,singleUrl,owner.{id,name,type}";
 const PAGE_SIZE = 50;
 const DEFAULT_MAX_PAGES = 20;
 /** A longer `Retry-After` is honored by leaving the install for the next cycle, not by holding the run. */
@@ -258,6 +262,45 @@ const isSelectionRejection = (error: unknown): boolean =>
   (error.kind === "invalid_response" ||
     (error.kind === "http" && (error.status === 400 || error.status >= 500)));
 
+/** Reads a listing with the rich selection and, if the install rejects it, again with the basic fields. */
+async function listWithFallback(
+  installation: MapasInstallation,
+  paramsFor: (select: string) => Record<string, string>,
+  fetcher: MapasFetcher,
+  maxPages: number,
+): Promise<Listing> {
+  try {
+    return await listPages(
+      installation.baseUrl,
+      paramsFor(RICH_SELECT),
+      fetcher,
+      maxPages,
+    );
+  } catch (error) {
+    if (!isSelectionRejection(error)) throw error;
+    logger.warn(
+      { err: error, installationId: installation.id },
+      "Mapas Culturais rejected the rich selection; retrying with basic fields",
+    );
+    let listing: Listing;
+    try {
+      listing = await listPages(
+        installation.baseUrl,
+        paramsFor(BASIC_SELECT),
+        fetcher,
+        maxPages,
+      );
+    } catch {
+      // The first answer is the one that says what the install returned.
+      throw error;
+    }
+    listing.warnings.unshift(
+      "A instalação não respondeu à consulta com áreas e tipo; as chamadas foram coletadas com os campos básicos.",
+    );
+    return listing;
+  }
+}
+
 /**
  * Every call of an install whose registration closes today or later. Continuous-flow calls are in the same
  * listing: Mapas stores them with a far-future `registrationTo`. Filtering on `continuousFlow` itself is not
@@ -281,35 +324,12 @@ export async function fetchOpenOpportunities(
     ...(keyword ? { "@keyword": keyword } : {}),
   });
 
-  let listing: Listing;
-  try {
-    listing = await listPages(
-      installation.baseUrl,
-      paramsFor(RICH_SELECT),
-      fetcher,
-      maxPages,
-    );
-  } catch (error) {
-    if (!isSelectionRejection(error)) throw error;
-    logger.warn(
-      { err: error, installationId: installation.id },
-      "Mapas Culturais rejected the rich selection; retrying with basic fields",
-    );
-    try {
-      listing = await listPages(
-        installation.baseUrl,
-        paramsFor(BASIC_SELECT),
-        fetcher,
-        maxPages,
-      );
-    } catch {
-      // The first answer is the one that says what the install returned.
-      throw error;
-    }
-    listing.warnings.unshift(
-      "A instalação não respondeu à consulta com áreas e tipo; as chamadas foram coletadas com os campos básicos.",
-    );
-  }
+  const listing = await listWithFallback(
+    installation,
+    paramsFor,
+    fetcher,
+    maxPages,
+  );
 
   const seen = new Set<string>();
   const drafts: OpportunityDraft[] = [];
@@ -337,4 +357,52 @@ export async function fetchOpenOpportunities(
     complete: listing.complete && !keyword,
     warning: listing.warnings.length > 0 ? listing.warnings.join(" ") : null,
   };
+}
+
+/** Most ids one request asks for: under a page, so the answer never needs a second request. */
+export const MAX_IDS_PER_REQUEST = 40;
+
+/**
+ * The calls of an install with the given ids, as the source publishes them today. A call the install no
+ * longer publishes is simply absent from the answer. Used to re-read the owner of rows stored before the
+ * agent type was collected.
+ */
+export async function fetchOpportunitiesByIds(
+  installation: MapasInstallation,
+  externalIds: string[],
+  now: Date,
+  options: { fetcher?: MapasFetcher } = {},
+): Promise<Map<string, OpportunityDraft>> {
+  const ids = [...new Set(externalIds.filter((id) => /^\d+$/.test(id)))];
+  if (ids.length > MAX_IDS_PER_REQUEST) {
+    throw new Error(
+      `fetchOpportunitiesByIds accepts at most ${MAX_IDS_PER_REQUEST} ids, received ${ids.length}`,
+    );
+  }
+  const drafts = new Map<string, OpportunityDraft>();
+  if (ids.length === 0) return drafts;
+
+  const listing = await listWithFallback(
+    installation,
+    (select) => ({
+      id: `IN(${ids.join(",")})`,
+      "@select": select,
+      "@limit": String(PAGE_SIZE),
+    }),
+    options.fetcher ?? defaultMapasFetch,
+    1,
+  );
+  if (!listing.complete) {
+    throw new Error(
+      `${installation.name} não respondeu só às chamadas pedidas: ${listing.warnings.join(" ")}`,
+    );
+  }
+  const asked = new Set(ids);
+  for (const record of listing.records) {
+    const draft = mapOpportunity(record, installation, now);
+    // An install that ignores the id filter would answer with other calls.
+    if (draft && asked.has(draft.externalId))
+      drafts.set(draft.externalId, draft);
+  }
+  return drafts;
 }
