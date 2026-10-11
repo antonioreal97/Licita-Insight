@@ -1996,9 +1996,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
         windowMinutes: 10,
         sendEmail: immediateSend,
       }),
-      { queued: 2, sent: 2, failed: 0, skipped: 0 },
+      { queued: 1, sent: 1, failed: 0, skipped: 0 },
     );
-    assert.equal(immediateMessages.length, 2);
+    // O aviso de fim do teste fica só no app: nenhum e-mail imediato para ele.
+    assert.equal(immediateMessages.length, 1);
     const monitoredMessage = immediateMessages.find(({ to }) => to === "email-immediate@example.test");
     assert.ok(monitoredMessage);
     assert.match(monitoredMessage.text, /Prazo alterado: .* → .*/);

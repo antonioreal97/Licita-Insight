@@ -9,6 +9,7 @@ import {
   isNull,
   lt,
   lte,
+  ne,
   notInArray,
   or,
   sql,
@@ -121,7 +122,6 @@ export const hasEmailAccess = (
   now: Date,
   betaEmails: ReadonlySet<string>,
 ): boolean =>
-  candidate.type === "trial_ending" ||
   betaEmails.has(candidate.email.toLowerCase()) ||
   isEntitled(
     {
@@ -252,6 +252,8 @@ const digestCandidates = async (
     .where(
       and(
         eq(usersTable.emailDigest, "daily"),
+        // Avisos de assinatura (fim do teste) ficam só no app: e-mail é para monitoramento e alertas.
+        ne(notificationsTable.type, "trial_ending"),
         isNull(emailDeliveryNotificationsTable.notificationId),
         lte(notificationsTable.createdAt, now),
       ),
@@ -295,7 +297,6 @@ const immediateCandidates = async (
         isNull(emailDeliveryNotificationsTable.notificationId),
         lte(notificationsTable.createdAt, cutoff),
         or(
-          eq(notificationsTable.type, "trial_ending"),
           and(
             eq(notificationsTable.type, "tender_deadline_changed"),
             isNotNull(savedTendersTable.userId),
