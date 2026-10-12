@@ -106,6 +106,14 @@ export const searchWhereFor = (
   const filters: SQL[] = [];
   const tokens = queryTokens(criteria.query);
 
+  if (criteria.tenderIds) {
+    filters.push(
+      criteria.tenderIds.length > 0
+        ? inArray(tendersTable.id, criteria.tenderIds)
+        : sql`false`,
+    );
+  }
+
   for (const token of tokens)
     filters.push(like(tendersTable.searchText, token));
 
@@ -361,6 +369,7 @@ type CombinedFacetResult = {
  */
 export const canUseCombinedFacets = (criteria: SearchCriteria): boolean =>
   queryTokens(criteria.query).length > 0 &&
+  criteria.tenderIds === undefined &&
   criteria.status.length === 0 &&
   criteria.modality.length === 0 &&
   criteria.state.length === 0 &&

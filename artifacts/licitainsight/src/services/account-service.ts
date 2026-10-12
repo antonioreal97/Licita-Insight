@@ -20,7 +20,7 @@ let reportedAuthUnavailable = false;
 
 /** Canonical `query` of a saved search: the search URL without `page`, `pageSize`, `view` and the leading `?`. */
 export function savedSearchQuery(params: TenderSearchParams): string {
-  const { page: _page, pageSize: _pageSize, ...rest } = params;
+  const { page: _page, pageSize: _pageSize, notification: _notification, ...rest } = params;
   return searchParamsToUrl(rest).replace(/^\?/, '');
 }
 

@@ -2258,6 +2258,31 @@ export interface SearchFacets {
   newCount: number;
 }
 
+export type NotificationSearchContextType = typeof NotificationSearchContextType[keyof typeof NotificationSearchContextType];
+
+
+export const NotificationSearchContextType = {
+  saved_search_new_matches: 'saved_search_new_matches',
+  profile_new_matches: 'profile_new_matches',
+} as const;
+
+export interface NotificationSearchContext {
+  id: string;
+  type: NotificationSearchContextType;
+  createdAt: string;
+  /** @minimum 0 */
+  matchCount: number;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  storedTenderCount: number;
+  /** @nullable */
+  savedSearchName: string | null;
+  /** @nullable */
+  savedSearchQuery: string | null;
+}
+
 export type SearchResponsePagination = {
   page: number;
   pageSize: number;
@@ -2283,6 +2308,8 @@ export type SearchResponseMeta = {
   tookMs: number;
   /** @nullable */
   indexUpdatedAt: string | null;
+  /** Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification. */
+  notification?: NotificationSearchContext | null;
 };
 
 export interface SearchResponse {
@@ -2444,6 +2471,11 @@ export type PlatformFilterParameter = string[];
 export type NewOnlyParameter = boolean;
 
 /**
+ * Restricts results to the tender ids captured by this notification. Requires a session; notifications not owned by the signed-in user are returned as an empty snapshot.
+ */
+export type NotificationFilterParameter = string;
+
+/**
  * Apply the signed-in company's saved service region.
  */
 export type MyRegionParameter = boolean;
@@ -2531,6 +2563,12 @@ platform?: PlatformFilterParameter;
  * Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).
  */
 newOnly?: NewOnlyParameter;
+/**
+ * Restricts results to the tender ids captured by this notification. Requires a session; notifications not owned by the signed-in user are returned as an empty snapshot.
+ * @minLength 1
+ * @maxLength 200
+ */
+notification?: NotificationFilterParameter;
 /**
  * Apply the signed-in company's saved service region.
  */

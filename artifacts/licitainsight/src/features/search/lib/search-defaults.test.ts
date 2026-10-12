@@ -9,6 +9,7 @@ import { rememberFacetLabels } from './facet-config';
 import { buildFilterChips } from './filter-chips';
 import { readRememberedSearch, rememberSearch } from './search-navigation-state';
 import { savedQueryHref, searchDefaultsToUrl, withoutFilters, withSearchDefaults } from './search-defaults';
+import { savedSearchQuery } from '@/services/account-service';
 
 // `parsed` stands for `searchParamsFromUrl(search)`, which keeps only valid statuses (drops `all` and `bogus`).
 const fromUrl = (parsed: TenderSearchParams, search: string) => withSearchDefaults(parsed, search);
@@ -79,7 +80,7 @@ test('busca salva sem status abre com todos os status; com status, abre igual', 
 test('filtro de novos e ordenação pela entrada no Pardal sobrevivem na URL', () => {
   const params = searchParamsFromUrl('newOnly=true&sort=first_seen_desc');
   assert.deepEqual(params, { newOnly: true, sort: 'first_seen_desc', pageSize: 20 });
-  assert.equal(savedQueryHref('q=limpeza', { newOnly: true }), '/search?q=limpeza&status=all&newOnly=true');
+  assert.equal(savedQueryHref('q=limpeza&newOnly=true', { withoutNewOnly: true }), '/search?q=limpeza&status=all');
   assert.deepEqual(buildFilterChips(params).at(-1), {
     id: 'newOnly',
     group: 'Entrada no Pardal',
@@ -87,6 +88,29 @@ test('filtro de novos e ordenação pela entrada no Pardal sobrevivem na URL', (
     remove: { newOnly: undefined },
   });
   assert.equal(withoutFilters(params).newOnly, undefined);
+});
+
+test('snapshot de notificação sobrevive na URL, vira chip e nunca entra na busca salva', () => {
+  const params = searchParamsFromUrl('status=all&notification=notice-1');
+  assert.equal(params.notification, 'notice-1');
+  assert.deepEqual(buildFilterChips(params, {
+    notification: {
+      id: 'notice-1',
+      type: 'saved_search_new_matches',
+      createdAt: '2026-10-10T12:00:00.000Z',
+      matchCount: 25,
+      storedTenderCount: 20,
+      savedSearchName: 'Software',
+      savedSearchQuery: 'q=software&newOnly=true',
+    },
+  }).at(-1), {
+    id: 'notification',
+    group: 'Notificação',
+    label: '25 editais de 10 de out de 2026',
+    remove: { notification: undefined },
+  });
+  assert.equal(savedSearchQuery({ q: 'software', notification: 'notice-1' }), 'q=software');
+  assert.equal(withoutFilters(params).notification, undefined);
 });
 
 test('atalho Minha região sobrevive na URL e sai ao limpar filtros', () => {

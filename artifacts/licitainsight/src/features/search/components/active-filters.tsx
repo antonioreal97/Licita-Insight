@@ -1,12 +1,18 @@
 import { X } from 'lucide-react';
-import type { TenderSearchParams } from '@/api';
+import type { TenderSearchParams, TenderSearchResponse } from '@/api';
 import { buildFilterChips } from '../lib/filter-chips';
 
-type Props = { params: TenderSearchParams; onRemove: (patch: Partial<TenderSearchParams>) => void; onClearAll: () => void; canClear: boolean };
+type Props = {
+  params: TenderSearchParams;
+  notification?: TenderSearchResponse['meta']['notification'];
+  onRemove: (patch: Partial<TenderSearchParams>) => void;
+  onClearAll: () => void;
+  canClear: boolean;
+};
 
 /** One removable chip per selected value/range. Labels come from the facet label cache (see facet-config). */
-export function ActiveFilters({ params, onRemove, onClearAll, canClear }: Props) {
-  const chips = buildFilterChips(params, { statusDefault: true });
+export function ActiveFilters({ params, notification, onRemove, onClearAll, canClear }: Props) {
+  const chips = buildFilterChips(params, { statusDefault: true, notification });
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="region" aria-label="Filtros ativos" data-testid="active-filters">

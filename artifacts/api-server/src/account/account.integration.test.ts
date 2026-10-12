@@ -343,6 +343,111 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.deepEqual(await opportunityIds("deadlineTo=2026-09-24"), ["timezone-end", "timezone-prior", "timezone-start"]);
   });
 
+  await t.test("searches only the signed-in user's notification snapshot", async (subtest) => {
+    const ownerCookie = await login("notification-search@example.test", false);
+    const [owner] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, "notification-search@example.test"));
+    const [otherUser] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, "user-b@example.test"));
+    assert.ok(owner && otherUser);
+    await db
+      .update(usersTable)
+      .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+      .where(eq(usersTable.id, owner.id));
+
+    const sequences = Array.from({ length: 21 }, (_, index) => 920 + index);
+    await upsertPublications(
+      sequences.map((sequence) =>
+        publication(sequence, {
+          objetoCompra: `TEST DATA notification snapshot ${sequence}`,
+          situacaoCompraNome: sequence === 920 ? "Encerrada" : "Divulgada no PNCP",
+        }),
+      ),
+      new Date("2026-10-10T12:00:00.000Z"),
+    );
+    const tenderId = (sequence: number) =>
+      `00394460000141-1-${String(sequence).padStart(6, "0")}-2026`;
+    const storedIds = sequences.slice(0, 20).map(tenderId);
+    subtest.after(async () => {
+      await db
+        .delete(notificationsTable)
+        .where(inArray(notificationsTable.id, ["notification-owned-snapshot", "notification-other-user"]));
+      await db.delete(tendersTable).where(inArray(tendersTable.id, sequences.map(tenderId)));
+      await db.delete(usersTable).where(eq(usersTable.id, owner.id));
+    });
+    await db.insert(notificationsTable).values([
+      {
+        id: "notification-owned-snapshot",
+        userId: owner.id,
+        type: "saved_search_new_matches",
+        dedupeKey: "test:notification-owned-snapshot",
+        createdAt: new Date("2026-10-10T12:00:00.000Z"),
+        savedSearchId: "saved-search-snapshot",
+        savedSearchName: "Software",
+        savedSearchQuery: "q=software&newOnly=true",
+        matchCount: 25,
+        tenderIds: storedIds,
+      },
+      {
+        id: "notification-other-user",
+        userId: otherUser.id,
+        type: "saved_search_new_matches",
+        dedupeKey: "test:notification-other-user",
+        createdAt: new Date("2026-10-10T12:00:00.000Z"),
+        savedSearchId: "saved-search-other",
+        savedSearchName: "Alheia",
+        savedSearchQuery: "q=segredo",
+        matchCount: 1,
+        tenderIds: [storedIds[0]!],
+      },
+    ]);
+
+    assert.equal(
+      (await request("/v1/tenders/search?notification=notification-owned-snapshot&facets=false")).status,
+      401,
+    );
+    const owned = await request(
+      "/v1/tenders/search?notification=notification-owned-snapshot&pageSize=100&facets=false",
+      {},
+      ownerCookie,
+    );
+    assert.equal(owned.status, 200, "notification snapshots do not require a subscription");
+    const ownedBody = (await owned.json()) as {
+      data: { id: string }[];
+      pagination: { total: number };
+      meta: { notification: null | { id: string; matchCount: number; storedTenderCount: number; savedSearchQuery: string | null } };
+    };
+    assert.equal(ownedBody.pagination.total, 20);
+    assert.deepEqual(ownedBody.data.map(({ id }) => id).sort(), [...storedIds].sort());
+    assert.deepEqual(ownedBody.meta.notification, {
+      id: "notification-owned-snapshot",
+      type: "saved_search_new_matches",
+      createdAt: "2026-10-10T12:00:00.000Z",
+      matchCount: 25,
+      storedTenderCount: 20,
+      savedSearchName: "Software",
+      savedSearchQuery: "q=software&newOnly=true",
+    });
+
+    const hiddenBodies = await Promise.all(
+      ["notification-other-user", "notification-does-not-exist"].map(async (notification) => {
+        const response = await request(`/v1/tenders/search?notification=${notification}&facets=false`, {}, ownerCookie);
+        assert.equal(response.status, 200);
+        return response.json() as Promise<{ data: unknown[]; pagination: { total: number }; meta: { notification: unknown } }>;
+      }),
+    );
+    for (const body of hiddenBodies) {
+      assert.equal(body.pagination.total, 0);
+      assert.deepEqual(body.data, []);
+      assert.equal(body.meta.notification, null);
+    }
+    assert.equal((await request("/v1/tenders/search?q=notification&facets=false")).status, 200, "ordinary search remains public");
+  });
+
   await t.test("manages email preferences and public one-click unsubscribe", async () => {
     const cookie = await login("email-preferences@example.test", false);
     const session = await request("/v1/auth/session", {}, cookie);

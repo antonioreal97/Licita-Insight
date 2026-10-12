@@ -93,10 +93,21 @@ export const savedSearchHref = (savedQuery: string): string => {
   return `/search?${query ? `${query}&` : ""}status=${ALL_STATUSES}`;
 };
 
+const notificationSearchHref = (notificationId: string): string => {
+  const params = new URLSearchParams({ status: ALL_STATUSES, notification: notificationId });
+  return `/search?${params}`;
+};
+
 const notificationLink = (
   notification: EmailNotificationSnapshot,
   origin: string,
 ): string => {
+  if (notification.type === "saved_search_new_matches") {
+    return `${origin}${notificationSearchHref(notification.id)}`;
+  }
+  if (notification.type === "profile_new_matches" && (notification.matchCount ?? notification.profileMatches?.length ?? 0) > 1) {
+    return `${origin}${notificationSearchHref(notification.id)}`;
+  }
   if (notification.tenderId) {
     return `${origin}/tenders/${encodeURIComponent(notification.tenderId)}`;
   }
