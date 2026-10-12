@@ -121,10 +121,12 @@ describe("PNCP consultation endpoints", () => {
   it("treats gateway and rate-limit errors as recoverable", () => {
     assert.equal(isRecoverablePncpFailure(new PncpError("down", 502, "")), true);
     assert.equal(isRecoverablePncpFailure(new PncpError("down", 503, "")), true);
+    assert.equal(isRecoverablePncpFailure(new PncpError("down", 507, "")), true);
     assert.equal(isRecoverablePncpFailure(new PncpError("limited", 429, "")), true);
     assert.equal(isRecoverablePncpFailure(new PncpError("bad", 400, "")), false);
     const timeout = new Error("The operation was aborted due to timeout");
     timeout.name = "TimeoutError";
     assert.equal(isRecoverablePncpFailure(timeout), true);
+    assert.equal(isRecoverablePncpFailure(new TypeError("fetch failed")), true);
   });
 });

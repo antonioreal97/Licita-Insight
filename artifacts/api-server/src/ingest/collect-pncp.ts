@@ -28,7 +28,10 @@ import {
   summarizeCoverage,
   type IngestDay,
 } from "./ingest-calendar";
-import { classifyPncpRefreshFailure } from "./pncp-refresh-failure";
+import {
+  MAX_CONSECUTIVE_RECOVERABLE_REFRESH_FAILURES,
+  refreshPncpCandidates,
+} from "./pncp-refresh-failure";
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -49,6 +52,7 @@ export type CollectOptions = {
   modalities: number[];
   pageSize: number;
   refreshLimit: number;
+  refreshMaxConsecutiveFailures: number;
   uf?: string;
   force?: boolean;
 };
@@ -64,7 +68,7 @@ const compactDay = (isoDate: string): string => isoDate.replaceAll("-", "");
 const pncpSourceRemovedMarker = () =>
   sql`${tendersTable.rawPayload}->'pncpRefresh'->>'sourceRemoved' is distinct from 'true'`;
 
-const markPncpSourceRemovedPayload = (removedAt: Date) =>
+const markPncpSourceRemovedPayload = (removedAt: Date, status: number) =>
   sql`jsonb_set(
     ${tendersTable.rawPayload},
     '{pncpRefresh}',
@@ -72,7 +76,7 @@ const markPncpSourceRemovedPayload = (removedAt: Date) =>
       ${JSON.stringify({
         ...PNCP_SOURCE_REMOVED_MARK.pncpRefresh,
         sourceRemovedAt: removedAt.toISOString(),
-        sourceRemovedStatus: 410,
+        sourceRemovedStatus: status,
       })}::jsonb,
     true
   )`;
@@ -166,6 +170,10 @@ export const collectOptionsFromEnv = (
     modalities: parseModalities(env.PNCP_MODALITIES),
     pageSize: positiveInt(env.PNCP_PAGE_SIZE, 50),
     refreshLimit: nonNegativeInt(env.PNCP_REFRESH_LIMIT, 200),
+    refreshMaxConsecutiveFailures: positiveInt(
+      env.PNCP_REFRESH_MAX_CONSECUTIVE_FAILURES,
+      MAX_CONSECUTIVE_RECOVERABLE_REFRESH_FAILURES,
+    ),
     ...(uf ? { uf } : {}),
   };
 };
@@ -425,6 +433,7 @@ async function refreshOpenTenders(
   runId: string,
   startedAt: Date,
   limit: number,
+  maxConsecutiveRecoverableFailures: number,
   counters: RunCounters,
 ): Promise<void> {
   const rows = await db
@@ -445,24 +454,25 @@ async function refreshOpenTenders(
     .orderBy(asc(tendersTable.fetchedAt))
     .limit(limit);
 
-  for (const row of rows) {
-    const identity = parseControlNumber(row.pncpControlNumber);
-    const publication = row.rawPayload as {
-      publication?: Record<string, unknown>;
-    };
-    const record =
-      publication.publication ?? (row.rawPayload as Record<string, unknown>);
-    if (!identity) {
-      counters.refreshErrors += 1;
-      logger.error(
-        { tenderId: row.id, pncpControlNumber: row.pncpControlNumber },
-        "Cannot refresh PNCP tender without a parseable control number",
-      );
-      continue;
-    }
-
-    try {
+  const initialRefreshed = counters.refreshed;
+  const initialRefreshErrors = counters.refreshErrors;
+  await refreshPncpCandidates(rows, {
+    maxConsecutiveRecoverableFailures,
+    attempt: async (row) => {
       await touchRun(runId, counters);
+      const identity = parseControlNumber(row.pncpControlNumber);
+      if (!identity) {
+        logger.error(
+          { tenderId: row.id, pncpControlNumber: row.pncpControlNumber },
+          "Cannot refresh PNCP tender without a parseable control number",
+        );
+        return "failed";
+      }
+      const publication = row.rawPayload as {
+        publication?: Record<string, unknown>;
+      };
+      const record =
+        publication.publication ?? (row.rawPayload as Record<string, unknown>);
       const compra = await fetchCompra(
         identity.cnpj,
         identity.ano,
@@ -474,34 +484,51 @@ async function refreshOpenTenders(
           { tenderId: row.id },
           "PNCP compra was not found during refresh",
         );
-        continue;
+        return "failed";
       }
       await upsertPublications(
         [{ ...record, ...compra, numeroControlePNCP: row.pncpControlNumber }],
         new Date(),
       );
       await enrichTenderById(row.id);
-      counters.refreshed += 1;
-    } catch (error) {
-      if (classifyPncpRefreshFailure(error) === "source_removed") {
-        const now = new Date();
-        await db
-          .update(tendersTable)
-          .set({
-            rawPayload: markPncpSourceRemovedPayload(now),
-            updatedAt: now,
-          })
-          .where(eq(tendersTable.id, row.id));
-        logger.warn(
-          { err: error, tenderId: row.id },
-          "PNCP compra was removed during refresh",
-        );
-        continue;
-      }
-      counters.refreshErrors += 1;
+      return "updated";
+    },
+    onSourceRemoved: async (error, row) => {
+      const now = new Date();
+      const status = error instanceof PncpError ? error.status : 410;
+      await db
+        .update(tendersTable)
+        .set({
+          rawPayload: markPncpSourceRemovedPayload(now, status),
+          updatedAt: now,
+        })
+        .where(eq(tendersTable.id, row.id));
+      logger.warn(
+        { err: error, tenderId: row.id },
+        "PNCP compra was removed during refresh",
+      );
+    },
+    onAttemptError: (error, row) => {
       logger.error({ err: error, tenderId: row.id }, "PNCP refresh failed");
-    }
-  }
+    },
+    onProgress: (progress) => {
+      counters.refreshed = initialRefreshed + progress.updated;
+      counters.refreshErrors = initialRefreshErrors + progress.failed;
+    },
+    onCircuitOpen: (progress, consecutiveRecoverableFailures) => {
+      logger.warn(
+        {
+          runId,
+          updated: progress.updated,
+          failed: progress.failed,
+          unattempted: progress.unattempted,
+          consecutiveRecoverableFailures,
+          maxConsecutiveRecoverableFailures,
+        },
+        "Stopping PNCP tender refresh after consecutive recoverable failures",
+      );
+    },
+  });
 }
 
 async function execute(
@@ -547,6 +574,7 @@ async function execute(
         runId,
         startedAt,
         options.refreshLimit,
+        options.refreshMaxConsecutiveFailures,
         counters,
       );
     }
