@@ -1,5 +1,5 @@
-import type { TenderSearchParams } from '@/api';
-import { formatDate } from '@/lib/format';
+import type { TenderSearchParams, TenderSearchResponse } from '@/api';
+import { formatDate, formatNumber } from '@/lib/format';
 import { FACET_GROUPS, labelFor, selectedValues } from './facet-config';
 import { DEFAULT_STATUS, isDefaultStatus } from './search-defaults';
 
@@ -18,7 +18,10 @@ function rangeLabel(from: string | undefined, to: string | undefined, format: (v
  * One chip per selected value, plus one per range. `remove` is the patch that drops it.
  * `statusDefault` (search page): the default status is labeled as such and no status shows as "Todos", which removes back to the default.
  */
-export function buildFilterChips(params: TenderSearchParams, { statusDefault = false } = {}): FilterChip[] {
+export function buildFilterChips(
+  params: TenderSearchParams,
+  { statusDefault = false, notification }: { statusDefault?: boolean; notification?: NonNullable<TenderSearchResponse['meta']['notification']> | null } = {},
+): FilterChip[] {
   const chips: FilterChip[] = [];
   if (statusDefault && !params.status?.length) chips.push({ id: 'status:all', group: 'Status', label: 'Todos', remove: { status: DEFAULT_STATUS } });
   const markDefault = statusDefault && isDefaultStatus(params.status);
@@ -60,6 +63,12 @@ export function buildFilterChips(params: TenderSearchParams, { statusDefault = f
   }
   if (params.newOnly) {
     chips.push({ id: 'newOnly', group: 'Entrada no Pardal', label: 'Novos (24 h)', remove: { newOnly: undefined } });
+  }
+  if (params.notification) {
+    const label = notification
+      ? `${formatNumber(notification.matchCount)} ${notification.matchCount === 1 ? 'edital' : 'editais'} de ${formatDate(notification.createdAt)}`
+      : 'Editais salvos';
+    chips.push({ id: 'notification', group: 'Notificação', label, remove: { notification: undefined } });
   }
   return chips;
 }

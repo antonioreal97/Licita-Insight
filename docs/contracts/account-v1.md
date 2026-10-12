@@ -176,7 +176,7 @@ type Notification = {
   savedSearch: { id: string; name: string; query: string } | null; // saved_search_*
   matchCount: number | null;
   newMatchCount: number | null; // resultados vinculados que ainda estão na janela de novos
-  tenderIds: string[]; // até 20 ids dos novos editais (saved_search_new_matches)
+  tenderIds: string[]; // até 20 ids dos novos editais (saved_search_new_matches / profile_new_matches)
   profileMatches: Array<{
     id: string;
     title: string;
@@ -201,11 +201,13 @@ Regras de geração:
 - **Buscas salvas com `alertsEnabled`:** um job independente da coleta avalia a busca contra os
   editais **vistos pela primeira vez** desde `lastCheckedAt`; se houver ≥ 1, criar uma notificação
   `saved_search_new_matches` com `matchCount` e até 20 `tenderIds`, somar em `newMatchesCount` e
-  atualizar `lastCheckedAt`.
+  atualizar `lastCheckedAt`. O link abre `/search?status=all&notification=<id>`, que preserva o
+  snapshot mesmo depois da janela de novos; a busca original fica disponível como ação secundária.
 - **Fim do teste:** um scheduler da API avalia a cada 6 horas usuários cujo `trialEndsAt` está entre
   agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
 - **Perfil da empresa:** antes do digest diário, avaliar somente editais novos desde o checkpoint do
   perfil e criar no máximo uma `profile_new_matches` por usuário/dia quando houver aderência alta.
+  Com mais de um edital, o link usa o mesmo snapshot por `notification=<id>`; com um, abre o edital.
 - Deduplicar: a mesma mudança não gera duas notificações para o mesmo usuário.
 - Retenção sugerida: 90 dias.
 

@@ -32,6 +32,8 @@ export type TenderSearchParams = {
   category?: string[];
   platform?: string[];
   newOnly?: boolean;
+  /** Exact tender snapshot captured by an owned notification. Never persisted in saved searches. */
+  notification?: string;
   myRegion?: boolean;
   valueMin?: number;
   valueMax?: number;
@@ -168,6 +170,15 @@ export type TenderSearchResponse = {
     searchModeFallbackReason?: 'not_available' | 'query_too_short' | null;
     tookMs: number;
     indexUpdatedAt: string | null;
+    notification?: {
+      id: string;
+      type: 'saved_search_new_matches' | 'profile_new_matches';
+      createdAt: string;
+      matchCount: number;
+      storedTenderCount: number;
+      savedSearchName: string | null;
+      savedSearchQuery: string | null;
+    } | null;
   };
 };
 

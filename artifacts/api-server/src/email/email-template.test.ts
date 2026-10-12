@@ -88,7 +88,7 @@ describe("notification email template", () => {
     assert.doesNotMatch(plural.text, /\(s\)/);
   });
 
-  it("links a saved search without status to every status, as the app does", () => {
+  it("links a saved-search alert to its immutable notification snapshot", () => {
     assert.equal(
       savedSearchHref("q=limpeza&state=DF"),
       "/search?q=limpeza&state=DF&status=all",
@@ -122,8 +122,9 @@ describe("notification email template", () => {
     });
     assert.match(
       rendered.text,
-      /https:\/\/licitai\.example\/search\?q=software&status=all/,
+      /https:\/\/licitai\.example\/search\?status=all&notification=saved-search-link/,
     );
+    assert.doesNotMatch(rendered.text, /newOnly/);
   });
 
   it("shows only the new deadline when the previous value is unavailable", () => {
@@ -192,9 +193,8 @@ describe("notification email template", () => {
     assert.match(rendered.text, /2 novos editais com alta aderência/);
     assert.match(rendered.html, /Aquisição de servidores/);
     assert.match(rendered.html, /tender%2Ffit/);
-    // The search page opens on open tenders without `status`; the profile matches can be in any status.
-    assert.match(rendered.text, /^https:\/\/licitai\.example\/search\?status=all$/m);
-    assert.match(rendered.html, /<a href="https:\/\/licitai\.example\/search\?status=all"[^>]*>Ver oportunidades<\/a>/);
+    assert.match(rendered.text, /^https:\/\/licitai\.example\/search\?status=all&notification=profile-fit-1$/m);
+    assert.match(rendered.html, /<a href="https:\/\/licitai\.example\/search\?status=all&amp;notification=profile-fit-1"[^>]*>Ver oportunidades<\/a>/);
   });
 });
 

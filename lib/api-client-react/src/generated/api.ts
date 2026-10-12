@@ -334,7 +334,7 @@ export const getSearchTendersQueryKey = (params?: SearchTendersParams,) => {
     }
 
 
-export const getSearchTendersQueryOptions = <TData = Awaited<ReturnType<typeof searchTenders>>, TError = ErrorType<InvalidParameterResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(params?: SearchTendersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchTenders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getSearchTendersQueryOptions = <TData = Awaited<ReturnType<typeof searchTenders>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(params?: SearchTendersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchTenders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -353,14 +353,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type SearchTendersQueryResult = NonNullable<Awaited<ReturnType<typeof searchTenders>>>
-export type SearchTendersQueryError = ErrorType<InvalidParameterResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>
+export type SearchTendersQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>
 
 
 /**
  * @summary Search tenders
  */
 
-export function useSearchTenders<TData = Awaited<ReturnType<typeof searchTenders>>, TError = ErrorType<InvalidParameterResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(
+export function useSearchTenders<TData = Awaited<ReturnType<typeof searchTenders>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(
  params?: SearchTendersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchTenders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

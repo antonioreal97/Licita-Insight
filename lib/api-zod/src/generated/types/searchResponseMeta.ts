@@ -5,6 +5,7 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { NotificationSearchContext } from './notificationSearchContext';
 import type { SearchMode } from './searchMode';
 import type { SearchResponseMetaSearchModeFallbackReason } from './searchResponseMetaSearchModeFallbackReason';
 
@@ -17,4 +18,6 @@ export type SearchResponseMeta = {
   tookMs: number;
   /** @nullable */
   indexUpdatedAt: Date | null;
+  /** Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification. */
+  notification?: NotificationSearchContext | null;
 };

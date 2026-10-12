@@ -93,6 +93,7 @@ type SearchMode = "keyword" | "semantic" | "hybrid";
 | `sourceId`                      | string[]                | —           | OR                                                                                                          |
 | `category`                      | string[]                | —           | slugs de categoria                                                                                          |
 | `newOnly`                       | boolean                 | `false`     | somente editais inseridos pela primeira vez no Pardal dentro de `NEW_TENDER_WINDOW_HOURS` (24 h por padrão) |
+| `notification`                  | string                  | —           | exige sessão; restringe aos até 20 `tenderIds` do snapshot de uma notificação `saved_search_new_matches` ou `profile_new_matches` do usuário logado |
 | `myRegion`                      | boolean                 | `false`     | exige sessão e aplica a região salva no perfil, incluindo raio e categorias remotas                         |
 | `valueMin` / `valueMax`         | number                  | —           | sobre `estimatedValue`; registros com valor `null` ou marcado como implausível (`estimatedValueFlag`) são excluídos quando um dos dois é enviado |
 | `publishedFrom` / `publishedTo` | date                    | —           | sobre `publishedAt`, inclusivo, horário de Brasília                                                         |
@@ -105,6 +106,11 @@ type SearchMode = "keyword" | "semantic" | "hybrid";
 Filtros diferentes combinam com AND. Facets devem ser calculados com **todos os filtros
 aplicados exceto o próprio grupo** (disjunctive faceting), para que o usuário veja
 contagens das outras opções do mesmo grupo.
+
+`notification` não faz parte da query canônica de uma busca salva. Sem sessão, responde 401.
+Um id inexistente, de outro usuário ou de outro tipo de notificação responde 200 com lista vazia
+e `meta.notification: null`, sem revelar se a notificação existe. Editais removidos da base são
+simplesmente omitidos. O filtro não exige assinatura além das regras normais da busca pública.
 
 ### Resposta 200
 
@@ -127,6 +133,15 @@ contagens das outras opções do mesmo grupo.
     searchMode: SearchMode;         // modo efetivamente aplicado
     tookMs: number;
     indexUpdatedAt: string | null;  // última atualização do índice
+    notification?: {
+      id: string;
+      type: 'saved_search_new_matches' | 'profile_new_matches';
+      createdAt: string;
+      matchCount: number;
+      storedTenderCount: number;
+      savedSearchName: string | null;
+      savedSearchQuery: string | null;
+    } | null;
   };
 }
 
