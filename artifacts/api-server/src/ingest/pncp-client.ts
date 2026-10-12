@@ -1,15 +1,42 @@
-import { timeoutSignal } from "../lib/http-timeout";
-
 const PNCP_CONSULTA = "https://pncp.gov.br/api/consulta/v1";
 // Items and files of a purchase are only served by the PNCP integration API;
 // the consultation API answers 404 for them.
 const PNCP_API = "https://pncp.gov.br/api/pncp/v1";
 const ITEMS_PAGE_SIZE = 50;
 const MAX_ITEM_PAGES = 200;
+const DEFAULT_HTTP_TIMEOUT_MS = 60_000;
+const DEFAULT_MAX_ATTEMPTS = 5;
+const DEFAULT_DETAIL_HTTP_TIMEOUT_MS = 20_000;
+const DEFAULT_DETAIL_MAX_ATTEMPTS = 2;
 
 export const PNCP_UFS = [
-  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
-  "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+  "AC",
+  "AL",
+  "AM",
+  "AP",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MG",
+  "MS",
+  "MT",
+  "PA",
+  "PB",
+  "PE",
+  "PI",
+  "PR",
+  "RJ",
+  "RN",
+  "RO",
+  "RR",
+  "RS",
+  "SC",
+  "SE",
+  "SP",
+  "TO",
 ] as const;
 
 export class PncpError extends Error {
@@ -44,8 +71,57 @@ const requestDelayMs = (): number => {
   return Number.isFinite(raw) && raw >= 0 ? raw : 150;
 };
 
+const positiveInteger = (
+  name: string,
+  value: string | undefined,
+  fallback: number,
+): number => {
+  if (value === undefined || value.trim() === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1)
+    throw new Error(`${name} must be a positive integer`);
+  return parsed;
+};
+
+export type PncpRequestPolicy = {
+  timeoutMs: number;
+  maxAttempts: number;
+  detailApi: boolean;
+};
+
+export const pncpRequestPolicy = (
+  url: string,
+  env: NodeJS.ProcessEnv = process.env,
+): PncpRequestPolicy => {
+  const detailApi = url.startsWith(`${PNCP_API}/`);
+  return detailApi
+    ? {
+        detailApi,
+        timeoutMs: positiveInteger(
+          "PNCP_DETAIL_HTTP_TIMEOUT_MS",
+          env.PNCP_DETAIL_HTTP_TIMEOUT_MS,
+          DEFAULT_DETAIL_HTTP_TIMEOUT_MS,
+        ),
+        maxAttempts: positiveInteger(
+          "PNCP_DETAIL_MAX_ATTEMPTS",
+          env.PNCP_DETAIL_MAX_ATTEMPTS,
+          DEFAULT_DETAIL_MAX_ATTEMPTS,
+        ),
+      }
+    : {
+        detailApi,
+        timeoutMs: positiveInteger(
+          "PNCP_HTTP_TIMEOUT_MS",
+          env.PNCP_HTTP_TIMEOUT_MS,
+          DEFAULT_HTTP_TIMEOUT_MS,
+        ),
+        maxAttempts: DEFAULT_MAX_ATTEMPTS,
+      };
+};
+
 export const isPncpTimeout = (error: unknown): boolean => {
-  if (error instanceof PncpError) return error.status === 504 || error.status === 408;
+  if (error instanceof PncpError)
+    return error.status === 504 || error.status === 408;
   if (error instanceof Error) {
     return error.name === "TimeoutError" || error.name === "AbortError";
   }
@@ -73,6 +149,7 @@ const rateLimitDelayMs = (attempt: number): number => {
 
 async function pncpGet(url: string): Promise<unknown> {
   let lastError: unknown;
+  const policy = pncpRequestPolicy(url);
 
   for (let attempt = 1; attempt <= 8; attempt += 1) {
     if (attempt === 1 && requestDelayMs() > 0) await sleep(requestDelayMs());
@@ -84,7 +161,7 @@ async function pncpGet(url: string): Promise<unknown> {
           Accept: "application/json",
           "User-Agent": "PardalDigital/0.1 (coleta de dados abertos do PNCP)",
         },
-        signal: timeoutSignal("PNCP_HTTP_TIMEOUT_MS", 60_000),
+        signal: AbortSignal.timeout(policy.timeoutMs),
       });
       const body = await response.text();
 
@@ -111,23 +188,35 @@ async function pncpGet(url: string): Promise<unknown> {
       rateLimited = response.status === 429;
       lastError = error;
     } catch (error) {
-      if (error instanceof PncpError && error.status < 500 && error.status !== 429) {
+      if (
+        error instanceof PncpError &&
+        error.status < 500 &&
+        error.status !== 429
+      ) {
         throw error;
       }
       lastError = error;
       rateLimited = error instanceof PncpError && error.status === 429;
     }
 
-    const maxAttempts = rateLimited ? 8 : 5;
+    // A rate-limited PNCP still receives the established long retry treatment.
+    const maxAttempts = rateLimited ? 8 : policy.maxAttempts;
     if (attempt >= maxAttempts) break;
-    await sleep(rateLimited ? rateLimitDelayMs(attempt) : 1_000 * 2 ** (attempt - 1));
+    await sleep(
+      rateLimited ? rateLimitDelayMs(attempt) : 1_000 * 2 ** (attempt - 1),
+    );
   }
 
-  throw lastError instanceof Error ? lastError : new Error(`PNCP request failed for ${url}`);
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`PNCP request failed for ${url}`);
 }
 
 const asPage = (body: unknown, url: string): PncpPublicationPage => {
-  const record = body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  const record =
+    body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
   const data = record?.data;
   const totalPaginas = Number(record?.totalPaginas);
   if (!record || !Array.isArray(data) || !Number.isFinite(totalPaginas)) {
@@ -139,7 +228,10 @@ const asPage = (body: unknown, url: string): PncpPublicationPage => {
   }
 
   return {
-    data: data.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object"),
+    data: data.filter(
+      (item): item is Record<string, unknown> =>
+        item !== null && typeof item === "object",
+    ),
     totalPaginas,
     numeroPagina: Number(record.numeroPagina ?? 0),
     totalRegistros: Number(record.totalRegistros ?? data.length),
@@ -166,7 +258,10 @@ export async function fetchPublicationPage(input: {
     return asPage(await pncpGet(url), url);
   } catch (error) {
     // PNCP answers 204 with an empty body when the day/modality has no publications.
-    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+    if (
+      error instanceof PncpError &&
+      (error.status === 204 || error.body === "")
+    ) {
       return {
         data: [],
         totalPaginas: 0,
@@ -202,7 +297,10 @@ export async function fetchContractsByPublicationPage(input: {
   try {
     return asPage(await pncpGet(url), url);
   } catch (error) {
-    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+    if (
+      error instanceof PncpError &&
+      (error.status === 204 || error.body === "")
+    ) {
       return {
         data: [],
         totalPaginas: 0,
@@ -238,7 +336,10 @@ export async function fetchContractsByUpdatePage(input: {
   try {
     return asPage(await pncpGet(url), url);
   } catch (error) {
-    if (error instanceof PncpError && (error.status === 204 || error.body === "")) {
+    if (
+      error instanceof PncpError &&
+      (error.status === 204 || error.body === "")
+    ) {
       return {
         data: [],
         totalPaginas: 0,
@@ -258,11 +359,17 @@ export type PncpList = {
 export const unwrapPncpList = (body: unknown): PncpList => {
   if (Array.isArray(body)) {
     return {
-      rows: body.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object"),
+      rows: body.filter(
+        (item): item is Record<string, unknown> =>
+          item !== null && typeof item === "object",
+      ),
       totalPages: 1,
     };
   }
-  const record = body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  const record =
+    body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
   const data = record?.data ?? record?.content;
   if (!Array.isArray(data)) {
     throw new PncpError(
@@ -273,7 +380,10 @@ export const unwrapPncpList = (body: unknown): PncpList => {
   }
   const totalPages = Number(record?.totalPaginas ?? 1);
   return {
-    rows: data.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object"),
+    rows: data.filter(
+      (item): item is Record<string, unknown> =>
+        item !== null && typeof item === "object",
+    ),
     totalPages: Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1,
   };
 };
@@ -301,7 +411,9 @@ export async function fetchCompra(
     const body = await pncpGet(
       `${PNCP_CONSULTA}/orgaos/${cnpj}/compras/${ano}/${sequencial}`,
     );
-    return body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
+    return body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
   } catch (error) {
     if (error instanceof PncpNotFoundError) return null;
     throw error;
@@ -359,8 +471,12 @@ export async function fetchContract(
   sequencial: number,
 ): Promise<Record<string, unknown> | null> {
   try {
-    const body = await pncpGet(`${PNCP_API}/orgaos/${cnpj}/contratos/${year}/${sequencial}`);
-    return body !== null && typeof body === "object" ? (body as Record<string, unknown>) : null;
+    const body = await pncpGet(
+      `${PNCP_API}/orgaos/${cnpj}/contratos/${year}/${sequencial}`,
+    );
+    return body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : null;
   } catch (error) {
     if (error instanceof PncpNotFoundError) return null;
     throw error;

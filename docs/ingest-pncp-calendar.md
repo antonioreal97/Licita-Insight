@@ -46,15 +46,35 @@ exige `all` selado ou todas as 27 UFs seladas.
   falhar, esse escopo permanece pendente para a próxima execução.
 - `PNCP_UF` e `PNCP_MODALITIES` continuam restringindo o escopo.
 
-Depois da listagem, `refreshOpenTenders` continua consultando compra, itens e
-arquivos individualmente. A fila inclui `open`, `under_review` e `suspended`
+Depois da listagem, `refreshOpenTenders` consulta cada compra pela API de
+consulta e grava status, prazos e valor antes de tentar itens e arquivos pela
+API de manutenção. A fila inclui `open`, `under_review` e `suspended`
 com `fetched_at` anterior ao início da execução, em ordem do mais antigo.
 `PNCP_REFRESH_LIMIT` mantém o padrão 200; `0` desliga essa revisão. Editais
-encerrados permanecem no banco. `PNCP_REFRESH_MAX_CONSECUTIVE_FAILURES` (padrão 3) interrompe somente a fase de revisão depois desse número de timeouts, erros
-de rede, respostas 429 ou 5xx consecutivos. Um refresh bem-sucedido zera a
-contagem; 404/410 e compras não encontradas não abrem o disjuntor. A execução
-termina normalmente com os contadores já acumulados, e os editais não tentados
-continuam elegíveis na próxima coleta porque seu `fetched_at` não é alterado.
+encerrados permanecem no banco. `PNCP_REFRESH_MAX_CONSECUTIVE_FAILURES` (padrão 3) controla dois disjuntores independentes: falhas recuperáveis consecutivas na
+consulta da compra interrompem a fila inteira; falhas no enriquecimento pulam
+somente itens/arquivos dos próximos editais, mantendo a renovação de compra.
+O mesmo limite interrompe a leitura de resultados da transparência. Uma compra
+renovada não vira falha de refresh se seu enriquecimento falhar. O resumo da
+execução separa compras renovadas, enriquecimentos concluídos, falhos e pulados.
+404/410 e compras não encontradas mantêm a classificação anterior.
+
+Chamadas à API de manutenção `/api/pncp/v1` usam
+`PNCP_DETAIL_HTTP_TIMEOUT_MS=20000` e `PNCP_DETAIL_MAX_ATTEMPTS=2`; a API de
+consulta continua usando `PNCP_HTTP_TIMEOUT_MS=60000` e até cinco tentativas.
+Respostas 429 preservam a espera longa existente. O detalhe aberto pelo usuário
+agenda o enriquecimento de forma assíncrona e a mesma política curta limita o
+trabalho em segundo plano. `details_fetched_at` só é preenchido depois de itens
+e arquivos serem gravados; enriquecimentos falhos/pulados continuam pendentes
+quando a publicação mudou e, em qualquer caso, voltam à fila do refresh na
+coleta seguinte.
+
+Os seis coletores em memória (`pncp`, transparência, Mapas Culturais, fomento,
+cultura federal e internacional) atualizam heartbeat a cada 30 s. Ao iniciar,
+o processo da aplicação observa três intervalos (90 s) antes de marcar como
+`failed`, com `interrupted by API restart` e `finished_at`, somente linhas cujo
+heartbeat não avançou. Assim, comandos manuais ativos em outro processo ficam
+preservados; os comandos `collect:*` não executam a reconciliação de startup.
 
 ## Cobertura na API
 
