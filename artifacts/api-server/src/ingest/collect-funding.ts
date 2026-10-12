@@ -7,6 +7,7 @@ import {
   refreshOpportunityStatuses,
   upsertFundingOpportunities,
 } from "./upsert-opportunities";
+import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 const INGEST_SOURCE = "funding-opportunities";
 export const FUNDING_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -64,6 +65,7 @@ export async function collectFunding(now = new Date()): Promise<{
     throw error;
   }
 
+  const stopHeartbeat = startIngestRunHeartbeat(runId);
   try {
     const refreshed = await refreshOpportunityStatuses(now);
     const sources = await collectFundingOnce({ now });
@@ -106,6 +108,8 @@ export async function collectFunding(now = new Date()): Promise<{
       })
       .where(eq(ingestRunsTable.id, runId));
     throw error;
+  } finally {
+    stopHeartbeat();
   }
 }
 

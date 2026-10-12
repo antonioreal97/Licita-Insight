@@ -4,6 +4,7 @@ import { PncpError } from "./pncp-client";
 import {
   classifyPncpRefreshFailure,
   refreshPncpCandidates,
+  refreshPncpCandidatesWithEnrichment,
 } from "./pncp-refresh-failure";
 
 describe("PNCP refresh failure classification", () => {
@@ -37,6 +38,61 @@ const timeout = () => {
 };
 
 describe("PNCP refresh circuit breaker", () => {
+  it("keeps refreshing purchases after only the enrichment circuit opens", async () => {
+    const purchases: number[] = [];
+    const enrichments: number[] = [];
+    let enrichmentCircuitLogs = 0;
+
+    const result = await refreshPncpCandidatesWithEnrichment([1, 2, 3, 4, 5], {
+      maxConsecutiveRecoverableFailures: 3,
+      attempt: async (candidate) => {
+        purchases.push(candidate);
+        return "updated";
+      },
+      enrich: async (candidate) => {
+        enrichments.push(candidate);
+        throw timeout();
+      },
+      onEnrichmentCircuitOpen: () => {
+        enrichmentCircuitLogs += 1;
+      },
+    });
+
+    assert.deepEqual(purchases, [1, 2, 3, 4, 5]);
+    assert.deepEqual(enrichments, [1, 2, 3]);
+    assert.equal(enrichmentCircuitLogs, 1);
+    assert.deepEqual(result, {
+      updated: 5,
+      failed: 0,
+      unattempted: 0,
+      stoppedAfterConsecutiveRecoverableFailures: false,
+      enriched: 0,
+      enrichmentFailed: 3,
+      enrichmentSkipped: 2,
+      enrichmentCircuitOpen: true,
+    });
+  });
+
+  it("still opens the whole refresh circuit when purchase consultation fails", async () => {
+    let purchaseAttempts = 0;
+    let enrichmentAttempts = 0;
+    const result = await refreshPncpCandidatesWithEnrichment([1, 2, 3, 4, 5], {
+      maxConsecutiveRecoverableFailures: 3,
+      attempt: async () => {
+        purchaseAttempts += 1;
+        throw timeout();
+      },
+      enrich: async () => {
+        enrichmentAttempts += 1;
+      },
+    });
+
+    assert.equal(purchaseAttempts, 3);
+    assert.equal(enrichmentAttempts, 0);
+    assert.equal(result.stoppedAfterConsecutiveRecoverableFailures, true);
+    assert.equal(result.unattempted, 2);
+  });
+
   it("stops after three consecutive timeouts and reports exact counters once", async () => {
     let attempts = 0;
     const circuitLogs: Array<{

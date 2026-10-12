@@ -6,6 +6,7 @@ import {
   fetchCompraItens,
   fetchPublicationPage,
   isRecoverablePncpFailure,
+  pncpRequestPolicy,
   PncpError,
 } from "./pncp-client";
 
@@ -42,14 +43,40 @@ describe("PNCP consultation endpoints", () => {
     ]);
   });
 
+  it("uses short configurable limits only for the PNCP maintenance API", () => {
+    const env = {
+      PNCP_HTTP_TIMEOUT_MS: "61000",
+      PNCP_DETAIL_HTTP_TIMEOUT_MS: "7000",
+      PNCP_DETAIL_MAX_ATTEMPTS: "2",
+    };
+    assert.deepEqual(
+      pncpRequestPolicy(
+        "https://pncp.gov.br/api/pncp/v1/orgaos/1/compras/2026/1/itens",
+        env,
+      ),
+      { detailApi: true, timeoutMs: 7000, maxAttempts: 2 },
+    );
+    assert.deepEqual(
+      pncpRequestPolicy(
+        "https://pncp.gov.br/api/consulta/v1/orgaos/1/compras/2026/1",
+        env,
+      ),
+      { detailApi: false, timeoutMs: 61000, maxAttempts: 5 },
+    );
+  });
+
   it("follows item pages until the PNCP API returns a short plain array", async () => {
     globalThis.fetch = async (input) => {
-      const url = new URL(input instanceof Request ? input.url : input.toString());
+      const url = new URL(
+        input instanceof Request ? input.url : input.toString(),
+      );
       requestedUrls.push(url.toString());
       const page = Number(url.searchParams.get("pagina"));
       const size = page === 1 ? 50 : 11;
       return Response.json(
-        Array.from({ length: size }, (_, index) => ({ numeroItem: (page - 1) * 50 + index + 1 })),
+        Array.from({ length: size }, (_, index) => ({
+          numeroItem: (page - 1) * 50 + index + 1,
+        })),
       );
     };
 
@@ -62,13 +89,20 @@ describe("PNCP consultation endpoints", () => {
 
   it("reads a full last item page as a request for one more page", async () => {
     globalThis.fetch = async (input) => {
-      const url = new URL(input instanceof Request ? input.url : input.toString());
+      const url = new URL(
+        input instanceof Request ? input.url : input.toString(),
+      );
       requestedUrls.push(url.toString());
       const page = Number(url.searchParams.get("pagina"));
-      return Response.json(page === 1 ? Array.from({ length: 50 }, () => ({})) : []);
+      return Response.json(
+        page === 1 ? Array.from({ length: 50 }, () => ({})) : [],
+      );
     };
 
-    assert.equal((await fetchCompraItens("45226214000119", 2026, 432)).length, 50);
+    assert.equal(
+      (await fetchCompraItens("45226214000119", 2026, 432)).length,
+      50,
+    );
     assert.equal(requestedUrls.length, 2);
   });
 
@@ -119,11 +153,26 @@ describe("PNCP consultation endpoints", () => {
   });
 
   it("treats gateway and rate-limit errors as recoverable", () => {
-    assert.equal(isRecoverablePncpFailure(new PncpError("down", 502, "")), true);
-    assert.equal(isRecoverablePncpFailure(new PncpError("down", 503, "")), true);
-    assert.equal(isRecoverablePncpFailure(new PncpError("down", 507, "")), true);
-    assert.equal(isRecoverablePncpFailure(new PncpError("limited", 429, "")), true);
-    assert.equal(isRecoverablePncpFailure(new PncpError("bad", 400, "")), false);
+    assert.equal(
+      isRecoverablePncpFailure(new PncpError("down", 502, "")),
+      true,
+    );
+    assert.equal(
+      isRecoverablePncpFailure(new PncpError("down", 503, "")),
+      true,
+    );
+    assert.equal(
+      isRecoverablePncpFailure(new PncpError("down", 507, "")),
+      true,
+    );
+    assert.equal(
+      isRecoverablePncpFailure(new PncpError("limited", 429, "")),
+      true,
+    );
+    assert.equal(
+      isRecoverablePncpFailure(new PncpError("bad", 400, "")),
+      false,
+    );
     const timeout = new Error("The operation was aborted due to timeout");
     timeout.name = "TimeoutError";
     assert.equal(isRecoverablePncpFailure(timeout), true);

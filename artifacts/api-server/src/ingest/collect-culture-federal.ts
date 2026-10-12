@@ -8,6 +8,7 @@ import {
   refreshOpportunityStatuses,
   upsertFundingOpportunities,
 } from "./upsert-opportunities";
+import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 const INGEST_SOURCE = "culture-federal";
 export const CULTURE_FEDERAL_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -74,6 +75,7 @@ export async function collectCultureFederal(
     throw error;
   }
 
+  const stopHeartbeat = startIngestRunHeartbeat(runId);
   try {
     const sources = await collect({ now });
     const details = { sources: summaryOf(sources) };
@@ -130,6 +132,8 @@ export async function collectCultureFederal(
       })
       .where(eq(ingestRunsTable.id, runId));
     throw error;
+  } finally {
+    stopHeartbeat();
   }
 }
 

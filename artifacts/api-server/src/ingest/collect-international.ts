@@ -28,6 +28,8 @@ import {
   saveTranslatedTitle,
   upsertInternationalOpportunities,
 } from "./upsert-opportunities";
+import { STALE_HEARTBEAT_ERROR } from "./international-collect-decision";
+import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 const INGEST_SOURCE = "international";
 export const INTERNATIONAL_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -47,7 +49,7 @@ export async function abandonStaleInternationalRuns(
     .update(ingestRunsTable)
     .set({
       status: "failed",
-      error: "Abandonada: heartbeat da coleta expirou",
+      error: STALE_HEARTBEAT_ERROR,
       finishedAt: now,
       heartbeatAt: now,
     })
@@ -92,10 +94,7 @@ export async function translatePendingInternationalTitles(
       recordTranslationAttempt,
     );
   } catch (error) {
-    logger.warn(
-      { err: error },
-      "International title translation was skipped",
-    );
+    logger.warn({ err: error }, "International title translation was skipped");
     return null;
   }
 }
@@ -134,10 +133,12 @@ export async function collectInternational(
       heartbeatAt: now,
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new InternationalIngestInProgressError();
+    if (isUniqueViolation(error))
+      throw new InternationalIngestInProgressError();
     throw error;
   }
 
+  const stopHeartbeat = startIngestRunHeartbeat(runId);
   let result: Omit<CollectInternationalResult, "translation">;
   try {
     const sources = await collect({ now });
@@ -187,7 +188,10 @@ export async function collectInternational(
       .update(ingestRunsTable)
       .set({
         status,
-        pagesRead: sources.reduce((total, source) => total + source.requests, 0),
+        pagesRead: sources.reduce(
+          (total, source) => total + source.requests,
+          0,
+        ),
         upserted,
         refreshed,
         refreshErrors: errors.length,
@@ -217,6 +221,8 @@ export async function collectInternational(
       })
       .where(eq(ingestRunsTable.id, runId));
     throw error;
+  } finally {
+    stopHeartbeat();
   }
 
   const translation = await translatePendingInternationalTitles({

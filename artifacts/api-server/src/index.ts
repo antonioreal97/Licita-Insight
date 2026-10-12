@@ -6,12 +6,7 @@ import { startDocumentRetryJob } from "./ai/document-retry-job";
 import { startTrialNotificationScheduler } from "./account/trial-notification-scheduler";
 import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
-import { abandonStalePncpRuns } from "./ingest/collect-pncp";
-import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
-import { abandonStaleFundingRuns } from "./ingest/collect-funding";
-import { abandonStaleCultureFederalRuns } from "./ingest/collect-culture-federal";
-import { abandonStaleInternationalRuns } from "./ingest/collect-international";
-import { abandonStaleTransparencyRuns } from "./ingest/collect-transparency";
+import { recoverInterruptedIngestRuns } from "./ingest/recover-interrupted-runs";
 import {
   startDailyCategoryClassify,
   startDailyCultureCollect,
@@ -119,21 +114,8 @@ const start = async (): Promise<void> => {
     );
   }
 
-  if (runsJobs) {
-    try {
-      await tryRunSingletonJob("ingest_reconciliation", async () => {
-        await abandonStalePncpRuns();
-        await abandonStaleCultureRuns();
-        await abandonStaleFundingRuns();
-        await abandonStaleCultureFederalRuns();
-        await abandonStaleInternationalRuns();
-        await abandonStaleTransparencyRuns();
-      });
-    } catch (error) {
-      logger.error({ err: error }, "Failed to reconcile stale ingest runs");
-    }
-  }
-
+  // Serve health/API traffic while startup observes existing ingest heartbeats;
+  // schedulers are armed only after that reconciliation finishes.
   const server = apiPort
     ? startHttpServer(apiPort, false)
     : workerHealthPort
@@ -142,6 +124,19 @@ const start = async (): Promise<void> => {
   const metricsServer = metricsPort
     ? startMetricsServer(metricsPort)
     : undefined;
+
+  if (runsJobs) {
+    try {
+      await tryRunSingletonJob("ingest_reconciliation", async () => {
+        await recoverInterruptedIngestRuns();
+      });
+    } catch (error) {
+      logger.error(
+        { err: error },
+        "Failed to reconcile interrupted ingest runs",
+      );
+    }
+  }
   const stops = runsJobs ? startSchedulers() : [];
   const config = httpServerConfig();
   installGracefulShutdown({

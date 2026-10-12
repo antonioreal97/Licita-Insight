@@ -9,12 +9,21 @@ export const INTERNATIONAL_RELEVANT_SOURCES = [
   "international",
 ] as const;
 
+/** `ingest_runs.error` written when the process died mid-run, as opposed to the source failing. */
+export const INTERRUPTED_BY_RESTART_ERROR = "interrupted by API restart";
+export const STALE_HEARTBEAT_ERROR = "Abandonada: heartbeat da coleta expirou";
+
+export const isInterruptedRunError = (error: string | null): boolean =>
+  error === INTERRUPTED_BY_RESTART_ERROR || error === STALE_HEARTBEAT_ERROR;
+
 export type InternationalIngestRun = {
   source: string;
   status: string;
   startedAt: Date;
   heartbeatAt: Date;
   finishedAt: Date | null;
+  /** A failed run that the process never finished; it does not use up the day's attempt. */
+  interrupted?: boolean;
 };
 
 export type InternationalCollectDecisionConfig = {
@@ -94,6 +103,7 @@ export const decideInternationalCollect = (
     runs.some(
       (run) =>
         run.source === "international" &&
+        !(run.status === "failed" && run.interrupted) &&
         isBetween(run.startedAt, today, tomorrow),
     )
   ) {
