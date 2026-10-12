@@ -1,6 +1,7 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import { db, ingestRunsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { INTERRUPTED_BY_RESTART_ERROR } from "./international-collect-decision";
 import { INTERRUPTED_RUN_OBSERVATION_MS } from "./run-heartbeat";
 
 export const IN_MEMORY_INGEST_SOURCES = [
@@ -53,7 +54,7 @@ const failInterrupted = async (
     .update(ingestRunsTable)
     .set({
       status: "failed",
-      error: "interrupted by API restart",
+      error: INTERRUPTED_BY_RESTART_ERROR,
       finishedAt,
       heartbeatAt: finishedAt,
     })

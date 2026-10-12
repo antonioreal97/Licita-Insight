@@ -28,6 +28,7 @@ import {
   saveTranslatedTitle,
   upsertInternationalOpportunities,
 } from "./upsert-opportunities";
+import { STALE_HEARTBEAT_ERROR } from "./international-collect-decision";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 const INGEST_SOURCE = "international";
@@ -48,7 +49,7 @@ export async function abandonStaleInternationalRuns(
     .update(ingestRunsTable)
     .set({
       status: "failed",
-      error: "Abandonada: heartbeat da coleta expirou",
+      error: STALE_HEARTBEAT_ERROR,
       finishedAt: now,
       heartbeatAt: now,
     })

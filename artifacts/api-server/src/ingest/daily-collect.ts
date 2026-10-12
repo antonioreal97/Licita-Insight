@@ -14,6 +14,7 @@ import { cultureFederalSchedule } from "./culture-federal-schedule";
 import { internationalSchedule } from "./international-schedule";
 import {
   decideInternationalCollect,
+  isInterruptedRunError,
   INTERNATIONAL_RELEVANT_SOURCES,
   nextInternationalCollectDayCheck,
   saoPauloDayStart,
@@ -366,13 +367,14 @@ export function startDailyInternationalCollect(): () => void {
       now.getTime() -
         Math.max(...Object.values(decisionConfig.staleAfterMsBySource)),
     );
-    return await db
+    const rows = await db
       .select({
         source: ingestRunsTable.source,
         status: ingestRunsTable.status,
         startedAt: ingestRunsTable.startedAt,
         heartbeatAt: ingestRunsTable.heartbeatAt,
         finishedAt: ingestRunsTable.finishedAt,
+        error: ingestRunsTable.error,
       })
       .from(ingestRunsTable)
       .where(
@@ -387,6 +389,10 @@ export function startDailyInternationalCollect(): () => void {
           ),
         ),
       );
+    return rows.map(({ error, ...run }) => ({
+      ...run,
+      interrupted: isInterruptedRunError(error),
+    }));
   };
 
   let timer: NodeJS.Timeout | undefined;

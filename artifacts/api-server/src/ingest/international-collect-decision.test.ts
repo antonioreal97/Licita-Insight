@@ -115,11 +115,31 @@ test("execução internacional interrompida hoje permite nova tentativa", () => 
         startedAt: new Date("2026-10-12T10:00:00Z"),
         finishedAt: new Date("2026-10-12T10:10:00Z"),
         status: "failed",
+        interrupted: true,
       }),
     ],
     config(),
   );
   assert.deepEqual(decision, { action: "run", reason: "safety_hour" });
+});
+
+test("falha da fonte hoje não gera nova tentativa no mesmo dia", () => {
+  const decision = decideInternationalCollect(
+    new Date("2026-10-12T14:00:00Z"),
+    [
+      run({
+        source: "international",
+        startedAt: new Date("2026-10-12T10:00:00Z"),
+        finishedAt: new Date("2026-10-12T10:10:00Z"),
+        status: "failed",
+      }),
+    ],
+    config(),
+  );
+  assert.deepEqual(decision, {
+    action: "already_ran",
+    reason: "international_started_today",
+  });
 });
 
 test("PNCP desligado roda na hora da rede de segurança", () => {
