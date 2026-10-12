@@ -38,6 +38,7 @@ export const opportunityKindLabels: Record<OpportunityKind, string> = {
   funding: 'Fomento',
   innovation: 'Inovação',
   partnership: 'Parceria',
+  procurement: 'Licitação internacional',
 };
 
 export const opportunitySourceLabels: Record<OpportunitySource, string> = {
@@ -49,7 +50,14 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   funarte: 'Funarte',
   minc: 'Ministério da Cultura',
   salic: 'Lei Rouanet (Salic)',
+  worldbank: 'Banco Mundial',
+  eu_ft: 'União Europeia (Funding & Tenders)',
 };
+
+/** Sources of each side of the hub, for the source filter. */
+export const INTERNATIONAL_SOURCES: OpportunitySource[] = ['worldbank', 'eu_ft'];
+export const INTERNATIONAL_KINDS: OpportunityKind[] = ['procurement', 'funding', 'innovation', 'partnership'];
+export const NATIONAL_KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership'];
 
 const tones: Record<OpportunityStatus, string> = {
   open: 'bg-status-open text-status-open-foreground',

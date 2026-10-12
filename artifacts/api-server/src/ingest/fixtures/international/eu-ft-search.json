@@ -1,0 +1,870 @@
+{
+ "apiVersion": "2.155",
+ "terms": "***",
+ "totalResults": 1197,
+ "pageNumber": 1,
+ "pageSize": 100,
+ "sort": "[identifier:ASC]",
+ "results": [
+  {
+   "reference": "50129793TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-CL5-2027-07-D3-17",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "HORIZON-CL5-2027-07-D3-17"
+    ],
+    "status": [
+     "31094501"
+    ],
+    "title": [
+     "PV based electrification of the economy: Designing & optimising PV systems supporting industrial electrification and promoting participation in electricity markets (EUPI-PV Partnership)"
+    ],
+    "callTitle": [
+     "ENERGY"
+    ],
+    "ccm2Id": [
+     "50129793"
+    ],
+    "callccm2Id": [
+     "50161357"
+    ],
+    "callIdentifier": [
+     "HORIZON-CL5-2027-07"
+    ],
+    "deadlineDate": [
+     "2027-12-01T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2027-08-04T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "typesOfAction": [
+     "HORIZON Innovation Actions"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2027\"], \"budgetTopicActionMap\": {\"113294\": [{\"action\": \"HORIZON-CL5-2027-07-D3-17 - HORIZON-IA HORIZON Innovation Actions\", \"expectedGrants\": 3, \"minContribution\": 6000000, \"maxContribution\": 6000000, \"budgetYearMap\": {\"2027\": \"18000000\"}, \"plannedOpeningDate\": \"2027-08-04\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-12-01\"]}], \"113296\": [{\"action\": \"HORIZON-CL5-2027-07-D3-11 - HORIZON-IA HORIZON Innovation Actions\", \"expectedGrants\": 2, \"minContribution\": 8500000, \"maxContribution\": 8500000, \"budgetYearMap\": {\"2027\": \"17000000\"}, \"plannedOpeningDate\": \"2027-08-04\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-12-01\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-CL5-2027-07-D3-17"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "izon Europe Work Programme General Annexes. Proposal page limits and layout: described in Part B of the Application Form available in the Submission System. 2. Eligible Countries described in Annex B of the Work Programme General Annexes. A number of non-EU/non-Associated Countries that are not automatically eligible for funding have made specific provisions for making funding available for their participants in Horizon Europe project"
+    ],
+    "descriptionByte": [
+     "Expected Outcome: Large PV systems such as utility scale PV are evolving towards higher voltage architecture (>=3kV) with the objective to minimize losses and improve system efficiency at lower costs. The intention is to integrate also storage into such (hybrid) PV systems offering flexibility. It is consequently essential to build a blueprint for the implementation of high voltage large PV systems and the developmen"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "50161195TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-HLTH-2027-03-TOOL-08",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "HORIZON-HLTH-2027-03-TOOL-08"
+    ],
+    "status": [
+     "31094501"
+    ],
+    "title": [
+     "Towards the next generation of frontier Artificial Intelligence models for healthcare"
+    ],
+    "callTitle": [
+     "Cluster 1 - Health (Single stage - 2027/2)"
+    ],
+    "ccm2Id": [
+     "50161195"
+    ],
+    "callccm2Id": [
+     "50161316"
+    ],
+    "callIdentifier": [
+     "HORIZON-HLTH-2027-03"
+    ],
+    "deadlineDate": [
+     "2027-09-16T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2027-06-03T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "typesOfAction": [
+     "HORIZON Coordination and Support Actions"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2027\"], \"budgetTopicActionMap\": {\"113286\": [{\"action\": \"HORIZON-HLTH-2027-03-TOOL-08 - HORIZON-CSA HORIZON Coordination and Support Actions\", \"expectedGrants\": 1, \"minContribution\": 2900000, \"maxContribution\": 2900000, \"budgetYearMap\": {\"2027\": \"2900000\"}, \"plannedOpeningDate\": \"2027-06-03\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-09-16\"]}], \"113287\": [{\"action\": \"HORIZON-HLTH-2027-03-TOOL-02 - HORIZON-RIA HORIZON  Research and Innovation Actions\", \"expectedGrants\": 4, \"minContribution\": 7000000, \"maxContribution\": 10000000, \"budgetYearMap\": {\"2027\": \"39300000\"}, \"plannedOpeningDate\": \"2027-06-03\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-09-16\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-HLTH-2027-03-TOOL-08"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "n Europe Work Programme General Annexes. Proposal page limits and layout are described in Part B of the Application Form available in the Submission System. 2. Eligible Countries Eligible countries are described in Annex B of the Work Programme General Annexes. A number of non-EU/non-Associated Countries that are not automatically eligible for funding have made specific provisions for making funding available for their participants in […] amme General Annexes. Proposal page limits and layout are described in Part B of the Application Form available in the Submission System. 2. Eligible Countries Eligible countries are described in Annex B of the Work Programme General Annexes. A number of non-EU/non-Associated Countries that are not automatically eligible for funding have made specific provisions for making funding available for their participants in Horizon Europe pro […] lly assess and address any strategic weaknesses, vulnerabilities and high-risk dependencies which put at risk the attainment of its ambitions. For this reason, participation is limited to legal entities established in Member States and Associated Countries. Proposals including entities established in countries outside the scope specified in the topic will be ineligible. For the duly justified and exceptional reasons listed in the paragraph "
+    ],
+    "descriptionByte": [
+     "Expected Outcome: This topic aims at supporting activities that are enabling or contributing to one or several expected impacts of destination “Developing and using new tools, technologies and digital solutions for a healthy society”. To that end, proposals under this topic should aim to deliver results that are directed at, tailored towards and contributing to all the following expected outcomes: Researchers and inn"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "50129018TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-CL5-2027-01-D1-13",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "HORIZON-CL5-2027-01-D1-13"
+    ],
+    "status": [
+     "31094501"
+    ],
+    "title": [
+     "Next generation scenarios for informing climate and sustainability transitions"
+    ],
+    "callTitle": [
+     "CLIMATE"
+    ],
+    "ccm2Id": [
+     "50129018"
+    ],
+    "callccm2Id": [
+     "50132216"
+    ],
+    "callIdentifier": [
+     "HORIZON-CL5-2027-01"
+    ],
+    "deadlineDate": [
+     "2027-03-04T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-11-17T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "typesOfAction": [
+     "HORIZON  Research and Innovation Actions"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2027\"], \"budgetTopicActionMap\": {\"112923\": [{\"action\": \"HORIZON-CL5-2027-01-D1-13 - HORIZON-RIA HORIZON  Research and Innovation Actions\", \"expectedGrants\": 6, \"minContribution\": 4000000, \"maxContribution\": 4000000, \"budgetYearMap\": {\"2027\": \"24000000\"}, \"plannedOpeningDate\": \"2026-11-17\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-03-04\"]}], \"112921\": [{\"action\": \"HORIZON-CL5-2027-01-D1-11 - HORIZON-COFUND HORIZON Programme Cofund Actions\", \"expectedGrants\": 1, \"minContribution\": 15000000, \"maxContribution\": 15000000, \"budgetYearMap\": {\"2027\": \"15000000\"}, \"plannedOpeningDate\": \"2026-11-17\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-03-04\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-CL5-2027-01-D1-13"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "izon Europe Work Programme General Annexes. Proposal page limits and layout: described in Part B of the Application Form available in the Submission System. 2. Eligible Countries described in Annex B of the Work Programme General Annexes. A number of non-EU/non-Associated Countries that are not automatically eligible for funding have made specific provisions for making funding available for their participants in Horizon Europe project"
+    ],
+    "descriptionByte": [
+     "s [3] – particularly major GHG emitters [4] such as China (contributing to the EU-China Climate Change and Biodiversity (CCB) flagship initiative [5] ), India, Brazil and Indonesia. It should ensure diverse, globally representative scenario space and, where appropriate, foster capacity development. [1] https://www.ecemf.eu/ecemp/european-climate-and-energy-modelling-platform/ [2] https://www.ecemf.eu/ [3] https://datahelpd"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "52256519TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERC-2027-COG",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "ERC-2027-COG"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "ERC Consolidator Grant"
+    ],
+    "callTitle": [
+     "Call for Proposals for ERC Consolidator Grant"
+    ],
+    "ccm2Id": [
+     "52256519"
+    ],
+    "callccm2Id": [
+     "52256526"
+    ],
+    "callIdentifier": [
+     "ERC-2027-COG"
+    ],
+    "deadlineDate": [
+     "2027-01-12T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-09-24T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "typesOfAction": [
+     "HORIZON ERC Grants"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2027\"], \"budgetTopicActionMap\": {\"115321\": [{\"action\": \"ERC-2027-COG - HORIZON-ERC HORIZON ERC Grants\", \"expectedGrants\": 296, \"minContribution\": 0, \"maxContribution\": 0, \"budgetYearMap\": {\"2027\": \"618500000\"}, \"plannedOpeningDate\": \"2026-09-24\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-01-12\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERC-2027-COG"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "al organisations with headquarters in an EU Member State or an Associated Country shall be deemed to be established in that Member State or Associated Country. Eligible countries: The conditions specific to the ERC are described in the ERC Work Programme 2027 under the heading 1 .4 ‘Admissibility, Eligibility, Resubmission Restrictions' and in Annex 3 . An overview is provided below: ERC grant schemes are open to researchers of any ag"
+    ],
+    "descriptionByte": [
+     "Scope: Objectives The Consolidator Grant supports excellent Principal Investigators who are consolidating their own independent research team or programme. A Consolidator Grant Principal Investigator should have already shown evidence of research independence. Size of ERC Consolidator Grants Consolidator Grants may be awarded up to a maximum of EUR 2 000 000 for a period of 60 months . The maximum amount of the grant"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "50220812TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-MSCA-2026-DN-01-01",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "HORIZON-MSCA-2026-DN-01-01"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "MSCA Doctoral Networks 2026"
+    ],
+    "callTitle": [
+     "MSCA Doctoral Networks 2026"
+    ],
+    "ccm2Id": [
+     "50220812"
+    ],
+    "callccm2Id": [
+     "50220822"
+    ],
+    "callIdentifier": [
+     "HORIZON-MSCA-2026-DN-01"
+    ],
+    "deadlineDate": [
+     "2026-11-24T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-05-28T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "typesOfAction": [
+     "HORIZON TMA MSCA Doctoral Networks",
+     "HORIZON TMA MSCA Doctoral Networks - Joint Doctorates",
+     "HORIZON TMA MSCA Doctoral Networks - Industrial Doctorates"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2026\"], \"budgetTopicActionMap\": {\"113402\": [{\"action\": \"HORIZON-MSCA-2026-DN-01-01 - HORIZON-TMA-MSCA-DN HORIZON TMA MSCA Doctoral Networks\", \"expectedGrants\": 0, \"minContribution\": 0, \"maxContribution\": 0, \"budgetYearMap\": {\"2026\": \"628033846\"}, \"plannedOpeningDate\": \"2026-05-28\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2026-11-24\"]}, {\"action\": \"HORIZON-MSCA-2026-DN-01-01 - HORIZON-TMA-MSCA-DN-JD HORIZON TMA MSCA Doctoral Networks - Joint Doctorates\", \"expectedGrants\": 0, \"minContribution\": 0, \"maxContribution\": 0, \"budgetYearMap\": {\"2026\": \"628033846\"}, \"plannedOpeningDate\": \"2026-05-28\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2026-11-24\"]}, {\"action\": \"HORIZON-MSCA-2026-DN-01-01 - HORIZON-TMA-MSCA-DN-ID HORIZON TMA MSCA Doctoral Networks - Industrial Doctorates\", \"expectedGrants\": 0, \"minContribution\": 0, \"maxContribution\": 0, \"budgetYearMap\": {\"2026\": \"628033846\"}, \"plannedOpeningDate\": \"2026-05-28\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2026-11-24\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-MSCA-2026-DN-01-01"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "rizon Europe Work Programme General Annexes. Proposal page limits and layout: described in Part B of the Application Form available in the Submission System 2. Eligible Countries described in Annex B of the Work Programme General Annexes. A number of non-EU/non-Associated Countries that are not automatically eligible for funding have made specific provisions for making funding available for their participants in Horizon Europe project"
+    ],
+    "descriptionByte": [
+     "Expected Outcome: Project results are expected to contribute to the following outcomes: For supported doctoral candidates New research and transferable skills and competences, leading to improved employability and career prospects within and outside academia; New knowledge allowing the conversion of ideas into products and services, where relevant; Enhanced networking and communication capacities with scientific peer"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "52303917TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/DIGITAL-ECCC-2027-DEPLOY-CYBER-11-AI4SME",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "DIGITAL-ECCC-2027-DEPLOY-CYBER-11-AI4SME"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Strengthening cybersecurity capacities of European SMEs  with cybersecure AI-powered solutions"
+    ],
+    "callTitle": [
+     "Strengthening European Cybersecurity Technologies, Capacities and Preparedness"
+    ],
+    "ccm2Id": [
+     "52303917"
+    ],
+    "callccm2Id": [
+     "52303968"
+    ],
+    "callIdentifier": [
+     "DIGITAL-ECCC-2027-DEPLOY-CYBER-11"
+    ],
+    "deadlineDate": [
+     "2027-01-14T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-09-01T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43152860"
+    ],
+    "typesOfAction": [
+     "DIGITAL JU SME Support Actions"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2026\"], \"budgetTopicActionMap\": {\"115385\": [{\"action\": \"DIGITAL-ECCC-2027-DEPLOY-CYBER-11-AI4SME - DIGITAL-JU-SME DIGITAL JU SME Support Actions\", \"expectedGrants\": 5, \"minContribution\": 3000000, \"maxContribution\": 5000000, \"budgetYearMap\": {\"2026\": \"20000000\"}, \"plannedOpeningDate\": \"2026-09-01\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-01-14\"]}], \"115381\": [{\"action\": \"DIGITAL-ECCC-2027-DEPLOY-CYBER-11-REGCABH - DIGITAL-JU-SIMPLE DIGITAL JU Simple Grants\", \"expectedGrants\": 2, \"minContribution\": 2500000, \"maxContribution\": 2500000, \"budgetYearMap\": {\"2026\": \"5000000\"}, \"plannedOpeningDate\": \"2026-09-01\", \"deadlineModel\": \"single-stage\", \"deadlineDates\": [\"2027-01-14\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/DIGITAL-ECCC-2027-DEPLOY-CYBER-11-AI4SME"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     "scribed in section 5 of the call document . Proposal page limits and layout: described in Part B of the Application Form available in the Submission System. 2. Eligible countries described in section 6 of the call document . 3. Other eligibility conditions described in section 6 of the call document . 4. Financial and operational capacity and exclusion described in section 7 of the call document . 5a. Evaluation and award: Submission "
+    ],
+    "descriptionByte": [
+     "Expected Outcome: Support the adoption of market-ready innovative AI-powered cybersecurity solutions, including solutions developed in the framework of EU-supported research and innovation projects. Provide and deploy up to date AI-powered tools and services to organisations (in particular SMEs) to prepare, protect and respond to cybersecurity threats. Integrate AI technologies into cybersecurity processes to improve"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "15342COMPETITIVE_CALLen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "8"
+    ],
+    "identifier": [
+     "HORIZON-EIE-2021-INNOVSMES-01-01"
+    ],
+    "status": [
+     "31094501"
+    ],
+    "title": [
+     "European Partnership on Innovative SMEs"
+    ],
+    "callTitle": [
+     "European Partnership on Innovative SMEs/Eurostars: joint transnational call for proposals (CALL 12 of Eurostars-3)"
+    ],
+    "caName": [
+     "European Partnership on Innovative SMEs/Eurostars: joint transnational call for proposals (CALL 12 of Eurostars-3)"
+    ],
+    "ccm2Id": [
+     "44087099"
+    ],
+    "callccm2Id": [
+     "15342"
+    ],
+    "deadlineDate": [
+     "2027-03-04T14:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-12-17T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43108390"
+    ],
+    "budget": [
+     "86439583"
+    ],
+    "projectName": [
+     "European Partnership on Innovative SMEs"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099"
+    ],
+    "language": [
+     "en"
+    ],
+    "beneficiaryAdministration": [
+     "CALL 12 OF EUROSTARS-3 FROM 17 December 2026 TO 04 March 2027 14:00 (Brussels time) Eurostars is part of the European Partnership on Innovative SMEs. The partnership is co-funded by the European Union through Horizon Europe. Eurostars is a funding instrument that supports innovative SMEs and project partners (large companies, universities, research organisations and other types of organisations) by funding internatio"
+    ],
+    "description": [],
+    "furtherInformation": [],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "15545COMPETITIVE_CALLen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/46357639",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "8"
+    ],
+    "identifier": [
+     "CERV-2024-CITIZENS-VALUES"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Call for proposals for civil society organisations active on protecting and promoting Union values: call to intermediaries (giving financial support to third parties)"
+    ],
+    "callTitle": [
+     "Social Power - Convocatoria 2"
+    ],
+    "caName": [
+     "Social Power - Convocatoria 2"
+    ],
+    "ccm2Id": [
+     "46357639"
+    ],
+    "callccm2Id": [
+     "15545"
+    ],
+    "deadlineDate": [
+     "2026-11-02T17:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-09-01T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43251589"
+    ],
+    "budget": [
+     "1036666.6"
+    ],
+    "projectName": [
+     "Social Power: CSOs in joint action for EU rights and values"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/46357639"
+    ],
+    "language": [
+     "en"
+    ],
+    "beneficiaryAdministration": [
+     "Civil society organisations based in Spain are invited to submit proposals under the Social Power project. This call supports initiatives that address three thematic rights agendas: decent employment in a fair productive system, gender justice and diversity and social protection and housing, particularly in contexts of inequality or discrimination. The three thematic rights provide a concrete operational framework to"
+    ],
+    "description": [],
+    "furtherInformation": [],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "15921COMPETITIVE_CALLen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/46357639",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "8"
+    ],
+    "identifier": [
+     "CERV-2024-CITIZENS-VALUES"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Call for proposals for civil society organisations active on protecting and promoting Union values: call to intermediaries (giving financial support to third parties)"
+    ],
+    "callTitle": [
+     "Együttható (Civil-Business) "
+    ],
+    "caName": [
+     "Együttható (Civil-Business) "
+    ],
+    "ccm2Id": [
+     "46357639"
+    ],
+    "callccm2Id": [
+     "15921"
+    ],
+    "deadlineDate": [
+     "2026-11-10T12:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2026-09-16T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43251589"
+    ],
+    "budget": [
+     "84000"
+    ],
+    "projectName": [
+     "Communities for Local Democracy"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/46357639"
+    ],
+    "language": [
+     "en"
+    ],
+    "beneficiaryAdministration": [
+     "Grants, knowledge sharing, networking – Aspektus+ is a complex four-year capacity building programme for rural NGOs in Hungary. The sub-program “Együttható” is for formal, independent, non-profit civil society organizations, established and operating in the 4 core regions of Aspect Group (South Trans-Danubia, South Plains, North Plains, North Hungary). The aim of this program is to motivate CSOs to cooperate with the"
+    ],
+    "description": [],
+    "furtherInformation": [
+     "palyazat.aspektus.hu"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "187670PROSPECTSEN",
+   "url": "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187670",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "2"
+    ],
+    "identifier": [
+     "EuropeAid/187670/DD/ACT/Multi"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Cross-border Programme North Macedonia - Albania under the Instrument of Pre-accession Assistance (IPA III) allocations for 2024"
+    ],
+    "callIdentifier": [
+     "187670"
+    ],
+    "deadlineDate": [
+     "2027-01-15T11:00:31.000+0000"
+    ],
+    "startDate": [
+     "2026-10-07T10:00:56.000+0000"
+    ],
+    "frameworkProgramme": [
+     "111111"
+    ],
+    "contractType": [
+     "42893160"
+    ],
+    "currency": [
+     "EUR"
+    ],
+    "budget": [
+     "3430000"
+    ],
+    "geographicalZones": [
+     "31085472"
+    ],
+    "publicationDocuments": [
+     "[{\"nameDoc\": \"Guidelines for applicants\", \"typeDoc\": \"docx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2026-10-07 12:00:38.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2228691&lang=EN\"}, {\"nameDoc\": \"Annex B - Budget\", \"typeDoc\": \"xlsx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2026-10-07 12:00:31.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2213461&lang=EN\"}, {\"nameDoc\": \"Annex C - Logical framework\", \"typeDoc\": \"docx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2026-10-07 12:00:49.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2213464&lang=EN\"}]"
+    ],
+    "url": [
+     "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187670"
+    ],
+    "language": [
+     "en"
+    ],
+    "beneficiaryAdministration": [],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "167264PROSPECTSEN",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/167264EN",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "2"
+    ],
+    "identifier": [
+     "EuropeAid/167264/DD/ACT/Multi"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Strengthening the Institutional Capacity of the National Statistics System of the Republic of Belarus"
+    ],
+    "caName": [
+     "true"
+    ],
+    "callIdentifier": [
+     "167264"
+    ],
+    "startDate": [
+     "2019-11-19T16:00:30.000+0000"
+    ],
+    "frameworkProgramme": [
+     "111111"
+    ],
+    "contractType": [
+     "42958121"
+    ],
+    "currency": [
+     "EUR"
+    ],
+    "budget": [
+     "1300000"
+    ],
+    "geographicalZones": [
+     "31085118"
+    ],
+    "publicationDocuments": [
+     "[{\"nameDoc\": \"letter to NCP\", \"typeDoc\": \"pdf\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2019-11-19 17:00:23.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=976669&lang=EN\"}, {\"nameDoc\": \"Annex C9\", \"typeDoc\": \"docx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2019-11-19 17:00:47.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=976667&lang=EN\"}, {\"nameDoc\": \"Logframe\", \"typeDoc\": \"docx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2019-11-19 17:00:53.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=976659&lang=EN\"}]"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/167264EN"
+    ],
+    "language": [
+     "en"
+    ],
+    "beneficiaryAdministration": [
+     "National Statistical Committee of the Republic of Belarus (Belstat)"
+    ],
+    "DATASOURCE": [
+     "SEDIA_PRD_CENTRICITY"
+    ]
+   }
+  },
+  {
+   "reference": "45970225CEFProjectGrants1681776000000",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/CEF-E-2023-PCI-STUDIES.json",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "CEF-E-2023-PCI-STUDIES"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Electricity, Gas, Smart Grids and CO₂ networks - Studies"
+    ],
+    "ccm2Id": [
+     "45970225"
+    ],
+    "callccm2Id": [
+     "45970243"
+    ],
+    "callIdentifier": [
+     "CEF-E-2023-PCI"
+    ],
+    "deadlineDate": [
+     "2023-09-05T17:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "single-stage"
+    ],
+    "startDate": [
+     "2023-04-18T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "43251567"
+    ],
+    "typesOfAction": [
+     "CEF Project Grants"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/CEF-E-2023-PCI-STUDIES.json"
+    ],
+    "language": [
+     "en"
+    ],
+    "DATASOURCE": [
+     "SEDIA_PRD_CENTRICITY"
+    ]
+   }
+  },
+  {
+   "reference": "51188737TOPICSen",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EDF-EDIP-P-2026-2027-FNLC-SA-SEAP",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "1"
+    ],
+    "identifier": [
+     "EDF-EDIP-P-2026-2027-FNLC-SA-SEAP"
+    ],
+    "status": [
+     "31094501"
+    ],
+    "title": [
+     "Support for the functioning of SEAPs, including  for the purpose of establishing, managing and maintaining defence industrial readiness pools"
+    ],
+    "callTitle": [
+     "Continuous call for proposals for supporting actions under the Programme"
+    ],
+    "ccm2Id": [
+     "51188737"
+    ],
+    "callccm2Id": [
+     "51188748"
+    ],
+    "callIdentifier": [
+     "EDF-EDIP-P-2026-2027-FNLC-SA"
+    ],
+    "deadlineDate": [
+     "2026-11-12T00:00:00.000+0000",
+     "2027-02-16T00:00:00.000+0000",
+     "2027-09-28T00:00:00.000+0000",
+     "2028-01-27T00:00:00.000+0000",
+     "2028-05-30T00:00:00.000+0000"
+    ],
+    "deadlineModel": [
+     "multiple cut-off"
+    ],
+    "startDate": [
+     "2026-10-13T00:00:00.000+0000"
+    ],
+    "frameworkProgramme": [
+     "44181033"
+    ],
+    "typesOfAction": [
+     "EDF Lump Sum Grants"
+    ],
+    "budgetOverview": [
+     "{\"budgetYearsColumns\": [\"2027\", \"2026\"], \"budgetTopicActionMap\": {\"114366\": [{\"action\": \"EDF-EDIP-P-2026-2027-FNLC-SA-SEAP - EDF-LS EDF Lump Sum Grants\", \"expectedGrants\": 0, \"minContribution\": 0, \"maxContribution\": 0, \"budgetYearMap\": {\"2026\": \"4000000\", \"2027\": \"6000000\"}, \"plannedOpeningDate\": \"2026-10-13\", \"deadlineModel\": \"multiple cut-off\", \"deadlineDates\": [\"2026-11-12\", \"2027-02-16\", \"2027-09-28\", \"2028-01-27\", \"2028-05-30\"]}]}}"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EDF-EDIP-P-2026-2027-FNLC-SA-SEAP"
+    ],
+    "language": [
+     "en"
+    ],
+    "topicConditions": [
+     " 5 of the call document (available shortly) Proposal page limits and layout: described in Part B of the Application Form available in the Submission System. 2. Eligible countries described in section 6 of the call document . 3. Other eligibility conditions described in section 6 of the call document . 4. Financial and operational capacity and exclusion described in section 7 of the call document . 5a. Evaluation and award: Submission "
+    ],
+    "descriptionByte": [
+     "Expected Impact: Supported SEAPs are expected to rent office space, recruit personnel and start and uphold operations for a duration of at least one year. Objective: This call aims to provide support for functioning of established SEAPs, including for the purpose of establishing, managing and maintaining defence industrial readiness pools. Scope: Proposals shall aim to support established SEAPs in their initial opera"
+    ],
+    "DATASOURCE": [
+     "SEDIA"
+    ]
+   }
+  },
+  {
+   "reference": "170893PROSPECTSEN",
+   "url": "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/170893EN",
+   "language": "en",
+   "metadata": {
+    "type": [
+     "2"
+    ],
+    "identifier": [
+     "EuropeAid/170893/ID/ACT/RS"
+    ],
+    "status": [
+     "31094502"
+    ],
+    "title": [
+     "Support in strengthening of the capacities of relevant institutions within the substances of human origins (SoHO) system"
+    ],
+    "callIdentifier": [
+     "170893"
+    ],
+    "startDate": [
+     "2020-12-11T11:00:37.000+0000"
+    ],
+    "frameworkProgramme": [
+     "111111"
+    ],
+    "contractType": [
+     "42958121"
+    ],
+    "currency": [
+     "EUR"
+    ],
+    "budget": [
+     "1500000"
+    ],
+    "geographicalZones": [
+     "20001057"
+    ],
+    "publicationDocuments": [
+     "[{\"nameDoc\": \"Annex C9\", \"typeDoc\": \"docx\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2020-12-11 12:00:19.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=1178130&lang=EN\"}, {\"nameDoc\": \"Annex C1\", \"typeDoc\": \"pdf\", \"languageDoc\": \"EN\", \"finalPublicDocDate\": \"2020-12-11 12:00:26.0\", \"docUrl\": \"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=1178131&lang=EN\"}]"
+    ],
+    "url": [
+     "https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/170893EN"
+    ],
+    "language": [
+     "en"
+    ]
+   }
+  }
+ ]
+}

@@ -3035,7 +3035,7 @@ export const getSearchOpportunitiesUrl = (params?: SearchOpportunitiesParams,) =
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["state","installation","status","program","kind","source"];
+    const explodeParameters = ["state","installation","status","program","kind","source","agency","region","country","language","opportunityType","eligibility","funding"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {

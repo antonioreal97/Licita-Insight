@@ -1481,6 +1481,7 @@ export const ExportAccountDataResponse = zod.object({
   "emailImmediateCritical": zod.boolean(),
   "profileAlerts": zod.boolean(),
   "recommendationPersonalizationEnabled": zod.boolean(),
+  "showInternationalOpportunities": zod.boolean(),
   "recommendationPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "emailPreferencesUpdatedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date(),
@@ -1811,6 +1812,21 @@ export const ApplyAsaasBillingWebhookResponse = zod.object({
  * @summary Search culture, funding and innovation opportunities
  */
 export const searchOpportunitiesQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
+export const searchOpportunitiesQueryScopeDefault = `national`;
+export const searchOpportunitiesQueryAgencyItemMax = 200;
+
+export const searchOpportunitiesQueryAgencyMax = 20;
+
+export const searchOpportunitiesQueryCountryItemRegExp = new RegExp('^[A-Za-z]{2}$');
+export const searchOpportunitiesQueryCountryMax = 20;
+
+export const searchOpportunitiesQueryLanguageItemRegExp = new RegExp('^[A-Za-z]{2}$');
+export const searchOpportunitiesQueryLanguageMax = 20;
+
+export const searchOpportunitiesQueryOpportunityTypeItemMax = 200;
+
+export const searchOpportunitiesQueryOpportunityTypeMax = 20;
+
 export const searchOpportunitiesQueryPageDefault = 1;
 
 export const searchOpportunitiesQueryPageSizeDefault = 20;
@@ -1824,8 +1840,16 @@ export const SearchOpportunitiesQueryParams = zod.object({
   "installation": zod.array(zod.coerce.string()).optional(),
   "status": zod.array(zod.enum(['open', 'upcoming', 'closed', 'undated'])).optional(),
   "program": zod.array(zod.enum(['audiovisual', 'lpg', 'fac', 'fsa'])).optional(),
-  "kind": zod.array(zod.enum(['culture', 'funding', 'innovation', 'partnership'])).optional(),
-  "source": zod.array(zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic'])).optional(),
+  "kind": zod.array(zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement'])).optional(),
+  "source": zod.array(zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft'])).optional(),
+  "scope": zod.enum(['national', 'international', 'all']).default(searchOpportunitiesQueryScopeDefault).describe('Reach of the calls. Without it only national calls are returned.'),
+  "agency": zod.array(zod.coerce.string().min(1).max(searchOpportunitiesQueryAgencyItemMax)).max(searchOpportunitiesQueryAgencyMax).optional().describe('Funding body of an international call, exactly as returned in the facet.'),
+  "region": zod.array(zod.enum(['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global'])).optional(),
+  "country": zod.array(zod.coerce.string().regex(searchOpportunitiesQueryCountryItemRegExp)).max(searchOpportunitiesQueryCountryMax).optional().describe('ISO 3166-1 alpha-2 code of the country where the call is executed.'),
+  "language": zod.array(zod.coerce.string().regex(searchOpportunitiesQueryLanguageItemRegExp)).max(searchOpportunitiesQueryLanguageMax).optional().describe('BCP 47 language code of the notice at the source.'),
+  "opportunityType": zod.array(zod.coerce.string().min(1).max(searchOpportunitiesQueryOpportunityTypeItemMax)).max(searchOpportunitiesQueryOpportunityTypeMax).optional().describe('Type of the call at the source, exactly as returned in the facet.'),
+  "eligibility": zod.array(zod.enum(['yes', 'conditional', 'no', 'unknown'])).optional().describe('Whether an entity or person from Brazil can take part.'),
+  "funding": zod.array(zod.enum(['yes', 'conditional', 'no', 'unknown'])).optional().describe('Whether the funder pays a participant from Brazil.'),
   "deadlineFrom": zod.date().optional().describe('Inclusive lower date in America/Sao_Paulo.'),
   "deadlineTo": zod.date().optional().describe('Inclusive upper date in America/Sao_Paulo.'),
   "page": zod.coerce.number().int().min(1).default(searchOpportunitiesQueryPageDefault),
@@ -1837,6 +1861,10 @@ export const searchOpportunitiesResponseDataItemAmountMin = 0;
 
 export const searchOpportunitiesResponseDataItemProfileMatchOneScoreMin = 0;
 export const searchOpportunitiesResponseDataItemProfileMatchOneScoreMax = 100;
+
+export const searchOpportunitiesResponseDataItemInternationalOneAmountOriginalMin = 0;
+
+export const searchOpportunitiesResponseDataItemInternationalOneAmountBrlApproxMin = 0;
 
 export const searchOpportunitiesResponseFacetsOneStatusItemCountMin = 0;
 
@@ -1850,9 +1878,21 @@ export const searchOpportunitiesResponseFacetsOneKindItemCountMin = 0;
 
 export const searchOpportunitiesResponseFacetsOneSourceItemCountMin = 0;
 
+export const searchOpportunitiesResponseFacetsOneAgencyItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneRegionItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneLanguageItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneOpportunityTypeItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneEligibilityItemCountMin = 0;
+
+export const searchOpportunitiesResponseFacetsOneFundingItemCountMin = 0;
+
 export const searchOpportunitiesResponseMetaTookMsMin = 0;
 
-
+export const searchOpportunitiesResponseMetaScopeDefault = `national`;
 
 export const SearchOpportunitiesResponse = zod.object({
   "data": zod.array(zod.object({
@@ -1862,8 +1902,8 @@ export const SearchOpportunitiesResponse = zod.object({
   "organizationName": zod.string(),
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
-  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic']),
+  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(searchOpportunitiesResponseDataItemAmountMin).nullable(),
@@ -1885,7 +1925,49 @@ export const SearchOpportunitiesResponse = zod.object({
   "profileMatch": zod.union([zod.object({
   "score": zod.number().min(searchOpportunitiesResponseDataItemProfileMatchOneScoreMin).max(searchOpportunitiesResponseDataItemProfileMatchOneScoreMax),
   "reasons": zod.array(zod.string())
-}),zod.null()])
+}),zod.null()]),
+  "scope": zod.enum(['national', 'international']).describe('Reach of the call, not its nature. An international call still has a `kind`.'),
+  "international": zod.union([zod.object({
+  "agency": zod.string().nullable(),
+  "country": zod.string().nullable().describe('ISO 3166-1 alpha-2 of the country where the call is executed.'),
+  "countryName": zod.string().nullable(),
+  "region": zod.union([zod.enum(['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global']),zod.null()]),
+  "regionName": zod.string().nullable(),
+  "brazilProject": zod.boolean(),
+  "language": zod.string().nullable(),
+  "languageName": zod.string().nullable(),
+  "titleOriginal": zod.string().nullable(),
+  "titlePt": zod.string().nullable(),
+  "translationSource": zod.union([zod.literal('source'),zod.literal('model'),zod.literal(null)]).nullable(),
+  "amountOriginal": zod.number().min(searchOpportunitiesResponseDataItemInternationalOneAmountOriginalMin).nullable(),
+  "currency": zod.string().nullable().describe('ISO 4217 code of `amountOriginal`.'),
+  "amountBrlApprox": zod.number().min(searchOpportunitiesResponseDataItemInternationalOneAmountBrlApproxMin).nullable().describe('`amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.'),
+  "fxRate": zod.number().nullable(),
+  "fxDate": zod.coerce.date().nullable(),
+  "deadline": zod.object({
+  "at": zod.coerce.date().nullable().describe('Same instant as `registrationTo`.'),
+  "precision": zod.union([zod.literal('datetime'),zod.literal('date'),zod.literal(null)]).nullable().describe('With `date` only the day is known; an hour in `original` was not converted.'),
+  "timeZone": zod.string().nullable().describe('IANA zone of the wall clock the source published.'),
+  "original": zod.string().nullable().describe('The deadline as the source wrote it, in its own wall clock.')
+}),
+  "brazilEligibility": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "brazilFunding": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "eligibilityCheckedAt": zod.coerce.date().nullable(),
+  "details": zod.array(zod.object({
+  "label": zod.string(),
+  "value": zod.string()
+}))
+}),zod.null()]).describe('Set on international calls only.')
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -1924,6 +2006,36 @@ export const SearchOpportunitiesResponse = zod.object({
   "value": zod.string(),
   "label": zod.string(),
   "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneSourceItemCountMin)
+})),
+  "agency": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneAgencyItemCountMin)
+})),
+  "region": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneRegionItemCountMin)
+})),
+  "language": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneLanguageItemCountMin)
+})),
+  "opportunityType": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneOpportunityTypeItemCountMin)
+})),
+  "eligibility": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneEligibilityItemCountMin)
+})),
+  "funding": zod.array(zod.object({
+  "value": zod.string(),
+  "label": zod.string(),
+  "count": zod.number().int().min(searchOpportunitiesResponseFacetsOneFundingItemCountMin)
 }))
 }),zod.null()]),
   "meta": zod.object({
@@ -1938,7 +2050,9 @@ export const SearchOpportunitiesResponse = zod.object({
   "gaps": zod.array(zod.object({
   "uf": zod.string(),
   "name": zod.string()
-}))
+})),
+  "scope": zod.enum(['national', 'international', 'all']).default(searchOpportunitiesResponseMetaScopeDefault),
+  "internationalInProfile": zod.boolean().describe('The account preference. International calls enter profile matching only when on.')
 })
 })
 
@@ -1958,6 +2072,10 @@ export const getOpportunityByIdResponseAmountMin = 0;
 export const getOpportunityByIdResponseProfileMatchOneScoreMin = 0;
 export const getOpportunityByIdResponseProfileMatchOneScoreMax = 100;
 
+export const getOpportunityByIdResponseInternationalOneAmountOriginalMin = 0;
+
+export const getOpportunityByIdResponseInternationalOneAmountBrlApproxMin = 0;
+
 
 
 export const GetOpportunityByIdResponse = zod.object({
@@ -1967,8 +2085,8 @@ export const GetOpportunityByIdResponse = zod.object({
   "organizationName": zod.string(),
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
-  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic']),
+  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(getOpportunityByIdResponseAmountMin).nullable(),
@@ -1990,7 +2108,49 @@ export const GetOpportunityByIdResponse = zod.object({
   "profileMatch": zod.union([zod.object({
   "score": zod.number().min(getOpportunityByIdResponseProfileMatchOneScoreMin).max(getOpportunityByIdResponseProfileMatchOneScoreMax),
   "reasons": zod.array(zod.string())
-}),zod.null()])
+}),zod.null()]),
+  "scope": zod.enum(['national', 'international']).describe('Reach of the call, not its nature. An international call still has a `kind`.'),
+  "international": zod.union([zod.object({
+  "agency": zod.string().nullable(),
+  "country": zod.string().nullable().describe('ISO 3166-1 alpha-2 of the country where the call is executed.'),
+  "countryName": zod.string().nullable(),
+  "region": zod.union([zod.enum(['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global']),zod.null()]),
+  "regionName": zod.string().nullable(),
+  "brazilProject": zod.boolean(),
+  "language": zod.string().nullable(),
+  "languageName": zod.string().nullable(),
+  "titleOriginal": zod.string().nullable(),
+  "titlePt": zod.string().nullable(),
+  "translationSource": zod.union([zod.literal('source'),zod.literal('model'),zod.literal(null)]).nullable(),
+  "amountOriginal": zod.number().min(getOpportunityByIdResponseInternationalOneAmountOriginalMin).nullable(),
+  "currency": zod.string().nullable().describe('ISO 4217 code of `amountOriginal`.'),
+  "amountBrlApprox": zod.number().min(getOpportunityByIdResponseInternationalOneAmountBrlApproxMin).nullable().describe('`amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.'),
+  "fxRate": zod.number().nullable(),
+  "fxDate": zod.coerce.date().nullable(),
+  "deadline": zod.object({
+  "at": zod.coerce.date().nullable().describe('Same instant as `registrationTo`.'),
+  "precision": zod.union([zod.literal('datetime'),zod.literal('date'),zod.literal(null)]).nullable().describe('With `date` only the day is known; an hour in `original` was not converted.'),
+  "timeZone": zod.string().nullable().describe('IANA zone of the wall clock the source published.'),
+  "original": zod.string().nullable().describe('The deadline as the source wrote it, in its own wall clock.')
+}),
+  "brazilEligibility": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "brazilFunding": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "eligibilityCheckedAt": zod.coerce.date().nullable(),
+  "details": zod.array(zod.object({
+  "label": zod.string(),
+  "value": zod.string()
+}))
+}),zod.null()]).describe('Set on international calls only.')
 })
 
 
@@ -2610,6 +2770,7 @@ export const UpdateNotificationPreferencesResponse = zod.object({
  */
 export const GetRecommendationPreferencesResponse = zod.object({
   "personalizationEnabled": zod.boolean(),
+  "showInternationalOpportunities": zod.boolean().describe('Off by default. International calls enter recommendations and profile matching only when on.'),
   "updatedAt": zod.coerce.date().nullable()
 })
 
@@ -2621,11 +2782,13 @@ export const updateRecommendationPreferencesBodyDeleteHistoryDefault = true;
 
 export const UpdateRecommendationPreferencesBody = zod.object({
   "personalizationEnabled": zod.boolean(),
-  "deleteHistory": zod.boolean().default(updateRecommendationPreferencesBodyDeleteHistoryDefault).describe('Applies when disabling; defaults to true so turning opt-in off erases the event history.')
+  "deleteHistory": zod.boolean().default(updateRecommendationPreferencesBodyDeleteHistoryDefault).describe('Applies when disabling; defaults to true so turning opt-in off erases the event history.'),
+  "showInternationalOpportunities": zod.boolean().optional().describe('Kept as it is when omitted.')
 })
 
 export const UpdateRecommendationPreferencesResponse = zod.object({
   "personalizationEnabled": zod.boolean(),
+  "showInternationalOpportunities": zod.boolean().describe('Off by default. International calls enter recommendations and profile matching only when on.'),
   "updatedAt": zod.coerce.date().nullable()
 })
 

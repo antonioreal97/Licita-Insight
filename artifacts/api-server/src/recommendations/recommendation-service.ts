@@ -1017,13 +1017,18 @@ export async function getRecommendationPreferences(userId: string) {
   const [user] = await db
     .select({
       enabled: usersTable.recommendationPersonalizationEnabled,
+      showInternationalOpportunities: usersTable.showInternationalOpportunities,
       updatedAt: usersTable.recommendationPreferencesUpdatedAt,
     })
     .from(usersTable)
     .where(eq(usersTable.id, userId))
     .limit(1);
   if (!user) throw new NotFoundError("Account was not found");
-  return { personalizationEnabled: user.enabled, updatedAt: user.updatedAt };
+  return {
+    personalizationEnabled: user.enabled,
+    showInternationalOpportunities: user.showInternationalOpportunities,
+    updatedAt: user.updatedAt,
+  };
 }
 
 export async function updateRecommendationPreferences(
@@ -1031,23 +1036,36 @@ export async function updateRecommendationPreferences(
   enabled: boolean,
   deleteHistory: boolean,
   now = new Date(),
+  /** Left as it is when the request does not send it. */
+  showInternationalOpportunities?: boolean,
 ) {
-  await db.transaction(async (tx) => {
-    await tx
+  const showInternational = await db.transaction(async (tx) => {
+    const [saved] = await tx
       .update(usersTable)
       .set({
         recommendationPersonalizationEnabled: enabled,
+        ...(showInternationalOpportunities === undefined
+          ? {}
+          : { showInternationalOpportunities }),
         recommendationPreferencesUpdatedAt: now,
         updatedAt: now,
       })
-      .where(eq(usersTable.id, userId));
+      .where(eq(usersTable.id, userId))
+      .returning({
+        showInternationalOpportunities: usersTable.showInternationalOpportunities,
+      });
     if (!enabled && deleteHistory)
       await tx
         .delete(recommendationEventsTable)
         .where(eq(recommendationEventsTable.userId, userId));
+    return saved?.showInternationalOpportunities ?? false;
   });
   scheduleRecommendationRebuild(userId, 0);
-  return { personalizationEnabled: enabled, updatedAt: now };
+  return {
+    personalizationEnabled: enabled,
+    showInternationalOpportunities: showInternational,
+    updatedAt: now,
+  };
 }
 
 export async function deleteRecommendationHistory(

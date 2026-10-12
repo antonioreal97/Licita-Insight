@@ -1,7 +1,7 @@
 import { FormEvent } from 'react';
 import { Link } from 'wouter';
 import { ExternalLink, SearchX } from 'lucide-react';
-import { isApiError, type OpportunityKind, type OpportunitySource, type OpportunityStatus, type OpportunitySummary } from '@/api';
+import { isApiError, type OpportunityKind, type OpportunityScope, type OpportunitySource, type OpportunityStatus, type OpportunitySummary } from '@/api';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { EmptyState } from '@/components/common/empty-state';
@@ -12,8 +12,13 @@ import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityFilters } from './components/opportunity-filters';
 import { statePatch, stateOptions } from './lib/opportunity-filters';
+import { scopePatch } from './lib/international';
+import { InternationalFilters, InternationalRow, OfficialNoticeBanner, ScopeTabs } from './components/international';
 import {
+  INTERNATIONAL_KINDS,
+  INTERNATIONAL_SOURCES,
   IndividualListingBadge,
+  NATIONAL_KINDS,
   OpportunityStatusBadge,
   opportunityAreaLabels,
   opportunityKindLabels,
@@ -53,8 +58,7 @@ const UFS = [
 ];
 
 const STATUSES = Object.keys(opportunityStatusLabels) as OpportunityStatus[];
-const KINDS = Object.keys(opportunityKindLabels) as OpportunityKind[];
-const SOURCES = Object.keys(opportunitySourceLabels) as OpportunitySource[];
+const NATIONAL_SOURCES = (Object.keys(opportunitySourceLabels) as OpportunitySource[]).filter((source) => !INTERNATIONAL_SOURCES.includes(source));
 
 const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -124,7 +128,7 @@ export default function OpportunitiesPage() {
     <>
       <PageTitle
         title="Hub de oportunidades"
-        description="Chamadas de cultura de todas as áreas, fomento e inovação publicadas por fontes oficiais. Licitações do PNCP continuam em Explorar editais."
+        description="Chamadas de cultura, fomento e inovação de fontes oficiais, no Brasil e em organismos internacionais. Licitações do PNCP continuam em Explorar editais."
       />
       <OpportunityAccessGate>
         <OpportunitySearch />
@@ -154,9 +158,15 @@ function OpportunitySearch() {
   const setStatus = (value: string) => update({ status: value ? [value as OpportunityStatus] : undefined });
   const setKind = (value: string) => update({ kind: value ? [value as OpportunityKind] : undefined });
   const setSource = (value: string) => update({ source: value ? [value as OpportunitySource] : undefined });
+  const scope: OpportunityScope = params.scope ?? 'national';
+  const international = scope === 'international';
+  const kinds = international ? INTERNATIONAL_KINDS : NATIONAL_KINDS;
+  const sources = international ? INTERNATIONAL_SOURCES : NATIONAL_SOURCES;
 
   return (
     <>
+      <ScopeTabs scope={scope} onChange={(next) => update(scopePatch(next))} />
+      {international && <OfficialNoticeBanner className="mb-4" />}
       <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Buscar chamadas</span>
@@ -178,7 +188,7 @@ function OpportunitySearch() {
             onChange={(event) => setKind(event.target.value)}
           >
             <option value="">Todos os tipos</option>
-            {KINDS.map((kind) => (
+            {kinds.map((kind) => (
               <option key={kind} value={kind}>
                 {opportunityKindLabels[kind]}
               </option>
@@ -194,29 +204,31 @@ function OpportunitySearch() {
             onChange={(event) => setSource(event.target.value)}
           >
             <option value="">Todas as fontes</option>
-            {SOURCES.map((source) => (
+            {sources.map((source) => (
               <option key={source} value={source}>
                 {opportunitySourceLabels[source]}
               </option>
             ))}
           </select>
         </label>
-        <label>
-          <span className="sr-only">Estado</span>
-          <select
-            data-testid="select-opportunity-state"
-            className={selectClass}
-            value={params.state?.[0] ?? ''}
-            onChange={(event) => setState(event.target.value)}
-          >
-            <option value="">Todos os estados</option>
-            {stateOptions(UFS, facets).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!international && (
+          <label>
+            <span className="sr-only">Estado</span>
+            <select
+              data-testid="select-opportunity-state"
+              className={selectClass}
+              value={params.state?.[0] ?? ''}
+              onChange={(event) => setState(event.target.value)}
+            >
+              <option value="">Todos os estados</option>
+              {stateOptions(UFS, facets).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           <span className="sr-only">Situação das inscrições</span>
           <select
@@ -235,7 +247,21 @@ function OpportunitySearch() {
         </label>
       </form>
 
-      <OpportunityFilters params={params} facets={facets} hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0} onChange={update} />
+      {international ? (
+        <InternationalFilters params={params} facets={facets} onChange={update} />
+      ) : (
+        <OpportunityFilters params={params} facets={facets} hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0} onChange={update} />
+      )}
+
+      {international && response && !response.meta.internationalInProfile && (
+        <p data-testid="notice-international-profile" className="mb-4 type-meta text-muted-foreground">
+          Oportunidades internacionais não entram nas suas recomendações nem na combinação com o perfil.{' '}
+          <Link href="/settings#recomendacoes" className="font-semibold text-primary hover:underline">
+            Ativar em Configurações
+          </Link>
+          .
+        </p>
+      )}
 
       {response && response.meta.installationIssues.length > 0 && (
         <details data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
@@ -274,7 +300,9 @@ function OpportunitySearch() {
         )
       ) : response && response.data.length === 0 ? (
         <EmptyState icon={SearchX} title="Nenhuma chamada encontrada" testId="state-empty">
-          Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.
+          {international
+            ? 'Não há oportunidades internacionais com esses filtros. Experimente “Qualquer elegibilidade”; a coleta internacional também pode estar desligada.'
+            : 'Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.'}
         </EmptyState>
       ) : (
         <section aria-label="Oportunidades" data-testid="list-opportunities">
@@ -283,9 +311,13 @@ function OpportunitySearch() {
             {response?.meta.indexUpdatedAt ? ` · Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}` : ''}
           </p>
           <ul className="overflow-hidden rounded-xl border border-border bg-card">
-            {response?.data.map((opportunity) => (
-              <OpportunityRow key={opportunity.id} opportunity={opportunity} />
-            ))}
+            {response?.data.map((opportunity) =>
+              opportunity.international ? (
+                <InternationalRow key={opportunity.id} opportunity={opportunity} />
+              ) : (
+                <OpportunityRow key={opportunity.id} opportunity={opportunity} />
+              ),
+            )}
           </ul>
           {pagination && <SearchPagination pagination={pagination} page={params.page ?? 1} onPageChange={(page) => update({ page })} />}
         </section>

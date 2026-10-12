@@ -1,5 +1,7 @@
 import {
   opportunityAdapter,
+  type BrazilEligibility,
+  type InternationalRegion,
   type OpportunityArea,
   type OpportunityProgram,
   type OpportunityKind,
@@ -12,8 +14,12 @@ export const OPPORTUNITY_PAGE_SIZE = 20;
 
 const STATUSES: OpportunityStatus[] = ['open', 'upcoming', 'closed', 'undated'];
 const PROGRAMS: OpportunityProgram[] = ['audiovisual', 'lpg', 'fac', 'fsa'];
-const KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership'];
-const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic'];
+const KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership', 'procurement'];
+const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft'];
+export const INTERNATIONAL_REGIONS: InternationalRegion[] = ['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global'];
+export const BRAZIL_ELIGIBILITIES: BrazilEligibility[] = ['yes', 'conditional', 'no', 'unknown'];
+/** What the international tab lists when the URL says nothing about eligibility. */
+export const DEFAULT_ELIGIBILITY: BrazilEligibility[] = ['yes', 'conditional'];
 export const OPPORTUNITY_AREAS: OpportunityArea[] = [
   'audiovisual',
   'musica',
@@ -77,6 +83,12 @@ const names = (values: string[]): string[] | undefined => {
 
 const date = (value: string | null): string | undefined => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined);
 
+/** Two-letter codes (`country`, `language`), in the case the API stores. */
+const codes = (values: string[], normalize: (code: string) => string): string[] | undefined => {
+  const picked = [...new Set(values.filter((value) => /^[A-Za-z]{2}$/.test(value)).map(normalize))].slice(0, 20);
+  return picked.length > 0 ? picked : undefined;
+};
+
 export function opportunityParamsFromUrl(search: string): OpportunitySearchParams {
   const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const page = Number(params.get('page'));
@@ -98,6 +110,14 @@ export function opportunityParamsFromUrl(search: string): OpportunitySearchParam
     deadlineFrom: date(params.get('deadlineFrom')),
     deadlineTo: date(params.get('deadlineTo')),
     includeIndividual: params.get('individual') === '1' ? true : undefined,
+    scope: params.get('scope') === 'international' ? 'international' : undefined,
+    agency: names(list(params, 'agency')),
+    region: keep(list(params, 'region'), INTERNATIONAL_REGIONS),
+    country: codes(list(params, 'country'), (code) => code.toUpperCase()),
+    language: codes(list(params, 'language'), (code) => code.toLowerCase()),
+    opportunityType: names(list(params, 'opportunityType')),
+    eligibility: list(params, 'eligibility').includes('all') ? 'all' : keep(list(params, 'eligibility'), BRAZIL_ELIGIBILITIES),
+    funding: keep(list(params, 'funding'), BRAZIL_ELIGIBILITIES),
     page: Number.isInteger(page) && page > 1 ? page : undefined,
   };
 }
@@ -117,13 +137,55 @@ export function opportunityParamsToUrl(params: OpportunitySearchParams): string 
   if (params.deadlineFrom) search.set('deadlineFrom', params.deadlineFrom);
   if (params.deadlineTo) search.set('deadlineTo', params.deadlineTo);
   if (params.includeIndividual) search.set('individual', '1');
+  if (params.scope === 'international') search.set('scope', 'international');
+  params.agency?.forEach((agency) => search.append('agency', agency));
+  params.region?.forEach((region) => search.append('region', region));
+  params.country?.forEach((country) => search.append('country', country));
+  params.language?.forEach((language) => search.append('language', language));
+  params.opportunityType?.forEach((type) => search.append('opportunityType', type));
+  if (params.eligibility === 'all') search.set('eligibility', 'all');
+  else params.eligibility?.forEach((eligibility) => search.append('eligibility', eligibility));
+  params.funding?.forEach((funding) => search.append('funding', funding));
   if (params.page && params.page > 1) search.set('page', String(params.page));
   const text = search.toString();
   return text ? `?${text}` : '';
 }
 
+/**
+ * What goes to the API. The international tab opens on calls a Brazilian can go after ("yes" and
+ * "conditional"); "all" lifts that and is a URL-only value. Outside that tab the international filters are
+ * dropped, so a leftover in the URL never empties the national list.
+ */
+export function opportunityApiParams(params: OpportunitySearchParams): OpportunitySearchParams {
+  if (params.scope !== 'international') {
+    return {
+      ...params,
+      scope: undefined,
+      agency: undefined,
+      region: undefined,
+      country: undefined,
+      language: undefined,
+      opportunityType: undefined,
+      eligibility: undefined,
+      funding: undefined,
+    };
+  }
+  const eligibility = params.eligibility === 'all' ? undefined : (params.eligibility ?? DEFAULT_ELIGIBILITY);
+  return {
+    ...params,
+    eligibility,
+    // Filters of the national list: UF, municipality, Mapas installation, cultural area, individual listings.
+    state: undefined,
+    city: undefined,
+    installation: undefined,
+    area: undefined,
+    program: undefined,
+    includeIndividual: undefined,
+  };
+}
+
 export const opportunityService = {
   search: (params: OpportunitySearchParams, signal?: AbortSignal) =>
-    opportunityAdapter.searchOpportunities({ ...params, pageSize: OPPORTUNITY_PAGE_SIZE, facets: true }, signal),
+    opportunityAdapter.searchOpportunities({ ...opportunityApiParams(params), pageSize: OPPORTUNITY_PAGE_SIZE, facets: true }, signal),
   get: (id: string, signal?: AbortSignal) => opportunityAdapter.getOpportunity(id, signal),
 };

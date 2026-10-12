@@ -5,9 +5,14 @@ import {
   culturalOpportunitiesTable,
   db,
   ingestRunsTable,
+  usersTable,
+  type BrazilEligibility,
+  type OpportunityDeadlinePrecision,
   type OpportunityDocument,
   type OpportunityKind,
+  type OpportunityScope,
   type OpportunitySource,
+  type OpportunityTranslationSource,
 } from "@workspace/db";
 import {
   installationById,
@@ -28,6 +33,13 @@ import {
   type OpportunityArea,
 } from "../ingest/opportunity-areas";
 import { storedOwnerReview } from "../ingest/opportunity-owner";
+import {
+  INTERNATIONAL_REGIONS,
+  internationalLanguageLabels,
+  internationalRegionLabels,
+  type InternationalRegion,
+} from "../ingest/international-countries";
+import type { InternationalDetail } from "../ingest/international-draft";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
 import {
@@ -37,12 +49,14 @@ import {
 import { scoreOpportunityForProfile } from "../recommendations/recommendation-service";
 
 const INGEST_SOURCE = "mapas-culturais";
+const INTERNATIONAL_INGEST_SOURCE = "international";
 
 export const opportunityKindLabels: Record<OpportunityKind, string> = {
   culture: "Cultura",
   funding: "Fomento",
   innovation: "Inovação",
   partnership: "Parceria",
+  procurement: "Licitação internacional",
 };
 
 export const opportunitySourceLabels: Record<OpportunitySource, string> = {
@@ -54,6 +68,22 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   funarte: "Funarte",
   minc: "Ministério da Cultura",
   salic: "Lei Rouanet (Salic)",
+  worldbank: "Banco Mundial",
+  eu_ft: "União Europeia (Funding & Tenders)",
+};
+
+export const brazilEligibilityLabels: Record<BrazilEligibility, string> = {
+  yes: "Aberto a brasileiros",
+  conditional: "Condicional",
+  no: "Fechado a brasileiros",
+  unknown: "Elegibilidade a confirmar",
+};
+
+export const brazilFundingLabels: Record<BrazilEligibility, string> = {
+  yes: "Financia participante do Brasil",
+  conditional: "Financiamento condicional",
+  no: "Sem financiamento direto",
+  unknown: "Financiamento a confirmar",
 };
 
 export const opportunityStatusLabels: Record<OpportunityStatus, string> = {
@@ -104,6 +134,53 @@ export type OpportunitySummary = {
   sourceUrl: string | null;
   updatedAt: string;
   profileMatch: { score: number; reasons: string[] } | null;
+  scope: OpportunityScope;
+  /** Set on international calls only; `null` on every national one. */
+  international: InternationalOpportunity | null;
+};
+
+export type EligibilityAnswer = {
+  status: BrazilEligibility;
+  label: string;
+  /** Readable sentence of the rule that decided. Indicative: the official notice prevails. */
+  reason: string | null;
+};
+
+export type InternationalOpportunity = {
+  /** Body that funds or runs the call. */
+  agency: string | null;
+  country: string | null;
+  countryName: string | null;
+  region: InternationalRegion | null;
+  regionName: string | null;
+  /** True when the project is executed in Brazil. */
+  brazilProject: boolean;
+  language: string | null;
+  languageName: string | null;
+  titleOriginal: string | null;
+  titlePt: string | null;
+  /** `source`: the source published it in Portuguese. `model`: local automatic translation. */
+  translationSource: OpportunityTranslationSource | null;
+  amountOriginal: number | null;
+  currency: string | null;
+  /** `amountOriginal` at the PTAX selling rate of `fxDate`. An approximation, never a quote of the notice. */
+  amountBrlApprox: number | null;
+  fxRate: number | null;
+  fxDate: string | null;
+  deadline: {
+    /** Same instant as `registrationTo`. */
+    at: string | null;
+    /** `date`: only the day is known; the hour, if any, is in `original` and was not converted. */
+    precision: OpportunityDeadlinePrecision | null;
+    timeZone: string | null;
+    original: string | null;
+  };
+  /** Can an entity or person from Brazil take part. */
+  brazilEligibility: (EligibilityAnswer & { rule: string | null }) | null;
+  /** Does the funder pay a participant from Brazil. `null` where the question does not apply. */
+  brazilFunding: EligibilityAnswer | null;
+  eligibilityCheckedAt: string | null;
+  details: InternationalDetail[];
 };
 
 export type FacetBucket = { value: string; label: string; count: number };
@@ -129,6 +206,13 @@ export type OpportunitySearchResponse = {
     area: FacetBucket[];
     city: CityFacetBucket[];
     organization: FacetBucket[];
+    /** The next six are empty unless the search includes international calls. */
+    agency: FacetBucket[];
+    region: FacetBucket[];
+    language: FacetBucket[];
+    opportunityType: FacetBucket[];
+    eligibility: FacetBucket[];
+    funding: FacetBucket[];
   } | null;
   meta: {
     query: string | null;
@@ -142,6 +226,9 @@ export type OpportunitySearchResponse = {
     gaps: { uf: string; name: string }[];
     /** Individual listings the same filters would add with `includeIndividual=true`. */
     hiddenIndividualListings: number;
+    scope: OpportunityCriteria["scope"];
+    /** The account preference: international calls enter profile matching only when it is on. */
+    internationalInProfile: boolean;
   };
 };
 
@@ -178,7 +265,13 @@ type FacetName =
   | "source"
   | "area"
   | "city"
-  | "organization";
+  | "organization"
+  | "agency"
+  | "region"
+  | "language"
+  | "opportunityType"
+  | "eligibility"
+  | "funding";
 
 const ORGANIZATION_FACET_LIMIT = 100;
 
@@ -200,6 +293,33 @@ const whereFor = (
   for (const token of queryTokens(criteria.query)) {
     filters.push(like(culturalOpportunitiesTable.searchText, token));
   }
+  if (criteria.scope !== "all")
+    filters.push(eq(culturalOpportunitiesTable.scope, criteria.scope));
+  if (skip !== "agency" && criteria.agency.length > 0)
+    filters.push(inArray(culturalOpportunitiesTable.agency, criteria.agency));
+  if (skip !== "region" && criteria.region.length > 0)
+    filters.push(inArray(culturalOpportunitiesTable.region, criteria.region));
+  if (criteria.country.length > 0)
+    filters.push(inArray(culturalOpportunitiesTable.country, criteria.country));
+  if (skip !== "language" && criteria.language.length > 0)
+    filters.push(
+      inArray(culturalOpportunitiesTable.language, criteria.language),
+    );
+  if (skip !== "opportunityType" && criteria.opportunityType.length > 0)
+    filters.push(
+      inArray(
+        culturalOpportunitiesTable.opportunityType,
+        criteria.opportunityType,
+      ),
+    );
+  if (skip !== "eligibility" && criteria.eligibility.length > 0)
+    filters.push(
+      inArray(culturalOpportunitiesTable.brazilEligibility, criteria.eligibility),
+    );
+  if (skip !== "funding" && criteria.funding.length > 0)
+    filters.push(
+      inArray(culturalOpportunitiesTable.brazilFunding, criteria.funding),
+    );
   if (skip !== "state" && criteria.state.length > 0) {
     filters.push(
       sql`upper(${culturalOpportunitiesTable.state}) in (${sql.join(
@@ -265,17 +385,94 @@ const whereFor = (
 
 type OpportunityProfile = typeof companyProfilesTable.$inferSelect;
 
+const numberOrNull = (value: string | null): number | null =>
+  value === null ? null : Number(value);
+
+const detailsOf = (rawPayload: unknown): InternationalDetail[] => {
+  const details =
+    rawPayload !== null && typeof rawPayload === "object"
+      ? (rawPayload as { details?: unknown }).details
+      : null;
+  if (!Array.isArray(details)) return [];
+  return details.flatMap((detail) => {
+    if (detail === null || typeof detail !== "object") return [];
+    const { label, value } = detail as { label?: unknown; value?: unknown };
+    return typeof label === "string" && typeof value === "string"
+      ? [{ label, value }]
+      : [];
+  });
+};
+
+const toInternational = (row: OpportunityRow): InternationalOpportunity => {
+  const region = INTERNATIONAL_REGIONS.find((value) => value === row.region);
+  return {
+    agency: row.agency,
+    country: row.country,
+    countryName: row.countryName,
+    region: region ?? null,
+    regionName: region ? internationalRegionLabels[region] : null,
+    brazilProject: row.country === "BR",
+    language: row.language,
+    languageName: row.language
+      ? (internationalLanguageLabels[row.language] ?? row.language)
+      : null,
+    titleOriginal: row.titleOriginal,
+    titlePt: row.titlePt,
+    translationSource: row.translationSource,
+    amountOriginal: numberOrNull(row.amountOriginal),
+    currency: row.currency,
+    amountBrlApprox: numberOrNull(row.amountBrlApprox),
+    fxRate: numberOrNull(row.fxRate),
+    fxDate: row.fxDate,
+    deadline: {
+      at: iso(row.registrationTo),
+      precision: row.deadlinePrecision,
+      timeZone: row.deadlineTimeZone,
+      original: row.deadlineOriginal,
+    },
+    brazilEligibility: row.brazilEligibility
+      ? {
+          status: row.brazilEligibility,
+          label: brazilEligibilityLabels[row.brazilEligibility],
+          reason: row.brazilEligibilityReason,
+          rule: row.brazilEligibilityRule,
+        }
+      : null,
+    brazilFunding: row.brazilFunding
+      ? {
+          status: row.brazilFunding,
+          label: brazilFundingLabels[row.brazilFunding],
+          reason: row.brazilFundingReason,
+        }
+      : null,
+    eligibilityCheckedAt: iso(row.eligibilityCheckedAt),
+    details: detailsOf(row.rawPayload),
+  };
+};
+
+type ProfileContext = {
+  profile: OpportunityProfile | null;
+  /** The account opted in to international calls in recommendations and profile matching. */
+  international: boolean;
+};
+
+const NO_PROFILE: ProfileContext = { profile: null, international: false };
+
 const toSummary = (
   row: OpportunityRow,
-  profile: OpportunityProfile | null = null,
+  context: ProfileContext = NO_PROFILE,
 ): OpportunitySummary => {
   const installation = installationById(row.installationId);
+  const international = row.scope === "international";
+  const profile =
+    international && !context.international ? null : context.profile;
   const profileMatch = profile
     ? scoreOpportunityForProfile(
         {
           searchText: row.searchText,
           state: row.state,
-          amount: row.amount === null ? null : Number(row.amount),
+          // An international value is compared in reais, at the PTAX rate stored with the call.
+          amount: numberOrNull(row.amountBrlApprox ?? row.amount),
           audience: row.audience,
         },
         profile,
@@ -314,6 +511,30 @@ const toSummary = (
     sourceUrl: row.sourceUrl,
     updatedAt: row.updatedAt.toISOString(),
     profileMatch,
+    scope: row.scope,
+    international: international ? toInternational(row) : null,
+  };
+};
+
+const profileContextFor = async (
+  userId: string | undefined,
+): Promise<ProfileContext> => {
+  if (!userId) return NO_PROFILE;
+  const [[profile], [user]] = await Promise.all([
+    db
+      .select()
+      .from(companyProfilesTable)
+      .where(eq(companyProfilesTable.userId, userId))
+      .limit(1),
+    db
+      .select({ international: usersTable.showInternationalOpportunities })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1),
+  ]);
+  return {
+    profile: profile ?? null,
+    international: user?.international === true,
   };
 };
 
@@ -446,6 +667,46 @@ const coverageMeta = (coverage: InstallationCoverage[]) => ({
     .map((row) => ({ uf: row.uf, name: row.name })),
 });
 
+/** Sources of the last international collection that did not answer in full. */
+const internationalIssues = async (): Promise<
+  OpportunitySearchResponse["meta"]["installationIssues"]
+> => {
+  const [run] = await db
+    .select({ details: ingestRunsTable.details })
+    .from(ingestRunsTable)
+    .where(sql`${ingestRunsTable.source} = ${INTERNATIONAL_INGEST_SOURCE}`)
+    .orderBy(desc(ingestRunsTable.startedAt))
+    .limit(1);
+  const sources =
+    run?.details !== null && typeof run?.details === "object"
+      ? (run.details as { sources?: unknown }).sources
+      : null;
+  if (!Array.isArray(sources)) return [];
+  return sources.flatMap((entry) => {
+    if (entry === null || typeof entry !== "object") return [];
+    const { source, outcome, message } = entry as Record<string, unknown>;
+    if (typeof source !== "string" || outcome === "ok") return [];
+    return [
+      {
+        installationId: source,
+        name:
+          opportunitySourceLabels[source as OpportunitySource] ?? source,
+        message:
+          typeof message === "string" && message
+            ? message
+            : "A fonte não respondeu.",
+      },
+    ];
+  });
+};
+
+const regionBuckets = async (where: SQL | undefined): Promise<FacetBucket[]> =>
+  labeledBuckets(
+    culturalOpportunitiesTable.region,
+    internationalRegionLabels,
+    where,
+  );
+
 export async function searchOpportunities(
   criteria: OpportunityCriteria,
   userId?: string,
@@ -474,18 +735,23 @@ export async function searchOpportunities(
     .select({
       indexUpdatedAt: sql<Date | null>`max(${culturalOpportunitiesTable.fetchedAt})`,
     })
-    .from(culturalOpportunitiesTable);
-  const coverage = await latestCoverage();
+    .from(culturalOpportunitiesTable)
+    .where(
+      criteria.scope === "all"
+        ? undefined
+        : eq(culturalOpportunitiesTable.scope, criteria.scope),
+    );
+  // Mapas Culturais coverage (installations, states with no install) says nothing about international sources.
+  const withNational = criteria.scope !== "international";
+  const withInternational = criteria.scope !== "national";
+  const coverage = withNational
+    ? coverageMeta(await latestCoverage())
+    : { installationIssues: [], gaps: [] };
+  const issues = withInternational ? await internationalIssues() : [];
   const hiddenIndividualListings = criteria.includeIndividual
     ? 0
     : await countRows(whereFor(criteria, undefined, "only"));
-  const [profile] = userId
-    ? await db
-        .select()
-        .from(companyProfilesTable)
-        .where(eq(companyProfilesTable.userId, userId))
-        .limit(1)
-    : [];
+  const context = await profileContextFor(userId);
 
   const facets = criteria.facets
     ? {
@@ -526,11 +792,49 @@ export async function searchOpportunities(
         organization: await organizationBuckets(
           whereFor(criteria, "organization"),
         ),
+        agency: withInternational
+          ? await labeledBuckets(
+              culturalOpportunitiesTable.agency,
+              {},
+              whereFor(criteria, "agency"),
+            )
+          : [],
+        region: withInternational
+          ? await regionBuckets(whereFor(criteria, "region"))
+          : [],
+        language: withInternational
+          ? await labeledBuckets(
+              culturalOpportunitiesTable.language,
+              internationalLanguageLabels,
+              whereFor(criteria, "language"),
+            )
+          : [],
+        opportunityType: withInternational
+          ? await labeledBuckets(
+              culturalOpportunitiesTable.opportunityType,
+              {},
+              whereFor(criteria, "opportunityType"),
+            )
+          : [],
+        eligibility: withInternational
+          ? await labeledBuckets(
+              culturalOpportunitiesTable.brazilEligibility,
+              brazilEligibilityLabels,
+              whereFor(criteria, "eligibility"),
+            )
+          : [],
+        funding: withInternational
+          ? await labeledBuckets(
+              culturalOpportunitiesTable.brazilFunding,
+              brazilFundingLabels,
+              whereFor(criteria, "funding"),
+            )
+          : [],
       }
     : null;
 
   return {
-    data: rows.map((row) => toSummary(row, profile ?? null)),
+    data: rows.map((row) => toSummary(row, context)),
     pagination: {
       page: criteria.page,
       pageSize: criteria.pageSize,
@@ -545,8 +849,11 @@ export async function searchOpportunities(
       indexUpdatedAt: updated?.indexUpdatedAt
         ? new Date(updated.indexUpdatedAt).toISOString()
         : null,
-      ...coverageMeta(coverage),
+      installationIssues: [...coverage.installationIssues, ...issues],
+      gaps: coverage.gaps,
       hiddenIndividualListings,
+      scope: criteria.scope,
+      internationalInProfile: context.international,
     },
   };
 }
@@ -561,12 +868,5 @@ export async function findOpportunity(
     .where(sql`${culturalOpportunitiesTable.id} = ${id}`)
     .limit(1);
   if (!row) return undefined;
-  const [profile] = userId
-    ? await db
-        .select()
-        .from(companyProfilesTable)
-        .where(eq(companyProfilesTable.userId, userId))
-        .limit(1)
-    : [];
-  return toSummary(row, profile ?? null);
+  return toSummary(row, await profileContextFor(userId));
 }

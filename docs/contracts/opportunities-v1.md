@@ -4,8 +4,10 @@ O endpoint preserva o contrato cultural original e passa a reunir oportunidades 
 
 ## Modelo e compatibilidade
 
-- `kind`: `culture` | `funding` | `innovation` | `partnership`.
-- `source`: `mapas` | `finep` | `cnpq` | `capes` | `transferegov` | `funarte` | `minc` | `salic`. `sourceName` traz o rótulo exibido como selo: "Mapas Culturais", "FINEP", "CNPq", "CAPES", "Transferegov.br", "Funarte", "Ministério da Cultura" e "Lei Rouanet (Salic)".
+- `kind`: `culture` | `funding` | `innovation` | `partnership` | `procurement`. `procurement` é aviso de aquisição de organismo internacional; licitações do PNCP continuam fora daqui.
+- `source`: `mapas` | `finep` | `cnpq` | `capes` | `transferegov` | `funarte` | `minc` | `salic` | `worldbank` | `eu_ft`. `sourceName` traz o rótulo exibido como selo: "Mapas Culturais", "FINEP", "CNPq", "CAPES", "Transferegov.br", "Funarte", "Ministério da Cultura", "Lei Rouanet (Salic)", "Banco Mundial" e "União Europeia (Funding & Tenders)".
+- `scope`: `national` | `international`. É abrangência, não tipo: uma chamada internacional continua com seu `kind`. Toda chamada das fontes brasileiras é `national`.
+- `international`: `null` nas chamadas nacionais; nas internacionais, o objeto descrito em "Oportunidades internacionais".
 - `status`: `open` | `upcoming` | `closed` | `undated`.
 - `program`: `audiovisual` | `lpg` | `fac` | `fsa` | `null`. Fundos nomeados (`lpg`, `fac`, `fsa`) saem do título e do resumo; `audiovisual` vale quando o texto ou a área da chamada é de audiovisual; nas demais chamadas de cultura é `null`.
 - `areas`: lista de áreas canônicas — `audiovisual`, `musica`, `teatro`, `danca`, `circo`, `artes-visuais`, `literatura`, `patrimonio`, `culturas-populares`, `artesanato`, `cultura-digital`, `gastronomia`, `gestao-producao`, `formacao`, `diversidade`, `outras`. Vem dos termos de área da fonte (`areaTerms`, `terms.area` no Mapas Culturais), cada termo em uma área; termo fora do vocabulário cai em `outras`. Audiovisual também é lido do título e do resumo. Instalações que não publicam termos de área (Ceará, Aracaju) são classificadas só pelo texto, e a lista pode ficar vazia.
@@ -30,18 +32,24 @@ A minimização de dados pessoais (11/10/2026) não tem migração: tipo do dono
 
 A migração `0040_opportunity_federal_sources.sql` só amplia a lista de valores aceitos em `source`; não toca em nenhuma linha. É manual em produção e deve ser aplicada antes de ligar a coleta federal (`docs/migrations/0040-opportunity-federal-sources.md`).
 
+A migração `0041_international_opportunities.sql` adiciona as colunas das chamadas internacionais, amplia as listas de `kind` e `source` e cria a preferência `users.show_international_opportunities`. É manual em produção e deve ser aplicada **antes** de publicar a API (`docs/migrations/0041-international-opportunities.md`).
+
 ## `GET /api/v1/opportunities`
 
-Filtros: `q`, `state`, `city`, `installation`, `organization`, `area`, `status`, `program`, `kind`, `source`, `deadlineFrom`, `deadlineTo`, `includeIndividual`, `page`, `pageSize` e `facets`. Arrays usam parâmetros repetidos. O contrato de busca do Pardal Digital permanece `q`, que também encontra área, tipo, origem e município.
+Filtros: `q`, `state`, `city`, `installation`, `organization`, `area`, `status`, `program`, `kind`, `source`, `scope`, `agency`, `region`, `country`, `language`, `opportunityType`, `eligibility`, `funding`, `deadlineFrom`, `deadlineTo`, `includeIndividual`, `page`, `pageSize` e `facets`. Arrays usam parâmetros repetidos. O contrato de busca do Pardal Digital permanece `q`, que também encontra área, tipo, origem e município.
 
 - `area`: uma ou mais áreas canônicas; a chamada entra se tiver qualquer uma delas. Audiovisual é um filtro (`area=audiovisual`), não mais a regra de coleta. `program=audiovisual` e `q=audiovisual` continuam respondendo.
 - `city`: nome do município como aparece na faceta. Mande `state` junto para separar homônimos.
 - `organization`: nome da instituição que publicou a chamada, como aparece na faceta. Até 20 valores de até 200 caracteres em `city` e em `organization`.
 - `includeIndividual`: `true` ou `false` (padrão `false`). Sem ele, anúncios individuais ficam fora dos resultados, do total e das facetas; `meta.hiddenIndividualListings` diz quantos os mesmos filtros deixaram de fora. Na tela é o parâmetro `individual=1` da URL.
 
-Facetas: `status`, `state`, `installation`, `program`, `kind`, `source`, `area`, `city` e `organization`. Em `area` a chamada conta uma vez em cada área que tem, então a soma passa do total. Cada item de `city` traz `state`. `organization` devolve as 100 instituições com mais chamadas. A ordenação continua: abertas, futuras, sem data e encerradas; depois prazo e título.
+- `scope`: `national` (padrão), `international` ou `all`. Sem o parâmetro só vêm chamadas nacionais, como antes; um cliente que não conhece a seção internacional não muda de resultado.
+- `agency`: organismo ("Banco Mundial", "União Europeia"), como aparece na faceta. `region`: `america-latina` | `africa` | `europa` | `asia` | `oriente-medio` | `global`. `country`: ISO 3166-1 alfa-2 do país de execução (`country=BR` lista os projetos no Brasil). `language`: código de duas letras do idioma do aviso. `opportunityType`: tipo como aparece na faceta ("Bens", "Obras", "Consultoria", "Serviços (não consultoria)", "Subvenção", "Financiamento em cascata", "Chamada de ação externa").
+- `eligibility` e `funding`: `yes` | `conditional` | `no` | `unknown`, um ou mais valores. A API não aplica padrão; a tela manda `eligibility=yes&eligibility=conditional` quando a URL da aba internacional não traz o filtro, e `eligibility=all` na URL (nunca enviado à API) mostra tudo.
 
-`meta.installationIssues` lista as fontes que falharam, foram bloqueadas ou estão desativadas na última coleta.
+Facetas: `status`, `state`, `installation`, `program`, `kind`, `source`, `area`, `city`, `organization` e, quando a busca inclui chamadas internacionais, `agency`, `region`, `language`, `opportunityType`, `eligibility` e `funding` (listas vazias com `scope=national`). Em `area` a chamada conta uma vez em cada área que tem, então a soma passa do total. Cada item de `city` traz `state`. `organization` devolve as 100 instituições com mais chamadas. A ordenação continua: abertas, futuras, sem data e encerradas; depois prazo e título.
+
+`meta.installationIssues` lista as fontes que falharam, foram bloqueadas ou estão desativadas na última coleta. Com `scope=international` vêm as fontes internacionais que não responderam por completo, e `gaps` fica vazio. `meta.scope` repete o escopo aplicado e `meta.internationalInProfile` diz se a conta ligou "Mostrar oportunidades internacionais".
 
 As rotas continuam exigindo a mesma sessão/acesso vigente da versão anterior: `401` sem sessão, `402 SUBSCRIPTION_REQUIRED` sem acesso, `503 SEARCH_UNAVAILABLE` se o Postgres não responder.
 
@@ -94,3 +102,74 @@ Regras comuns às páginas gov.br:
 - Datas: caixa "De … Até …" da Funarte, cronograma ("Início das inscrições", "Encerramento do prazo de inscrição") e frases que falam de inscrição. Sem data explícita na página, `registrationFrom`/`registrationTo` ficam `null` e a situação é `open`, porque a própria lista oficial é a de editais abertos. "Fluxo contínuo" sem data final marca `continuousFlow`.
 - Deduplicação: `(installationId, externalId)`, com `installationId` igual à fonte. `externalId` é `programa-<COD_PROGRAMA>` ou `parcerias-<id_programa>` no Transferegov e o SHA-256 truncado da URL canônica nas páginas gov.br. O mesmo edital listado pelo MinC e pela Funarte (as duas apontam para a mesma oportunidade do Mapa da Cultura) fica só na primeira fonte que o lista.
 - Encerramento: pela data (`registrationTo`), a cada coleta; e, quando a listagem oficial foi lida inteira, o que saiu dela é encerrado. Listagem vazia, incompleta ou com falha não encerra nada.
+
+## Oportunidades internacionais
+
+Fase 1: avisos de aquisição do **Banco Mundial** (`source = worldbank`, `kind = procurement`) e tópicos e chamadas do **Funding & Tenders da União Europeia** (`source = eu_ft`). BID, UNGM e Devex não são coletados (`docs/research/oportunidades-internacionais-2026-10-codex.md`).
+
+### Campos de `international`
+
+- `agency`: organismo que financia ou conduz ("Banco Mundial", "União Europeia"). `organizationName` continua sendo quem publicou: o órgão comprador no Banco Mundial, "Comissão Europeia" na UE. `originName` traz o projeto (`P171305 · …`) ou o programa e a chamada (`Horizon Europe (HORIZON) · HORIZON-CL5-2027-07`).
+- `country` (ISO alfa-2), `countryName` (em português), `region`, `regionName`: onde a chamada é executada, não a sede do organismo. Projeto regional fica sem `country`. `brazilProject` é `true` quando `country = BR`.
+- `language`, `languageName`: idioma do aviso na fonte.
+- `titleOriginal`, `titlePt`, `translationSource`: o título publicado e, quando existe, o título em português. `translationSource = source` quando a própria fonte publica em português; `model` quando veio de tradução automática local. O campo `title` do resumo é o que a tela mostra: `titlePt` se houver, senão o original. `summary` é escrito por regras, em português, a partir de campos estruturados (tipo, país, método, projeto, orçamento); o texto do aviso não é copiado.
+- `amountOriginal`, `currency`: valor e moeda como publicados (a UE publica orçamento em euros; o aviso do Banco Mundial não traz valor). `amountBrlApprox`, `fxRate`, `fxDate`: conversão pela PTAX de venda do boletim de fechamento do Banco Central, com a data da cotação. É aproximação. `amount` continua reservado a valor que a fonte publica em reais e fica `null` aqui.
+- `deadline`: `at` é o mesmo instante de `registrationTo`; `original` é o prazo como a fonte escreveu, no relógio dela (`2026-10-27 11:00` ou `2026-10-27`); `timeZone` é a zona IANA desse relógio; `precision` é `datetime` quando dia, hora e zona são conhecidos e `date` quando só o dia é confiável. A tela mostra sempre o horário de Brasília com o original ao lado.
+  - Banco Mundial: a API manda dia e hora local sem fuso. Quando o país do projeto tem um fuso só, a hora é convertida. Em país com mais de um fuso (Brasil, Indonésia, RD Congo, México…) e em projeto regional, fica o dia, `precision = date`, `timeZone = null`, e a hora aparece como texto ("12:00, hora local do comprador"), sem conversão. Nesses casos `at` é o último segundo do dia em UTC−12, para a chamada nunca ser encerrada antes da hora.
+  - UE: o portal rotula os prazos como `+0000`, mas o relógio é o de Bruxelas (a chamada Eurostars diz "14:00 (Brussels time)" e a API manda `14:00:00.000+0000`). Prazo à meia-noite é prazo sem hora: `precision = date` em `Europe/Brussels`. Com vários prazos de corte vale o próximo ainda por vir.
+- `brazilEligibility`: `{ status, label, reason, rule }`, se uma entidade ou pessoa do Brasil pode participar. `status`: `yes` | `conditional` | `no` | `unknown`. `reason` é a frase legível da regra; `rule` é o identificador dela.
+- `brazilFunding`: `{ status, label, reason }`, se o financiador paga o participante do Brasil. É uma pergunta separada: só a UE responde; no Banco Mundial é `null` (o contrato é pago a quem vence).
+- `eligibilityCheckedAt`: quando a regra foi aplicada (a cada coleta).
+- `details`: fatos rotulados do aviso para o detalhe ("Método", "Projeto", "Referência", "Programa", "Tipo de ação", "Prazos de corte"…).
+
+A elegibilidade é indicativa. A tela mostra o motivo ao lado do selo e o aviso "o edital oficial prevalece".
+
+### Regras de elegibilidade
+
+**Banco Mundial** — `conditional` por padrão. A API não tem campo de país elegível; a abordagem de mercado está no texto do aviso, lido na coleta e não guardado.
+
+| `rule` | `status` | Quando |
+| --- | --- | --- |
+| `wb-international-open` | `yes` | O aviso declara concorrência internacional ("international competitive procurement", "ICB", "appel d'offres international", "AOI", "licitación pública internacional"…) |
+| `wb-national-other-country` | `no` | Processo nacional ou local ("National Competitive Bidding", "open national", "appel d'offres national", "LPN", "national shopping", "national consultant"…) em país que não é o Brasil |
+| `wb-national-brazil` | `conditional` | Processo nacional de projeto no Brasil |
+| `wb-ambiguous-market` | `conditional` | O aviso cita as duas abordagens |
+| `wb-direct-selection` | `no` | Contratação direta |
+| `wb-quotations`, `wb-individual-consultant`, `wb-consulting-firms`, `wb-default` | `conditional` | Sem menção ao mercado: pedido de cotações, consultor individual, seleção de firmas de consultoria e os demais |
+
+**União Europeia** — participação e financiamento separados.
+
+| `rule` | Participa | Recebe financiamento | Quando |
+| --- | --- | --- | --- |
+| `eu-horizon-consortium` / `eu-third-country-not-funded` | `conditional` | `no` | Horizon Europe colaborativo: entra em consórcio, sem verba da UE (Anexo B), salvo exceção da chamada |
+| `eu-mentions-brazil` | `conditional` | `conditional` | O texto da chamada cita Brasil, CELAC, América Latina ou Mercosul |
+| `eu-individual-researcher` | `yes` | `yes` | ERC e MSCA Postdoctoral Fellowships (bolsa individual, instituição anfitriã na UE ou país associado) |
+| `eu-msca-partner` | `conditional` | `no` | Demais ações MSCA: organização do Brasil como parceira associada |
+| `eu-restricted` | `no` | `no` | "participation is limited to legal entities established in Member States and Associated Countries" |
+| `eu-defence-fund` | `no` | `no` | Fundo Europeu de Defesa |
+| `eu-programme-countries` | `unknown` | `no` | Outros programas (Digital Europe, Creative Europe, CERV, LIFE…): o Brasil não é país associado |
+| `eu-cascade` / `eu-cascade-restricted` | `unknown` / `no` | `unknown` / `no` | Chamada em cascata: quem define os países é o projeto que a abriu |
+| `eu-external-action` / `eu-twinning` | `unknown` / `no` | `unknown` / `no` | Ação externa (regra de nacionalidade do instrumento) e Twinning |
+
+### Coleta
+
+`pnpm --filter @workspace/api-server run collect:international`; agenda somente quando `INTERNATIONAL_COLLECT=true` (padrão desligado), uma vez por dia às 10:00 de `America/Sao_Paulo` (`INTERNATIONAL_HOUR`, de 7 a 23 — a janela 00:00–05:30 é do job noturno e 06:00 é do PNCP e do Mapas). Não roda ao subir. `INTERNATIONAL_DRY_RUN=true` no comando manual lê as fontes e imprime as contagens por fonte e por elegibilidade, sem gravar e sem exigir `DATABASE_URL`. `INTERNATIONAL_SOURCES=worldbank` lê uma fonte só. Trava: job singleton `international_collect` e uma linha `running` por vez em `ingest_runs` (`source = 'international'`).
+
+- **Banco Mundial**: `GET search.worldbank.org/api/v2/procnotices?format=json` com `deadline_strdate` (ontem, em UTC) e `deadline_enddate`, 100 por página. É a API do dataset "Procurement Notice" (Finances One DS00979, CC BY 4.0). Entram convite à licitação, pedido de manifestação de interesse e convite à pré-qualificação com prazo ainda por vir; adjudicações e avisos gerais ficam fora. A lista `fl` não pede contato, e-mail, telefone nem endereço, e `raw_payload` guarda uma lista fechada de campos, sem o texto do aviso.
+- **Funding & Tenders**: `POST api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA` com a DSL documentada pela Comissão — `type` 1 (tópico de subvenção), 2 (chamada de ação externa) e 8 (chamada em cascata), `status` 31094501 (previsto) e 31094502 (aberto), ordenado por `identifier`, 100 por página — e um `POST …/rest/facet` por coleta para os rótulos de programa, zona e tipo de contrato. O resultado da busca já traz condições, orçamento e descrição, então a API Topic Details não é chamada (seriam centenas de requisições a mais). Resultado de outro datasource (evento, notícia) é ignorado. O índice mantém `status` aberto em chamadas encerradas há anos: só entra o que tem prazo à frente ou está previsto.
+- **PTAX**: `GET olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo`, uma requisição por moeda presente na coleta (hoje só EUR). Sem resposta do Banco Central a conversão anterior é mantida enquanto o valor original não muda; valor novo fica sem conversão até a próxima coleta.
+- Volume: em 11/10/2026 a coleta inteira fez 23 requisições (8 ao Banco Mundial, 14 à UE e 1 ao Banco Central).
+- User-Agent `PardalDigital/<versão> (+https://pardaldigital.com; contato@pardaldigital.com)` e 1 segundo entre requisições (`INTERNATIONAL_PAGE_DELAY_MS`). O `robots.txt` de cada host é lido antes: 404 não restringe (é o caso dos dois hoje), proibição vira `blocked_by_robots` e qualquer outra resposta deixa a fonte fora daquela coleta. O serviço Olinda do Banco Central é API de dados abertos e não publica `robots.txt` (responde 502 nesse endereço); ele não passa por esse teste.
+- `Retry-After` em 429 ou 503 é respeitado, com uma nova tentativa; acima de 60 s, ou na segunda recusa, a fonte fica para o próximo ciclo (`rate_limited`). Nenhuma outra resposta é repetida. Redirecionamento não é seguido.
+- Deduplicação por id da fonte no índice `(installationId, externalId)`: o id do aviso no Banco Mundial (`OP00474363`), o identificador do tópico na UE, `cascade-<callccm2Id>` nas chamadas em cascata (várias do mesmo tópico compartilham o `identifier`) e `prospect-<callIdentifier>` na ação externa.
+- Encerramento: pelo prazo, a cada coleta; e, quando a listagem foi lida até o fim, o que saiu dela é encerrado. Listagem incompleta ou com falha não encerra nada.
+
+### Tradução do título
+
+Sem OpenAI. `INTERNATIONAL_TITLE_TRANSLATION=off` (padrão) mantém o título original; o resumo em português por regras e o selo de idioma dão o contexto. `ollama` usa um modelo local servido pelo Ollama e exige `INTERNATIONAL_TITLE_TRANSLATION_MODEL` (não há modelo padrão); `libretranslate` usa qualquer serviço com a API do LibreTranslate (`INTERNATIONAL_TITLE_TRANSLATION_URL`), que é como modelos Marian/OPUS-MT e NLLB costumam ser servidos. A tradução roda depois que a coleta já foi gravada, em lote de até `INTERNATIONAL_TITLE_TRANSLATION_BATCH` títulos (padrão 100), só para os idiomas de `INTERNATIONAL_TITLE_TRANSLATION_LANGUAGES` (padrão `en,fr`; espanhol fica como está). Resposta vazia, igual ao original ou longa demais é recusada e o título fica no original; três falhas seguidas encerram o lote. Avisos em português entram com `translationSource = source`.
+
+**Pendente: a medir no servidor.** Nenhum modelo foi escolhido nem medido. Antes de ligar, medir no próprio servidor (nunca na máquina de desenvolvimento) com uma amostra de títulos reais em inglês e francês: segundos por título, memória ocupada pelo modelo e proporção de respostas aceitas pelas regras acima, comparando ao menos um modelo de tradução dedicado (Marian/OPUS-MT ou NLLB via LibreTranslate) com um modelo pequeno do Ollama. Até lá a variável fica em `off` e a tela mostra o título original com o selo de idioma.
+
+### Recomendações e perfil
+
+A conta tem a preferência "Mostrar oportunidades internacionais" (`showInternationalOpportunities` em `GET/PUT /api/v1/me/recommendation-preferences`, padrão `false`). Desligada, `profileMatch` é sempre `null` nas chamadas internacionais; ligada, elas são comparadas com o perfil como as demais, com o valor em reais pela PTAX. A aba Internacionais do hub aparece para qualquer conta com acesso.

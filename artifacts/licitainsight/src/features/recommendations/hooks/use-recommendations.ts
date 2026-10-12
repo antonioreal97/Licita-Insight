@@ -27,11 +27,20 @@ export function useRecommendations(pageSize = 8) {
 export function useUpdateRecommendationPreferences() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ enabled, deleteHistory }: { enabled: boolean; deleteHistory?: boolean }) =>
-      accountService.updateRecommendationPreferences(enabled, deleteHistory),
+    mutationFn: ({
+      enabled,
+      deleteHistory,
+      showInternationalOpportunities,
+    }: {
+      enabled: boolean;
+      deleteHistory?: boolean;
+      showInternationalOpportunities?: boolean;
+    }) => accountService.updateRecommendationPreferences(enabled, deleteHistory, showInternationalOpportunities),
     onSuccess: (data) => {
       client.setQueryData(queryKeys.me.recommendationPreferences, data);
       void client.invalidateQueries({ queryKey: queryKeys.me.recommendations });
+      // Profile matching of international calls follows the preference.
+      void client.invalidateQueries({ queryKey: queryKeys.opportunities.all });
     },
   });
 }

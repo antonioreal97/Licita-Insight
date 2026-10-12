@@ -506,7 +506,12 @@ export type NotificationPreferences = { email: EmailPreferences; profileAlerts: 
 /** Partial PUT body: only the fields sent change. */
 export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences>; profileAlerts?: boolean };
 
-export type RecommendationPreferences = { personalizationEnabled: boolean; updatedAt: string | null };
+export type RecommendationPreferences = {
+  personalizationEnabled: boolean;
+  /** Off by default. International calls enter recommendations and profile matching only when on. */
+  showInternationalOpportunities: boolean;
+  updatedAt: string | null;
+};
 export type RecommendationReason = {
   kind: 'profile' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value' | 'platform';
   text: string;
@@ -725,8 +730,13 @@ export type TenderFitsResponse = { profileVersion: number | null; results: Recor
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
-export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership';
-export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic';
+export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership' | 'procurement';
+export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic' | 'worldbank' | 'eu_ft';
+/** Reach of a call, not its nature: an international call still has a `kind`. */
+export type OpportunityScope = 'national' | 'international';
+export type InternationalRegion = 'america-latina' | 'africa' | 'europa' | 'asia' | 'oriente-medio' | 'global';
+/** Whether an entity or person from Brazil can take part (or be funded). Indicative: the official notice prevails. */
+export type BrazilEligibility = 'yes' | 'conditional' | 'no' | 'unknown';
 /** Canonical cultural areas (docs/contracts/opportunities-v1.md). */
 export type OpportunityArea =
   | 'audiovisual'
@@ -763,9 +773,61 @@ export type OpportunitySearchParams = {
   deadlineTo?: string;
   /** Also list what a person published with no sign of a public call (classes, private workshops). */
   includeIndividual?: boolean;
+  /** Absent means national calls only. */
+  scope?: OpportunityScope;
+  /** Funding body, exactly as listed in the `agency` facet. */
+  agency?: string[];
+  region?: InternationalRegion[];
+  /** ISO 3166-1 alpha-2 of the country where the call is executed. */
+  country?: string[];
+  /** Language code of the notice at the source (`en`, `fr`…). */
+  language?: string[];
+  /** Type of the call at the source, exactly as listed in the `opportunityType` facet. */
+  opportunityType?: string[];
+  /** In the international tab an absent value means "open or conditional"; `'all'` lifts the filter and is never sent to the API. */
+  eligibility?: BrazilEligibility[] | 'all';
+  funding?: BrazilEligibility[];
   page?: number;
   pageSize?: number;
   facets?: boolean;
+};
+
+export type OpportunityEligibilityAnswer = { status: BrazilEligibility; label: string; reason: string | null };
+
+/** What an international call adds to the summary (docs/contracts/opportunities-v1.md). */
+export type InternationalOpportunity = {
+  agency: string | null;
+  country: string | null;
+  countryName: string | null;
+  region: InternationalRegion | null;
+  regionName: string | null;
+  /** The project is executed in Brazil. */
+  brazilProject: boolean;
+  language: string | null;
+  languageName: string | null;
+  titleOriginal: string | null;
+  titlePt: string | null;
+  /** `source`: published in Portuguese by the source. `model`: automatic translation by a local model. */
+  translationSource: 'source' | 'model' | null;
+  amountOriginal: number | null;
+  currency: string | null;
+  /** `amountOriginal` at the PTAX rate of `fxDate`. An approximation. */
+  amountBrlApprox: number | null;
+  fxRate: number | null;
+  fxDate: string | null;
+  deadline: {
+    at: string | null;
+    /** With `date` only the day is known: an hour in `original` was not converted. */
+    precision: 'datetime' | 'date' | null;
+    timeZone: string | null;
+    /** As the source wrote it, in its own wall clock: `2026-10-27 11:00` or `2026-10-27`. */
+    original: string | null;
+  };
+  brazilEligibility: (OpportunityEligibilityAnswer & { rule: string | null }) | null;
+  /** Separate from being allowed to take part. `null` where it does not apply (procurement). */
+  brazilFunding: OpportunityEligibilityAnswer | null;
+  eligibilityCheckedAt: string | null;
+  details: { label: string; value: string }[];
 };
 
 export type OpportunitySummary = {
@@ -801,6 +863,9 @@ export type OpportunitySummary = {
   sourceUrl: string | null;
   updatedAt: string;
   profileMatch: { score: number; reasons: string[] } | null;
+  scope: OpportunityScope;
+  /** Set on international calls only. */
+  international: InternationalOpportunity | null;
 };
 
 export type OpportunityCityBucket = FacetBucket & { state: string | null };
@@ -819,6 +884,13 @@ export type OpportunitySearchResponse = {
     area: FacetBucket[];
     city: OpportunityCityBucket[];
     organization: FacetBucket[];
+    /** Empty unless the search includes international calls. */
+    agency: FacetBucket[];
+    region: FacetBucket[];
+    language: FacetBucket[];
+    opportunityType: FacetBucket[];
+    eligibility: FacetBucket[];
+    funding: FacetBucket[];
   } | null;
   meta: {
     query: string | null;
@@ -828,5 +900,8 @@ export type OpportunitySearchResponse = {
     gaps: { uf: string; name: string }[];
     /** Individual listings the same filters would add with `includeIndividual`. */
     hiddenIndividualListings: number;
+    scope: OpportunityScope | 'all';
+    /** The account preference "Mostrar oportunidades internacionais". */
+    internationalInProfile: boolean;
   };
 };
