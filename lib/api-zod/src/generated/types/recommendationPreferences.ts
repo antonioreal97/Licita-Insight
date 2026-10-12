@@ -8,6 +8,8 @@
 
 export interface RecommendationPreferences {
   personalizationEnabled: boolean;
+  /** Off by default. International calls enter recommendations and profile matching only when on. */
+  showInternationalOpportunities: boolean;
   /** @nullable */
   updatedAt: Date | null;
 }

@@ -14,4 +14,5 @@ export const OpportunityKind = {
   funding: 'funding',
   innovation: 'innovation',
   partnership: 'partnership',
+  procurement: 'procurement',
 } as const;

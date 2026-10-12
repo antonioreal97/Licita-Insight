@@ -10,4 +10,6 @@ export interface UpdateRecommendationPreferencesRequest {
   personalizationEnabled: boolean;
   /** Applies when disabling; defaults to true so turning opt-in off erases the event history. */
   deleteHistory?: boolean;
+  /** Kept as it is when omitted. */
+  showInternationalOpportunities?: boolean;
 }

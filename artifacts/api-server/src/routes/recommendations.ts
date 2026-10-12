@@ -53,6 +53,15 @@ router.put(
         { field: "deleteHistory", issue: "invalid_type" },
       ]);
     }
+    if (
+      req.body.showInternationalOpportunities !== undefined &&
+      typeof req.body.showInternationalOpportunities !== "boolean"
+    ) {
+      throw new InvalidParameterError(
+        "showInternationalOpportunities is invalid",
+        [{ field: "showInternationalOpportunities", issue: "invalid_type" }],
+      );
+    }
     res.json(
       await updateRecommendationPreferences(
         authContext(res).user.id,
@@ -60,6 +69,8 @@ router.put(
         req.body.personalizationEnabled
           ? false
           : req.body.deleteHistory !== false,
+        new Date(),
+        req.body.showInternationalOpportunities,
       ),
     );
   }),

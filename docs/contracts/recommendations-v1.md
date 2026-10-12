@@ -16,8 +16,8 @@ Sinais que não dependem do opt-in: perfil da empresa, editais salvos e monitora
 | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/v1/recommendations?page=1&pageSize=10` | página de `Recommendation`, máximo 50; sessão + acesso                                                   |
 | POST   | `/api/v1/recommendations/{tenderId}/dismiss` | 204; nunca recomenda o edital novamente e atualiza o perfil em segundo plano                             |
-| GET    | `/api/v1/me/recommendation-preferences`      | `{ personalizationEnabled, updatedAt }`                                                                  |
-| PUT    | `/api/v1/me/recommendation-preferences`      | `{ personalizationEnabled, deleteHistory? }`; `deleteHistory` default true ao desligar                   |
+| GET    | `/api/v1/me/recommendation-preferences`      | `{ personalizationEnabled, showInternationalOpportunities, updatedAt }`                                  |
+| PUT    | `/api/v1/me/recommendation-preferences`      | `{ personalizationEnabled, deleteHistory?, showInternationalOpportunities? }`; `deleteHistory` default true ao desligar; `showInternationalOpportunities` omitido fica como está |
 | DELETE | `/api/v1/me/recommendation-history`          | 204; apaga eventos de busca/visualização                                                                 |
 | POST   | `/api/v1/recommendations/events`             | `{type:'search',query}`, `{type:'tender_view',tenderId}` ou `{type:'click',tenderId?}`; 202 `{recorded}` |
 

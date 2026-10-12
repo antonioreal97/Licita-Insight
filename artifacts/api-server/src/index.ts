@@ -10,12 +10,14 @@ import { abandonStalePncpRuns } from "./ingest/collect-pncp";
 import { abandonStaleCultureRuns } from "./ingest/collect-opportunities";
 import { abandonStaleFundingRuns } from "./ingest/collect-funding";
 import { abandonStaleCultureFederalRuns } from "./ingest/collect-culture-federal";
+import { abandonStaleInternationalRuns } from "./ingest/collect-international";
 import { abandonStaleTransparencyRuns } from "./ingest/collect-transparency";
 import {
   startDailyCategoryClassify,
   startDailyCultureCollect,
   startDailyCultureFederalCollect,
   startDailyFundingCollect,
+  startDailyInternationalCollect,
   startDailyPncpCollect,
   startDailyTransparencyCollect,
 } from "./ingest/daily-collect";
@@ -93,6 +95,7 @@ const startSchedulers = (): Array<() => void> => [
   startDailyCultureCollect(),
   startDailyFundingCollect(),
   startDailyCultureFederalCollect(),
+  startDailyInternationalCollect(),
   startDailyCategoryClassify(),
   startNightlyCategoryClassification(),
   startRecommendationScheduler(),
@@ -123,6 +126,7 @@ const start = async (): Promise<void> => {
         await abandonStaleCultureRuns();
         await abandonStaleFundingRuns();
         await abandonStaleCultureFederalRuns();
+        await abandonStaleInternationalRuns();
         await abandonStaleTransparencyRuns();
       });
     } catch (error) {

@@ -884,6 +884,73 @@ paths:
             type: array
             items:
               $ref: "#/components/schemas/OpportunitySource"
+        - name: scope
+          in: query
+          description: Reach of the calls. Without it only national calls are returned.
+          schema:
+            $ref: "#/components/schemas/OpportunityScopeFilter"
+        - name: agency
+          in: query
+          description: Funding body of an international call, exactly as returned in the facet.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items: { type: string, minLength: 1, maxLength: 200 }
+        - name: region
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/InternationalRegion"
+        - name: country
+          in: query
+          description: ISO 3166-1 alpha-2 code of the country where the call is executed.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items: { type: string, pattern: "^[A-Za-z]{2}$" }
+        - name: language
+          in: query
+          description: BCP 47 language code of the notice at the source.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items: { type: string, pattern: "^[A-Za-z]{2}$" }
+        - name: opportunityType
+          in: query
+          description: Type of the call at the source, exactly as returned in the facet.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items: { type: string, minLength: 1, maxLength: 200 }
+        - name: eligibility
+          in: query
+          description: Whether an entity or person from Brazil can take part.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/BrazilEligibility"
+        - name: funding
+          in: query
+          description: Whether the funder pays a participant from Brazil.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/BrazilEligibility"
         - name: deadlineFrom
           in: query
           description: Inclusive lower date in America/Sao_Paulo.
@@ -1908,8 +1975,12 @@ components:
       additionalProperties: false
       properties:
         personalizationEnabled: { type: boolean }
+        showInternationalOpportunities:
+          type: boolean
+          description: Off by default. International calls enter recommendations and profile matching only when on.
         updatedAt: { type: [string, "null"], format: date-time }
-      required: [personalizationEnabled, updatedAt]
+      required:
+        [personalizationEnabled, showInternationalOpportunities, updatedAt]
     UpdateRecommendationPreferencesRequest:
       type: object
       additionalProperties: false
@@ -1919,6 +1990,9 @@ components:
           type: boolean
           default: true
           description: Applies when disabling; defaults to true so turning opt-in off erases the event history.
+        showInternationalOpportunities:
+          type: boolean
+          description: Kept as it is when omitted.
       required: [personalizationEnabled]
     RecommendationEventRequest:
       oneOf:
@@ -2000,6 +2074,7 @@ components:
         emailImmediateCritical: { type: boolean }
         profileAlerts: { type: boolean }
         recommendationPersonalizationEnabled: { type: boolean }
+        showInternationalOpportunities: { type: boolean }
         recommendationPreferencesUpdatedAt:
           { type: [string, "null"], format: date-time }
         emailPreferencesUpdatedAt: { type: [string, "null"], format: date-time }
@@ -2016,6 +2091,7 @@ components:
           emailImmediateCritical,
           profileAlerts,
           recommendationPersonalizationEnabled,
+          showInternationalOpportunities,
           recommendationPreferencesUpdatedAt,
           emailPreferencesUpdatedAt,
           createdAt,
@@ -3775,10 +3851,143 @@ components:
       enum: [audiovisual, lpg, fac, fsa]
     OpportunityKind:
       type: string
-      enum: [culture, funding, innovation, partnership]
+      enum: [culture, funding, innovation, partnership, procurement]
     OpportunitySource:
       type: string
-      enum: [mapas, finep, cnpq, capes, transferegov, funarte, minc, salic]
+      enum:
+        [
+          mapas,
+          finep,
+          cnpq,
+          capes,
+          transferegov,
+          funarte,
+          minc,
+          salic,
+          worldbank,
+          eu_ft,
+        ]
+    OpportunityScope:
+      type: string
+      description: Reach of the call, not its nature. An international call still has a `kind`.
+      enum: [national, international]
+    OpportunityScopeFilter:
+      type: string
+      enum: [national, international, all]
+      default: national
+    InternationalRegion:
+      type: string
+      enum: [america-latina, africa, europa, asia, oriente-medio, global]
+    BrazilEligibility:
+      type: string
+      enum: ["yes", conditional, "no", unknown]
+    OpportunityEligibilityAnswer:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/BrazilEligibility"
+        label: { type: string }
+        reason:
+          type: [string, "null"]
+          description: Readable sentence of the rule that decided. Indicative; the official notice prevails.
+        rule:
+          type: [string, "null"]
+          description: Slug of the rule. Present on `brazilEligibility` only.
+      required: [status, label, reason]
+    InternationalOpportunityDetail:
+      type: object
+      properties:
+        label: { type: string }
+        value: { type: string }
+      required: [label, value]
+    InternationalOpportunityDeadline:
+      type: object
+      properties:
+        at:
+          type: [string, "null"]
+          format: date-time
+          description: Same instant as `registrationTo`.
+        precision:
+          type: [string, "null"]
+          enum: [datetime, date, null]
+          description: With `date` only the day is known; an hour in `original` was not converted.
+        timeZone:
+          type: [string, "null"]
+          description: IANA zone of the wall clock the source published.
+        original:
+          type: [string, "null"]
+          description: The deadline as the source wrote it, in its own wall clock.
+      required: [at, precision, timeZone, original]
+    InternationalOpportunity:
+      type: object
+      properties:
+        agency: { type: [string, "null"] }
+        country:
+          type: [string, "null"]
+          description: ISO 3166-1 alpha-2 of the country where the call is executed.
+        countryName: { type: [string, "null"] }
+        region:
+          anyOf:
+            - $ref: "#/components/schemas/InternationalRegion"
+            - type: "null"
+        regionName: { type: [string, "null"] }
+        brazilProject: { type: boolean }
+        language: { type: [string, "null"] }
+        languageName: { type: [string, "null"] }
+        titleOriginal: { type: [string, "null"] }
+        titlePt: { type: [string, "null"] }
+        translationSource:
+          type: [string, "null"]
+          enum: [source, model, null]
+        amountOriginal: { type: [number, "null"], minimum: 0 }
+        currency:
+          type: [string, "null"]
+          description: ISO 4217 code of `amountOriginal`.
+        amountBrlApprox:
+          type: [number, "null"]
+          minimum: 0
+          description: "`amountOriginal` at the PTAX selling rate of `fxDate`. An approximation."
+        fxRate: { type: [number, "null"] }
+        fxDate: { type: [string, "null"], format: date }
+        deadline:
+          $ref: "#/components/schemas/InternationalOpportunityDeadline"
+        brazilEligibility:
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityEligibilityAnswer"
+            - type: "null"
+        brazilFunding:
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityEligibilityAnswer"
+            - type: "null"
+        eligibilityCheckedAt: { type: [string, "null"], format: date-time }
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/InternationalOpportunityDetail"
+      required:
+        [
+          agency,
+          country,
+          countryName,
+          region,
+          regionName,
+          brazilProject,
+          language,
+          languageName,
+          titleOriginal,
+          titlePt,
+          translationSource,
+          amountOriginal,
+          currency,
+          amountBrlApprox,
+          fxRate,
+          fxDate,
+          deadline,
+          brazilEligibility,
+          brazilFunding,
+          eligibilityCheckedAt,
+          details,
+        ]
     OpportunityDocument:
       type: object
       properties:
@@ -3836,6 +4045,13 @@ components:
           anyOf:
             - $ref: "#/components/schemas/OpportunityProfileMatch"
             - type: "null"
+        scope:
+          $ref: "#/components/schemas/OpportunityScope"
+        international:
+          description: Set on international calls only.
+          anyOf:
+            - $ref: "#/components/schemas/InternationalOpportunity"
+            - type: "null"
       required:
         [
           id,
@@ -3857,6 +4073,8 @@ components:
           sourceUrl,
           updatedAt,
           profileMatch,
+          scope,
+          international,
         ]
     OpportunityFacets:
       type: object
@@ -3885,7 +4103,45 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FacetBucket"
-      required: [status, state, installation, program, kind, source]
+        agency:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        region:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        language:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        opportunityType:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        eligibility:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+        funding:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetBucket"
+      required:
+        [
+          status,
+          state,
+          installation,
+          program,
+          kind,
+          source,
+          agency,
+          region,
+          language,
+          opportunityType,
+          eligibility,
+          funding,
+        ]
     OpportunityInstallationIssue:
       type: object
       properties:
@@ -3913,7 +4169,21 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OpportunityGap"
-      required: [query, tookMs, indexUpdatedAt, installationIssues, gaps]
+        scope:
+          $ref: "#/components/schemas/OpportunityScopeFilter"
+        internationalInProfile:
+          type: boolean
+          description: The account preference. International calls enter profile matching only when on.
+      required:
+        [
+          query,
+          tookMs,
+          indexUpdatedAt,
+          installationIssues,
+          gaps,
+          scope,
+          internationalInProfile,
+        ]
     OpportunitySearchResponse:
       type: object
       properties:

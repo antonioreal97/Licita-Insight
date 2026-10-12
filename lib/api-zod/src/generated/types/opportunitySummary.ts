@@ -5,11 +5,13 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { InternationalOpportunity } from './internationalOpportunity';
 import type { OpportunityDocument } from './opportunityDocument';
 import type { OpportunityInstallation } from './opportunityInstallation';
 import type { OpportunityKind } from './opportunityKind';
 import type { OpportunityProfileMatch } from './opportunityProfileMatch';
 import type { OpportunityProgram } from './opportunityProgram';
+import type { OpportunityScope } from './opportunityScope';
 import type { OpportunitySource } from './opportunitySource';
 import type { OpportunityStatus } from './opportunityStatus';
 
@@ -43,4 +45,7 @@ export interface OpportunitySummary {
   sourceUrl: string | null;
   updatedAt: Date;
   profileMatch: OpportunityProfileMatch | null;
+  scope: OpportunityScope;
+  /** Set on international calls only. */
+  international: InternationalOpportunity | null;
 }

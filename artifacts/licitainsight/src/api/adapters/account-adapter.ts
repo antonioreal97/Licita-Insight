@@ -74,7 +74,11 @@ export interface AccountAdapter {
   getNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences>;
   updateNotificationPreferences(body: UpdateNotificationPreferencesBody): Promise<NotificationPreferences>;
   getRecommendationPreferences(signal?: AbortSignal): Promise<RecommendationPreferences>;
-  updateRecommendationPreferences(body: { personalizationEnabled: boolean; deleteHistory?: boolean }): Promise<RecommendationPreferences>;
+  updateRecommendationPreferences(body: {
+    personalizationEnabled: boolean;
+    deleteHistory?: boolean;
+    showInternationalOpportunities?: boolean;
+  }): Promise<RecommendationPreferences>;
   deleteRecommendationHistory(): Promise<void>;
   listRecommendations(params: { page?: number; pageSize?: number }, signal?: AbortSignal): Promise<RecommendationsResponse>;
   dismissRecommendation(tenderId: string): Promise<void>;

@@ -1,0 +1,95 @@
+{
+ "@odata.context": "https://was-p.bcnet.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata$metadata#_CotacaoMoedaPeriodo(cotacaoCompra,cotacaoVenda,dataHoraCotacao,tipoBoletim)",
+ "value": [
+  {
+   "cotacaoCompra": 5.5697,
+   "cotacaoVenda": 5.5714,
+   "dataHoraCotacao": "2026-10-07 10:07:14.65173",
+   "tipoBoletim": "Abertura"
+  },
+  {
+   "cotacaoCompra": 5.586,
+   "cotacaoVenda": 5.5877,
+   "dataHoraCotacao": "2026-10-07 11:05:13.548138",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5931,
+   "cotacaoVenda": 5.5943,
+   "dataHoraCotacao": "2026-10-07 12:06:10.846834",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5894,
+   "cotacaoVenda": 5.5911,
+   "dataHoraCotacao": "2026-10-07 13:05:23.057069",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5851,
+   "cotacaoVenda": 5.5867,
+   "dataHoraCotacao": "2026-10-07 13:05:23.249063",
+   "tipoBoletim": "Fechamento"
+  },
+  {
+   "cotacaoCompra": 5.613,
+   "cotacaoVenda": 5.6142,
+   "dataHoraCotacao": "2026-10-08 10:03:11.648598",
+   "tipoBoletim": "Abertura"
+  },
+  {
+   "cotacaoCompra": 5.6099,
+   "cotacaoVenda": 5.6111,
+   "dataHoraCotacao": "2026-10-08 11:07:11.251005",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.6119,
+   "cotacaoVenda": 5.6136,
+   "dataHoraCotacao": "2026-10-08 12:07:11.656886",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.6033,
+   "cotacaoVenda": 5.6045,
+   "dataHoraCotacao": "2026-10-08 13:08:16.700296",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.6081,
+   "cotacaoVenda": 5.6093,
+   "dataHoraCotacao": "2026-10-08 13:08:16.814037",
+   "tipoBoletim": "Fechamento"
+  },
+  {
+   "cotacaoCompra": 5.5998,
+   "cotacaoVenda": 5.6015,
+   "dataHoraCotacao": "2026-10-09 10:10:14.047225",
+   "tipoBoletim": "Abertura"
+  },
+  {
+   "cotacaoCompra": 5.586,
+   "cotacaoVenda": 5.5876,
+   "dataHoraCotacao": "2026-10-09 11:04:12.553856",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5813,
+   "cotacaoVenda": 5.5829,
+   "dataHoraCotacao": "2026-10-09 12:02:23.4373",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5698,
+   "cotacaoVenda": 5.5714,
+   "dataHoraCotacao": "2026-10-09 13:07:30.550247",
+   "tipoBoletim": "Intermediário"
+  },
+  {
+   "cotacaoCompra": 5.5827,
+   "cotacaoVenda": 5.5844,
+   "dataHoraCotacao": "2026-10-09 13:07:30.746597",
+   "tipoBoletim": "Fechamento"
+  }
+ ]
+}

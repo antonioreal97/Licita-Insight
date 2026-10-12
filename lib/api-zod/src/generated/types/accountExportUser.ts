@@ -19,6 +19,7 @@ export interface AccountExportUser {
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
   recommendationPersonalizationEnabled: boolean;
+  showInternationalOpportunities: boolean;
   /** @nullable */
   recommendationPreferencesUpdatedAt: Date | null;
   /** @nullable */

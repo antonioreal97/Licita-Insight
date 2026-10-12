@@ -14,4 +14,10 @@ export interface OpportunityFacets {
   program: FacetBucket[];
   kind: FacetBucket[];
   source: FacetBucket[];
+  agency: FacetBucket[];
+  region: FacetBucket[];
+  language: FacetBucket[];
+  opportunityType: FacetBucket[];
+  eligibility: FacetBucket[];
+  funding: FacetBucket[];
 }

@@ -1,6 +1,7 @@
 import {
   boolean,
   check,
+  date,
   index,
   jsonb,
   numeric,
@@ -12,7 +13,7 @@ import {
 import { sql } from "drizzle-orm";
 
 export type OpportunityKind =
-  "culture" | "funding" | "innovation" | "partnership";
+  "culture" | "funding" | "innovation" | "partnership" | "procurement";
 export type OpportunitySource =
   | "mapas"
   | "finep"
@@ -21,7 +22,16 @@ export type OpportunitySource =
   | "transferegov"
   | "funarte"
   | "minc"
-  | "salic";
+  | "salic"
+  | "worldbank"
+  | "eu_ft";
+/** Reach of the call, not its nature: an international call still has a `kind`. */
+export type OpportunityScope = "national" | "international";
+export type BrazilEligibility = "yes" | "conditional" | "no" | "unknown";
+/** `date` when the source gives no time, or a local time whose time zone cannot be resolved. */
+export type OpportunityDeadlinePrecision = "datetime" | "date";
+/** `source` when the source already publishes the title in Portuguese; `model` for a local translation. */
+export type OpportunityTranslationSource = "source" | "model";
 export type OpportunityDocument = {
   title: string;
   url: string;
@@ -70,6 +80,44 @@ export const culturalOpportunitiesTable = pgTable(
     /** Municipality, set only for municipal installations. */
     city: text("city"),
     continuousFlow: boolean("continuous_flow").notNull().default(false),
+    scope: text("scope").$type<OpportunityScope>().notNull().default("national"),
+    /** Body that funds or runs the call ("Banco Mundial", "União Europeia"). International rows only. */
+    agency: text("agency"),
+    /** Where the call is executed: ISO 3166-1 alpha-2, the name in Portuguese and the region slug. */
+    country: text("country"),
+    countryName: text("country_name"),
+    region: text("region"),
+    /** BCP 47 language of the notice at the source. */
+    language: text("language"),
+    /** `title` is what the hub shows: `titlePt` when there is one, else `titleOriginal`. */
+    titleOriginal: text("title_original"),
+    titlePt: text("title_pt"),
+    translationSource: text(
+      "translation_source",
+    ).$type<OpportunityTranslationSource>(),
+    /** Value as published. `amount` stays in reais and is only set when the source itself publishes reais. */
+    amountOriginal: numeric("amount_original", { precision: 18, scale: 2 }),
+    currency: text("currency"),
+    /** `amountOriginal` at the PTAX selling rate of `fxDate` (Banco Central do Brasil). */
+    amountBrlApprox: numeric("amount_brl_approx", { precision: 18, scale: 2 }),
+    fxRate: numeric("fx_rate", { precision: 18, scale: 6 }),
+    fxDate: date("fx_date"),
+    /** `registrationTo` is the instant; these keep how the source wrote it. */
+    deadlineTimeZone: text("deadline_time_zone"),
+    deadlinePrecision: text(
+      "deadline_precision",
+    ).$type<OpportunityDeadlinePrecision>(),
+    deadlineOriginal: text("deadline_original"),
+    /** Whether an entity or person from Brazil can apply, and the readable reason of the rule that decided. */
+    brazilEligibility: text("brazil_eligibility").$type<BrazilEligibility>(),
+    brazilEligibilityReason: text("brazil_eligibility_reason"),
+    brazilEligibilityRule: text("brazil_eligibility_rule"),
+    /** Whether the funder pays a participant from Brazil. Separate from being allowed to take part. */
+    brazilFunding: text("brazil_funding").$type<BrazilEligibility>(),
+    brazilFundingReason: text("brazil_funding_reason"),
+    eligibilityCheckedAt: timestamp("eligibility_checked_at", {
+      withTimezone: true,
+    }),
     sourceUrl: text("source_url"),
     searchText: text("search_text").notNull(),
     rawPayload: jsonb("raw_payload").notNull(),
@@ -97,17 +145,42 @@ export const culturalOpportunitiesTable = pgTable(
     index("cultural_opportunities_areas_idx").using("gin", table.areas),
     index("cultural_opportunities_city_idx").on(table.city),
     index("cultural_opportunities_fetched_at_idx").on(table.fetchedAt),
+    index("cultural_opportunities_scope_idx").on(table.scope),
+    index("cultural_opportunities_brazil_eligibility_idx").on(
+      table.brazilEligibility,
+    ),
+    index("cultural_opportunities_region_idx").on(table.region),
     index("cultural_opportunities_search_text_trgm_idx").using(
       "gin",
       table.searchText.asc().op("gin_trgm_ops"),
     ),
     check(
       "cultural_opportunities_kind_check",
-      sql`${table.kind} in ('culture', 'funding', 'innovation', 'partnership')`,
+      sql`${table.kind} in ('culture', 'funding', 'innovation', 'partnership', 'procurement')`,
     ),
     check(
       "cultural_opportunities_source_check",
-      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic')`,
+      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft')`,
+    ),
+    check(
+      "cultural_opportunities_scope_check",
+      sql`${table.scope} in ('national', 'international')`,
+    ),
+    check(
+      "cultural_opportunities_brazil_eligibility_check",
+      sql`${table.brazilEligibility} is null or ${table.brazilEligibility} in ('yes', 'conditional', 'no', 'unknown')`,
+    ),
+    check(
+      "cultural_opportunities_brazil_funding_check",
+      sql`${table.brazilFunding} is null or ${table.brazilFunding} in ('yes', 'conditional', 'no', 'unknown')`,
+    ),
+    check(
+      "cultural_opportunities_deadline_precision_check",
+      sql`${table.deadlinePrecision} is null or ${table.deadlinePrecision} in ('datetime', 'date')`,
+    ),
+    check(
+      "cultural_opportunities_amount_original_check",
+      sql`${table.amountOriginal} is null or ${table.amountOriginal} >= 0`,
     ),
     check(
       "cultural_opportunities_amount_check",

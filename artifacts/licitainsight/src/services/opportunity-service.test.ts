@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { opportunityParamsFromUrl, opportunityParamsToUrl } from './opportunity-service';
+import { DEFAULT_ELIGIBILITY, opportunityApiParams, opportunityParamsFromUrl, opportunityParamsToUrl } from './opportunity-service';
 
 test('filtros de tipo e fonte sobrevivem ao round-trip da URL', () => {
   const url = opportunityParamsToUrl({
@@ -24,6 +24,14 @@ test('filtros de tipo e fonte sobrevivem ao round-trip da URL', () => {
     deadlineFrom: undefined,
     deadlineTo: undefined,
     includeIndividual: undefined,
+    scope: undefined,
+    agency: undefined,
+    region: undefined,
+    country: undefined,
+    language: undefined,
+    opportunityType: undefined,
+    eligibility: undefined,
+    funding: undefined,
     page: undefined,
   });
 });
@@ -71,4 +79,77 @@ test('fontes federais de cultura passam pelo filtro de fonte', () => {
   const parsed = opportunityParamsFromUrl(url);
   assert.deepEqual(parsed.source, ['transferegov', 'funarte', 'minc', 'salic']);
   assert.equal(opportunityParamsToUrl(parsed), url);
+});
+
+test('aba internacional e seus filtros sobrevivem ao round-trip da URL', () => {
+  const url = opportunityParamsToUrl({
+    scope: 'international',
+    agency: ['Banco Mundial'],
+    region: ['africa'],
+    country: ['BR'],
+    language: ['fr'],
+    opportunityType: ['Obras'],
+    eligibility: ['yes'],
+    funding: ['no'],
+    page: 2,
+  });
+  assert.equal(
+    url,
+    '?scope=international&agency=Banco+Mundial&region=africa&country=BR&language=fr&opportunityType=Obras&eligibility=yes&funding=no&page=2',
+  );
+  const parsed = opportunityParamsFromUrl(url);
+  assert.equal(parsed.scope, 'international');
+  assert.deepEqual(parsed.agency, ['Banco Mundial']);
+  assert.deepEqual(parsed.region, ['africa']);
+  assert.deepEqual(parsed.country, ['BR']);
+  assert.deepEqual(parsed.language, ['fr']);
+  assert.deepEqual(parsed.opportunityType, ['Obras']);
+  assert.deepEqual(parsed.eligibility, ['yes']);
+  assert.deepEqual(parsed.funding, ['no']);
+  assert.equal(opportunityParamsToUrl(parsed), url);
+});
+
+test('a URL sem escopo é a lista nacional, e valores desconhecidos são descartados', () => {
+  assert.equal(opportunityParamsFromUrl('').scope, undefined);
+  assert.equal(opportunityParamsFromUrl('?scope=national').scope, undefined);
+  assert.equal(opportunityParamsFromUrl('?scope=all').scope, undefined);
+  assert.equal(opportunityParamsToUrl({ scope: 'national' }), '');
+  const parsed = opportunityParamsFromUrl('?scope=international&region=antartida&eligibility=talvez&country=bra&country=br&language=EN');
+  assert.equal(parsed.region, undefined);
+  assert.equal(parsed.eligibility, undefined);
+  assert.deepEqual(parsed.country, ['BR']);
+  assert.deepEqual(parsed.language, ['en']);
+});
+
+test('aba internacional abre em "aberto ou condicional"; "todas" fica só na URL', () => {
+  // Sem `eligibility` na URL, a API recebe os dois selos que um brasileiro pode disputar.
+  assert.deepEqual(opportunityApiParams(opportunityParamsFromUrl('?scope=international')).eligibility, DEFAULT_ELIGIBILITY);
+  assert.deepEqual(DEFAULT_ELIGIBILITY, ['yes', 'conditional']);
+  // `eligibility=all` tira o filtro e nunca vai à API.
+  const all = opportunityParamsFromUrl('?scope=international&eligibility=all');
+  assert.equal(all.eligibility, 'all');
+  assert.equal(opportunityParamsToUrl(all), '?scope=international&eligibility=all');
+  assert.equal(opportunityApiParams(all).eligibility, undefined);
+  assert.equal(opportunityApiParams(all).scope, 'international');
+  // Um selo escolhido vai como está.
+  assert.deepEqual(opportunityApiParams(opportunityParamsFromUrl('?scope=international&eligibility=no')).eligibility, ['no']);
+});
+
+test('filtros de um lado do hub não vazam para o outro', () => {
+  // Na lista nacional, sobras de filtros internacionais na URL não vão à API.
+  const national = opportunityApiParams(opportunityParamsFromUrl('?state=CE&region=africa&eligibility=yes&agency=Banco+Mundial&language=fr'));
+  assert.equal(national.scope, undefined);
+  assert.deepEqual(national.state, ['CE']);
+  assert.equal(national.region, undefined);
+  assert.equal(national.eligibility, undefined);
+  assert.equal(national.agency, undefined);
+  assert.equal(national.language, undefined);
+  // Na aba internacional, UF, município, área e anúncios individuais não se aplicam.
+  const international = opportunityApiParams(opportunityParamsFromUrl('?scope=international&state=CE&city=Sobral&area=musica&individual=1&q=solar&status=open'));
+  assert.equal(international.state, undefined);
+  assert.equal(international.city, undefined);
+  assert.equal(international.area, undefined);
+  assert.equal(international.includeIndividual, undefined);
+  assert.equal(international.q, 'solar');
+  assert.deepEqual(international.status, ['open']);
 });

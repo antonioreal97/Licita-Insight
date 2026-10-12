@@ -7,6 +7,7 @@
  */
 import type { OpportunityGap } from './opportunityGap';
 import type { OpportunityInstallationIssue } from './opportunityInstallationIssue';
+import type { OpportunityScopeFilter } from './opportunityScopeFilter';
 
 export interface OpportunitySearchMeta {
   /** @nullable */
@@ -17,4 +18,7 @@ export interface OpportunitySearchMeta {
   indexUpdatedAt: Date | null;
   installationIssues: OpportunityInstallationIssue[];
   gaps: OpportunityGap[];
+  scope: OpportunityScopeFilter;
+  /** The account preference. International calls enter profile matching only when on. */
+  internationalInProfile: boolean;
 }

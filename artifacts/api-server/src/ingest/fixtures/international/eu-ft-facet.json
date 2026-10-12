@@ -1,0 +1,111 @@
+{
+ "apiVersion": "2.155",
+ "terms": "*",
+ "facets": [
+  {
+   "name": "status",
+   "values": [
+    {
+     "rawValue": "31094501",
+     "value": "Forthcoming",
+     "count": 654
+    },
+    {
+     "rawValue": "31094502",
+     "value": "Open for submission",
+     "count": 543
+    }
+   ]
+  },
+  {
+   "name": "contractType",
+   "values": [
+    {
+     "rawValue": "42893160",
+     "value": "Grants",
+     "count": 10
+    },
+    {
+     "rawValue": "42958121",
+     "value": "Twinning",
+     "count": 10
+    }
+   ]
+  },
+  {
+   "name": "geographicalZones",
+   "values": [
+    {
+     "rawValue": "20001057",
+     "value": "Serbia",
+     "count": 3
+    },
+    {
+     "rawValue": "31085118",
+     "value": "EU Europe ",
+     "count": 1
+    },
+    {
+     "rawValue": "31085472",
+     "value": "Pre-accession Region",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "name": "type",
+   "values": [
+    {
+     "rawValue": "1",
+     "value": "Grant",
+     "count": 1003
+    },
+    {
+     "rawValue": "8",
+     "value": "Cascade funding calls",
+     "count": 174
+    },
+    {
+     "rawValue": "2",
+     "value": "Calls for proposals",
+     "count": 20
+    }
+   ]
+  },
+  {
+   "name": "frameworkProgramme",
+   "values": [
+    {
+     "rawValue": "43108390",
+     "value": "Horizon Europe (HORIZON)",
+     "count": 880
+    },
+    {
+     "rawValue": "43152860",
+     "value": "Digital Europe Programme (DIGITAL)",
+     "count": 71
+    },
+    {
+     "rawValue": "44181033",
+     "value": "European Defence Fund (EDF)",
+     "count": 43
+    },
+    {
+     "rawValue": "43251589",
+     "value": "Citizens, Equality, Rights and Values programme (CERV)",
+     "count": 22
+    },
+    {
+     "rawValue": "111111",
+     "value": "EU External Action - Prospect (RELEX-PROSPECT)",
+     "count": 20
+    },
+    {
+     "rawValue": "43251567",
+     "value": "Connecting Europe Facility (CEF)",
+     "count": 10
+    }
+   ]
+  }
+ ]
+}
