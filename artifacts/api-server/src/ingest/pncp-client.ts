@@ -52,12 +52,16 @@ export const isPncpTimeout = (error: unknown): boolean => {
   return false;
 };
 
+export const isPncpNetworkFailure = (error: unknown): boolean =>
+  error instanceof TypeError &&
+  /fetch failed|failed to fetch|network error/i.test(error.message);
+
 /** Gateway and rate-limit failures should leave the partition open and move on. */
 export const isRecoverablePncpFailure = (error: unknown): boolean => {
-  if (isPncpTimeout(error)) return true;
+  if (isPncpTimeout(error) || isPncpNetworkFailure(error)) return true;
   return (
     error instanceof PncpError &&
-    (error.status === 429 || error.status === 500 || error.status === 502 || error.status === 503)
+    (error.status === 429 || (error.status >= 500 && error.status <= 599))
   );
 };
 

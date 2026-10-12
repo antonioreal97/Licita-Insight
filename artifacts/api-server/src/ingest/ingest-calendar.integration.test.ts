@@ -79,6 +79,7 @@ test(
       uf: "DF",
       pageSize: 50,
       refreshLimit: 0,
+      refreshMaxConsecutiveFailures: 3,
       force: false,
     };
     const publication = (sequence = 123) => ({
