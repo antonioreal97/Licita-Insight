@@ -3,9 +3,9 @@ const INTERNATIONAL_FIRST_HOUR = 7;
 const INTERNATIONAL_DEFAULT_HOUR = 10;
 
 /**
- * International sources (World Bank, EU Funding & Tenders) are read once a day and only when
- * `INTERNATIONAL_COLLECT=true`. The hour must stay out of the nightly window and off the PNCP hour; the
- * default leaves 08:00 to the funding sources and 09:00 to the federal culture ones.
+ * International sources (World Bank, EU Funding & Tenders) are read once a day after the daily PNCP run
+ * finishes and only when `INTERNATIONAL_COLLECT=true`. The configured hour is the safety fallback when PNCP
+ * did not run; it stays out of the nightly window and leaves 08:00 and 09:00 to the other scheduled sources.
  */
 export const internationalSchedule = (
   env: NodeJS.ProcessEnv = process.env,

@@ -1,3 +1,5 @@
+import { and, eq, gte, inArray, or } from "drizzle-orm";
+import { db, ingestRunsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import {
   collectOptionsFromEnv,
@@ -10,6 +12,15 @@ import { inProgressRetry } from "./in-progress-retry";
 import { nightlyCategoryEnabled } from "../titles/nightly-window";
 import { cultureFederalSchedule } from "./culture-federal-schedule";
 import { internationalSchedule } from "./international-schedule";
+import {
+  decideInternationalCollect,
+  INTERNATIONAL_RELEVANT_SOURCES,
+  nextInternationalCollectDayCheck,
+  saoPauloDayStart,
+  type InternationalCollectDecision,
+  type InternationalCollectDecisionConfig,
+  type InternationalIngestRun,
+} from "./international-collect-decision";
 
 const TZ = "America/Sao_Paulo";
 
@@ -334,56 +345,170 @@ export function startDailyInternationalCollect(): () => void {
     return () => undefined;
   }
 
+  const retryIntervalMs = 5 * 60_000;
+  const decisionConfig: InternationalCollectDecisionConfig = {
+    pncpDailyEnabled: process.env.PNCP_DAILY_COLLECT !== "false",
+    pncpHour: dailyHour(),
+    safetyHour: schedule.hour,
+    retryIntervalMs,
+    staleAfterMsBySource: {
+      pncp: PNCP_STALE_AFTER_MS,
+      "pncp-transparency": 2 * 60 * 60_000,
+      "mapas-culturais": 30 * 60_000,
+      "funding-opportunities": 30 * 60_000,
+      "culture-federal": 30 * 60_000,
+    },
+  };
+
+  const loadRuns = async (now: Date): Promise<InternationalIngestRun[]> => {
+    const today = saoPauloDayStart(now);
+    const oldestRecentHeartbeat = new Date(
+      now.getTime() -
+        Math.max(...Object.values(decisionConfig.staleAfterMsBySource)),
+    );
+    return await db
+      .select({
+        source: ingestRunsTable.source,
+        status: ingestRunsTable.status,
+        startedAt: ingestRunsTable.startedAt,
+        heartbeatAt: ingestRunsTable.heartbeatAt,
+        finishedAt: ingestRunsTable.finishedAt,
+      })
+      .from(ingestRunsTable)
+      .where(
+        and(
+          inArray(ingestRunsTable.source, [...INTERNATIONAL_RELEVANT_SOURCES]),
+          or(
+            gte(ingestRunsTable.startedAt, today),
+            and(
+              eq(ingestRunsTable.status, "running"),
+              gte(ingestRunsTable.heartbeatAt, oldestRecentHeartbeat),
+            ),
+          ),
+        ),
+      );
+  };
+
   let timer: NodeJS.Timeout | undefined;
   let stopped = false;
-  const run = async (reason: string) => {
-    try {
-      const { collectInternational } = await import("./collect-international");
-      const locked = await tryRunSingletonJob("international_collect", () =>
-        collectInternational(),
+  let ingestRetry: ReturnType<typeof inProgressRetry> | undefined;
+
+  const armAt = (when: Date, reason: string) => {
+    if (stopped) return;
+    const delay = Math.max(1_000, when.getTime() - Date.now());
+    logger.info(
+      { reason, at: when.toISOString(), delayMs: delay },
+      "Next international opportunities collect check scheduled",
+    );
+    timer = setTimeout(() => void check("scheduled_check"), delay);
+    timer.unref();
+  };
+
+  const handleDecision = (
+    decision: InternationalCollectDecision,
+    now: Date,
+  ): boolean => {
+    if (decision.action === "run") return true;
+    if (decision.action === "already_ran") {
+      ingestRetry?.reset();
+      armAt(
+        nextInternationalCollectDayCheck(now, decisionConfig),
+        decision.reason,
       );
-      if (locked.acquired)
+      return false;
+    }
+    armAt(decision.retryAt, decision.reason);
+    return false;
+  };
+
+  const check = async (reason: string): Promise<void> => {
+    if (stopped) return;
+    const now = new Date();
+    try {
+      const decision = decideInternationalCollect(
+        now,
+        await loadRuns(now),
+        decisionConfig,
+      );
+      if (!handleDecision(decision, now)) return;
+
+      const locked = await tryRunSingletonJob(
+        "international_collect",
+        async () => {
+          const lockedAt = new Date();
+          const lockedDecision = decideInternationalCollect(
+            lockedAt,
+            await loadRuns(lockedAt),
+            decisionConfig,
+          );
+          if (lockedDecision.action !== "run")
+            return { collected: false as const, decision: lockedDecision };
+          const { collectInternational } =
+            await import("./collect-international");
+          return {
+            collected: true as const,
+            result: await collectInternational(lockedAt),
+          };
+        },
+      );
+      if (!locked.acquired) {
+        armAt(new Date(Date.now() + retryIntervalMs), "singleton_locked");
+        return;
+      }
+      if (!locked.value.collected) {
+        handleDecision(locked.value.decision, new Date());
+        return;
+      }
+      ingestRetry?.reset();
+      const collected = locked.value.result;
+      logger.info(
+        {
+          reason,
+          decision: decision.reason,
+          runId: collected.runId,
+          upserted: collected.upserted,
+          closed: collected.closed,
+          translation: collected.translation,
+        },
+        "Daily international opportunities collected",
+      );
+      armAt(
+        nextInternationalCollectDayCheck(new Date(), decisionConfig),
+        "collected_today",
+      );
+    } catch (error) {
+      const {
+        InternationalIngestInProgressError,
+        INTERNATIONAL_STALE_AFTER_MS,
+      } = await import("./collect-international");
+      if (error instanceof InternationalIngestInProgressError) {
+        ingestRetry ??= inProgressRetry(
+          INTERNATIONAL_STALE_AFTER_MS,
+          (retryReason) => check(retryReason),
+        );
         logger.info(
           {
             reason,
-            runId: locked.value.runId,
-            upserted: locked.value.upserted,
-            closed: locked.value.closed,
-            translation: locked.value.translation,
+            retryScheduled: ingestRetry.schedule(),
           },
-          "Daily international opportunities collected",
-        );
-    } catch (error) {
-      const { InternationalIngestInProgressError } =
-        await import("./collect-international");
-      if (error instanceof InternationalIngestInProgressError) {
-        logger.info(
-          { reason },
-          "Daily international opportunities collect skipped because one is already running",
+          "Daily international opportunities collect is already running",
         );
         return;
       }
       logger.error(
         { err: error, reason },
-        "Daily international opportunities collect failed",
+        "Daily international opportunities collect check failed",
       );
+      armAt(new Date(Date.now() + retryIntervalMs), "check_failed");
     }
   };
-  // No run at startup: a restart must not add requests to the sources.
-  const arm = () => {
-    if (stopped) return;
-    const delay = msUntilHour(schedule.hour);
-    logger.info(
-      { hour: schedule.hour, delayMs: delay },
-      "Next international opportunities collect scheduled",
-    );
-    timer = setTimeout(() => void run("schedule").finally(arm), delay);
-    timer.unref();
-  };
-  arm();
+
+  // Startup only evaluates persisted runs. It never starts a second collection for the local day.
+  void check("startup");
   return () => {
     stopped = true;
     if (timer) clearTimeout(timer);
+    ingestRetry?.stop();
   };
 }
 
