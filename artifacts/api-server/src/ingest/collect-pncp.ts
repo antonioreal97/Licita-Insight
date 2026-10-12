@@ -29,9 +29,10 @@ import {
   type IngestDay,
 } from "./ingest-calendar";
 import {
-  MAX_CONSECUTIVE_RECOVERABLE_REFRESH_FAILURES,
-  refreshPncpCandidates,
+  pncpRefreshMaxConsecutiveFailuresFromEnv,
+  refreshPncpCandidatesWithEnrichment,
 } from "./pncp-refresh-failure";
+import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -62,7 +63,27 @@ type RunCounters = {
   upserted: number;
   refreshed: number;
   refreshErrors: number;
+  purchaseErrors: number;
+  enriched: number;
+  enrichmentErrors: number;
+  enrichmentSkipped: number;
 };
+
+const persistedCounters = (counters: RunCounters) => ({
+  pagesRead: counters.pagesRead,
+  upserted: counters.upserted,
+  refreshed: counters.refreshed,
+  refreshErrors: counters.refreshErrors,
+  details: {
+    refresh: {
+      purchasesUpdated: counters.refreshed,
+      purchasesFailed: counters.purchaseErrors,
+      enrichmentsCompleted: counters.enriched,
+      enrichmentsFailed: counters.enrichmentErrors,
+      enrichmentsSkipped: counters.enrichmentSkipped,
+    },
+  },
+});
 
 const compactDay = (isoDate: string): string => isoDate.replaceAll("-", "");
 const pncpSourceRemovedMarker = () =>
@@ -170,10 +191,8 @@ export const collectOptionsFromEnv = (
     modalities: parseModalities(env.PNCP_MODALITIES),
     pageSize: positiveInt(env.PNCP_PAGE_SIZE, 50),
     refreshLimit: nonNegativeInt(env.PNCP_REFRESH_LIMIT, 200),
-    refreshMaxConsecutiveFailures: positiveInt(
-      env.PNCP_REFRESH_MAX_CONSECUTIVE_FAILURES,
-      MAX_CONSECUTIVE_RECOVERABLE_REFRESH_FAILURES,
-    ),
+    refreshMaxConsecutiveFailures:
+      pncpRefreshMaxConsecutiveFailuresFromEnv(env),
     ...(uf ? { uf } : {}),
   };
 };
@@ -243,10 +262,7 @@ async function touchRun(runId: string, counters: RunCounters): Promise<void> {
     .update(ingestRunsTable)
     .set({
       heartbeatAt: new Date(),
-      pagesRead: counters.pagesRead,
-      upserted: counters.upserted,
-      refreshed: counters.refreshed,
-      refreshErrors: counters.refreshErrors,
+      ...persistedCounters(counters),
     })
     .where(eq(ingestRunsTable.id, runId));
 }
@@ -456,7 +472,7 @@ async function refreshOpenTenders(
 
   const initialRefreshed = counters.refreshed;
   const initialRefreshErrors = counters.refreshErrors;
-  await refreshPncpCandidates(rows, {
+  await refreshPncpCandidatesWithEnrichment(rows, {
     maxConsecutiveRecoverableFailures,
     attempt: async (row) => {
       await touchRun(runId, counters);
@@ -479,7 +495,6 @@ async function refreshOpenTenders(
         identity.sequencial,
       );
       if (!compra) {
-        counters.refreshErrors += 1;
         logger.error(
           { tenderId: row.id },
           "PNCP compra was not found during refresh",
@@ -490,9 +505,9 @@ async function refreshOpenTenders(
         [{ ...record, ...compra, numeroControlePNCP: row.pncpControlNumber }],
         new Date(),
       );
-      await enrichTenderById(row.id);
       return "updated";
     },
+    enrich: async (row) => enrichTenderById(row.id),
     onSourceRemoved: async (error, row) => {
       const now = new Date();
       const status = error instanceof PncpError ? error.status : 410;
@@ -511,9 +526,33 @@ async function refreshOpenTenders(
     onAttemptError: (error, row) => {
       logger.error({ err: error, tenderId: row.id }, "PNCP refresh failed");
     },
-    onProgress: (progress) => {
+    onEnrichmentError: (error, row) => {
+      logger.warn(
+        { err: error, tenderId: row.id },
+        "PNCP detail enrichment failed; will retry later",
+      );
+    },
+    onCombinedProgress: (progress) => {
       counters.refreshed = initialRefreshed + progress.updated;
-      counters.refreshErrors = initialRefreshErrors + progress.failed;
+      counters.refreshErrors =
+        initialRefreshErrors + progress.failed + progress.enrichmentFailed;
+      counters.purchaseErrors = progress.failed;
+      counters.enriched = progress.enriched;
+      counters.enrichmentErrors = progress.enrichmentFailed;
+      counters.enrichmentSkipped = progress.enrichmentSkipped;
+    },
+    onEnrichmentCircuitOpen: (progress, consecutiveRecoverableFailures) => {
+      logger.warn(
+        {
+          runId,
+          purchasesUpdated: progress.updated,
+          enrichmentsCompleted: progress.enriched,
+          enrichmentsFailed: progress.enrichmentFailed,
+          consecutiveRecoverableFailures,
+          maxConsecutiveRecoverableFailures,
+        },
+        "Skipping remaining PNCP detail enrichment after consecutive recoverable failures",
+      );
     },
     onCircuitOpen: (progress, consecutiveRecoverableFailures) => {
       logger.warn(
@@ -541,6 +580,10 @@ async function execute(
     upserted: 0,
     refreshed: 0,
     refreshErrors: 0,
+    purchaseErrors: 0,
+    enriched: 0,
+    enrichmentErrors: 0,
+    enrichmentSkipped: 0,
   };
 
   try {
@@ -584,10 +627,22 @@ async function execute(
         status: "succeeded",
         finishedAt: new Date(),
         heartbeatAt: new Date(),
-        ...counters,
+        ...persistedCounters(counters),
       })
       .where(eq(ingestRunsTable.id, runId));
-    logger.info({ runId, ...counters }, "PNCP ingest finished");
+    logger.info(
+      {
+        runId,
+        pagesRead: counters.pagesRead,
+        upserted: counters.upserted,
+        purchasesUpdated: counters.refreshed,
+        purchasesFailed: counters.purchaseErrors,
+        enrichmentsCompleted: counters.enriched,
+        enrichmentsFailed: counters.enrichmentErrors,
+        enrichmentsSkipped: counters.enrichmentSkipped,
+      },
+      "PNCP ingest finished",
+    );
     const { classifyAfterCollect } = await import("../titles/classify");
     await classifyAfterCollect("pncp_collect");
   } catch (error) {
@@ -600,7 +655,7 @@ async function execute(
         error: message,
         finishedAt: new Date(),
         heartbeatAt: new Date(),
-        ...counters,
+        ...persistedCounters(counters),
       })
       .where(eq(ingestRunsTable.id, runId));
   }
@@ -628,12 +683,15 @@ export async function startPncpIngest(
     throw error;
   }
 
-  void execute(runId, options, startedAt).catch((error) => {
-    logger.error(
-      { err: error, runId },
-      "PNCP ingest crashed before recording the failure",
-    );
-  });
+  const stopHeartbeat = startIngestRunHeartbeat(runId);
+  void execute(runId, options, startedAt)
+    .catch((error) => {
+      logger.error(
+        { err: error, runId },
+        "PNCP ingest crashed before recording the failure",
+      );
+    })
+    .finally(stopHeartbeat);
   return { runId, status: "running" };
 }
 

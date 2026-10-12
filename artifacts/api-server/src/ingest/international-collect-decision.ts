@@ -94,6 +94,9 @@ export const decideInternationalCollect = (
     runs.some(
       (run) =>
         run.source === "international" &&
+        (run.status === "complete" ||
+          run.status === "succeeded" ||
+          run.status === "running") &&
         isBetween(run.startedAt, today, tomorrow),
     )
   ) {

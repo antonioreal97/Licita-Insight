@@ -17,6 +17,7 @@ import {
   refreshOpportunityStatuses,
   upsertOpportunities,
 } from "./upsert-opportunities";
+import { startIngestRunHeartbeat } from "./run-heartbeat";
 
 export {
   coverageFromDetails,
@@ -175,12 +176,15 @@ export async function startCultureIngest(
     throw error;
   }
 
-  void execute(runId, now).catch((error) => {
-    logger.error(
-      { err: error, runId },
-      "Cultural opportunities ingest crashed before recording the failure",
-    );
-  });
+  const stopHeartbeat = startIngestRunHeartbeat(runId);
+  void execute(runId, now)
+    .catch((error) => {
+      logger.error(
+        { err: error, runId },
+        "Cultural opportunities ingest crashed before recording the failure",
+      );
+    })
+    .finally(stopHeartbeat);
   return { runId, status: "running" };
 }
 
