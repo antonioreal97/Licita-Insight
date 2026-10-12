@@ -50,7 +50,11 @@ Depois da listagem, `refreshOpenTenders` continua consultando compra, itens e
 arquivos individualmente. A fila inclui `open`, `under_review` e `suspended`
 com `fetched_at` anterior ao início da execução, em ordem do mais antigo.
 `PNCP_REFRESH_LIMIT` mantém o padrão 200; `0` desliga essa revisão. Editais
-encerrados permanecem no banco.
+encerrados permanecem no banco. `PNCP_REFRESH_MAX_CONSECUTIVE_FAILURES` (padrão 3) interrompe somente a fase de revisão depois desse número de timeouts, erros
+de rede, respostas 429 ou 5xx consecutivos. Um refresh bem-sucedido zera a
+contagem; 404/410 e compras não encontradas não abrem o disjuntor. A execução
+termina normalmente com os contadores já acumulados, e os editais não tentados
+continuam elegíveis na próxima coleta porque seu `fetched_at` não é alterado.
 
 ## Cobertura na API
 
