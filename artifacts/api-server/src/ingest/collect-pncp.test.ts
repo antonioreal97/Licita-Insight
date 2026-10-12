@@ -14,10 +14,10 @@ describe("PNCP refresh failure classification", () => {
     );
   });
 
-  it("also treats HTTP 404 as a source removal", () => {
+  it("keeps HTTP 404 as a refresh error so the tender is tried again", () => {
     assert.equal(
       classifyPncpRefreshFailure(new PncpError("not found", 404, "")),
-      "source_removed",
+      "error",
     );
   });
 
@@ -117,10 +117,10 @@ describe("PNCP refresh circuit breaker", () => {
       },
     });
 
-    assert.deepEqual(removedStatuses, [404, 410]);
+    assert.deepEqual(removedStatuses, [410]);
     assert.deepEqual(result, {
       updated: 0,
-      failed: 5,
+      failed: 6,
       unattempted: 0,
       stoppedAfterConsecutiveRecoverableFailures: false,
     });

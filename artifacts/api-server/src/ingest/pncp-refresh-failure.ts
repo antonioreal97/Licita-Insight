@@ -5,7 +5,7 @@ export const MAX_CONSECUTIVE_RECOVERABLE_REFRESH_FAILURES = 3;
 export const classifyPncpRefreshFailure = (
   error: unknown,
 ): "source_removed" | "error" =>
-  error instanceof PncpError && (error.status === 404 || error.status === 410)
+  error instanceof PncpError && error.status === 410
     ? "source_removed"
     : "error";
 
