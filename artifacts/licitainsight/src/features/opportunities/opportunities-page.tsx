@@ -165,7 +165,7 @@ function OpportunitySearch() {
 
   return (
     <>
-      <ScopeTabs scope={scope} onChange={(next) => update(scopePatch(next))} />
+      {!international && <ScopeTabs scope={scope} onChange={(next) => update(scopePatch(next))} />}
       {international && <OfficialNoticeBanner className="mb-4" />}
       <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <label className="min-w-0 flex-1">
