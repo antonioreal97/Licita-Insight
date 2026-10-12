@@ -31,18 +31,20 @@ const savedSearchNotification: Notification = {
   profileMatches: [],
 };
 
-test('editais novos para o perfil abrem o primeiro edital encontrado', () => {
+test('um único edital novo para o perfil abre o edital diretamente', () => {
+  const notification = profileNotification([{ id: 'tender/1', title: 'Aquisição de servidores', organizationName: 'Órgão de teste', proposalDeadline: null, level: 'high' }]);
+  notification.matchCount = 1;
   const href = notificationHref(
-    profileNotification([{ id: 'tender/1', title: 'Aquisição de servidores', organizationName: 'Órgão de teste', proposalDeadline: null, level: 'high' }]),
+    notification,
   );
   assert.equal(href, '/tenders/tender%2F1');
 });
 
-test('sem edital em destaque, o link de perfil abre a busca com todos os status', () => {
-  assert.equal(notificationHref(profileNotification([])), '/search?status=all');
+test('vários editais novos para o perfil abrem o snapshot da notificação', () => {
+  assert.equal(notificationHref(profileNotification([])), '/search?status=all&notification=profile-1');
 });
 
-test('alerta de busca salva informa quantos ainda são novos e abre o filtro de novos', () => {
-  assert.equal(notificationDescription(savedSearchNotification), '3 resultados entraram no Pardal nas últimas 24 horas.');
-  assert.equal(notificationHref(savedSearchNotification), '/search?q=cameras&status=open&newOnly=true');
+test('alerta de busca salva usa texto neutro e abre somente o snapshot, sem filtros relativos', () => {
+  assert.equal(notificationDescription(savedSearchNotification), 'Abra para ver os editais.');
+  assert.equal(notificationHref(savedSearchNotification), '/search?status=all&notification=saved-search-1');
 });

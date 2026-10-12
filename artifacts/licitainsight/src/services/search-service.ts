@@ -79,6 +79,8 @@ export function normalizeSearchParams(params: TenderSearchParams): TenderSearchP
   for (const key of NUMBER_KEYS) if (typeof params[key] === 'number' && Number.isFinite(params[key])) out[key] = params[key];
   for (const key of DATE_KEYS) if (params[key]) out[key] = params[key];
   if (params.newOnly) out.newOnly = true;
+  const notification = params.notification?.trim();
+  if (notification && notification.length <= 200) out.notification = notification;
   if (params.myRegion) out.myRegion = true;
   if (params.sort && params.sort !== 'relevance') out.sort = params.sort;
   if (params.page && params.page > 1) out.page = Math.floor(params.page);
@@ -109,6 +111,8 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
     if (value && isCalendarDate(value)) params[key] = value;
   }
   if (url.get('newOnly') === 'true') params.newOnly = true;
+  const notification = url.get('notification')?.trim();
+  if (notification && notification.length <= 200) params.notification = notification;
   if (url.get('myRegion') === 'true') params.myRegion = true;
   const sort = url.get('sort') as SortOption | null;
   if (sort && SORTS.includes(sort)) params.sort = sort;
@@ -140,6 +144,7 @@ export function countActiveFilters(params: TenderSearchParams) {
     NUMBER_KEYS.filter((key) => params[key] !== undefined).length +
     DATE_KEYS.filter((key) => params[key] !== undefined).length +
     (params.newOnly ? 1 : 0) +
+    (params.notification ? 1 : 0) +
     (params.myRegion ? 1 : 0)
   );
 }

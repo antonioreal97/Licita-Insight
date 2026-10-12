@@ -224,4 +224,25 @@ describe("search response semantics", () => {
     assert.equal(result.facets?.newCount, 1);
     assert.equal(result.pagination.total, 1);
   });
+
+  it("restricts results and facets to the exact notification tender ids", () => {
+    const now = new Date("2026-10-12T15:00:00.000Z");
+    const tenders = [
+      detail("snapshot-a", new Date("2026-10-01T12:00:00.000Z")),
+      detail("snapshot-b", new Date("2026-10-02T12:00:00.000Z")),
+      detail("outside", new Date("2026-10-03T12:00:00.000Z")),
+    ];
+    const repository: TenderRepository = {
+      findAll: () => tenders,
+      findById: (id) => tenders.find((tender) => tender.id === id),
+      getIndexUpdatedAt: () => now,
+    };
+    const service = new SearchService(repository, () => now);
+
+    const result = service.search(criteria({ tenderIds: ["snapshot-b", "snapshot-a"] }));
+    assert.deepEqual(result.data.map(({ id }) => id).sort(), ["snapshot-a", "snapshot-b"]);
+    assert.equal(result.pagination.total, 2);
+    assert.equal(result.facets?.groupTotals?.status, 2);
+    assert.equal(service.search(criteria({ tenderIds: [] })).pagination.total, 0);
+  });
 });

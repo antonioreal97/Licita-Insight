@@ -76,6 +76,7 @@ paths:
         - $ref: "#/components/parameters/CategoryFilter"
         - $ref: "#/components/parameters/PlatformFilter"
         - $ref: "#/components/parameters/NewOnly"
+        - $ref: "#/components/parameters/NotificationFilter"
         - $ref: "#/components/parameters/MyRegion"
         - $ref: "#/components/parameters/ValueMin"
         - $ref: "#/components/parameters/ValueMax"
@@ -96,6 +97,8 @@ paths:
                 $ref: "#/components/schemas/SearchResponse"
         "400":
           $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
         "500":
@@ -1609,6 +1612,16 @@ components:
       schema:
         type: boolean
         default: false
+    NotificationFilter:
+      name: notification
+      in: query
+      description: >-
+        Restricts results to the tender ids captured by this notification. Requires a session;
+        notifications not owned by the signed-in user are returned as an empty snapshot.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
     MyRegion:
       name: myRegion
       in: query
@@ -4319,6 +4332,29 @@ components:
           valueRange,
           newCount,
         ]
+    NotificationSearchContext:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [saved_search_new_matches, profile_new_matches]
+        createdAt:
+          type: string
+          format: date-time
+        matchCount:
+          type: integer
+          minimum: 0
+        storedTenderCount:
+          type: integer
+          minimum: 0
+          maximum: 20
+        savedSearchName:
+          type: [string, "null"]
+        savedSearchQuery:
+          type: [string, "null"]
+      required: [id, type, createdAt, matchCount, storedTenderCount, savedSearchName, savedSearchQuery]
     SearchResponse:
       type: object
       properties:
@@ -4362,6 +4398,13 @@ components:
             indexUpdatedAt:
               type: [string, "null"]
               format: date-time
+            notification:
+              description: >-
+                Snapshot metadata for the requested notification; null when the id does not exist,
+                belongs to another user, or is not a supported match notification.
+              anyOf:
+                - $ref: "#/components/schemas/NotificationSearchContext"
+                - type: "null"
           required:
             [
               query,

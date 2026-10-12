@@ -146,6 +146,7 @@ const applyFilters = (
   const tokens = queryTokens(criteria.query);
 
   return tenders.filter((tender) => {
+    if (criteria.tenderIds && !criteria.tenderIds.includes(tender.id)) return false;
     if (!matchesQuery(tender, tokens)) return false;
     if (
       skippedFacet !== "new" &&

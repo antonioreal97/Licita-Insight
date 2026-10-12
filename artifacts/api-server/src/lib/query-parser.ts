@@ -99,6 +99,7 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
   const query = result.data.q?.trim() || null;
   return {
     query,
+    notificationId: result.data.notification,
     mode: result.data.mode ?? "keyword",
     status: result.data.status ?? [],
     modality: result.data.modality ?? [],

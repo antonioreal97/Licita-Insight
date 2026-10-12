@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { List, Loader2, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Table2 } from 'lucide-react';
+import { Link } from 'wouter';
 import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
@@ -26,7 +27,7 @@ import { useRelaxation } from './hooks/use-relaxation';
 import { useSearchUrlState } from './hooks/use-search-url-state';
 import { useTenderSearch } from './hooks/use-tender-search';
 import { rememberFacetLabels, rememberLabel } from './lib/facet-config';
-import { searchDefaultsToUrl } from './lib/search-defaults';
+import { savedQueryHref, searchDefaultsToUrl } from './lib/search-defaults';
 import { relevanceVaries } from '@/features/tenders/lib/tender-display';
 import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
 import { accountService } from '@/services/account-service';
@@ -54,6 +55,10 @@ export default function SearchPage() {
   const facets = response?.facets;
   const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
+  const notificationContext = response?.meta.notification;
+  const completeSearchHref = notificationContext?.savedSearchQuery != null
+    ? savedQueryHref(notificationContext.savedSearchQuery, { withoutNewOnly: true })
+    : null;
   const page = params.page ?? 1;
   // A shared link can point past the last page (the total shrank): jump to the last page instead of an empty page.
   // Judged on the response's own page so the skeleton stays up while the corrected page loads (no empty-state flash).
@@ -335,8 +340,28 @@ export default function SearchPage() {
             </div>
 
             <div className="mb-3 empty:hidden">
-              <ActiveFilters params={params} onRemove={update} onClearAll={clearFilters} canClear={activeFilters > 0} />
+              <ActiveFilters
+                params={params}
+                notification={notificationContext}
+                onRemove={update}
+                onClearAll={clearFilters}
+                canClear={activeFilters > 0}
+              />
             </div>
+
+            {notificationContext && notificationContext.matchCount > notificationContext.storedTenderCount && (
+              <p className="mb-3 type-meta text-muted-foreground" data-testid="notification-truncated-note">
+                Mostrando os {formatNumber(notificationContext.storedTenderCount)} primeiros de {formatNumber(notificationContext.matchCount)}
+                {completeSearchHref && (
+                  <>
+                    {' · '}
+                    <Link href={completeSearchHref} className="font-semibold text-primary hover:underline focus-visible:focus-ring">
+                      Ver a busca completa
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
 
             <div
               aria-busy={search.isFetching}
@@ -358,6 +383,8 @@ export default function SearchPage() {
                 <EmptySearch
                   query={params.q}
                   hasFilters={activeFilters > 0}
+                  notification={Boolean(params.notification)}
+                  completeSearchHref={completeSearchHref}
                   relaxation={relaxation}
                   onRelax={() => relaxation && update(relaxation.patch)}
                   onClearFilters={clearFilters}

@@ -18,6 +18,7 @@ import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail
 import { pgErrorCode } from "../lib/pg-error";
 import { authContext } from "../auth/http";
 import { getCompanyProfile } from "../ai/company-fit-service";
+import { notificationSearchScope } from "../account/notification-service";
 
 const router: IRouter = Router();
 
@@ -48,6 +49,17 @@ const exposeSearchError = (error: unknown): unknown => {
 router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
   try {
     const criteria = parseSearchQuery(req.query);
+    let notification = null;
+    if (criteria.notificationId) {
+      if (!res.locals.auth) throw new UnauthenticatedError();
+      const scope = await notificationSearchScope(
+        authContext(res).user.id,
+        criteria.notificationId,
+      );
+      criteria.tenderIds = scope?.tenderIds ?? [];
+      notification = scope?.context ?? null;
+      res.locals.publicCachePolicy = "no-store";
+    }
     if (criteria.myRegion) {
       if (!res.locals.auth) throw new UnauthenticatedError();
       criteria.serviceRegion = (
@@ -57,7 +69,15 @@ router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
     }
     const backend = await getSearchBackend();
     const result = await backend.search(criteria);
-    res.json(SearchTendersResponse.parse(result));
+    res.json(
+      SearchTendersResponse.parse({
+        ...result,
+        meta: {
+          ...result.meta,
+          ...(criteria.notificationId ? { notification } : {}),
+        },
+      }),
+    );
     if (criteria.page === 1) {
       scheduleTitleRewrites(
         result.data

@@ -23,5 +23,9 @@ describe("saved search query", () => {
       () => canonicalSearchQuery("valueMin=200&valueMax=100"),
       InvalidParameterError,
     );
+    assert.throws(
+      () => canonicalSearchQuery("q=software&notification=notice-1"),
+      InvalidParameterError,
+    );
   });
 });

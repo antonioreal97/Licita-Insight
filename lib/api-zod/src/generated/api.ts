@@ -35,6 +35,8 @@ export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 export const searchTendersQueryNewOnlyDefault = false;
+export const searchTendersQueryNotificationMax = 200;
+
 export const searchTendersQueryMyRegionDefault = false;
 export const searchTendersQueryValueMinMin = 0;
 
@@ -60,6 +62,7 @@ export const SearchTendersQueryParams = zod.object({
   "category": zod.array(zod.coerce.string().min(1)).optional(),
   "platform": zod.array(zod.coerce.string().min(1)).optional().describe('Normalized bidding platform slug (`TenderPlatform.slug`).'),
   "newOnly": zod.coerce.boolean().default(searchTendersQueryNewOnlyDefault).describe('Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).'),
+  "notification": zod.coerce.string().min(1).max(searchTendersQueryNotificationMax).optional().describe('Restricts results to the tender ids captured by this notification. Requires a session; notifications not owned by the signed-in user are returned as an empty snapshot.'),
   "myRegion": zod.coerce.boolean().default(searchTendersQueryMyRegionDefault).describe('Apply the signed-in company\'s saved service region.'),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
@@ -119,6 +122,11 @@ export const searchTendersResponseFacetsOneValueRangeHistogramMax = 12;
 export const searchTendersResponseFacetsOneNewCountMin = 0;
 
 export const searchTendersResponseMetaTookMsMin = 0;
+
+export const searchTendersResponseMetaNotificationOneMatchCountMin = 0;
+
+export const searchTendersResponseMetaNotificationOneStoredTenderCountMin = 0;
+export const searchTendersResponseMetaNotificationOneStoredTenderCountMax = 20;
 
 
 
@@ -249,7 +257,16 @@ export const SearchTendersResponse = zod.object({
   "searchMode": zod.enum(['keyword', 'semantic', 'hybrid']),
   "searchModeFallbackReason": zod.union([zod.enum(['not_available', 'query_too_short']),zod.null()]),
   "tookMs": zod.number().min(searchTendersResponseMetaTookMsMin),
-  "indexUpdatedAt": zod.coerce.date().nullable()
+  "indexUpdatedAt": zod.coerce.date().nullable(),
+  "notification": zod.union([zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['saved_search_new_matches', 'profile_new_matches']),
+  "createdAt": zod.coerce.date(),
+  "matchCount": zod.number().int().min(searchTendersResponseMetaNotificationOneMatchCountMin),
+  "storedTenderCount": zod.number().int().min(searchTendersResponseMetaNotificationOneStoredTenderCountMin).max(searchTendersResponseMetaNotificationOneStoredTenderCountMax),
+  "savedSearchName": zod.string().nullable(),
+  "savedSearchQuery": zod.string().nullable()
+}),zod.null()]).optional().describe('Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification.')
 })
 })
 

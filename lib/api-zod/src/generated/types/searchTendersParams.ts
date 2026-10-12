@@ -14,6 +14,7 @@ import type { IncludeMonitoredParameter } from './includeMonitoredParameter';
 import type { ModalityFilterParameter } from './modalityFilterParameter';
 import type { MyRegionParameter } from './myRegionParameter';
 import type { NewOnlyParameter } from './newOnlyParameter';
+import type { NotificationFilterParameter } from './notificationFilterParameter';
 import type { OrganizationFilterParameter } from './organizationFilterParameter';
 import type { PageParameter } from './pageParameter';
 import type { PageSizeParameter } from './pageSizeParameter';
@@ -67,6 +68,12 @@ platform?: PlatformFilterParameter;
  * Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).
  */
 newOnly?: NewOnlyParameter;
+/**
+ * Restricts results to the tender ids captured by this notification. Requires a session; notifications not owned by the signed-in user are returned as an empty snapshot.
+ * @minLength 1
+ * @maxLength 200
+ */
+notification?: NotificationFilterParameter;
 /**
  * Apply the signed-in company's saved service region.
  */

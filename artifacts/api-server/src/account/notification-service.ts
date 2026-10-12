@@ -32,6 +32,59 @@ import { hasSubscriptionEntitlement } from "../billing/billing-access";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+export type NotificationSearchScope = {
+  tenderIds: string[];
+  context: {
+    id: string;
+    type: "saved_search_new_matches" | "profile_new_matches";
+    createdAt: Date;
+    matchCount: number;
+    storedTenderCount: number;
+    savedSearchName: string | null;
+    savedSearchQuery: string | null;
+  };
+};
+
+/** Returns only notification snapshots owned by this user; every other id is indistinguishable from missing. */
+export const notificationSearchScope = async (
+  userId: string,
+  notificationId: string,
+): Promise<NotificationSearchScope | null> => {
+  const [row] = await db
+    .select({
+      id: notificationsTable.id,
+      type: notificationsTable.type,
+      createdAt: notificationsTable.createdAt,
+      matchCount: notificationsTable.matchCount,
+      tenderIds: notificationsTable.tenderIds,
+      savedSearchName: notificationsTable.savedSearchName,
+      savedSearchQuery: notificationsTable.savedSearchQuery,
+    })
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.id, notificationId),
+        eq(notificationsTable.userId, userId),
+        sql`${notificationsTable.type} in ('saved_search_new_matches', 'profile_new_matches')`,
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const type = row.type as NotificationSearchScope["context"]["type"];
+  return {
+    tenderIds: row.tenderIds,
+    context: {
+      id: row.id,
+      type,
+      createdAt: row.createdAt,
+      matchCount: row.matchCount ?? row.tenderIds.length,
+      storedTenderCount: row.tenderIds.length,
+      savedSearchName: row.savedSearchName,
+      savedSearchQuery: row.savedSearchQuery,
+    },
+  };
+};
+
 const digest = (value: string): string =>
   createHash("sha256").update(value).digest("hex").slice(0, 24);
 

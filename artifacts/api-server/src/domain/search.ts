@@ -21,6 +21,10 @@ export type FacetGroup =
 
 export interface SearchCriteria {
   query: string | null;
+  /** Notification id from the public query string. Resolved by the route against the signed-in user. */
+  notificationId?: string;
+  /** Exact notification snapshot. `[]` deliberately means no visible tenders. */
+  tenderIds?: string[];
   mode: SearchMode;
   status: TenderStatus[];
   modality: Modality[];

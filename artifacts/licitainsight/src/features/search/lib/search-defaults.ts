@@ -48,6 +48,7 @@ const FILTER_KEYS = [
   'deadlineFrom',
   'deadlineTo',
   'newOnly',
+  'notification',
   'myRegion',
 ] as const;
 
@@ -60,9 +61,15 @@ export function withoutFilters(params: TenderSearchParams): TenderSearchParams {
 }
 
 /** A saved query without `status` covers every status: say so explicitly instead of opening on the default. */
-export function savedQueryHref(query: string, options: { newOnly?: boolean } = {}) {
+export function savedQueryHref(query: string, options: { withoutNewOnly?: boolean } = {}) {
   const params = new URLSearchParams(query);
   if (!params.has('status')) params.append('status', ALL_STATUSES);
-  if (options.newOnly) params.set('newOnly', 'true');
+  if (options.withoutNewOnly) params.delete('newOnly');
+  return `/search?${params}`;
+}
+
+/** Notification links intentionally carry only the immutable snapshot id and the explicit all-status URL value. */
+export function notificationSearchHref(notificationId: string) {
+  const params = new URLSearchParams({ status: ALL_STATUSES, notification: notificationId });
   return `/search?${params}`;
 }
