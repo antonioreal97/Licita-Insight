@@ -26,7 +26,7 @@
     "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
     "backfill:display-titles": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-display-titles.ts",
     "backfill:platform": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-platform.ts",
-    "billing:reconcile": "node --env-file-if-exists=../../.env --import tsx scripts/reconcile-billing.ts",
+    "billing:reconcile": "node --env-file-if-exists=../../.env --import tsx src/billing/reconcile-billing-cli.ts",
     "review:estimated-values": "node --env-file-if-exists=../../.env --import tsx scripts/review-estimated-values.ts",
     "calibrate:estimated-value": "node --import tsx scripts/calibrate-estimated-value.ts",
     "titles:teacher-sample": "node --env-file-if-exists=../../.env --import tsx scripts/titles-teacher-sample.ts",
@@ -41,7 +41,8 @@
     "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test:dist-sheet": "node ./build.mjs && node scripts/verify-dist-sheet.mjs",
-    "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet",
+    "test:dist-reconcile": "node ./build.mjs && node scripts/verify-dist-reconcile-billing.mjs",
+    "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet && node scripts/verify-dist-reconcile-billing.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

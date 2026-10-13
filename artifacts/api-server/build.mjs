@@ -29,6 +29,10 @@ async function buildAll() {
         artifactDir,
         "src/ai/qualification-checklist-policy.ts",
       ),
+      "reconcile-billing": path.resolve(
+        artifactDir,
+        "src/billing/reconcile-billing-cli.ts",
+      ),
     },
     platform: "node",
     bundle: true,
