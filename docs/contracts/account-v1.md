@@ -403,9 +403,34 @@ Cupons são armazenados por digest SHA-256, aceitam duração de 7 ou 30 dias, p
 `accessUntil` a partir do maior entre agora, o período pago/trial vigente e outro cupom ativo; portanto estende acesso sem alterar a assinatura no Asaas. `GET /me/billing` expõe `couponAccessUntil` e usa `source: 'coupon'` quando o cupom é a fonte vigente (assinatura paga continua tendo prioridade).
 
 Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nextDueDate` da assinatura;
-`PAYMENT_OVERDUE` marca `past_due` (uma cobrança antiga não derruba um período já pago);
-`PAYMENT_REFUNDED` cancela e encerra o período. Evento desconhecido responde 200 e não altera a linha.
+`PAYMENT_OVERDUE` marca `past_due`; `PAYMENT_REFUNDED` cancela e encerra o período. Cobrança paga ou
+vencida com `dueDate` anterior ao fim do período já pago não altera a linha — assim reenvio e entrega fora
+de ordem não recalculam o período, não reativam uma assinatura vencida e não derrubam um cancelamento
+voluntário ainda vigente. Evento desconhecido responde 200 e não altera a linha.
 O usuário é casado por `externalReference` ou pelo `paymentLink` / assinatura já gravados.
+
+Reconciliação (corrige webhook perdido): o job `billing_reconciliation` roda uma vez por dia às
+`BILLING_RECONCILE_HOUR` (padrão 14:00, `America/Sao_Paulo`; aceita 7–23, fora da janela noturna
+00:00–05:30 e da coleta PNCP das 06:00), sob advisory lock, só com o Asaas configurado.
+Percorre, uma assinatura por vez e com `BILLING_RECONCILE_PAUSE_MS` (padrão 1000) antes de cada chamada,
+as linhas `pending`, `active`, `past_due` e `canceled` com período pago vigente, até
+`BILLING_RECONCILE_MAX_PER_RUN` (padrão 200) por execução; a execução seguinte continua de onde parou.
+Para cada linha consulta o Asaas e aplica a mesma decisão do webhook à cobrança decidida mais recente
+(`RECEIVED`/`CONFIRMED`/`OVERDUE`/`REFUNDED`): `pending` pago → `active`; `active` com a cobrança
+vigente vencida → `past_due`; `past_due` pago → `active`; estorno → `canceled` sem acesso; assinatura
+removida ou inativa no Asaas sem estorno → `canceled` mantendo o período pago. O fim do período é o
+vencimento da cobrança seguinte (ou `nextDueDate`, se ela ainda não existe). Sem divergência, nada é gravado.
+
+Consultas ao Asaas: `GET /v3/subscriptions/{id}` e `GET /v3/subscriptions/{id}/payments`; para `pending`,
+a assinatura é localizada por `GET /v3/payments?externalReference={userId}` filtrando o `paymentLink`
+do checkout atual. Falha do Asaas (timeout, 5xx, 429) não altera a linha; três falhas seguidas encerram a
+execução. Assinatura que o Asaas responde com 404 (removida ou criada em outro ambiente, como o sandbox
+depois da troca para produção) também não altera a linha, nunca cancela acesso e não conta como falha:
+entra em `missingRemote` no resumo, sem log de erro. Se um webhook gravar a linha entre a leitura e a escrita, o webhook prevalece.
+`BILLING_RECONCILE_ENABLED=false` desliga o job. Manual:
+`pnpm --filter @workspace/api-server run billing:reconcile [--dry-run]` — imprime só contagens por
+transição (`--dry-run` não grava); saída e logs não levam e-mail nem nome, e identificadores de usuário
+ou do Asaas aparecem só em nível `debug`.
 O checkout do Asaas disponível nesta versão cobra imediatamente; pagar durante o teste troca
 `source` para `subscription` e não posterga a primeira cobrança até `trialEndsAt`.
 

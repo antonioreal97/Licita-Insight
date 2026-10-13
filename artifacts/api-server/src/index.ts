@@ -6,6 +6,7 @@ import { startDocumentRetryJob } from "./ai/document-retry-job";
 import { startTrialNotificationScheduler } from "./account/trial-notification-scheduler";
 import { startEmailNotificationJobs } from "./email/email-scheduler";
 import { devEntitlementEnabled } from "./billing/billing-access";
+import { startBillingReconciliationScheduler } from "./billing/billing-reconciliation";
 import { recoverInterruptedIngestRuns } from "./ingest/recover-interrupted-runs";
 import {
   startDailyCategoryClassify,
@@ -96,6 +97,7 @@ const startSchedulers = (): Array<() => void> => [
   startRecommendationScheduler(),
   startProfileKeywordScheduler(),
   startPersonalDataRetentionScheduler(),
+  startBillingReconciliationScheduler(),
 ];
 
 const start = async (): Promise<void> => {

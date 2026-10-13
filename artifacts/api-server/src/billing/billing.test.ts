@@ -213,3 +213,57 @@ describe("Asaas webhook", () => {
     assert.equal(webhookPatch("PAYMENT_CREATED", {}, null, null), null);
   });
 });
+
+describe("Asaas webhook redelivery", () => {
+  type Row = { status: string; currentPeriodEnd: Date | null };
+  const deliver = (row: Row, event: string, dueDate: string, nextDueDate: string | null = null): Row => {
+    const patch = webhookPatch(event, { subscription: "sub_1", dueDate }, nextDueDate, row);
+    return patch ? { status: patch.status, currentPeriodEnd: patch.currentPeriodEnd } : row;
+  };
+  const pending: Row = { status: "pending", currentPeriodEnd: null };
+
+  it("keeps the period when PAYMENT_RECEIVED arrives again after the next charge was generated", () => {
+    const first = deliver(pending, "PAYMENT_RECEIVED", "2026-10-10", "2026-11-10");
+    const again = deliver(first, "PAYMENT_RECEIVED", "2026-10-10", "2026-12-10");
+    assert.deepEqual(again, first);
+    assert.equal(first.currentPeriodEnd?.toISOString(), periodEndFromAsaasDate("2026-11-10").toISOString());
+  });
+
+  it("ignores an old PAYMENT_OVERDUE delivered after a newer PAYMENT_RECEIVED", () => {
+    const paid = deliver(
+      deliver(pending, "PAYMENT_RECEIVED", "2026-09-10", "2026-10-10"),
+      "PAYMENT_RECEIVED",
+      "2026-10-10",
+      "2026-11-10",
+    );
+    const late = deliver(paid, "PAYMENT_OVERDUE", "2026-09-10");
+    assert.deepEqual(late, paid);
+    assert.equal(late.status, "active");
+  });
+
+  it("does not reactivate an overdue subscription when an older payment is redelivered", () => {
+    const overdue = deliver(
+      deliver(pending, "PAYMENT_RECEIVED", "2026-09-10", "2026-10-10"),
+      "PAYMENT_OVERDUE",
+      "2026-10-10",
+    );
+    assert.equal(overdue.status, "past_due");
+    assert.deepEqual(deliver(overdue, "PAYMENT_RECEIVED", "2026-09-10", "2026-11-10"), overdue);
+    assert.equal(deliver(overdue, "PAYMENT_RECEIVED", "2026-10-10", "2026-11-10").status, "active");
+  });
+
+  it("repeats PAYMENT_OVERDUE and PAYMENT_REFUNDED without changing the result", () => {
+    const active: Row = { status: "active", currentPeriodEnd: periodEndFromAsaasDate("2026-10-10") };
+    const overdue = deliver(active, "PAYMENT_OVERDUE", "2026-10-10");
+    assert.deepEqual(deliver(overdue, "PAYMENT_OVERDUE", "2026-10-10"), overdue);
+    const refunded = deliver(active, "PAYMENT_REFUNDED", "2026-09-10");
+    assert.deepEqual(deliver(refunded, "PAYMENT_REFUNDED", "2026-09-10"), refunded);
+    assert.deepEqual(refunded, { status: "canceled", currentPeriodEnd: null });
+  });
+
+  it("keeps a voluntary cancellation entitled when an old overdue event is redelivered", () => {
+    const canceled: Row = { status: "canceled", currentPeriodEnd: periodEndFromAsaasDate("2026-11-10") };
+    assert.deepEqual(deliver(canceled, "PAYMENT_OVERDUE", "2026-09-10"), canceled);
+    assert.deepEqual(deliver(canceled, "PAYMENT_RECEIVED", "2026-10-10", "2026-12-10"), canceled);
+  });
+});
