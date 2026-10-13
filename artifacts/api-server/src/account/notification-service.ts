@@ -8,16 +8,19 @@ import {
   isNull,
   lt,
   lte,
+  or,
   sql,
 } from "drizzle-orm";
 import {
   db,
   notificationsTable,
+  pool,
   savedSearchesTable,
   savedTendersTable,
   subscriptionsTable,
   tendersTable,
   usersTable,
+  type WorkspaceCutoverMode,
 } from "@workspace/db";
 import type { NotificationChangeRecord } from "@workspace/db/schema";
 import { searchWhereFor } from "../repositories/postgres-tender-repository";
@@ -29,6 +32,9 @@ import {
 } from "./notification-change";
 import { TRIAL_ENDING_NOTICE_DAYS } from "../billing/trial-access";
 import { hasSubscriptionEntitlement } from "../billing/billing-access";
+import { CutoverModeChangedError, withCutoverGate } from "../workspaces/cutover-gate";
+import { readCutoverState } from "../workspaces/cutover-state";
+import { defaultWorkspaceId, requireDefaultWorkspace } from "../workspaces/workspace-service";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -45,11 +51,35 @@ export type NotificationSearchScope = {
   };
 };
 
+/**
+ * The notifications a v1 route acts on: the user's in `legacy`; in `workspaces`, the default workspace's (never the
+ * active one). The collection and the profile alerts still create rows without a workspace until unit E, and W4
+ * forbids them afterwards: until then those rows stay in the feed instead of vanishing at the cutover.
+ */
+export const notificationScope = async (
+  executor: Pick<typeof db, "select">,
+  userId: string,
+  mode: WorkspaceCutoverMode,
+) => {
+  const own = eq(notificationsTable.userId, userId);
+  if (mode === "legacy") return own;
+  const { id } = await requireDefaultWorkspace(executor, userId);
+  return and(own, or(eq(notificationsTable.workspaceId, id), isNull(notificationsTable.workspaceId)))!;
+};
+
+/** A cycle that read its inputs in one model must not write in the other: drop the result, the next cycle redoes it. */
+const discardedByCutover = (error: unknown, operation: string): boolean => {
+  if (!(error instanceof CutoverModeChangedError)) return false;
+  logger.warn({ err: error, operation }, "Cycle result discarded because the cutover mode changed");
+  return true;
+};
+
 /** Returns only notification snapshots owned by this user; every other id is indistinguishable from missing. */
 export const notificationSearchScope = async (
   userId: string,
   notificationId: string,
 ): Promise<NotificationSearchScope | null> => {
+  const scope = await notificationScope(db, userId, (await readCutoverState(pool)).mode);
   const [row] = await db
     .select({
       id: notificationsTable.id,
@@ -64,7 +94,7 @@ export const notificationSearchScope = async (
     .where(
       and(
         eq(notificationsTable.id, notificationId),
-        eq(notificationsTable.userId, userId),
+        scope,
         sql`${notificationsTable.type} in ('saved_search_new_matches', 'profile_new_matches')`,
       ),
     )
@@ -91,6 +121,7 @@ const digest = (value: string): string =>
 export const createTrialEndingNotifications = async (
   now = new Date(),
 ): Promise<number> => {
+  const { mode } = await readCutoverState(pool);
   const noticeLimit = new Date(
     now.getTime() + TRIAL_ENDING_NOTICE_DAYS * 24 * 60 * 60 * 1000,
   );
@@ -124,25 +155,34 @@ export const createTrialEndingNotifications = async (
   );
   if (users.length === 0) return 0;
 
-  const inserted = await db
-    .insert(notificationsTable)
-    .values(
-      users.map((user) => ({
-        id: randomUUID(),
-        userId: user.id,
-        type: "trial_ending",
-        dedupeKey: "account:trial-ending",
-        createdAt: now,
-        change: {
-          field: "trialEndsAt",
-          from: null,
-          to: user.trialEndsAt.toISOString(),
-        },
-      })),
-    )
-    .onConflictDoNothing()
-    .returning({ id: notificationsTable.id });
-  return inserted.length;
+  try {
+    return await withCutoverGate({ kind: "job", cycleMode: mode }, async (tx) => {
+      const inserted = await tx
+        .insert(notificationsTable)
+        .values(
+          users.map((user) => ({
+            id: randomUUID(),
+            userId: user.id,
+            // An account notice belongs to the default workspace; the dedupe key keeps its legacy text until W4.
+            ...(mode === "workspaces" ? { workspaceId: defaultWorkspaceId(user.id) } : {}),
+            type: "trial_ending",
+            dedupeKey: "account:trial-ending",
+            createdAt: now,
+            change: {
+              field: "trialEndsAt",
+              from: null,
+              to: user.trialEndsAt.toISOString(),
+            },
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: notificationsTable.id });
+      return inserted.length;
+    });
+  } catch (error) {
+    if (discardedByCutover(error, "trial_notifications")) return 0;
+    throw error;
+  }
 };
 
 export const createTenderChangeNotifications = async (
@@ -250,8 +290,9 @@ export const createDocumentAddedNotifications = async (
 const evaluateSavedSearch = async (
   id: string,
   completedAt: Date,
+  cycleMode: WorkspaceCutoverMode,
 ): Promise<void> => {
-  await db.transaction(async (tx) => {
+  await withCutoverGate({ kind: "job", cycleMode }, async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${`saved-search:${id}`}))`,
     );
@@ -287,6 +328,8 @@ const evaluateSavedSearch = async (
         .values({
           id: randomUUID(),
           userId: savedSearch.userId,
+          // The alert belongs to the workspace of its saved search; the dedupe key keeps its legacy text until W4.
+          ...(cycleMode === "workspaces" ? { workspaceId: savedSearch.workspaceId } : {}),
           type: "saved_search_new_matches",
           dedupeKey: `saved-search:${id}:${since.toISOString()}:${completedAt.toISOString()}`,
           createdAt: completedAt,
@@ -315,6 +358,7 @@ const evaluateSavedSearch = async (
 export const evaluateSavedSearchNotifications = async (
   completedAt = new Date(),
 ): Promise<void> => {
+  const { mode } = await readCutoverState(pool);
   const searches = await db
     .select({ id: savedSearchesTable.id })
     .from(savedSearchesTable)
@@ -326,18 +370,25 @@ export const evaluateSavedSearchNotifications = async (
     );
   for (const { id } of searches) {
     try {
-      await evaluateSavedSearch(id, completedAt);
+      await evaluateSavedSearch(id, completedAt, mode);
     } catch (error) {
+      if (discardedByCutover(error, "saved_search_evaluation")) return;
       logger.error({ err: error, savedSearchId: id }, "Saved search evaluation failed");
       throw error;
     }
   }
-  await db
-    .delete(notificationsTable)
-    .where(
-      lt(
-        notificationsTable.createdAt,
-        new Date(completedAt.getTime() - 90 * 24 * 60 * 60 * 1000),
-      ),
+  try {
+    await withCutoverGate({ kind: "job", cycleMode: mode }, (tx) =>
+      tx
+        .delete(notificationsTable)
+        .where(
+          lt(
+            notificationsTable.createdAt,
+            new Date(completedAt.getTime() - 90 * 24 * 60 * 60 * 1000),
+          ),
+        ),
     );
+  } catch (error) {
+    if (!discardedByCutover(error, "saved_search_evaluation")) throw error;
+  }
 };

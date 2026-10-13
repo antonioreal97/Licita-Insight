@@ -38,6 +38,7 @@ import { toSummary } from "../services/search-service";
 import type { SearchCriteria } from "../domain/search";
 import { canonicalSearchQuery } from "./saved-search-query";
 import { participationUpdate, type ParticipationPatch } from './participation';
+import { notificationScope } from "./notification-service";
 import { newTenderCutoff } from "../domain/new-tender";
 import { withCutoverGate, type GateDatabase } from "../workspaces/cutover-gate";
 import { readCutoverState } from "../workspaces/cutover-state";
@@ -312,9 +313,27 @@ const savedSearchConflict = (existingId: string): ConflictError =>
     { field: "query", issue: "duplicate", existingId },
   ]);
 
+/**
+ * The `saved_searches` rows a v1 route acts on, like `savedTenderScope`. The active uniqueness stays
+ * `(user_id, query)` until W4, so the duplicate check never relies on the index per workspace.
+ */
+const savedSearchScope = async (
+  executor: Pick<typeof db, "select">,
+  userId: string,
+  mode: WorkspaceCutoverMode,
+) => {
+  if (mode === "legacy") {
+    return { filter: eq(savedSearchesTable.userId, userId), values: {}, workspaceId: null };
+  }
+  const { id } = await requireDefaultWorkspace(executor, userId);
+  return { filter: eq(savedSearchesTable.workspaceId, id), values: { workspaceId: id }, workspaceId: id };
+};
+
+type SavedSearchScope = Awaited<ReturnType<typeof savedSearchScope>>;
+
 const findDuplicateSavedSearch = async (
   tx: Transaction,
-  userId: string,
+  scope: SavedSearchScope,
   query: string,
   exceptId?: string,
 ) => {
@@ -323,7 +342,7 @@ const findDuplicateSavedSearch = async (
     .from(savedSearchesTable)
     .where(
       and(
-        eq(savedSearchesTable.userId, userId),
+        scope.filter,
         eq(savedSearchesTable.query, query),
         isNull(savedSearchesTable.deletedAt),
         exceptId ? ne(savedSearchesTable.id, exceptId) : undefined,
@@ -335,6 +354,7 @@ const findDuplicateSavedSearch = async (
 
 const assertSavedSearchOwner = async (
   tx: Transaction,
+  scope: SavedSearchScope,
   userId: string,
   id: string,
   includeDeleted = false,
@@ -346,51 +366,46 @@ const assertSavedSearchOwner = async (
     .limit(1);
   if (!row) throw new NotFoundError(`Saved search ${id} was not found`);
   if (row.userId !== userId) throw new ForbiddenError();
-  if (!includeDeleted && row.deletedAt) {
+  // The owner's search outside the default workspace does not exist for the v1 routes.
+  const outside = scope.workspaceId !== null && row.workspaceId !== scope.workspaceId;
+  if (outside || (!includeDeleted && row.deletedAt)) {
     throw new NotFoundError(`Saved search ${id} was not found`);
   }
   return row;
 };
 
-export const listSavedSearches = async (userId: string) => ({
-  data: (
-    await db
-      .select()
-      .from(savedSearchesTable)
-      .where(
-        and(
-          eq(savedSearchesTable.userId, userId),
-          isNull(savedSearchesTable.deletedAt),
-        ),
-      )
-      .orderBy(desc(savedSearchesTable.updatedAt))
-  ).map(toSavedSearch),
-});
+export const listSavedSearches = async (userId: string) => {
+  const scope = await savedSearchScope(db, userId, (await readCutoverState(pool)).mode);
+  return {
+    data: (
+      await db
+        .select()
+        .from(savedSearchesTable)
+        .where(and(scope.filter, isNull(savedSearchesTable.deletedAt)))
+        .orderBy(desc(savedSearchesTable.updatedAt))
+    ).map(toSavedSearch),
+  };
+};
 
-export const createSavedSearch = async (input: {
-  userId: string;
-  name: string;
-  query: string;
-  alertsEnabled: boolean;
-}): Promise<SavedSearch> => {
+export const createSavedSearch = async (
+  input: {
+    userId: string;
+    name: string;
+    query: string;
+    alertsEnabled: boolean;
+  },
+  database?: GateDatabase,
+): Promise<SavedSearch> => {
   const canonical = canonicalSearchQuery(input.query).query;
-  return db.transaction(async (tx) => {
+  return withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedSearchScope(tx, input.userId, state.mode);
     await lockUser(tx, input.userId);
-    const duplicate = await findDuplicateSavedSearch(
-      tx,
-      input.userId,
-      canonical,
-    );
+    const duplicate = await findDuplicateSavedSearch(tx, scope, canonical);
     if (duplicate) throw savedSearchConflict(duplicate.id);
     const [totalRow] = await tx
       .select({ value: count() })
       .from(savedSearchesTable)
-      .where(
-        and(
-          eq(savedSearchesTable.userId, input.userId),
-          isNull(savedSearchesTable.deletedAt),
-        ),
-      );
+      .where(and(scope.filter, isNull(savedSearchesTable.deletedAt)));
     if (Number(totalRow?.value ?? 0) >= MAX_SAVED_SEARCHES) {
       throw new ConflictError("Saved search limit reached", [
         { field: "limit", issue: "max_saved_searches" },
@@ -402,6 +417,7 @@ export const createSavedSearch = async (input: {
       .values({
         id: randomUUID(),
         userId: input.userId,
+        ...scope.values,
         name: input.name,
         query: canonical,
         alertsEnabled: input.alertsEnabled,
@@ -412,29 +428,34 @@ export const createSavedSearch = async (input: {
       .returning();
     if (!row) throw new Error("Failed to create saved search");
     return toSavedSearch(row);
-  });
+  }, database);
 };
 
-export const updateSavedSearch = async (input: {
-  userId: string;
-  id: string;
-  name?: string;
-  query?: string;
-  alertsEnabled?: boolean;
-}): Promise<SavedSearch> => {
+export const updateSavedSearch = async (
+  input: {
+    userId: string;
+    id: string;
+    name?: string;
+    query?: string;
+    alertsEnabled?: boolean;
+  },
+  database?: GateDatabase,
+): Promise<SavedSearch> => {
   const requestedQuery =
     input.query === undefined ? undefined : canonicalSearchQuery(input.query).query;
-  return db.transaction(async (tx) => {
+  return withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedSearchScope(tx, input.userId, state.mode);
     await lockUser(tx, input.userId);
     const existing = await assertSavedSearchOwner(
       tx,
+      scope,
       input.userId,
       input.id,
     );
     const query = requestedQuery ?? existing.query;
     const duplicate = await findDuplicateSavedSearch(
       tx,
-      input.userId,
+      scope,
       query,
       input.id,
     );
@@ -456,20 +477,25 @@ export const updateSavedSearch = async (input: {
       .where(
         and(
           eq(savedSearchesTable.id, input.id),
-          eq(savedSearchesTable.userId, input.userId),
+          scope.filter,
           isNull(savedSearchesTable.deletedAt),
         ),
       )
       .returning();
     if (!row) throw new ForbiddenError();
     return toSavedSearch(row);
-  });
+  }, database);
 };
 
-export const deleteSavedSearch = async (userId: string, id: string): Promise<void> => {
-  await db.transaction(async (tx) => {
+export const deleteSavedSearch = async (
+  userId: string,
+  id: string,
+  database?: GateDatabase,
+): Promise<void> => {
+  await withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedSearchScope(tx, userId, state.mode);
     await lockUser(tx, userId);
-    await assertSavedSearchOwner(tx, userId, id);
+    await assertSavedSearchOwner(tx, scope, userId, id);
     const now = new Date();
     await tx
       .update(savedSearchesTable)
@@ -477,20 +503,22 @@ export const deleteSavedSearch = async (userId: string, id: string): Promise<voi
       .where(
         and(
           eq(savedSearchesTable.id, id),
-          eq(savedSearchesTable.userId, userId),
+          scope.filter,
           isNull(savedSearchesTable.deletedAt),
         ),
       );
-  });
+  }, database);
 };
 
 export const restoreSavedSearch = async (
   userId: string,
   id: string,
+  database?: GateDatabase,
 ): Promise<SavedSearch> =>
-  db.transaction(async (tx) => {
+  withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedSearchScope(tx, userId, state.mode);
     await lockUser(tx, userId);
-    const existing = await assertSavedSearchOwner(tx, userId, id, true);
+    const existing = await assertSavedSearchOwner(tx, scope, userId, id, true);
     if (!existing.deletedAt) return toSavedSearch(existing);
     const now = new Date();
     if (
@@ -503,7 +531,7 @@ export const restoreSavedSearch = async (
     }
     const duplicate = await findDuplicateSavedSearch(
       tx,
-      userId,
+      scope,
       existing.query,
       id,
     );
@@ -516,38 +544,35 @@ export const restoreSavedSearch = async (
         newMatchesCount: 0,
         lastCheckedAt: existing.alertsEnabled ? now : null,
       })
-      .where(
-        and(
-          eq(savedSearchesTable.id, id),
-          eq(savedSearchesTable.userId, userId),
-        ),
-      )
+      .where(and(eq(savedSearchesTable.id, id), scope.filter))
       .returning();
     if (!row) throw new NotFoundError(`Saved search ${id} was not found`);
     return toSavedSearch(row);
-  });
+  }, database);
 
 export const markSavedSearchSeen = async (
   userId: string,
   id: string,
+  database?: GateDatabase,
 ): Promise<SavedSearch> =>
-  db.transaction(async (tx) => {
+  withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedSearchScope(tx, userId, state.mode);
     await lockUser(tx, userId);
-    await assertSavedSearchOwner(tx, userId, id);
+    await assertSavedSearchOwner(tx, scope, userId, id);
     const [row] = await tx
       .update(savedSearchesTable)
       .set({ newMatchesCount: 0, updatedAt: new Date() })
       .where(
         and(
           eq(savedSearchesTable.id, id),
-          eq(savedSearchesTable.userId, userId),
+          scope.filter,
           isNull(savedSearchesTable.deletedAt),
         ),
       )
       .returning();
     if (!row) throw new ForbiddenError();
     return toSavedSearch(row);
-  });
+  }, database);
 
 const toNotification = (
   row: typeof notificationsTable.$inferSelect,
@@ -583,13 +608,24 @@ const toNotification = (
   profileMatches: row.profileMatches,
 });
 
-export const unreadNotificationCount = async (userId: string): Promise<number> => {
-  const [row] = await db
+type NotificationScope = Awaited<ReturnType<typeof notificationScope>>;
+
+const notificationReadScope = async (userId: string) =>
+  notificationScope(db, userId, (await readCutoverState(pool)).mode);
+
+const countUnreadNotifications = async (
+  executor: Pick<typeof db, "select">,
+  scope: NotificationScope,
+): Promise<number> => {
+  const [row] = await executor
     .select({ value: count() })
     .from(notificationsTable)
-    .where(and(eq(notificationsTable.userId, userId), isNull(notificationsTable.readAt)));
+    .where(and(scope, isNull(notificationsTable.readAt)));
   return Number(row?.value ?? 0);
 };
+
+export const unreadNotificationCount = async (userId: string): Promise<number> =>
+  countUnreadNotifications(db, await notificationReadScope(userId));
 
 export const listNotifications = async (input: {
   userId: string;
@@ -598,8 +634,9 @@ export const listNotifications = async (input: {
   pageSize: number;
 }): Promise<NotificationPage> => {
   const now = new Date();
+  const scope = await notificationReadScope(input.userId);
   const filter = and(
-    eq(notificationsTable.userId, input.userId),
+    scope,
     input.unreadOnly ? isNull(notificationsTable.readAt) : undefined,
   );
   const [[totalRow], rows, unreadCount] = await Promise.all([
@@ -611,7 +648,7 @@ export const listNotifications = async (input: {
       .orderBy(desc(notificationsTable.createdAt))
       .limit(input.pageSize)
       .offset((input.page - 1) * input.pageSize),
-    unreadNotificationCount(input.userId),
+    countUnreadNotifications(db, scope),
   ]);
   const total = Number(totalRow?.value ?? 0);
   const linkedTenderIds = [
@@ -640,33 +677,33 @@ export const listNotifications = async (input: {
   };
 };
 
-export const markNotificationsRead = async (input: {
-  userId: string;
-  ids?: string[];
-  all?: boolean;
-}): Promise<{ unreadCount: number }> => {
-  const now = new Date();
-  if (input.all) {
-    await db
-      .update(notificationsTable)
-      .set({ readAt: now })
-      .where(
-        and(
-          eq(notificationsTable.userId, input.userId),
-          isNull(notificationsTable.readAt),
-        ),
-      );
-  } else if (input.ids && input.ids.length > 0) {
-    await db
-      .update(notificationsTable)
-      .set({ readAt: now })
-      .where(
-        and(
-          eq(notificationsTable.userId, input.userId),
-          inArray(notificationsTable.id, input.ids),
-          isNull(notificationsTable.readAt),
-        ),
-      );
-  }
-  return { unreadCount: await unreadNotificationCount(input.userId) };
-};
+export const markNotificationsRead = async (
+  input: {
+    userId: string;
+    ids?: string[];
+    all?: boolean;
+  },
+  database?: GateDatabase,
+): Promise<{ unreadCount: number }> =>
+  withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await notificationScope(tx, input.userId, state.mode);
+    const now = new Date();
+    if (input.all) {
+      await tx
+        .update(notificationsTable)
+        .set({ readAt: now })
+        .where(and(scope, isNull(notificationsTable.readAt)));
+    } else if (input.ids && input.ids.length > 0) {
+      await tx
+        .update(notificationsTable)
+        .set({ readAt: now })
+        .where(
+          and(
+            scope,
+            inArray(notificationsTable.id, input.ids),
+            isNull(notificationsTable.readAt),
+          ),
+        );
+    }
+    return { unreadCount: await countUnreadNotifications(tx, scope) };
+  }, database);
