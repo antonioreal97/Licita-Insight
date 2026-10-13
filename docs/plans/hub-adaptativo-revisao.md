@@ -93,9 +93,22 @@ As decisões abaixo foram **aprovadas pelo dono em 13/10/2026** e fecham ou refi
 9. **Busca com `workspaceId`:** `401` sem sessão; `400` para id malformado; para id inexistente, de outro usuário ou sem acesso, `200` com resultado universal, sem personalização, sem cache e com corpo idêntico nos três casos.
 10. **Edição simultânea do perfil:** controle otimista somente na rota nova, com contador `revision` separado de `profileVersion`; a rota v1 continua com última gravação vence.
 11. **Histórico de perguntas de IA:** log pessoal da conta, sem `workspace_id`, com a retenção atual de 90 dias e fora do backfill.
-12. **Forma da troca no corte:** por flag em runtime, com um deploy preparatório que leva schema e adaptadores com a flag desligada. A virada é atômica e sem reinício; o rollback de aplicação é desligar a flag. `FEATURE_JOURNEYS`, lida do ambiente e dependente de reinício, não serve sozinha para o corte.
+12. **Forma da troca no corte:** por flag em runtime, com um deploy preparatório que leva schema e adaptadores com a flag desligada. A virada é atômica e sem reinício; o rollback de aplicação é desligar a flag, nas condições do item 15. `FEATURE_JOURNEYS`, lida do ambiente e dependente de reinício, não serve sozinha para o corte.
 
-Nenhuma dessas decisões autoriza a Fase 1, a criação de migrações ou qualquer mudança em produção.
+Também em 13/10/2026, o dono autorizou o código da Fase 1 (“flag de corte em runtime, serviço de Espaços e adaptadores das rotas v1, tudo desligado e sem migração em produção”) e aprovou as dez decisões de execução do [plano da Fase 1](./hub-adaptativo-fase1-execucao.md#decisões-aprovadas-em-13102026):
+
+13. **W4 fora da janela de corte**, aplicada depois de um período de observação.
+14. **Observação de 7 dias** sem incidente e com zero linhas do escopo com `workspace_id` nulo criadas depois da virada.
+15. **Rollback pela flag estrito:** só vale com a cópia reversa do perfil, antes de W4 e sem Espaço não padrão.
+16. **W1 e W2 obrigatórias:** a versão nova exige as duas aplicadas para subir; não há projeção para o schema antigo.
+17. **Retomada separada da troca:** o dono confere uma leitura pelas rotas v1 antes de liberar as escritas.
+18. **Fase 1 na `main`** só depois do gate de migração (SQL aprovado, backup/restore, ensaio com volume real), com a flag desligada; a virada espera todos os gates, inclusive Asaas.
+19. **Delta W3 definitivo** reconcilia perfis editados ou apagados, cursor de alerta e preferência internacional; o ensaio no servidor fica suspenso até ser refeito com ele.
+20. **Ferramenta de corte em `psql` + `bash`.**
+21. **Erro `503 MAINTENANCE_IN_PROGRESS`**, com o texto “Manutenção rápida em andamento. Tente de novo em alguns minutos.”
+22. **Rotas novas, criação de Espaços e jornadas só depois de W4**; a Fase 1 tem duas janelas em produção, a da virada e a de W4.
+
+Nenhuma dessas decisões autoriza migração, virada da flag ou qualquer mudança em produção.
 
 ## 5. Checkout Asaas antes de ativar a Fase 1
 
@@ -111,4 +124,4 @@ Se a integração não puder ser validada de ponta a ponta, a Fase 1 não é ati
 
 ## Limites desta aprovação
 
-Não iniciar a Fase 1 sem nova autorização explícita. O dono revisará antes o contrato de Espaços, o backfill, a sequência de migrações, a estratégia de isolamento, o ensaio da janela de corte e a evidência do Asaas. Migrações de produção continuam manuais, uma a uma, sempre após backup verificado.
+O código da Fase 1 foi autorizado em 13/10/2026, desligado e sem migração em produção; a ativação continua exigindo autorização explícita. O dono revisará antes o contrato de Espaços, o backfill, a sequência de migrações, a estratégia de isolamento, o ensaio da janela de corte e a evidência do Asaas. Migrações de produção continuam manuais, uma a uma, sempre após backup verificado.
