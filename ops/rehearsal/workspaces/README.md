@@ -2,6 +2,8 @@
 
 > **Rascunhos exclusivos para ensaio. Não são migrações aprovadas e não autorizam a Fase 1.**
 
+> **Ensaio suspenso (decisão de 13/10/2026).** Este rascunho aplica W4 dentro da transação do corte e tem um delta W3 incompleto: não reconcilia perfis editados ou apagados, cursor de alerta nem preferência internacional entre o lote e a janela. A regra aprovada põe W4 numa segunda janela, depois de 7 dias de observação. Não rode o ensaio no servidor até a versão definitiva (unidade G do [plano de execução](../../../docs/plans/hub-adaptativo-fase1-execucao.md)) e do [contrato da flag de corte](../../../docs/contracts/workspace-cutover-v1.md).
+
 Esta pasta é deliberadamente independente de `lib/db/migrations`, do schema Drizzle e do código da aplicação. Ela serve para o dono restaurar um backup em um banco descartável no próprio servidor, medir W1–W4 e compartilhar apenas os relatórios sanitizados. Não execute estes arquivos no banco de produção, em réplica de produção, nem no banco usado pela aplicação.
 
 ## Conteúdo e ordem

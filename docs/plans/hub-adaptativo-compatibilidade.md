@@ -185,9 +185,9 @@ Billing permanece por conta. O limite de criação e o `accessMode` consultam en
 - **Busca:** `workspaceId` na busca nunca muda a resposta para quem não é membro e sempre desliga o cache público; a busca v1 sem o parâmetro segue idêntica.
 - **Onboarding:** os estados permanecem `not_started | in_progress | complete`. Perfis convertidos pelo backfill ficam `complete` quando têm palavras-chave e região, e `in_progress` quando falta um dos dois.
 - **Perguntas de IA:** `ai_ask_requests` e as cotas de IA permanecem na conta; nenhuma coluna, índice ou job dessa área muda na Fase 1.
+- **Flag de corte e W4:** o mecanismo está no [contrato da flag de corte](../contracts/workspace-cutover-v1.md). W4 (`NOT NULL` e chaves por Espaço) sai da janela de corte e roda numa segunda janela, depois de 7 dias de observação. Até lá, as chaves legadas por `user_id` continuam valendo e a desvirada pela flag é possível com a cópia reversa do perfil.
 
 ## Pontos ainda a decidir pelo dono
 
 - valores finais da janela de corte (duração máxima e ponto de não retorno), depois do ensaio com volume real;
-- mecanismo da flag de corte em runtime (a forma da troca já está decidida: por flag, sem reinício, com deploy preparatório);
 - política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6.

@@ -1,7 +1,7 @@
 # Flag de corte de Espaços v1 — rascunho
 
 Data de atualização: 13 out. 2026
-Status: **contrato proposto para aprovação do dono**. Nada aqui está implementado; nenhuma tabela, migração ou flag existe. O código da Fase 1 foi autorizado em 13/10/2026 apenas desligado e sem migração em produção.
+Status: **contrato vigente**. Em 13/10/2026 o dono aprovou as dez decisões do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md#decisões-aprovadas-em-13102026) que afetam este contrato: W4 fora da janela, 7 dias de observação, rollback estrito, W1/W2 obrigatórias na subida, retomada separada, ferramenta em `psql` + `bash`, `503 MAINTENANCE_IN_PROGRESS` e rotas novas só depois de W4. O armazenamento e a porta de escrita são o desenho de referência para o código e podem ser refinados nos PRs, sem mudar as garantias. Nada aqui está implementado; nenhuma tabela, migração ou flag existe. O código da Fase 1 foi autorizado apenas desligado e sem migração em produção.
 
 Referências: [roadmap v2 — Forma da troca](../plans/hub-adaptativo-roadmap-v2.md#forma-da-troca), [compatibilidade de `workspace_id`](../plans/hub-adaptativo-compatibilidade.md), [contrato de Espaços](./workspaces-v1.md), [flags de jornada](./feature-flags-v1.md), [ensaio W1–W4](../../ops/rehearsal/workspaces/README.md) e [plano de execução da Fase 1](../plans/hub-adaptativo-fase1-execucao.md).
 
@@ -9,7 +9,7 @@ Referências: [roadmap v2 — Forma da troca](../plans/hub-adaptativo-roadmap-v2
 
 O dono decidiu em 13/10/2026: troca por **flag em runtime, com deploy preparatório**; virada atômica e sem reinício; rollback de aplicação = desligar a flag. `FEATURE_JOURNEYS` é lida do ambiente na subida e não serve para o corte.
 
-Este contrato define onde o valor mora, como cada escrita o enxerga, como o dono vira e desvira, e **até onde desligar a flag é de fato um rollback**. A conclusão central está em [Rollback pela flag](#rollback-pela-flag-e-seus-limites): a flag só é rollback seguro enquanto W4 não foi aplicada e enquanto só existe o Espaço padrão, e mesmo assim exige uma cópia reversa do perfil.
+Este contrato define onde o valor mora, como cada escrita o enxerga, como o dono vira e desvira, e **até onde desligar a flag é de fato um rollback**. A regra central, aprovada pelo dono em 13/10/2026, está em [Rollback pela flag](#rollback-pela-flag-e-seus-limites): desligar a flag só é rollback com a cópia reversa do perfil, antes de W4 e sem Espaço não padrão.
 
 ## Código atual que condiciona o desenho
 
@@ -21,7 +21,7 @@ Este contrato define onde o valor mora, como cada escrita o enxerga, como o dono
 
 ## Onde o valor mora
 
-### Recomendado: tabela própria, só de inserção, no PostgreSQL
+### Desenho de referência: tabela própria, só de inserção, no PostgreSQL
 
 Uma tabela criada pela W1, `workspace_cutover_events`, guarda cada mudança de estado como uma linha nova. O estado vigente é a linha de maior `id`; **sem nenhuma linha, o estado é `legacy` com escritas liberadas**, por definição, e não como fallback de erro.
 
@@ -90,7 +90,7 @@ Consequências:
 | `mode` diferente do modo em que o job leu seus insumos               | não se aplica                                                            | descarta o resultado, registra `warn` e reprograma sem consumir tentativa                         |
 | erro ao ler a tabela (qualquer erro do PostgreSQL)                   | propaga como erro da requisição (500 com `requestId`), sem escolher modo | propaga; o ciclo falha e é auditado como `failed`                                                 |
 
-`MAINTENANCE_IN_PROGRESS` é um código novo no envelope v1 `{ error: { code, message, requestId } }`; a UI mostra “Manutenção rápida em andamento. Tente de novo em alguns minutos.” Busca, detalhe e demais leituras nunca recebem esse código.
+`MAINTENANCE_IN_PROGRESS` (aprovado em 13/10/2026) é um código novo no envelope v1 `{ error: { code, message, requestId } }`; a UI mostra “Manutenção rápida em andamento. Tente de novo em alguns minutos.” Busca, detalhe e demais leituras nunca recebem esse código.
 
 ### Leituras
 
@@ -129,7 +129,7 @@ Regras:
 
 ## Como o dono vira, desvira e confere
 
-Alteração em produção é sempre do dono. A ferramenta é um conjunto de scripts `psql` + `bash`, no mesmo formato do ensaio (`ops/rehearsal/workspaces/run-rehearsal.sh`), para que o SQL medido no ensaio seja o mesmo executado em produção e o servidor não precise de Node no host. Ela será entregue na unidade G do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md); os comandos abaixo são a interface prevista, não comandos existentes.
+Alteração em produção é sempre do dono. A ferramenta é um conjunto de scripts `psql` + `bash` (decisão de 13/10/2026), no mesmo formato do ensaio (`ops/rehearsal/workspaces/run-rehearsal.sh`), para que o SQL medido no ensaio seja o mesmo executado em produção e o servidor não precise de Node no host. Ela será entregue na unidade G do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md); os comandos abaixo são a interface prevista, não comandos existentes.
 
 | Comando previsto                     | O que faz                                                                                                                                                                        |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -227,19 +227,19 @@ A conversão de ida (W3) e a inversa precisam ser testadas como par: perfil lega
 
 Requer a janela completa outra vez, com uma etapa a mais no delta: reconverter os perfis legados alterados depois da desvirada (`company_profiles.updated_at` posterior), apagar perfis de Espaço cujo legado foi apagado, recopiar `show_international_opportunities` e regenerar os sinais. `revision` sobe uma unidade em cada perfil reconvertido; `profile_version` passa a ser o maior entre o legado e o Espaço.
 
-**Achado no rascunho de ensaio:** o delta de `w3_backfill.sql` usa `ON CONFLICT DO NOTHING` em `workspace_profiles`, `workspaces` e sinais. Ele não captura perfis editados, apagados ou com cursor de alerta avançado entre o lote e a janela, nem mudança de `show_international_opportunities`. O delta definitivo precisa dessa mesma reconciliação já na primeira virada, porque os alertas de perfil e as edições continuam acontecendo entre o lote e as 03:30.
+**Delta definitivo (decisão de 13/10/2026):** o delta do rascunho `w3_backfill.sql` usa `ON CONFLICT DO NOTHING` em `workspace_profiles`, `workspaces` e sinais. Por isso, não captura perfis editados, apagados ou com cursor de alerta avançado entre o lote e a janela, nem mudança de `show_international_opportunities`. O delta definitivo faz essa reconciliação já na primeira virada, porque os alertas de perfil e as edições continuam acontecendo entre o lote e as 03:30. O ensaio é refeito com o delta definitivo, e o ensaio no servidor fica suspenso até lá.
 
-### Regra proposta para W4
+### Regra para W4
 
-W4 sai da janela de corte e vira um passo próprio, depois de um período de observação com a flag ligada. Enquanto isso:
+Decisões de 13/10/2026: W4 fica fora da janela de corte e vira um passo próprio, com segunda janela curta em produção. Ela só é aplicada depois de **7 dias de observação** com a flag ligada, sem incidente. Durante a observação:
 
 - a desvirada pela flag continua disponível (C1);
-- `cutover.sh status` e uma consulta diária confirmam zero linhas do escopo com `workspace_id` nulo criadas depois da virada; qualquer linha nula indica gravação fora da porta e bloqueia W4;
-- criação de Espaços, rotas novas e jornadas continuam desligadas (C2).
+- `cutover.sh status` e uma consulta diária confirmam zero linhas do escopo com `workspace_id` nulo criadas depois da virada; qualquer linha nula indica gravação fora da porta, conta como incidente e bloqueia W4;
+- criação de Espaços, rotas novas e jornadas continuam desligadas (C2). Elas só respondem depois de W4.
 
-Aplicar W4 é o **ponto sem volta pela flag**. Daí em diante restam rollback de dados (restaurar backup e reconciliar gravações posteriores) ou correção para frente. W4 precisa de uma segunda janela curta, porque `SET NOT NULL` e a troca de PK tomam `ACCESS EXCLUSIVE` nas tabelas, inclusive `saved_tenders`, lida pela busca com `includeMonitored`.
+Aplicar W4 é o **ponto sem volta pela flag**. Daí em diante restam rollback de dados (restaurar backup e reconciliar gravações posteriores) ou correção para frente. A segunda janela existe porque `SET NOT NULL` e a troca de PK tomam `ACCESS EXCLUSIVE` nas tabelas, inclusive `saved_tenders`, lida pela busca com `includeMonitored`.
 
-Isso diverge do ensaio atual, que aplica W4 dentro da transação do corte. Se o dono preferir manter W4 na janela, a consequência deve ficar escrita: **não existe rollback pela flag**, apenas rollback de dados, desde o primeiro minuto depois da virada. A decisão está em [Pontos a decidir pelo dono](../plans/hub-adaptativo-fase1-execucao.md#pontos-a-decidir-pelo-dono).
+O rascunho de ensaio atual ainda aplica W4 dentro da transação do corte; a versão definitiva (unidade G do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md)) separa os dois passos.
 
 ## Relação com W1–W4 e com a janela
 
@@ -251,7 +251,7 @@ Isso diverge do ensaio atual, que aplica W4 dentro da transação do corte. Se o
 | W3 lote                   | fora da janela, com a aplicação em `legacy`; o legado continua sendo a fonte                          |
 | janela (W3 delta + troca) | pausa → drenagem → transação de corte → conferência → retomada                                        |
 | observação                | `workspaces`, desvirada possível                                                                      |
-| W4                        | segunda janela, aprovada pelo dono; fim da desvirada pela flag                                        |
+| W4                        | segunda janela, depois de 7 dias de observação; fim da desvirada pela flag; libera rotas novas        |
 
 O deploy preparatório contém: migrações W1 e W2 (aplicadas à mão pelo dono antes do deploy), schema Drizzle correspondente, porta de escrita em todas as gravações do escopo, adaptadores v1 com os dois caminhos, jobs com a regra de ciclo, exportação e exclusão cobrindo os dois modelos e a ferramenta `cutover.sh`. Não contém W3, W4, nem rotas novas ou jornadas ligadas.
 
@@ -268,7 +268,7 @@ Ordem exata na janela, a partir dos parâmetros aprovados (início 03:30, teto d
 
 Aborto antes do passo 6: `ROLLBACK` e linha `legacy`, `writes_paused = false`. Problema entre 6 e 8: `cutover.sh rollback`, rápido porque nada foi gravado no modelo novo.
 
-A alternativa de retomar as escritas já no passo 6, sem conferência, economiza um passo e tira do dono a chance de olhar antes de liberar; está listada como ponto a decidir.
+A retomada é sempre separada da troca (decisão de 13/10/2026): as escritas só voltam depois que o dono confere a leitura no passo 7. Retomar no `COMMIT` da troca foi descartado.
 
 ## Comportamento com a flag desligada
 
@@ -280,10 +280,9 @@ Com `mode = 'legacy'` (ou tabela vazia), a versão nova executa exatamente os ca
 
 Payloads, códigos de erro existentes, gates de assinatura e textos da UI não mudam.
 
-**Tabelas e colunas novas ausentes.** O schema Drizzle da versão nova declara `workspace_id` nas tabelas do escopo, e várias consultas atuais usam `select()` ou `returning()` sem projeção (`account/account-privacy-service.ts`, `account/account-service.ts`, `account/notification-service.ts`, entre outros). Contra um banco sem W2, essas consultas pediriam uma coluna inexistente e falhariam. Portanto “igual a hoje sem as tabelas novas” só é possível de dois jeitos:
+**Tabelas e colunas novas ausentes.** O schema Drizzle da versão nova declara `workspace_id` nas tabelas do escopo, e várias consultas atuais usam `select()` ou `returning()` sem projeção (`account/account-privacy-service.ts`, `account/account-service.ts`, `account/notification-service.ts`, entre outros). Contra um banco sem W2, essas consultas pediriam uma coluna inexistente e falhariam.
 
-- **Recomendado:** a versão nova exige W1 e W2. Na subida, uma verificação confere a tabela da flag e as colunas `workspace_id` e, se faltar algo, encerra o processo com erro listando o que falta. A ordem migrar → implantar já é imposta pelo agente de deploy do servidor, que para quando o pull contém `lib/db/migrations/` ou `lib/db/src/schema/`. A mesma verificação existe como comando para o dono rodar antes do deploy.
-- **Alternativa:** projeção explícita em toda consulta legada das tabelas do escopo, para a versão nova rodar sobre o schema de hoje. Atende o requisito ao pé da letra, mas impõe disciplina em cada consulta nova até o caminho legado ser removido e exige uma segunda suíte contra o schema anterior.
+Regra (decisão de 13/10/2026): **a versão nova exige W1 e W2 aplicadas.** Na subida, uma verificação confere a tabela da flag e as colunas `workspace_id` e, se faltar algo, encerra o processo com erro listando o que falta. A ordem migrar → implantar já é imposta pelo agente de deploy do servidor, que para quando o pull contém `lib/db/migrations/` ou `lib/db/src/schema/`. A mesma verificação existe como comando para o dono rodar antes do deploy. Foi descartada a projeção explícita em toda consulta legada para rodar sobre o schema de hoje.
 
 Antes de W1 e W2 em produção, quem roda é a versão atual, que tolera colunas e tabelas aditivas: não as lê e grava `workspace_id` nulo.
 

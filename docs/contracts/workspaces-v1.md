@@ -1,7 +1,7 @@
 # API de Espaços v1 — rascunho
 
 Data de atualização: 13 out. 2026
-Status: somente contrato consolidado; nenhuma rota, tabela ou migração implementada, e a Fase 1 não está autorizada
+Status: contrato consolidado; nenhuma rota, tabela ou migração implementada. O código da Fase 1 foi autorizado em 13/10/2026, desligado e sem migração em produção
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 Todas as rotas usam a sessão atual no cookie HttpOnly `licita_session`. Nenhuma aceita token de sessão ou perfil em `localStorage`. Escritas mantêm a proteção CSRF atual (`X-Requested-With`) e são `Cache-Control: no-store`.
@@ -52,6 +52,8 @@ Downgrade nunca exclui, arquiva, mescla ou move dados. Espaços excedentes conti
 Criar Espaço acima do limite retorna HTTP `402` com `error.code = WORKSPACE_LIMIT_REACHED`. Alterar um Espaço excedente retorna HTTP `402` com `error.code = WORKSPACE_READ_ONLY`. O código genérico `SUBSCRIPTION_REQUIRED` continua reservado ao gate de uma ação premium; os três casos permanecem distintos para permitir mensagens específicas sem mudar os gates atuais.
 
 ## Rotas de Espaços e onboarding
+
+Disponibilidade (decisão de 13/10/2026): as rotas desta seção e das seguintes, inclusive a criação de Espaços e as jornadas, só respondem depois de W4 aplicada em produção, com a flag de corte em `workspaces` e a jornada habilitada. Antes disso respondem `422 FEATURE_DISABLED` sem gravar nada. W4 roda numa segunda janela, depois de 7 dias de observação da virada; ver o [contrato da flag de corte](./workspace-cutover-v1.md#regra-para-w4).
 
 ### `GET /api/v1/me/workspaces`
 
@@ -211,7 +213,10 @@ Mantém o envelope v1 atual `{ error: { code, message, requestId, details? } }`.
 | 404  | `WORKSPACE_NOT_FOUND`      | inexistente ou sem membership, sem distinção                           |
 | 409  | `WORKSPACE_ARCHIVED`       | escrita ou seleção em Espaço arquivado                                 |
 | 409  | `PROFILE_VERSION_CONFLICT` | `baseRevision` diferente da `revision` atual em `PUT .../profile`      |
-| 422  | `FEATURE_DISABLED`         | jornada ainda não habilitada                                           |
+| 422  | `FEATURE_DISABLED`         | jornada ainda não habilitada, ou corte ainda sem W4 aplicada           |
+| 503  | `MAINTENANCE_IN_PROGRESS`  | mutação durante pausa ou virada do corte; vem com `Retry-After`        |
+
+`MAINTENANCE_IN_PROGRESS` (decisão de 13/10/2026) vale para rotas novas e rotas v1 que gravam nas tabelas do escopo; leituras nunca o recebem. A UI mostra “Manutenção rápida em andamento. Tente de novo em alguns minutos.” Detalhes no [contrato da flag de corte](./workspace-cutover-v1.md#quando-a-porta-recusa).
 
 ## Matriz mínima de isolamento
 
@@ -257,7 +262,7 @@ As rotas atuais mantêm caminhos, payloads, respostas e gates. Após o backfill,
 - busca com `includeMonitored`;
 - exportação e exclusão de conta.
 
-Não há escrita dupla: rota nova e adaptador v1 gravam apenas no modelo novo depois do corte. Nenhuma rota v1 foi alterada nesta consolidação, e a Fase 1 depende de autorização explícita.
+Não há escrita dupla: rota nova e adaptador v1 gravam apenas no modelo novo depois do corte. Nenhuma rota v1 foi alterada nesta consolidação; migração, virada e ativação dependem de autorização explícita.
 
 ## Backfill e concorrência
 
