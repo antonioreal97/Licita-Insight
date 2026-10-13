@@ -1,7 +1,7 @@
 # Revisão aprovada — hub adaptativo de oportunidades
 
-Data: 12 out. 2026
-Status: **ajustes e decisões aprovados pelo dono em 12/10/2026**
+Data de atualização: 13 out. 2026
+Status: **ajustes e decisões aprovados pelo dono em 12 e 13/10/2026**
 
 Este documento complementa, sem alterar, o [plano técnico original](./hub-adaptativo-2026-10-12.md). Aprovação de arquitetura não autoriza iniciar a Fase 1, criar/aplicar migração ou ativar mudança visível.
 
@@ -11,7 +11,7 @@ Este documento complementa, sem alterar, o [plano técnico original](./hub-adapt
 - A mesma oportunidade pode aparecer no espaço adequado e em “Explorar tudo”, respeitando filtros e vocabulário de cada experiência.
 - Domínio da oportunidade, país de origem e fonte de coleta são dimensões distintas; nenhuma é inferida da outra.
 - A personalização não pode fragmentar o Pardal Digital nem duplicar oportunidades por espaço.
-- A nomenclatura única é `workspace_id`; não introduzir `space_id`.
+- A nomenclatura única é `workspace_id` em todos os contratos e dados contextuais.
 
 ## 1. Migração para Espaços sem escrita dupla
 
@@ -27,9 +27,7 @@ Substituir os passos 5–7 da §4.2 por um backfill único, idempotente e audit�
 
 Justificativa: a base beta ainda é pequena e o custo operacional de duas fontes graváveis supera o risco mitigado pela escrita dupla. O backfill deve continuar reversível por backup e relatório de auditoria. Nenhuma migração está autorizada na Fase 0.
 
-### Alternativa descartada para esta migração
-
-Manter escrita dupla temporária conforme o plano original quando a base, o volume de mutações ou a necessidade de rollback online crescerem antes da Fase 1. Exige idempotência, métrica de divergência e definição explícita da fonte vencedora.
+Escrita dupla não será reintroduzida como atalho de corte ou rollback. Se o delta ou a validação não couberem na janela aprovada, o corte será cancelado.
 
 ## 2. Meta de latência da busca
 
@@ -80,20 +78,27 @@ Essa regra está codificada apenas como mapeador puro de contrato na Fase 0; nã
 | Estudo        | Oculto até existir ao menos uma fonte oficial homologada com coleta e atualização verificadas                               |
 | Acesso        | Busca e detalhe públicos em todos os domínios; salvar, monitorar e alertar seguem gates de assinatura existentes            |
 
-Permanece **a definir pelo produto** o acesso aos espaços excedentes depois que teste/assinatura expira. Invariante já aprovado: registros são preservados e nunca excluídos automaticamente. O contrato recomenda leitura/exportação dos cinco, um espaço selecionável para ações gratuitas e bloqueio de novas criações/mutações premium até reativação; essa recomendação ainda não está aprovada.
+## Decisões de 13/10/2026
 
-## 5. Checkout Asaas antes da Fase 3
+As decisões abaixo foram **aprovadas pelo dono em 13/10/2026** e fecham ou refinam pontos desta revisão:
+
+1. **Downgrade:** espaços excedentes ficam somente leitura e nenhum dado é excluído. Entre os espaços não arquivados, o de menor slot permanece gravável. A UI deve informar claramente, antes da expiração, qual espaço continuará editável.
+2. **Membros:** `workspace_members` entra na Fase 1 apenas com a associação `owner`. Convites, outros papéis, equipes, gerenciamento de membros e colaboração ficam na Fase 6. A primeira migração não inclui convites; `requireWorkspaceMember` continua sendo a regra de autorização, satisfeita na Fase 1 somente pelo `owner`.
+3. **Corte:** aceita-se uma janela curta de manutenção, bloqueando somente as mutações afetadas; busca e detalhes públicos permanecem disponíveis. A duração máxima e o critério de aborto serão definidos pelo dono após ensaio com volume real. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não será usada como atalho.
+4. **Asaas:** checkout e webhooks serão validados ponta a ponta antes de ativar a Fase 1, pois o entitlement determina quais espaços são graváveis. Esta decisão não autoriza mudar os gates atuais.
+
+## 5. Checkout Asaas antes de ativar a Fase 1
 
 ### Pré-requisito aprovado
 
-Criar um gate de entrada para a Fase 3: checkout Asaas validado de ponta a ponta no sandbox e, depois, em produção com transação controlada. O roteiro deve cobrir criação/recuperação de cliente, geração do checkout, retorno à aplicação, webhook autenticado, idempotência, estados `pending`/`active`/`past_due`/`cancelled`, liberação e remoção do entitlement e reconciliação após webhook perdido.
+Criar um gate de entrada para a Fase 1: checkout Asaas validado de ponta a ponta no sandbox e, depois, em produção com transação controlada. O roteiro deve cobrir criação/recuperação de cliente, geração do checkout, retorno à aplicação, webhook autenticado, idempotência, estados `pending`/`active`/`past_due`/`cancelled`, liberação e remoção do entitlement e reconciliação após webhook perdido.
 
 Não usar a Fase 0 para disparar checkout real. A evidência mínima é um relatório com IDs redigidos, horários, estados observados e resultado dos gates; nunca registrar chave, token, nome, e-mail ou URL privada completa.
 
 ### Regra de contenção
 
-Se a integração de produção não puder ser exercitada antes, limitar a Fase 3 a mudanças internas que não alterem gates e adiar qualquer mudança de cobrança até a validação.
+Se a integração não puder ser validada de ponta a ponta, a Fase 1 não é ativada. A validação é evidência para o cálculo de entitlement, não autorização para alterar busca/detalhe públicos nem os gates atuais das ações premium.
 
 ## Limites desta aprovação
 
-Não iniciar a Fase 1 sem nova autorização explícita. O dono revisará antes o contrato de Espaços, o backfill, a sequência de migrações e a estratégia de isolamento. Migrações de produção continuam manuais, uma a uma, sempre após backup.
+Não iniciar a Fase 1 sem nova autorização explícita. O dono revisará antes o contrato de Espaços, o backfill, a sequência de migrações, a estratégia de isolamento, o ensaio da janela de corte e a evidência do Asaas. Migrações de produção continuam manuais, uma a uma, sempre após backup verificado.
