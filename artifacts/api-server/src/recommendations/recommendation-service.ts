@@ -39,7 +39,10 @@ import {
 } from "../workspaces/cutover-gate";
 import { readCutoverState, type CutoverState } from "../workspaces/cutover-state";
 import { isCutoverInterruption } from "../workspaces/cutover-cycle";
-import { requireDefaultWorkspace } from "../workspaces/workspace-service";
+import {
+  defaultWorkspaceId,
+  requireDefaultWorkspace,
+} from "../workspaces/workspace-service";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { NotFoundError } from "../lib/api-error";
 import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
@@ -915,15 +918,22 @@ export async function rebuildRecommendationsForUser(
   return ranked.length;
 }
 
+/**
+ * Debounced by user and workspace (docs/contracts/workspace-cutover-v1.md, "Jobs e agendadores"): the v1 routes
+ * rebuild the default workspace, so two workspaces of one account will never share a timer. These rebuilds live in
+ * memory and are not in the drain query; they do not need to be: one that fires during the pause does not start,
+ * one that wrote before the cutover took its lock is covered by the delta, and one that crosses it is discarded.
+ */
 const pendingRebuilds = new Map<string, ReturnType<typeof setTimeout>>();
 export function scheduleRecommendationRebuild(
   userId: string,
   delayMs = 1_500,
 ): void {
-  const existing = pendingRebuilds.get(userId);
+  const key = `${userId}:${defaultWorkspaceId(userId)}`;
+  const existing = pendingRebuilds.get(key);
   if (existing) clearTimeout(existing);
   const timer = setTimeout(() => {
-    pendingRebuilds.delete(userId);
+    pendingRebuilds.delete(key);
     void rebuildRecommendationsForUser(userId).catch((error) =>
       isCutoverInterruption(error)
         ? logger.warn(
@@ -934,7 +944,7 @@ export function scheduleRecommendationRebuild(
     );
   }, delayMs);
   timer.unref?.();
-  pendingRebuilds.set(userId, timer);
+  pendingRebuilds.set(key, timer);
 }
 
 const incrementMetric = async (

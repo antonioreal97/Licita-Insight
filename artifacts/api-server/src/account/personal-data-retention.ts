@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { logger } from "../lib/logger";
 
@@ -45,50 +46,57 @@ export type PersonalDataRetentionResult = {
   emailDeliveriesRedacted: number;
 };
 
-/** Deletes obsolete records and strips email content while retaining only the minimum send audit. */
+const NOTHING_PURGED: PersonalDataRetentionResult = {
+  sessionsDeleted: 0,
+  notificationsDeleted: 0,
+  emailDeliveriesRedacted: 0,
+};
+
+/**
+ * Deletes obsolete records and strips email content while retaining only the minimum send audit. The statements are
+ * the same in both cutover modes (they select by age, never by owner), but notifications and deliveries are in the
+ * workspace scope: the purge is a cycle that does not start while writes are paused and writes through the gate.
+ */
 export async function purgeRetainedPersonalData(
   now = new Date(),
   config = personalDataRetentionConfig(),
 ): Promise<PersonalDataRetentionResult> {
-  const { pool } = await import("@workspace/db");
-  const client = await pool.connect();
+  // Loaded here, like the pool before them, so the schedule helpers of this module need no database to be imported.
+  const { cycleCaller, discardedByCutover, startCutoverCycle } = await import("../workspaces/cutover-cycle");
+  const { withCutoverGate } = await import("../workspaces/cutover-gate");
+  const cycle = await startCutoverCycle("personal_data_retention");
+  if (!cycle) return NOTHING_PURGED;
   try {
-    await client.query("begin");
-    const sessions = await client.query(
-      `delete from sessions
-       where expires_at < $1 or (revoked_at is not null and revoked_at < $1)
-       returning id`,
-      [cutoff(now, config.sessionDays)],
-    );
-    const notifications = await client.query(
-      `delete from notifications
-       where read_at is not null and read_at < $1
-       returning id`,
-      [cutoff(now, config.readNotificationDays)],
-    );
-    const deliveries = await client.query(
-      `update email_deliveries
-       set recipient_email = $2,
-           html_body = '',
-           text_body = '',
-           message_headers = '{}'::jsonb,
-           last_error = null
-       where created_at < $1
-         and (recipient_email <> $2 or html_body <> '' or text_body <> '' or message_headers <> '{}'::jsonb or last_error is not null)
-       returning id`,
-      [cutoff(now, config.emailContentDays), REDACTED_RECIPIENT],
-    );
-    await client.query("commit");
-    return {
-      sessionsDeleted: sessions.rowCount ?? 0,
-      notificationsDeleted: notifications.rowCount ?? 0,
-      emailDeliveriesRedacted: deliveries.rowCount ?? 0,
-    };
+    return await withCutoverGate(cycleCaller(cycle), async (tx) => {
+      const sessions = await tx.execute(sql`
+        delete from sessions
+        where expires_at < ${cutoff(now, config.sessionDays)}
+          or (revoked_at is not null and revoked_at < ${cutoff(now, config.sessionDays)})
+        returning id`);
+      const notifications = await tx.execute(sql`
+        delete from notifications
+        where read_at is not null and read_at < ${cutoff(now, config.readNotificationDays)}
+        returning id`);
+      const deliveries = await tx.execute(sql`
+        update email_deliveries
+        set recipient_email = ${REDACTED_RECIPIENT},
+            html_body = '',
+            text_body = '',
+            message_headers = '{}'::jsonb,
+            last_error = null
+        where created_at < ${cutoff(now, config.emailContentDays)}
+          and (recipient_email <> ${REDACTED_RECIPIENT} or html_body <> '' or text_body <> ''
+            or message_headers <> '{}'::jsonb or last_error is not null)
+        returning id`);
+      return {
+        sessionsDeleted: sessions.rowCount ?? 0,
+        notificationsDeleted: notifications.rowCount ?? 0,
+        emailDeliveriesRedacted: deliveries.rowCount ?? 0,
+      };
+    });
   } catch (error) {
-    await client.query("rollback").catch(() => undefined);
-    throw error;
-  } finally {
-    client.release();
+    if (!discardedByCutover(error, "personal_data_retention")) throw error;
+    return NOTHING_PURGED;
   }
 }
 

@@ -42,6 +42,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
     "subscriptions",
     "email_deliveries",
     "email_delivery_notifications",
+    "workspace_cutover_events",
   ]) {
     await pool.query(`CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`);
   }
