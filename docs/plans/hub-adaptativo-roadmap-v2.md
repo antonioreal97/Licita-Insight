@@ -253,6 +253,8 @@ O job noturno de classificação de categorias (00:00–05:30) não grava em tab
 
 O ensaio usa cópia restaurada do backup de produção e a taxa de mutações extraída dos logs; contém dado pessoal. Condições aprovadas:
 
+Os [scripts W1–W4 e o runbook do ensaio](../../ops/rehearsal/workspaces/README.md) são **rascunhos exclusivos para ensaio**, não migrações aprovadas nem autorização para iniciar a Fase 1. O dono os executa somente no servidor e sobre a cópia isolada descrita abaixo.
+
 - roda **no servidor, executado pelo dono**; agentes não acessam o banco de produção nem cópias dele;
 - a cópia é descartada ao fim do ensaio;
 - o relatório traz somente contagens, tempos e resultados de invariantes, sem dado pessoal;
