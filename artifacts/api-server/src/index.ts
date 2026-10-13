@@ -37,6 +37,7 @@ import { startRecommendationScheduler } from "./recommendations/recommendation-s
 import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 import { startPersonalDataRetentionScheduler } from "./account/personal-data-retention";
 import { startNightlyCategoryClassification } from "./titles/nightly-scheduler";
+import { verifyWorkspaceSchema } from "./workspaces/cutover-state";
 
 const parsePort = (
   name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
@@ -108,6 +109,12 @@ const start = async (): Promise<void> => {
   const workerHealthPort =
     role === "worker" ? parsePort("WORKER_HEALTH_PORT", false) : undefined;
   const metricsPort = parsePort("METRICS_PORT", false);
+
+  const cutover = await verifyWorkspaceSchema(pool);
+  logger.info(
+    { cutoverMode: cutover.mode, writesPaused: cutover.writesPaused },
+    "Workspace cutover state",
+  );
 
   if (devEntitlementEnabled()) {
     logger.warn(

@@ -108,6 +108,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "recommendation_interest_profiles",
     "user_recommendations",
     "recommendation_metrics_daily",
+    "workspaces",
+    "workspace_members",
+    "user_workspace_preferences",
   ]) {
     await pool.query(`CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`);
   }
@@ -1592,7 +1595,20 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
        order by c.table_name`,
       ["public"],
     );
-    assert.deepEqual(userOwnedTables.rows.map(({ table_name }) => table_name), Object.keys(ACCOUNT_EXPORT_TABLES).sort());
+    // Empty until the cutover backfill; the export must cover them before the cutover
+    // (docs/plans/hub-adaptativo-fase1-execucao.md, unit F).
+    const workspaceTablesPendingExport = new Set(["user_workspace_preferences", "workspace_members"]);
+    assert.deepEqual(
+      userOwnedTables.rows.map(({ table_name }) => table_name).filter((table) => !workspaceTablesPendingExport.has(table)),
+      Object.keys(ACCOUNT_EXPORT_TABLES).sort(),
+    );
+    for (const record of [
+      ...(body.recommendationEvents as object[]),
+      ...(body.recommendationDismissals as object[]),
+      ...(body.recommendations as object[]),
+    ]) {
+      assert.equal("workspaceId" in record, false, "the export keeps its pre-workspace shape");
+    }
     for (const exportKey of Object.values(ACCOUNT_EXPORT_TABLES)) {
       assert.ok(exportKey in body, `${exportKey} must be present in the account export`);
     }

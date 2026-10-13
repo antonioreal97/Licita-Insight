@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { tendersTable } from "./tenders";
+import { workspacesTable } from "./workspaces";
 
 export type NotificationChangeRecord = {
   field: string;
@@ -147,6 +148,7 @@ export const savedTendersTable = pgTable(
     nextActionDeadline: timestamp("next_action_deadline", { withTimezone: true }),
     checklist: jsonb("checklist").$type<ParticipationChecklistItem[]>().notNull().default([]),
     history: jsonb("history").$type<ParticipationTransition[]>().notNull().default([]),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.tenderId] }),
@@ -156,6 +158,8 @@ export const savedTendersTable = pgTable(
     index("saved_tenders_monitored_tender_idx")
       .on(table.tenderId)
       .where(sql`${table.monitored} = true`),
+    index("saved_tenders_workspace_saved_idx").on(table.workspaceId, table.savedAt),
+    uniqueIndex("saved_tenders_workspace_tender_uidx").on(table.workspaceId, table.tenderId),
   ],
 );
 
@@ -178,6 +182,7 @@ export const savedSearchesTable = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
     newMatchesCount: integer("new_matches_count").notNull().default(0),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     index("saved_searches_user_updated_at_idx").on(
@@ -190,6 +195,10 @@ export const savedSearchesTable = pgTable(
     uniqueIndex("saved_searches_user_query_active_uidx")
       .on(table.userId, table.query)
       .where(sql`${table.deletedAt} is null`),
+    index("saved_searches_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
+    uniqueIndex("saved_searches_workspace_query_active_uidx")
+      .on(table.workspaceId, table.query)
+      .where(sql`${table.workspaceId} is not null and ${table.deletedAt} is null`),
   ],
 );
 
@@ -226,6 +235,7 @@ export const notificationsTable = pgTable(
       .$type<ProfileMatchNotificationRecord[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     uniqueIndex("notifications_user_dedupe_uidx").on(
@@ -239,6 +249,11 @@ export const notificationsTable = pgTable(
     index("notifications_user_unread_idx")
       .on(table.userId, table.createdAt)
       .where(sql`${table.readAt} is null`),
+    index("notifications_workspace_created_idx").on(table.workspaceId, table.createdAt),
+    uniqueIndex("notifications_workspace_dedupe_uidx")
+      .on(table.workspaceId, table.dedupeKey)
+      .where(sql`${table.workspaceId} is not null`),
+    uniqueIndex("notifications_id_workspace_uidx").on(table.id, table.workspaceId),
   ],
 );
 
@@ -272,6 +287,8 @@ export const emailDeliveriesTable = pgTable(
       .notNull()
       .defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
+    /** Null for account-only messages; set when the delivery groups resources of one workspace. */
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "set null" }),
   },
   (table) => [
     uniqueIndex("email_deliveries_dedupe_uidx").on(table.dedupeKey),
@@ -280,6 +297,13 @@ export const emailDeliveriesTable = pgTable(
       table.userId,
       table.createdAt,
     ),
+    index("email_deliveries_workspace_created_idx")
+      .on(table.workspaceId, table.createdAt)
+      .where(sql`${table.workspaceId} is not null`),
+    uniqueIndex("email_deliveries_id_workspace_uidx").on(table.id, table.workspaceId),
+    uniqueIndex("email_deliveries_workspace_dedupe_uidx")
+      .on(table.workspaceId, table.dedupeKey)
+      .where(sql`${table.workspaceId} is not null`),
     check("email_deliveries_channel_check", sql`${table.channel} = 'email'`),
     check(
       "email_deliveries_mode_check",
@@ -302,12 +326,14 @@ export const emailDeliveryNotificationsTable = pgTable(
     notificationId: text("notification_id")
       .notNull()
       .references(() => notificationsTable.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.deliveryId, table.notificationId] }),
     uniqueIndex("email_delivery_notifications_notification_uidx").on(
       table.notificationId,
     ),
+    index("email_delivery_notifications_workspace_idx").on(table.workspaceId),
   ],
 );
 

@@ -295,6 +295,20 @@
       "when": 1791482410000,
       "tag": "0041_international_opportunities",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791482411000,
+      "tag": "0042_workspaces_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791482412000,
+      "tag": "0043_workspace_scope_expand",
+      "breakpoints": true
     }
   ]
 }
