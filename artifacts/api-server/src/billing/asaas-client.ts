@@ -106,13 +106,19 @@ export async function getPaymentLink(id: string): Promise<AsaasPaymentLink | nul
   return asaas<AsaasPaymentLink>(`/paymentLinks/${encodeURIComponent(id)}`);
 }
 
-export async function getSubscription(id: string): Promise<AsaasSubscription> {
-  return asaas<AsaasSubscription>(`/subscriptions/${encodeURIComponent(id)}`);
+/** Asaas answered 404. Thrown only for callers that pass `notFoundExpected`; the others keep the generic error. */
+export class AsaasNotFoundError extends BillingUnavailableError {}
+
+type ReadOptions = { notFoundExpected?: boolean };
+
+export async function getSubscription(id: string, options: ReadOptions = {}): Promise<AsaasSubscription> {
+  return asaas<AsaasSubscription>(`/subscriptions/${encodeURIComponent(id)}`, options);
 }
 
-export async function listSubscriptionPayments(id: string): Promise<AsaasInvoice[]> {
+export async function listSubscriptionPayments(id: string, options: ReadOptions = {}): Promise<AsaasInvoice[]> {
   const page = await asaas<{ data?: AsaasInvoice[] }>(
     `/subscriptions/${encodeURIComponent(id)}/payments?limit=100`,
+    options,
   );
   return Array.isArray(page.data) ? page.data : [];
 }
@@ -131,7 +137,7 @@ export async function deleteSubscription(id: string): Promise<void> {
 
 async function asaas<T>(
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown } & ReadOptions = {},
 ): Promise<T> {
   const { apiKey, baseUrl } = requireAsaasConfig();
   // Query strings can carry the user id (`externalReference`); logs keep only the resource path.
@@ -162,6 +168,10 @@ async function asaas<T>(
     } catch {
       payload = text;
     }
+  }
+  if (response.status === 404 && init.notFoundExpected) {
+    logger.debug({ path: logPath }, "Asaas resource not found");
+    throw new AsaasNotFoundError(asaasErrorMessage(payload, response.status));
   }
   if (!response.ok) {
     // Provider bodies can echo customer fields. Keep only operational metadata in application logs.

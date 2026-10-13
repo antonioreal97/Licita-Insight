@@ -4,6 +4,7 @@ import { tryRunSingletonJob } from "../jobs/job-lock";
 import { logger } from "../lib/logger";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
+  AsaasNotFoundError,
   billingConfigured,
   getSubscription,
   listPaymentsByExternalReference,
@@ -138,6 +139,8 @@ export type BillingReconcileResult = {
   checked: number;
   unchanged: number;
   unmatched: number;
+  /** Asaas answered 404 for the stored subscription; the row is left as is and is not a failure. */
+  missingRemote: number;
   failed: number;
   conflicts: number;
   aborted: boolean;
@@ -158,13 +161,18 @@ export async function reconcileSubscriptions(options: {
   reader?: AsaasReader;
   now?: Date;
 }): Promise<BillingReconcileResult> {
-  const reader = options.reader ?? { getSubscription, listSubscriptionPayments, listPaymentsByExternalReference };
+  const reader: AsaasReader = options.reader ?? {
+    getSubscription: (id) => getSubscription(id, { notFoundExpected: true }),
+    listSubscriptionPayments: (id) => listSubscriptionPayments(id, { notFoundExpected: true }),
+    listPaymentsByExternalReference,
+  };
   const now = options.now ?? new Date();
   const pause = () => new Promise<void>((resolve) => setTimeout(resolve, options.pauseMs));
   const result: BillingReconcileResult = {
     checked: 0,
     unchanged: 0,
     unmatched: 0,
+    missingRemote: 0,
     failed: 0,
     conflicts: 0,
     aborted: false,
@@ -205,6 +213,12 @@ export async function reconcileSubscriptions(options: {
         patch = reconcilePatch(row, remote);
         consecutiveFailures = 0;
       } catch (error) {
+        // 404 may mean a wrong environment or key (e.g. sandbox rows after moving to production): never cancel on it.
+        if (error instanceof AsaasNotFoundError) {
+          result.missingRemote += 1;
+          logger.debug({ userId: row.userId, asaasSubscriptionId: row.asaasSubscriptionId }, "Billing reconciliation target missing in Asaas");
+          continue;
+        }
         result.failed += 1;
         consecutiveFailures += 1;
         // Only the message: provider and driver details can carry Asaas or user identifiers.

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { periodEndFromAsaasDate } from "./billing-access";
 import { BillingUnavailableError } from "../lib/api-error";
-import type { AsaasInvoice, AsaasSubscription } from "./asaas-client";
+import { AsaasNotFoundError, type AsaasInvoice, type AsaasSubscription } from "./asaas-client";
 import type { AsaasReader } from "./billing-reconciliation";
 
 test("billing reconciliation writes only real divergences in PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL }, async (t) => {
@@ -64,14 +64,19 @@ test("billing reconciliation writes only real divergences in PostgreSQL", { skip
   };
   const calls: string[] = [];
   let failing = new Set<string>();
+  let missingSubscription = new Set<string>();
+  let missingPayments = new Set<string>();
+  const notFound = () => new AsaasNotFoundError("O Asaas recusou o pagamento (HTTP 404).");
   const reader: AsaasReader = {
     async getSubscription(id) {
       calls.push(`subscription:${id}`);
       if (failing.has(id)) throw new BillingUnavailableError("O Asaas recusou o pagamento (HTTP 503).");
+      if (missingSubscription.has(id)) throw notFound();
       return subscriptions[id]!;
     },
     async listSubscriptionPayments(id) {
       calls.push(`payments:${id}`);
+      if (missingPayments.has(id)) throw notFound();
       return payments[id] ?? [];
     },
     async listPaymentsByExternalReference(reference) {
@@ -136,6 +141,24 @@ test("billing reconciliation writes only real divergences in PostgreSQL", { skip
       assert.deepEqual(third.transitions, {});
       assert.equal(third.failed, 0);
       assert.deepEqual(await snapshot(), settled);
+    });
+
+    await t.test("subscriptions missing in Asaas are counted apart, untouched, and never abort the run", async () => {
+      missingSubscription = new Set(["sub_2", "sub_3"]);
+      missingPayments = new Set(["sub_5", "sub_6"]);
+      const before = await snapshot();
+      const dryRun = await reconcileSubscriptions({ ...options, dryRun: true });
+      const result = await reconcileSubscriptions(options);
+      missingSubscription = new Set();
+      missingPayments = new Set();
+      assert.deepEqual(await snapshot(), before);
+      for (const run of [dryRun, result]) {
+        assert.equal(run.missingRemote, 4);
+        assert.equal(run.failed, 0);
+        assert.equal(run.aborted, false);
+        assert.equal(run.checked, 6);
+        assert.equal(run.nextUserId, null);
+      }
     });
 
     await t.test("the per-run cap is respected and the cursor resumes", async () => {

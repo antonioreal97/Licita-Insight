@@ -424,7 +424,9 @@ vencimento da cobrança seguinte (ou `nextDueDate`, se ela ainda não existe). S
 Consultas ao Asaas: `GET /v3/subscriptions/{id}` e `GET /v3/subscriptions/{id}/payments`; para `pending`,
 a assinatura é localizada por `GET /v3/payments?externalReference={userId}` filtrando o `paymentLink`
 do checkout atual. Falha do Asaas (timeout, 5xx, 429) não altera a linha; três falhas seguidas encerram a
-execução. Se um webhook gravar a linha entre a leitura e a escrita, o webhook prevalece.
+execução. Assinatura que o Asaas responde com 404 (removida ou criada em outro ambiente, como o sandbox
+depois da troca para produção) também não altera a linha, nunca cancela acesso e não conta como falha:
+entra em `missingRemote` no resumo, sem log de erro. Se um webhook gravar a linha entre a leitura e a escrita, o webhook prevalece.
 `BILLING_RECONCILE_ENABLED=false` desliga o job. Manual:
 `pnpm --filter @workspace/api-server run billing:reconcile [--dry-run]` — imprime só contagens por
 transição (`--dry-run` não grava); saída e logs não levam e-mail nem nome, e identificadores de usuário
