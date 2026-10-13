@@ -190,6 +190,10 @@ export function trackSearch(): void {
   getBrowserController()?.event('search');
 }
 
+export function trackProfileSetup(event: 'profile_setup_start' | 'profile_setup_complete'): void {
+  getBrowserController()?.event(event);
+}
+
 export function trackTenderAction(event: 'save_tender' | 'monitor_tender'): void {
   getBrowserController()?.event(event);
 }
