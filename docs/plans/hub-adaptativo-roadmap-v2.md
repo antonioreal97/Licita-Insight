@@ -69,6 +69,8 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 
 **Gate:** aprovação explícita do SQL, backfill, relatório do dry run, backup/restore, valores finais da janela de corte após o ensaio, evidências de isolamento, checklist LGPD e validação ponta a ponta do Asaas. Esta aprovação ainda não existe.
 
+**Execução do código:** [plano de execução da Fase 1](./hub-adaptativo-fase1-execucao.md) (branch de integração, unidades B–H e pontos a decidir).
+
 ## Fase 2 — catálogo e busca universal
 
 **Objetivo:** unificar leitura de `tenders` e `cultural_opportunities` sob `OpportunitySummary`, preservando tabelas/fontes de origem e proveniência.
@@ -229,6 +231,7 @@ Decisão do dono em 13/10/2026: **troca por flag em runtime, com um deploy prepa
 - O rollback de aplicação é apenas desligar a flag, enquanto as estruturas legadas continuam intactas. Rollback de dados segue sendo um procedimento separado.
 - `FEATURE_JOURNEYS` é lida do ambiente na subida e exige reinício; por isso **não serve sozinha para o corte**. A Fase 1 precisa de uma flag de corte lida em runtime, com propagação medida no ensaio. O mecanismo (onde o valor mora, como é alterado e auditado, e como API e worker o enxergam ao mesmo tempo) é definido no contrato da Fase 1 e ainda não existe.
 - As flags de jornada continuam como estão: controlam disponibilidade de produto, não o corte de dados.
+- Mecanismo proposto, ainda em aprovação: [contrato da flag de corte](../contracts/workspace-cutover-v1.md).
 
 ### Rotinas a drenar ou pausar
 
