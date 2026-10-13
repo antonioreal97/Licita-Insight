@@ -1,10 +1,11 @@
-import { useEffect, useId, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { Check, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import { isApiError, type CompanyMacroregion, type CompanyProfile, type CompanyProfileInput, type CompanySize, type MunicipalityReference } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { trackProfileSetup } from '@/features/analytics/google-analytics';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { toast } from '@/hooks/use-toast';
 import { formatDateTime } from '@/lib/format';
@@ -435,6 +436,13 @@ export function CompanyProfileSection() {
   const [dismissedSuggestion, setDismissedSuggestion] = useState('');
   const descriptionSuggestions = useProfileDescriptionSuggestions(descriptionForSuggestions);
   const ids = useId();
+  const profileStartTracked = useRef(false);
+
+  useEffect(() => {
+    if (!profile.isSuccess || saved || profileStartTracked.current) return;
+    profileStartTracked.current = true;
+    trackProfileSetup('profile_setup_start');
+  }, [profile.isSuccess, saved]);
 
   // Load the stored profile into the form, and again after each save (new `version`). Keyed on the version, not the
   // object, so a background refetch of the same profile doesn't wipe what the user is typing.
@@ -469,12 +477,14 @@ export function CompanyProfileSection() {
       return;
     }
     save.mutate(toInput(draft), {
-      onSuccess: (response) =>
+      onSuccess: (response) => {
+        if (!saved) trackProfileSetup('profile_setup_complete');
         toast({
           title: 'Perfil salvo',
           description:
             billing.data?.entitled && response.profile?.version !== saved?.version ? 'Os selos de aderência serão recalculados em instantes.' : undefined,
-        }),
+        });
+      },
       onError: (error) => setErrors(serverErrors(error)),
     });
   };

@@ -4,6 +4,7 @@ import aiRouter from "./ai";
 import accountRouter from "./account";
 import billingRouter from "./billing";
 import healthRouter from "./health";
+import featureFlagsRouter from "./feature-flags";
 import ingestRouter from "./ingest";
 import opportunitiesRouter from "./opportunities";
 import profileRouter from "./profile";
@@ -15,6 +16,7 @@ import transparencyRouter from "./transparency";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(featureFlagsRouter);
 router.use(authRouter);
 router.use(billingRouter);
 router.use(aiRouter);
