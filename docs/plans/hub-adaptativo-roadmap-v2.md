@@ -48,6 +48,10 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 - adaptar rotas `/me`, jobs, caches, e-mails, exportação e exclusão;
 - manter assinatura/sessão na conta, catálogo atual global e `requireWorkspaceMember` como regra de autorização, nesta fase satisfeita apenas pelo `owner`;
 - criar gestão e onboarding mínimo de Espaços somente depois da integridade estrutural, sem redesenhar o dashboard.
+- resolver preferência de Espaço ativo inválida por ordem determinística, sem gravar em leitura;
+- adotar controle otimista (`baseRevision`/`revision`) apenas na rota nova de perfil, mantendo a rota v1 como está;
+- responder `workspaceId` na busca conforme o contrato: `401` sem sessão, `400` para id malformado e resultado universal idêntico para id inexistente ou alheio;
+- manter o histórico de perguntas de IA como log pessoal da conta, fora do backfill.
 
 **Critérios de aceite:**
 
@@ -58,11 +62,12 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 - rotas v1 mantêm payload, gates e comportamento no Espaço padrão;
 - conta grátis limitada a um Espaço e trial/assinatura a cinco; expiração não apaga dados e torna excedentes somente leitura;
 - rollback de aplicação e de dados ensaiados separadamente;
-- duração máxima e critério de aborto da janela definidos e aprovados após ensaio com volume real.
+- parâmetros iniciais da janela confirmados ou ajustados pelo dono após ensaio com volume real, executado por ele no servidor;
+- os três estados de onboarding preservados, com `complete` significando mínimo concluído.
 
 **Esforço indicativo:** 2–3 sprints, incluindo ensaio de backfill e rollout.
 
-**Gate:** aprovação explícita do SQL, backfill, relatório do dry run, backup/restore, duração máxima e critério de aborto da janela, evidências de isolamento, checklist LGPD e validação ponta a ponta do Asaas. Esta aprovação ainda não existe.
+**Gate:** aprovação explícita do SQL, backfill, relatório do dry run, backup/restore, valores finais da janela de corte após o ensaio, evidências de isolamento, checklist LGPD e validação ponta a ponta do Asaas. Esta aprovação ainda não existe.
 
 ## Fase 2 — catálogo e busca universal
 
@@ -165,26 +170,94 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 
 Esta é uma ordem lógica, não nomes ou números de arquivos autorizados. Produção continua operada manualmente pelo dono, uma migração por vez, sempre após backup verificado. Antes de W1, o preflight não executa DDL: conta usuários e recursos, identifica órfãos/duplicidades, estima locks e registra contagens, checksums e marcos por tabela.
 
-| Ordem | Artefato lógico           | Conteúdo e disciplina operacional                                                                                                                                                                                                                                                                                 |
-| ----- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1    | fundação de Espaços       | criar `workspaces`, `workspace_members` apenas com associação `owner`, perfis, sinais e preferência ativa; não criar convites; garantir idempotência do Espaço padrão e da membership; incluir constraints e índices de propriedade, `limit_slot` e preferência ativa compatíveis com carga                       |
-| W2    | expansão de escopo        | adicionar colunas `workspace_id` anuláveis às tabelas pessoais da matriz; criar FKs como `NOT VALID` quando apropriado e índices concorrentes fora de transações quando o PostgreSQL exigir; a aplicação compatível tolera nulos até o corte                                                                      |
-| W3    | backfill único            | executar procedimento idempotente e auditável: lote do Espaço `procurement`, perfil e artefatos; manter checkpoints e relatório por linha/conjunto; durante o corte curto, drenar jobs, bloquear somente mutações afetadas, aplicar o delta desde os marcos e reconciliar invariantes; nunca manter escrita dupla |
-| W4    | enforcement               | validar FKs e contagens, eliminar nulos e só então aplicar `NOT NULL` e novas unicidades por Espaço; remover apenas constraints incompatíveis; manter estruturas legadas até uma release posterior comprovar ausência de leitores, writers e retries antigos                                                      |
-| C1    | catálogo                  | criar a projeção universal e índices; backfill de `tenders` e `cultural_opportunities`; validar fingerprints e proveniência antes do cutover de leitura                                                                                                                                                           |
-| A1    | artefatos                 | criar modelos universais de salvos, buscas, alertas e dashboard da Fase 3; copiar estados com verificação e trocar leituras antes de qualquer remoção futura                                                                                                                                                      |
-| E1    | afinidade e elegibilidade | criar caches, rulesets, resultados e evidências separados da Fase 4                                                                                                                                                                                                                                               |
-| T1    | colaboração               | ampliar memberships para demais papéis e criar convites, equipes e organizações apenas na Fase 6                                                                                                                                                                                                                  |
+| Ordem | Artefato lógico           | Conteúdo e disciplina operacional                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1    | fundação de Espaços       | criar `workspaces`, `workspace_members` apenas com associação `owner`, perfis, sinais e preferência ativa; não criar convites; garantir idempotência do Espaço padrão e da membership; incluir constraints e índices de propriedade, `limit_slot` e preferência ativa compatíveis com carga; o perfil nasce com o contador `revision` do controle otimista, separado de `profileVersion`; a preferência ativa referencia o Espaço com `ON DELETE SET NULL` e registra a última seleção por Espaço |
+| W2    | expansão de escopo        | adicionar colunas `workspace_id` anuláveis às tabelas pessoais da matriz; criar FKs como `NOT VALID` quando apropriado e índices concorrentes fora de transações quando o PostgreSQL exigir; a aplicação compatível tolera nulos até o corte                                                                                                                                                                                                                                                      |
+| W3    | backfill único            | executar procedimento idempotente e auditável: lote do Espaço `procurement`, perfil e artefatos; manter checkpoints e relatório por linha/conjunto; `ai_ask_requests` fica fora, por ser log pessoal da conta; durante o corte curto, drenar jobs, bloquear somente mutações afetadas, aplicar o delta desde os marcos e reconciliar invariantes; nunca manter escrita dupla                                                                                                                      |
+| W4    | enforcement               | validar FKs e contagens, eliminar nulos e só então aplicar `NOT NULL` e novas unicidades por Espaço; remover apenas constraints incompatíveis; manter estruturas legadas até uma release posterior comprovar ausência de leitores, writers e retries antigos                                                                                                                                                                                                                                      |
+| C1    | catálogo                  | criar a projeção universal e índices; backfill de `tenders` e `cultural_opportunities`; validar fingerprints e proveniência antes do cutover de leitura                                                                                                                                                                                                                                                                                                                                           |
+| A1    | artefatos                 | criar modelos universais de salvos, buscas, alertas e dashboard da Fase 3; copiar estados com verificação e trocar leituras antes de qualquer remoção futura                                                                                                                                                                                                                                                                                                                                      |
+| E1    | afinidade e elegibilidade | criar caches, rulesets, resultados e evidências separados da Fase 4                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| T1    | colaboração               | ampliar memberships para demais papéis e criar convites, equipes e organizações apenas na Fase 6                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Nunca combinar criação, backfill massivo, constraint e remoção em uma única migração. Qualquer falha interrompe a sequência. Nenhuma remoção de coluna/tabela ocorre até uma release posterior comprovar que não há leitores, jobs ou retries antigos.
 
 ## Janela de corte
 
-O corte de W3 aceita uma janela curta de manutenção. Somente as mutações que escrevem nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis, assim como coleta global que não escreva nessas tabelas.
-
-Durante a janela, os jobs afetados são drenados ou pausados, as tabelas de origem são bloqueadas no menor escopo possível, o delta posterior aos marcos é aplicado e integridade e isolamento são validados antes da troca. A duração máxima e o critério objetivo de aborto permanecem pendentes de definição pelo dono **após ensaio com volume real**; não há número presumido neste roadmap.
+O corte de W3 aceita uma janela curta de manutenção. Somente as mutações que escrevem nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis, assim como coleta global que não escreva nessas tabelas. O backfill em lote roda fora da janela; dentro dela ficam apenas a drenagem de jobs, o bloqueio no menor escopo, o delta desde os marcos, a conferência de invariantes e a troca para gravar só no modelo novo.
 
 Se o delta ou a validação excederem a janela aprovada, o corte é cancelado. A aplicação permanece ou retorna ao estado anterior conforme o runbook, e a escrita dupla nunca é introduzida como atalho.
+
+### Parâmetros iniciais
+
+Aprovados pelo dono em 13/10/2026 como **valores iniciais, a confirmar no ensaio com volume real**. Os valores finais saem das fórmulas abaixo e nunca passam do teto.
+
+```
+janela_max   = min(15 min, 2 × (drenagem + bloqueio + delta + validação + troca) medidos no pior ensaio)
+ponto_aborto = janela_max − tempo de rollback de aplicação medido
+```
+
+| Parâmetro                             | Valor inicial              | Por quê                                                                                                                                          |
+| ------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Início                                | 03:30 `America/Sao_Paulo`  | depois da retenção das 03:00, que apaga registros do escopo e mudaria o delta; antes da coleta do PNCP das 06:00 e do digest de e-mail das 07:00 |
+| Duração máxima de mutações bloqueadas | 15 min (meta de até 5 min) | base beta pequena; leitura, busca e detalhe nunca entram em manutenção                                                                           |
+| Ponto de não retorno                  | T+10 min                   | deixa 5 min para reabrir as mutações no legado                                                                                                   |
+| Drenagem de jobs                      | até 3 min                  | job de afinidade/IA ou envio de e-mail ainda rodando depois disso aborta o corte                                                                 |
+| `lock_timeout` por tabela de origem   | 5 s                        | espera maior por lock indica tráfego inesperado                                                                                                  |
+
+### Aborto
+
+Aborto imediato, em qualquer momento antes da troca, se:
+
+1. qualquer contagem, checksum por usuário/tabela, órfão, duplicata ou vínculo com Espaço errado divergir — tolerância zero;
+2. o ponto de não retorno chegar sem a validação concluída;
+3. a drenagem passar de 3 min ou um `lock_timeout` disparar;
+4. o delta tiver mais de 3× as linhas previstas pela taxa medida de mutações naquele horário;
+5. as leituras públicas passarem de 1% de erro ou de 2× o p95 do baseline durante a janela.
+
+Abortar significa soltar os locks, manter as flags desligadas, reabrir as mutações no legado — que nunca deixou de ser a fonte — e preservar as tabelas novas para investigação. Como nada grava no modelo novo antes da troca, abortar não exige restaurar backup.
+
+O script de corte precisa de cronômetro com ponto de não retorno, `lock_timeout` explícito, relatório das invariantes antes da troca e um comando de aborto ensaiado.
+
+### Rotinas a drenar ou pausar
+
+Além da fila de IA, a API mantém agendadores que gravam continuamente em tabelas do escopo. Todos entram na drenagem e ficam pausados até a troca ou o aborto. Lista levantada a partir de `startSchedulers` em `artifacts/api-server/src/index.ts`; o que não foi confirmado por leitura do código está marcado **a verificar** e precisa ser fechado antes do ensaio.
+
+| Rotina                                          | Onde                                                             | O que grava no escopo                                                                                      |
+| ----------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| fila durável de IA                              | `ai/ai-job-queue.ts` (`startAiJobWorker`)                        | jobs personalizados de afinidade e seus resultados (a verificar tabela a tabela)                           |
+| envio imediato de e-mail, a cada 60 s           | `email/email-scheduler.ts` (`startEmailNotificationJobs`)        | entregas de e-mail e vínculo com notificações                                                              |
+| avaliação de buscas salvas, por intervalo       | `email/email-scheduler.ts` e `account/notification-service.ts`   | notificações, checkpoint e contador de novos itens da busca salva                                          |
+| digest diário de e-mail                         | `email/email-scheduler.ts`                                       | entregas de e-mail; fora do horário da janela, mas pausado por segurança                                   |
+| notificação de fim de teste                     | `account/trial-notification-scheduler.ts`                        | notificações (a verificar)                                                                                 |
+| alertas de perfil                               | serviço de afinidade da empresa (a verificar o agendador)        | notificações de novos editais com alta aderência                                                           |
+| rebuild de recomendações                        | `recommendations/recommendation-service.ts`                      | perfil de interesse e recomendações materializadas                                                         |
+| retenção de dados pessoais e de perguntas de IA | `account/personal-data-retention.ts`, `ai/ask-tender-service.ts` | exclusões em tabelas do escopo; por isso a janela começa depois das 03:00                                  |
+| notificações de mudança de edital               | geradas pela coleta e atualização do PNCP                        | notificações de prazo, status, valor e documento; nenhuma coleta do PNCP pode estar em andamento na janela |
+| reconciliação de prazos e status                | `ingest/reconcile-tender-deadlines.ts`                           | a verificar se gera notificação                                                                            |
+
+O job noturno de classificação de categorias (00:00–05:30) não grava em tabelas de usuário e não precisa ser drenado. Porém, se a troca for feita por deploy, o reinício do app o interrompe naquela noite. Esse efeito deve ser aceito explicitamente no runbook ou evitado fazendo a troca por flag, sem reinício.
+
+### Ensaio com volume real
+
+O ensaio usa cópia restaurada do backup de produção e a taxa de mutações extraída dos logs; contém dado pessoal. Condições aprovadas:
+
+- roda **no servidor, executado pelo dono**; agentes não acessam o banco de produção nem cópias dele;
+- a cópia é descartada ao fim do ensaio;
+- o relatório traz somente contagens, tempos e resultados de invariantes, sem dado pessoal;
+- o ensaio roda pelo menos duas vezes e vale o pior resultado.
+
+O que o ensaio mede:
+
+1. contagem e tamanho por tabela do escopo (perfis, salvos e participação, buscas salvas, notificações, afinidades, recomendações e eventos);
+2. duração do backfill em lote, para garantir que ele cabe fora da janela;
+3. taxa real de mutações por minuto entre 03:30 e 04:30 e, com ela, o tamanho esperado do delta;
+4. tempo de aplicar o delta com escritas sintéticas nessa taxa durante o lote;
+5. tempo de drenagem da fila de IA e do envio de e-mails no pior caso;
+6. tempo de obter os locks e de rodar todas as conferências — os checksums são a parte mais provável de estourar;
+7. tempo da troca (flag ou deploy) e do rollback de aplicação, cada um ensaiado de verdade;
+8. tempo de restaurar o backup, que não entra na janela mas decide se o rollback de dados é viável.
 
 ## Operação, backup, validação e rollback
 
@@ -240,7 +313,7 @@ Rollback por categoria:
 1. **Contrato:** dono aprova a Fase 0 consolidada, o contrato owner-only e as pendências registradas.
 2. **Asaas:** checkout, retorno, webhooks autenticados/idempotentes, estados de assinatura e reconciliação são validados ponta a ponta antes de ativar a Fase 1; isso não autoriza mudar gates atuais.
 3. **Migração:** revisão de SQL, estimativa de lock, backup/restore e dry run com volume real.
-4. **Corte:** dono define, após o ensaio, a duração máxima e o critério de aborto; aprova bloqueio limitado às mutações afetadas e cancelamento quando delta ou validação não couberem.
+4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; depois do ensaio no servidor, o dono confirma os valores finais da janela, a lista de rotinas pausadas e a forma da troca (flag ou deploy).
 5. **Integridade, isolamento e reversibilidade:** as três evidências ficam verdes antes de `NOT NULL`, cutover ou liberação de mutações.
 6. **Catálogo:** proveniência, fingerprint, fontes e metas de busca aprovadas.
 7. **Artefatos/jornadas:** contratos, UX, acessibilidade, analytics, jobs e rollback de flag aprovados individualmente.

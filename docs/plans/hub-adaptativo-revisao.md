@@ -86,6 +86,15 @@ As decisões abaixo foram **aprovadas pelo dono em 13/10/2026** e fecham ou refi
 2. **Membros:** `workspace_members` entra na Fase 1 apenas com a associação `owner`. Convites, outros papéis, equipes, gerenciamento de membros e colaboração ficam na Fase 6. A primeira migração não inclui convites; `requireWorkspaceMember` continua sendo a regra de autorização, satisfeita na Fase 1 somente pelo `owner`.
 3. **Corte:** aceita-se uma janela curta de manutenção, bloqueando somente as mutações afetadas; busca e detalhes públicos permanecem disponíveis. A duração máxima e o critério de aborto serão definidos pelo dono após ensaio com volume real. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não será usada como atalho.
 4. **Asaas:** checkout e webhooks serão validados ponta a ponta antes de ativar a Fase 1, pois o entitlement determina quais espaços são graváveis. Esta decisão não autoriza mudar os gates atuais.
+5. **Janela de corte — parâmetros iniciais:** início às 03:30 de `America/Sao_Paulo`, teto de 15 minutos de mutações bloqueadas (meta de até 5), ponto de não retorno em T+10 min, drenagem de até 3 min e `lock_timeout` de 5 s, com cinco gatilhos de aborto imediato e tolerância zero nas invariantes. São valores iniciais: os finais valem `min(15 min, 2 × o pior ensaio)`. Detalhes na seção “Janela de corte” do [roadmap](./hub-adaptativo-roadmap-v2.md#janela-de-corte).
+6. **Janela de corte — acréscimos:** a drenagem inclui, além da fila de IA, os agendadores que gravam continuamente nas tabelas do escopo (envio imediato de e-mail, avaliação de buscas salvas e os demais listados no roadmap). O ensaio usa cópia do backup de produção, contém dado pessoal e por isso roda no servidor, executado pelo dono; a cópia é descartada e o relatório sai sem dado pessoal.
+7. **Espaço ativo inválido:** resolvedor determinístico único — não arquivados graváveis, depois o selecionado mais recentemente, depois o criado primeiro; `null` se não houver nenhum. Na leitura, resolve sem gravar.
+8. **Estados de onboarding:** permanecem `not_started | in_progress | complete`; `complete` significa mínimo concluído (palavras-chave e região). Riqueza do perfil é dado derivado, não estado.
+9. **Busca com `workspaceId`:** `401` sem sessão; `400` para id malformado; para id inexistente, de outro usuário ou sem acesso, `200` com resultado universal, sem personalização, sem cache e com corpo idêntico nos três casos.
+10. **Edição simultânea do perfil:** controle otimista somente na rota nova, com contador `revision` separado de `profileVersion`; a rota v1 continua com última gravação vence.
+11. **Histórico de perguntas de IA:** log pessoal da conta, sem `workspace_id`, com a retenção atual de 90 dias e fora do backfill.
+
+Nenhuma dessas decisões autoriza a Fase 1, a criação de migrações ou qualquer mudança em produção.
 
 ## 5. Checkout Asaas antes de ativar a Fase 1
 
