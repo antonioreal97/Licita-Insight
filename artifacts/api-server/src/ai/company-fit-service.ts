@@ -13,6 +13,7 @@ import {
   tenderAiPassagesTable,
   tendersTable,
   usersTable,
+  workspaceMembersTable,
   workspaceProfileSignalsTable,
   workspaceProfilesTable,
   workspacesTable,
@@ -26,10 +27,19 @@ import {
 import { SubscriptionRequiredError } from "../lib/api-error";
 import {
   withCutoverGate,
+  type CutoverCaller,
   type GateDatabase,
   type GateTransaction,
 } from "../workspaces/cutover-gate";
 import { readCutoverState } from "../workspaces/cutover-state";
+import {
+  cycleCaller,
+  discardedByCutover,
+  isCutoverInterruption,
+  requireCutoverCycle,
+  startCutoverCycle,
+  type CutoverCycle,
+} from "../workspaces/cutover-cycle";
 import {
   companyProfileToWorkspaceProfile,
   workspaceProfileToCompanyProfile,
@@ -56,7 +66,11 @@ import {
   scoreSizeRestriction,
 } from "./jev-client";
 import { fitLexicalGateMode } from "./fit-lexical-gate";
-import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
+import {
+  enqueueAiJob,
+  runEnqueuedAiJobNow,
+  TerminalAiJobError,
+} from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
 import { isAiBatchBudgetPaused } from "./ai-budget";
 import { recordSkippedJobRun } from "../jobs/job-lock";
@@ -583,6 +597,7 @@ async function processFit(
   userId: string,
   profile: CompanyProfile,
   tender: TenderRow,
+  cycle: CutoverCycle,
   now = new Date(),
 ): Promise<void> {
   if (!(await reserveFitQuota(userId, now))) return;
@@ -670,26 +685,33 @@ async function processFit(
       size?.reason?.kind === "size_restricted" ? size.reason.restriction : null,
     );
     const checkedAt = new Date();
-    await db
-      .update(companyTenderFitsTable)
-      .set({
-        status: "ready",
-        level,
-        score: score.toFixed(7),
-        reasons: reasons.slice(0, 4),
-        responseModel: model,
-        inputTokens,
-        estimatedCostUsd: (inputTokens * 0.000000042).toFixed(8),
-        checkedAt,
-        updatedAt: checkedAt,
-      })
-      .where(eq(companyTenderFitsTable.id, rowId));
+    // The model call above ran outside any transaction; only this short write holds the gate.
+    await withCutoverGate(cycleCaller(cycle), (tx) =>
+      tx
+        .update(companyTenderFitsTable)
+        .set({
+          status: "ready",
+          level,
+          score: score.toFixed(7),
+          reasons: reasons.slice(0, 4),
+          responseModel: model,
+          inputTokens,
+          estimatedCostUsd: (inputTokens * 0.000000042).toFixed(8),
+          checkedAt,
+          updatedAt: checkedAt,
+        })
+        .where(eq(companyTenderFitsTable.id, rowId)),
+    );
     await recordUsage(userId, now, inputTokens);
   } catch (error) {
-    await db
-      .update(companyTenderFitsTable)
-      .set({ status: "failed", updatedAt: new Date() })
-      .where(eq(companyTenderFitsTable.id, rowId));
+    // Interrupted by the cutover: the row stays `processing` and the job runs again in the current model.
+    if (isCutoverInterruption(error)) throw error;
+    await withCutoverGate(cycleCaller(cycle), (tx) =>
+      tx
+        .update(companyTenderFitsTable)
+        .set({ status: "failed", updatedAt: new Date() })
+        .where(eq(companyTenderFitsTable.id, rowId)),
+    );
     logger.warn(
       { err: error, userId, tenderId: tender.id },
       "Company fit evaluation failed",
@@ -698,7 +720,56 @@ async function processFit(
   }
 }
 
-export async function executeCompanyFitJob(fitId: string): Promise<void> {
+/**
+ * The profile a `fit` job evaluates. In `workspaces` it comes from the workspace of the job, after checking that the
+ * user is still a member; a removed membership cancels the job without reading the workspace
+ * (docs/contracts/workspaces-v1.md). A job without a workspace in that mode is a broken cutover and dies loudly.
+ */
+async function fitJobProfile(
+  fit: typeof companyTenderFitsTable.$inferSelect,
+  jobWorkspaceId: string | null,
+  cycle: CutoverCycle,
+): Promise<CompanyProfile | null> {
+  if (cycle.mode === "legacy") {
+    const row = await readCompanyProfileRow(fit.userId, "legacy");
+    return row ? toProfile(row) : null;
+  }
+  if (!jobWorkspaceId) {
+    throw new TerminalAiJobError("fit job without workspace_id after cutover");
+  }
+  const [member] = await db
+    .select({ role: workspaceMembersTable.role })
+    .from(workspaceMembersTable)
+    .where(
+      and(
+        eq(workspaceMembersTable.workspaceId, jobWorkspaceId),
+        eq(workspaceMembersTable.userId, fit.userId),
+      ),
+    )
+    .limit(1);
+  if (!member || fit.workspaceId !== jobWorkspaceId) {
+    logger.warn(
+      { fitId: fit.id, member: Boolean(member) },
+      "Fit job cancelled: the membership or the fit no longer belongs to its workspace",
+    );
+    return null;
+  }
+  const [profile] = await db
+    .select()
+    .from(workspaceProfilesTable)
+    .where(eq(workspaceProfilesTable.workspaceId, jobWorkspaceId))
+    .limit(1);
+  return profile
+    ? toProfile(workspaceProfileToCompanyProfile(fit.userId, profile))
+    : null;
+}
+
+/** One job is one cycle: it does not start while writes are paused and writes in the mode it read the profile in. */
+export async function executeCompanyFitJob(
+  fitId: string,
+  jobWorkspaceId: string | null = null,
+): Promise<void> {
+  const cycle = await requireCutoverCycle("fit_job");
   const [fit] = await db
     .select()
     .from(companyTenderFitsTable)
@@ -706,7 +777,7 @@ export async function executeCompanyFitJob(fitId: string): Promise<void> {
     .limit(1);
   if (!fit || fit.status === "ready" || fit.status === "filtered") return;
   const [profile, tender] = await Promise.all([
-    getCompanyProfile(fit.userId),
+    fitJobProfile(fit, jobWorkspaceId, cycle),
     db
       .select({
         id: tendersTable.id,
@@ -727,7 +798,7 @@ export async function executeCompanyFitJob(fitId: string): Promise<void> {
       .limit(1),
   ]);
   if (!profile || !tender[0] || profile.version !== fit.profileVersion) return;
-  await processFit(fit.id, fit.userId, profile, tender[0]);
+  await processFit(fit.id, fit.userId, profile, tender[0], cycle);
 }
 
 const publicFit = (
@@ -755,6 +826,8 @@ async function ensureFit(
   profile: CompanyProfile,
   tender: TenderRow,
   wait: boolean,
+  /** A request refuses during the pause; the profile-alert cycle that already started may go on. */
+  caller: CutoverCaller,
 ): Promise<TenderFit> {
   const config = aiConfig();
   const fingerprint = companyFitTenderFingerprint(tender);
@@ -797,7 +870,7 @@ async function ensureFit(
           ...profile.offerings,
         ]);
   // Only `tx` inside the gate: up to 100 fits run in parallel, and a second pool connection per fit could starve the pool.
-  const row = await withCutoverGate({ kind: "http" }, async (tx, state) => {
+  const row = await withCutoverGate(caller, async (tx, state) => {
     // Until W4 the conflict target and the dedupe key stay the legacy ones; the default workspace is the user's only one.
     const scope =
       state.mode === "workspaces" ? { workspaceId: defaultWorkspaceId(userId) } : {};
@@ -978,12 +1051,15 @@ async function ensureFit(
 export async function getTenderFits(
   userId: string,
   tenderIds: string[],
-  options: { wait?: boolean } = {},
+  options: { wait?: boolean; cycle?: CutoverCycle } = {},
 ): Promise<{
   profileVersion: number | null;
   results: Record<string, TenderFit>;
 }> {
-  const { mode } = await readCutoverState(pool);
+  const mode = options.cycle?.mode ?? (await readCutoverState(pool)).mode;
+  const caller: CutoverCaller = options.cycle
+    ? cycleCaller(options.cycle)
+    : { kind: "http" };
   const row = await readCompanyProfileRow(userId, mode);
   if (!row) return { profileVersion: null, results: {} };
   const profile = toProfile(row);
@@ -1010,7 +1086,14 @@ export async function getTenderFits(
       async (tender) =>
         [
           tender.id,
-          await ensureFit(userId, mode, profile, tender, options.wait ?? false),
+          await ensureFit(
+            userId,
+            mode,
+            profile,
+            tender,
+            options.wait ?? false,
+            caller,
+          ),
         ] as const,
     ),
   );
@@ -1020,6 +1103,70 @@ export async function getTenderFits(
   };
 }
 
+type AlertProfile = {
+  userId: string;
+  workspaceId: string | null;
+  lastAlertAt: Date;
+};
+
+/**
+ * The profiles the daily alert evaluates, with their cursor: the account's profile in `legacy`, the profile of each
+ * default workspace in `workspaces`. The alert preference stays with the account in both.
+ */
+async function alertProfiles(cycle: CutoverCycle): Promise<AlertProfile[]> {
+  if (cycle.mode === "legacy") {
+    const rows = await db
+      .select({
+        userId: companyProfilesTable.userId,
+        lastAlertAt: companyProfilesTable.lastAlertAt,
+      })
+      .from(companyProfilesTable)
+      .innerJoin(usersTable, eq(usersTable.id, companyProfilesTable.userId))
+      .where(eq(usersTable.profileAlerts, true));
+    return rows.map((row) => ({ ...row, workspaceId: null }));
+  }
+  const rows = await db
+    .select({
+      userId: workspacesTable.ownerUserId,
+      workspaceId: workspacesTable.id,
+      lastAlertAt: workspaceProfilesTable.lastAlertAt,
+      updatedAt: workspaceProfilesTable.updatedAt,
+    })
+    .from(workspaceProfilesTable)
+    .innerJoin(
+      workspacesTable,
+      eq(workspacesTable.id, workspaceProfilesTable.workspaceId),
+    )
+    .innerJoin(usersTable, eq(usersTable.id, workspacesTable.ownerUserId))
+    .where(
+      and(eq(workspacesTable.isDefault, true), eq(usersTable.profileAlerts, true)),
+    );
+  return rows.map(({ updatedAt, ...row }) => ({
+    ...row,
+    lastAlertAt: row.lastAlertAt ?? updatedAt,
+  }));
+}
+
+/** The cursor lives with the profile: `company_profiles` in `legacy`, `workspace_profiles` in `workspaces`. */
+const advanceAlertCursor = (
+  tx: GateTransaction,
+  profile: AlertProfile,
+  lastAlertAt: Date,
+) =>
+  profile.workspaceId === null
+    ? tx
+        .update(companyProfilesTable)
+        .set({ lastAlertAt })
+        .where(eq(companyProfilesTable.userId, profile.userId))
+    : tx
+        .update(workspaceProfilesTable)
+        .set({ lastAlertAt })
+        .where(eq(workspaceProfilesTable.workspaceId, profile.workspaceId));
+
+/**
+ * One evaluation is one job cycle: it does not start while the cutover pauses writes, writes through the gate in the
+ * mode it read the profiles in, and stops with what it already did if that mode changes.
+ */
 export async function evaluateProfileAlertNotifications(
   completedAt = new Date(),
 ): Promise<number> {
@@ -1027,90 +1174,90 @@ export async function evaluateProfileAlertNotifications(
     await recordSkippedJobRun("profile_alerts", "skipped_budget");
     return 0;
   }
-  const profiles = await db
-    .select({
-      userId: companyProfilesTable.userId,
-      lastAlertAt: companyProfilesTable.lastAlertAt,
-    })
-    .from(companyProfilesTable)
-    .innerJoin(usersTable, eq(usersTable.id, companyProfilesTable.userId))
-    .where(eq(usersTable.profileAlerts, true));
+  const cycle = await startCutoverCycle("profile_alerts");
+  if (!cycle) return 0;
   let created = 0;
-  for (const profile of profiles) {
-    if (!(await hasAiAccess(profile.userId, completedAt))) continue;
-    const tenders = await db
-      .select({
-        id: tendersTable.id,
-        title: tendersTable.title,
-        organizationName: tendersTable.organizationName,
-        proposalDeadline: tendersTable.proposalDeadline,
-        createdAt: tendersTable.createdAt,
-      })
-      .from(tendersTable)
-      .where(
-        and(
-          gt(tendersTable.createdAt, profile.lastAlertAt),
-          lte(tendersTable.createdAt, completedAt),
-        ),
-      )
-      .orderBy(asc(tendersTable.createdAt), asc(tendersTable.id))
-      .limit(1_000);
-    if (tenders.length === 0) {
-      await db
-        .update(companyProfilesTable)
-        .set({ lastAlertAt: completedAt })
-        .where(eq(companyProfilesTable.userId, profile.userId));
-      continue;
-    }
-    const high: typeof tenders = [];
-    let pending = false;
-    for (let index = 0; index < tenders.length; index += 100) {
-      const batch = tenders.slice(index, index + 100);
-      const fits = await getTenderFits(
-        profile.userId,
-        batch.map(({ id }) => id),
-        { wait: true },
-      );
-      for (const tender of batch) {
-        const fit = fits.results[tender.id];
-        if (fit?.status === "pending") pending = true;
-        if (fit?.status === "ready" && fit.level === "high") high.push(tender);
-      }
-    }
-    if (high.length > 0) {
-      const snapshots = high.slice(0, 5).map((tender) => ({
-        id: tender.id,
-        title: tender.title,
-        organizationName: tender.organizationName,
-        proposalDeadline: tender.proposalDeadline,
-        level: "high" as const,
-      }));
-      const inserted = await db
-        .insert(notificationsTable)
-        .values({
-          id: randomUUID(),
-          userId: profile.userId,
-          type: "profile_new_matches",
-          dedupeKey: `profile:${profile.userId}:${dateInSaoPaulo(completedAt)}`,
-          createdAt: completedAt,
-          matchCount: high.length,
-          tenderIds: high.slice(0, 20).map(({ id }) => id),
-          profileMatches: snapshots,
+  try {
+    for (const profile of await alertProfiles(cycle)) {
+      if (!(await hasAiAccess(profile.userId, completedAt))) continue;
+      const tenders = await db
+        .select({
+          id: tendersTable.id,
+          title: tendersTable.title,
+          organizationName: tendersTable.organizationName,
+          proposalDeadline: tendersTable.proposalDeadline,
+          createdAt: tendersTable.createdAt,
         })
-        .onConflictDoNothing()
-        .returning({ id: notificationsTable.id });
-      created += inserted.length;
-    }
-    if (!pending) {
+        .from(tendersTable)
+        .where(
+          and(
+            gt(tendersTable.createdAt, profile.lastAlertAt),
+            lte(tendersTable.createdAt, completedAt),
+          ),
+        )
+        .orderBy(asc(tendersTable.createdAt), asc(tendersTable.id))
+        .limit(1_000);
+      if (tenders.length === 0) {
+        await withCutoverGate(cycleCaller(cycle), (tx) =>
+          advanceAlertCursor(tx, profile, completedAt),
+        );
+        continue;
+      }
+      const high: typeof tenders = [];
+      let pending = false;
+      for (let index = 0; index < tenders.length; index += 100) {
+        const batch = tenders.slice(index, index + 100);
+        const fits = await getTenderFits(
+          profile.userId,
+          batch.map(({ id }) => id),
+          { wait: true, cycle },
+        );
+        for (const tender of batch) {
+          const fit = fits.results[tender.id];
+          if (fit?.status === "pending") pending = true;
+          if (fit?.status === "ready" && fit.level === "high") high.push(tender);
+        }
+      }
+      if (high.length === 0 && pending) continue;
       const checkpoint =
         tenders.length < 1_000
           ? completedAt
           : tenders[tenders.length - 1]!.createdAt;
-      await db
-        .update(companyProfilesTable)
-        .set({ lastAlertAt: checkpoint })
-        .where(eq(companyProfilesTable.userId, profile.userId));
+      created += await withCutoverGate(cycleCaller(cycle), async (tx) => {
+        let inserted = 0;
+        if (high.length > 0) {
+          const rows = await tx
+            .insert(notificationsTable)
+            .values({
+              id: randomUUID(),
+              userId: profile.userId,
+              // The alert belongs to the workspace of its profile; the dedupe key keeps its legacy text until W4.
+              ...(profile.workspaceId === null
+                ? {}
+                : { workspaceId: profile.workspaceId }),
+              type: "profile_new_matches",
+              dedupeKey: `profile:${profile.userId}:${dateInSaoPaulo(completedAt)}`,
+              createdAt: completedAt,
+              matchCount: high.length,
+              tenderIds: high.slice(0, 20).map(({ id }) => id),
+              profileMatches: high.slice(0, 5).map((tender) => ({
+                id: tender.id,
+                title: tender.title,
+                organizationName: tender.organizationName,
+                proposalDeadline: tender.proposalDeadline,
+                level: "high" as const,
+              })),
+            })
+            .onConflictDoNothing()
+            .returning({ id: notificationsTable.id });
+          inserted = rows.length;
+        }
+        if (!pending) await advanceAlertCursor(tx, profile, checkpoint);
+        return inserted;
+      });
     }
+  } catch (error) {
+    if (!discardedByCutover(error, "profile_alerts")) throw error;
   }
   return created;
 }

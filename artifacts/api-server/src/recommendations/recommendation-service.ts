@@ -38,10 +38,10 @@ import {
   type GateDatabase,
 } from "../workspaces/cutover-gate";
 import { readCutoverState, type CutoverState } from "../workspaces/cutover-state";
+import { isCutoverInterruption } from "../workspaces/cutover-cycle";
 import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { NotFoundError } from "../lib/api-error";
-import { pgErrorCode } from "../lib/pg-error";
 import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
@@ -306,13 +306,6 @@ const scoped = (
 
 const stamp = (scope: RecommendationScope) =>
   scope.workspaceId === null ? {} : { workspaceId: scope.workspaceId };
-
-/**
- * The cutover got in the way of a rebuild: the mode changed after the cycle read its inputs, or a state change held
- * the lock past the job's `lock_timeout`. The result is dropped and the next rebuild redoes it in the current model.
- */
-const interruptedByCutover = (error: unknown): boolean =>
-  error instanceof CutoverModeChangedError || pgErrorCode(error) === "55P03";
 
 export async function rebuildInterestProfile(
   userId: string,
@@ -932,7 +925,7 @@ export function scheduleRecommendationRebuild(
   const timer = setTimeout(() => {
     pendingRebuilds.delete(userId);
     void rebuildRecommendationsForUser(userId).catch((error) =>
-      interruptedByCutover(error)
+      isCutoverInterruption(error)
         ? logger.warn(
             { err: error, userId },
             "Recommendation rebuild discarded because of the cutover",
@@ -978,7 +971,7 @@ export async function listRecommendations(
     // A read never fails or waits because of the cutover: without a rebuild it answers what is stored.
     await rebuildRecommendationsForUser(userId, new Date(), state).catch(
       (error) => {
-        if (!interruptedByCutover(error)) throw error;
+        if (!isCutoverInterruption(error)) throw error;
       },
     );
   }

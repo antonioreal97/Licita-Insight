@@ -32,8 +32,15 @@ import {
 } from "./notification-change";
 import { TRIAL_ENDING_NOTICE_DAYS } from "../billing/trial-access";
 import { hasSubscriptionEntitlement } from "../billing/billing-access";
-import { CutoverModeChangedError, withCutoverGate } from "../workspaces/cutover-gate";
+import { enterCutoverGate, withCutoverGate } from "../workspaces/cutover-gate";
 import { readCutoverState } from "../workspaces/cutover-state";
+import {
+  cycleCaller,
+  discardedByCutover,
+  requireCutoverCycle,
+  startCutoverCycle,
+  type CutoverCycle,
+} from "../workspaces/cutover-cycle";
 import { defaultWorkspaceId, requireDefaultWorkspace } from "../workspaces/workspace-service";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -53,8 +60,8 @@ export type NotificationSearchScope = {
 
 /**
  * The notifications a v1 route acts on: the user's in `legacy`; in `workspaces`, the default workspace's (never the
- * active one). The collection and the profile alerts still create rows without a workspace until unit E, and W4
- * forbids them afterwards: until then those rows stay in the feed instead of vanishing at the cutover.
+ * active one). A row without a workspace (written by a version before the jobs stamped it, or not yet assigned by
+ * the cutover delta) stays in the feed instead of vanishing; W4 forbids such rows and retires this branch.
  */
 export const notificationScope = async (
   executor: Pick<typeof db, "select">,
@@ -65,13 +72,6 @@ export const notificationScope = async (
   if (mode === "legacy") return own;
   const { id } = await requireDefaultWorkspace(executor, userId);
   return and(own, or(eq(notificationsTable.workspaceId, id), isNull(notificationsTable.workspaceId)))!;
-};
-
-/** A cycle that read its inputs in one model must not write in the other: drop the result, the next cycle redoes it. */
-const discardedByCutover = (error: unknown, operation: string): boolean => {
-  if (!(error instanceof CutoverModeChangedError)) return false;
-  logger.warn({ err: error, operation }, "Cycle result discarded because the cutover mode changed");
-  return true;
 };
 
 /** Returns only notification snapshots owned by this user; every other id is indistinguishable from missing. */
@@ -121,7 +121,9 @@ const digest = (value: string): string =>
 export const createTrialEndingNotifications = async (
   now = new Date(),
 ): Promise<number> => {
-  const { mode } = await readCutoverState(pool);
+  const cycle = await startCutoverCycle("trial_notifications");
+  if (!cycle) return 0;
+  const { mode } = cycle;
   const noticeLimit = new Date(
     now.getTime() + TRIAL_ENDING_NOTICE_DAYS * 24 * 60 * 60 * 1000,
   );
@@ -156,7 +158,7 @@ export const createTrialEndingNotifications = async (
   if (users.length === 0) return 0;
 
   try {
-    return await withCutoverGate({ kind: "job", cycleMode: mode }, async (tx) => {
+    return await withCutoverGate(cycleCaller(cycle), async (tx) => {
       const inserted = await tx
         .insert(notificationsTable)
         .values(
@@ -185,6 +187,43 @@ export const createTrialEndingNotifications = async (
   }
 };
 
+/**
+ * Who monitors the tender, read behind the gate. The collection's transaction is not a gated one, and most changed
+ * tenders have nobody monitoring them, so the gate is taken only when a notification will be written: this step is
+ * then a cycle of its own. It does not start while the cutover pauses writes — the error rolls the tender's
+ * transaction back and the next collection finds the same change — and in `workspaces` each notification takes the
+ * workspace of the saved tender that asked for it. The dedupe keys keep their legacy text until W4.
+ */
+const monitoringSubscribers = async (
+  tx: Transaction,
+  tenderId: string,
+  operation: string,
+): Promise<Array<{ userId: string; workspace: { workspaceId?: string | null } }>> => {
+  const monitored = and(
+    eq(savedTendersTable.tenderId, tenderId),
+    eq(savedTendersTable.monitored, true),
+  );
+  const [anyone] = await tx
+    .select({ userId: savedTendersTable.userId })
+    .from(savedTendersTable)
+    .where(monitored)
+    .limit(1);
+  if (!anyone) return [];
+  const cycle = await requireCutoverCycle(operation);
+  await enterCutoverGate(tx, cycleCaller(cycle));
+  const rows = await tx
+    .select({
+      userId: savedTendersTable.userId,
+      workspaceId: savedTendersTable.workspaceId,
+    })
+    .from(savedTendersTable)
+    .where(monitored);
+  return rows.map(({ userId, workspaceId }) => ({
+    userId,
+    workspace: cycle.mode === "workspaces" ? { workspaceId } : {},
+  }));
+};
+
 export const createTenderChangeNotifications = async (
   tx: Transaction,
   input: {
@@ -196,24 +235,17 @@ export const createTenderChangeNotifications = async (
 ): Promise<number> => {
   const changes = tenderChanges(input.previous, input.next);
   if (changes.length === 0) return 0;
-  const subscribers = await tx
-    .select({ userId: savedTendersTable.userId })
-    .from(savedTendersTable)
-    .where(
-      and(
-        eq(savedTendersTable.tenderId, input.next.id),
-        eq(savedTendersTable.monitored, true),
-      ),
-    );
+  const subscribers = await monitoringSubscribers(tx, input.next.id, "tender_change_notifications");
   if (subscribers.length === 0) return 0;
 
   const inserted = await tx
     .insert(notificationsTable)
     .values(
-      subscribers.flatMap(({ userId }) =>
+      subscribers.flatMap(({ userId, workspace }) =>
         changes.map(({ type, change }) => ({
           id: randomUUID(),
           userId,
+          ...workspace,
           type,
           dedupeKey: `tender:${input.next.id}:${change.field}:${digest(input.sourceVersion)}:${digest(JSON.stringify(change))}`,
           createdAt: input.detectedAt,
@@ -249,15 +281,7 @@ export const createDocumentAddedNotifications = async (
   },
 ): Promise<number> => {
   if (input.addedDocumentIds.length === 0) return 0;
-  const subscribers = await tx
-    .select({ userId: savedTendersTable.userId })
-    .from(savedTendersTable)
-    .where(
-      and(
-        eq(savedTendersTable.tenderId, input.tender.id),
-        eq(savedTendersTable.monitored, true),
-      ),
-    );
+  const subscribers = await monitoringSubscribers(tx, input.tender.id, "tender_document_notifications");
   if (subscribers.length === 0) return 0;
   const change: NotificationChangeRecord = {
     field: "documents",
@@ -268,9 +292,10 @@ export const createDocumentAddedNotifications = async (
   const inserted = await tx
     .insert(notificationsTable)
     .values(
-      subscribers.map(({ userId }) => ({
+      subscribers.map(({ userId, workspace }) => ({
         id: randomUUID(),
         userId,
+        ...workspace,
         type: "tender_document_added",
         dedupeKey: `tender:${input.tender.id}:documents:${version}`,
         createdAt: input.detectedAt,
@@ -290,9 +315,9 @@ export const createDocumentAddedNotifications = async (
 const evaluateSavedSearch = async (
   id: string,
   completedAt: Date,
-  cycleMode: WorkspaceCutoverMode,
+  cycle: CutoverCycle,
 ): Promise<void> => {
-  await withCutoverGate({ kind: "job", cycleMode }, async (tx) => {
+  await withCutoverGate(cycleCaller(cycle), async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${`saved-search:${id}`}))`,
     );
@@ -329,7 +354,7 @@ const evaluateSavedSearch = async (
           id: randomUUID(),
           userId: savedSearch.userId,
           // The alert belongs to the workspace of its saved search; the dedupe key keeps its legacy text until W4.
-          ...(cycleMode === "workspaces" ? { workspaceId: savedSearch.workspaceId } : {}),
+          ...(cycle.mode === "workspaces" ? { workspaceId: savedSearch.workspaceId } : {}),
           type: "saved_search_new_matches",
           dedupeKey: `saved-search:${id}:${since.toISOString()}:${completedAt.toISOString()}`,
           createdAt: completedAt,
@@ -358,7 +383,8 @@ const evaluateSavedSearch = async (
 export const evaluateSavedSearchNotifications = async (
   completedAt = new Date(),
 ): Promise<void> => {
-  const { mode } = await readCutoverState(pool);
+  const cycle = await startCutoverCycle("saved_search_evaluation");
+  if (!cycle) return;
   const searches = await db
     .select({ id: savedSearchesTable.id })
     .from(savedSearchesTable)
@@ -370,7 +396,7 @@ export const evaluateSavedSearchNotifications = async (
     );
   for (const { id } of searches) {
     try {
-      await evaluateSavedSearch(id, completedAt, mode);
+      await evaluateSavedSearch(id, completedAt, cycle);
     } catch (error) {
       if (discardedByCutover(error, "saved_search_evaluation")) return;
       logger.error({ err: error, savedSearchId: id }, "Saved search evaluation failed");
@@ -378,7 +404,7 @@ export const evaluateSavedSearchNotifications = async (
     }
   }
   try {
-    await withCutoverGate({ kind: "job", cycleMode: mode }, (tx) =>
+    await withCutoverGate(cycleCaller(cycle), (tx) =>
       tx
         .delete(notificationsTable)
         .where(

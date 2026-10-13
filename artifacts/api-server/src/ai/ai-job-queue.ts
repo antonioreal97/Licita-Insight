@@ -4,6 +4,8 @@ import { sql } from "drizzle-orm";
 import { db, pool } from "@workspace/db";
 import { logger } from "../lib/logger";
 import type { GateTransaction } from "../workspaces/cutover-gate";
+import { isCutoverInterruption } from "../workspaces/cutover-cycle";
+import { readCutoverState } from "../workspaces/cutover-state";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { incrementMetric, observeMetric } from "../metrics";
 
@@ -16,6 +18,8 @@ export type AiJob = {
   dedupeKey: string;
   tenderId: string;
   userId: string | null;
+  /** Only `fit` jobs written in `workspaces` mode, or assigned by the cutover delta, carry one. */
+  workspaceId: string | null;
   payload: Record<string, unknown>;
   lane: AiJobLane;
   status: "queued" | "running" | "succeeded" | "failed" | "dead";
@@ -35,6 +39,7 @@ type DatabaseRow = {
   dedupe_key: string;
   tender_id: string;
   user_id: string | null;
+  workspace_id: string | null;
   payload: Record<string, unknown>;
   lane: AiJobLane;
   status: AiJob["status"];
@@ -54,6 +59,7 @@ const jobFromRow = (row: DatabaseRow): AiJob => ({
   dedupeKey: row.dedupe_key,
   tenderId: row.tender_id,
   userId: row.user_id,
+  workspaceId: row.workspace_id,
   payload: row.payload,
   lane: row.lane,
   status: row.status,
@@ -297,9 +303,41 @@ const completeAiJob = async (job: AiJob): Promise<void> => {
   );
 };
 
+/** A failure no retry can fix: the job goes to `dead` at once, with the message as its error. */
+export class TerminalAiJobError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TerminalAiJobError";
+  }
+}
+
+/**
+ * The cutover interrupted the job (docs/contracts/workspace-cutover-v1.md, "Quando a porta recusa"): its result is
+ * dropped and it goes back to the queue without spending the attempt, to run again in the current model.
+ */
+const requeueInterruptedAiJob = async (job: AiJob, error: unknown): Promise<void> => {
+  await pool.query(
+    `update ai_jobs set status = 'queued', attempts = greatest(attempts - 1, 0), locked_by = null,
+       locked_until = null, run_after = now() + interval '5 seconds'
+     where id = $1 and locked_by = $2`,
+    [job.id, job.lockedBy],
+  );
+  logger.warn({ err: error, jobId: job.id, kind: job.kind }, "AI job requeued because of the cutover");
+};
+
+/** A read error holds the `fit` jobs for this tick instead of claiming them in a mode nobody could read. */
+const cutoverHoldsFitJobs = async (): Promise<boolean> => {
+  try {
+    return (await readCutoverState(pool)).writesPaused;
+  } catch (error) {
+    logger.error({ err: error }, "Cutover state could not be read; fit jobs are not claimed");
+    return true;
+  }
+};
+
 const failAiJob = async (job: AiJob, error: unknown): Promise<void> => {
   const message = (error instanceof Error ? `${error.name}: ${error.message}` : String(error)).slice(0, 4_000);
-  const terminal = job.attempts >= job.maxAttempts;
+  const terminal = error instanceof TerminalAiJobError || job.attempts >= job.maxAttempts;
   await pool.query(
     `update ai_jobs set status = $3, locked_by = null, locked_until = null,
        last_error = $4, finished_at = case when $3 = 'dead' then now() else null end,
@@ -328,7 +366,7 @@ export async function executeAiJob(job: AiJob): Promise<void> {
   }
   if (job.kind === "fit") {
     const { executeCompanyFitJob } = await import("./company-fit-service");
-    await executeCompanyFitJob(String(job.payload.fitId));
+    await executeCompanyFitJob(String(job.payload.fitId), job.workspaceId);
     return;
   }
   if (job.kind === "title_rewrite") {
@@ -368,7 +406,8 @@ export async function runEnqueuedAiJobNow(dedupeKey: string): Promise<boolean> {
     await executeAiJob(job);
     await completeAiJob(job);
   } catch (error) {
-    await failAiJob(job, error);
+    if (isCutoverInterruption(error)) await requeueInterruptedAiJob(job, error);
+    else await failAiJob(job, error);
   }
   return true;
 }
@@ -434,6 +473,7 @@ export function startAiJobWorker(options: {
     const task = executor(job)
       .then(() => completeAiJob(job))
       .catch(async (error) => {
+        if (isCutoverInterruption(error)) return requeueInterruptedAiJob(job, error);
         await failAiJob(job, error);
         logger.warn({ err: error, jobId: job.id, kind: job.kind, attempts: job.attempts }, "AI job failed");
       })
@@ -499,8 +539,10 @@ export function startAiJobWorker(options: {
     }
     const { isAiBatchBudgetPaused, isTitleTeacherBudgetPaused } = await import("./ai-budget");
     const budgetPaused = await isAiBatchBudgetPaused();
+    // `fit` is the only kind that writes in the workspace scope: it is not claimed while the cutover pauses writes.
+    const fitHeld = budgetPaused || (await cutoverHoldsFitJobs());
     for (const kind of ["index", "document_ocr", "sheet", "sheet_summary", "fit"] as const) {
-      if (kind === "fit" && budgetPaused) continue;
+      if (kind === "fit" && fitHeld) continue;
       const available = config.concurrency[kind] - activeByKind[kind];
       if (available < 1) continue;
       const claimed = await claimAiJobs([kind], available, workerId);
