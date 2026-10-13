@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: adicionar workspace_id anulável às tabelas contextuais do schema real e FKs NOT VALID.
 -- Pré-condições: W1 aplicado; schema legado migrado até a versão corrente.
@@ -5,6 +6,14 @@
 -- Desfazer: executar w2_scope_expand_rollback.sql depois de reverter W4 e W3.
 
 BEGIN;
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w2_scope_expand.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 ALTER TABLE company_tender_fits ADD COLUMN IF NOT EXISTS workspace_id text;
 ALTER TABLE saved_tenders ADD COLUMN IF NOT EXISTS workspace_id text;

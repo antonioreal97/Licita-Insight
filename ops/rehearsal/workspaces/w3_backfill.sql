@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: backfill único, repetível e sem recálculo dos campos legados.
 -- Pré-condições: W1, W2 e índices W2 aplicados. O lote usa faixas de user_id; o delta roda sob locks do runner.
@@ -24,6 +25,15 @@
 \if :w3_manage_transaction
 BEGIN;
 \endif
+
+-- Fora do \if: com w3_manage_transaction=false a guarda roda dentro da transação do chamador.
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w3_backfill.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 CREATE TEMP TABLE w3_target_users (
   user_id text PRIMARY KEY,

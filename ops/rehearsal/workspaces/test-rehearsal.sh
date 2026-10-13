@@ -20,6 +20,7 @@ SERVER_PREFIX="${BASE_WITHOUT_QUERY%/*}"
 TEST_URL="${SERVER_PREFIX}/${TEST_DB}${QUERY_SUFFIX}"
 UNSAFE_URL="${SERVER_PREFIX}/${UNSAFE_DB}${QUERY_SUFFIX}"
 REPORT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/workspaces-rehearsal-reports.XXXXXX")"
+GUARD_ERR="$(mktemp "${TMPDIR:-/tmp}/workspaces-rehearsal-guard.XXXXXX")"
 
 drop_database() {
   local name="$1"
@@ -31,7 +32,7 @@ SQL
 cleanup() {
   drop_database "$TEST_DB"
   drop_database "$UNSAFE_DB"
-  rm -rf "$REPORT_DIR"
+  rm -rf "$REPORT_DIR" "$GUARD_ERR"
 }
 trap cleanup EXIT INT TERM
 
@@ -186,11 +187,57 @@ printf 'Validando rollback completo...\n'
 assert_sql t "SELECT to_regclass('public.workspaces') IS NULL"
 assert_sql 20 "SELECT count(*) FROM saved_tenders WHERE user_id = 'user_heavy'"
 
-printf 'Validando guarda de sufixo...\n'
-if REHEARSAL_DATABASE_URL="$UNSAFE_URL" REHEARSAL_CONFIRM="$UNSAFE_DB" "$SCRIPT_DIR/run-rehearsal.sh" --abort-drill >/dev/null 2>&1; then
-  printf 'A guarda aceitou banco sem sufixo _rehearsal.\n' >&2
-  exit 1
-fi
+printf 'Validando guarda de sufixo e diretório de relatório obrigatório...\n'
+status=0
+REHEARSAL_DATABASE_URL="$UNSAFE_URL" REHEARSAL_CONFIRM="$UNSAFE_DB" \
+  "$SCRIPT_DIR/run-rehearsal.sh" --abort-drill --report-dir "$REPORT_DIR" >/dev/null 2>&1 || status=$?
+[[ "$status" == 65 ]] || { printf 'A guarda do runner não recusou banco sem sufixo _rehearsal (saída %s).\n' "$status" >&2; exit 1; }
+status=0
+env -u REHEARSAL_REPORT_DIR REHEARSAL_DATABASE_URL="$TEST_URL" REHEARSAL_CONFIRM="$TEST_DB" \
+  "$SCRIPT_DIR/run-rehearsal.sh" --abort-drill >/dev/null 2>&1 || status=$?
+[[ "$status" == 64 ]] || { printf 'O runner aceitou rodar sem --report-dir (saída %s).\n' "$status" >&2; exit 1; }
+
+printf 'Validando a guarda de cada SQL executado direto, sem runner e sem ON_ERROR_STOP na linha de comando...\n'
+UNSAFE_PSQL=(psql "$UNSAFE_URL" -X --no-psqlrc)
+"${UNSAFE_PSQL[@]}" -v ON_ERROR_STOP=1 -q <<'SQL'
+CREATE TABLE users (id text PRIMARY KEY);
+CREATE TABLE saved_tenders (user_id text, tender_id text, workspace_id text);
+CREATE INDEX saved_tenders_workspace_saved_idx ON saved_tenders (workspace_id);
+SQL
+unsafe_schema() {
+  "${UNSAFE_PSQL[@]}" -Atq <<'SQL'
+SELECT string_agg(item, ',' ORDER BY item) FROM (
+  SELECT table_name || '.' || column_name AS item FROM information_schema.columns WHERE table_schema = 'public'
+  UNION ALL SELECT 'index:' || indexname FROM pg_indexes WHERE schemaname = 'public'
+) objects;
+SQL
+}
+expect_guard() {
+  local file="$1"
+  shift
+  if "${UNSAFE_PSQL[@]}" -q "$@" -f "$SCRIPT_DIR/$file" >/dev/null 2>"$GUARD_ERR"; then
+    printf 'A guarda de %s aceitou banco sem sufixo _rehearsal.\n' "$file" >&2
+    exit 1
+  fi
+  grep -q "Recusado: $file é rascunho de ensaio" "$GUARD_ERR" || {
+    printf 'Falha inesperada ao executar %s:\n' "$file" >&2
+    cat "$GUARD_ERR" >&2
+    exit 1
+  }
+}
+schema_before="$(unsafe_schema)"
+expect_guard w1_foundation.sql
+[[ "$(unsafe_schema)" == "$schema_before" ]] || { printf 'w1_foundation.sql criou objetos fora de _rehearsal.\n' >&2; exit 1; }
+"${UNSAFE_PSQL[@]}" -v ON_ERROR_STOP=1 -qc 'CREATE TABLE workspaces (id text PRIMARY KEY)'
+schema_before="$(unsafe_schema)"
+expect_guard w1_foundation_rollback.sql
+expect_guard w2_scope_expand_rollback.sql
+for sql_file in "$SCRIPT_DIR"/*.sql; do
+  expect_guard "$(basename "$sql_file")"
+done
+expect_guard w3_backfill.sql -v w3_manage_transaction=false
+expect_guard w4_enforce.sql -v w4_manage_transaction=false
+[[ "$(unsafe_schema)" == "$schema_before" ]] || { printf 'Um SQL removeu ou criou objetos fora de _rehearsal.\n' >&2; exit 1; }
 
 printf 'Validando abort drill, legado intacto e relatório sanitizado...\n'
 abort_before="$("${PSQL[@]}" -Atq <<'SQL'

@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: criar a fundação aditiva de Espaços usada exclusivamente no ensaio W1.
 -- Pré-condições: schema legado migrado até a versão corrente; PostgreSQL 16; nenhuma tabela abaixo criada por outra mudança.
@@ -5,6 +6,14 @@
 -- Desfazer: executar w1_foundation_rollback.sql somente depois dos rollbacks W4, W3 e W2.
 
 BEGIN;
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w1_foundation.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 CREATE TABLE IF NOT EXISTS workspaces (
   id text PRIMARY KEY,

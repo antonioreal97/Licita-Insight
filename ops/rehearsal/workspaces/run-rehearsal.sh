@@ -8,7 +8,7 @@ umask 077
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROLLBACK=false
 ABORT_DRILL=false
-REPORT_DIR="${REHEARSAL_REPORT_DIR:-$SCRIPT_DIR/reports}"
+REPORT_DIR="${REHEARSAL_REPORT_DIR:-}"
 BATCH_SIZE="${REHEARSAL_BATCH_SIZE:-500}"
 POINT_OF_NO_RETURN_SECONDS="${REHEARSAL_POINT_OF_NO_RETURN_SECONDS:-600}"
 EXPECTED_DELTA_ROWS="${REHEARSAL_EXPECTED_DELTA_ROWS:-0}"
@@ -19,8 +19,8 @@ SYNTHETIC_RATE="${REHEARSAL_SYNTHETIC_RATE_PER_MINUTE:-0}"
 
 usage() {
   printf '%s\n' \
-    'Uso: REHEARSAL_DATABASE_URL=... REHEARSAL_CONFIRM=<banco> run-rehearsal.sh [--rollback] [--abort-drill] [--report-dir DIR]' \
-    'O nome do banco precisa terminar em _rehearsal. A ferramenta nunca lê .env.'
+    'Uso: REHEARSAL_DATABASE_URL=... REHEARSAL_CONFIRM=<banco> run-rehearsal.sh [--rollback] [--abort-drill] --report-dir DIR' \
+    'O nome do banco precisa terminar em _rehearsal. A ferramenta nunca lê .env e só escreve em DIR e no diretório temporário.'
 }
 
 while (($#)); do
@@ -40,6 +40,7 @@ done
 
 [[ -n "${REHEARSAL_DATABASE_URL:-}" ]] || { printf 'REHEARSAL_DATABASE_URL é obrigatório.\n' >&2; exit 64; }
 [[ -n "${REHEARSAL_CONFIRM:-}" ]] || { printf 'REHEARSAL_CONFIRM é obrigatório.\n' >&2; exit 64; }
+[[ -n "$REPORT_DIR" ]] || { printf -- '--report-dir (ou REHEARSAL_REPORT_DIR) é obrigatório; a pasta dos scripts pode estar montada somente leitura.\n' >&2; exit 64; }
 if [[ -n "${DATABASE_URL:-}" && "$REHEARSAL_DATABASE_URL" == "$DATABASE_URL" ]]; then
   printf 'Recusado: REHEARSAL_DATABASE_URL é igual a DATABASE_URL.\n' >&2
   exit 65
@@ -57,6 +58,7 @@ database_name="$("${PSQL[@]}" -Atqc 'SELECT current_database()')"
 [[ "$REHEARSAL_CONFIRM" == "$database_name" ]] || { printf 'Recusado: REHEARSAL_CONFIRM não coincide com o banco alvo.\n' >&2; exit 65; }
 
 mkdir -p "$REPORT_DIR"
+[[ -w "$REPORT_DIR" ]] || { printf 'Sem permissão de escrita no diretório de relatório: %s\n' "$REPORT_DIR" >&2; exit 73; }
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pardal-workspaces-rehearsal.XXXXXX")"
 SYNTH_PID=''
 RUN_TOKEN="${BASHPID:-$$}"

@@ -1,8 +1,17 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: medir a reversão do enforcement W4 sem remover workspace_id nem dados.
 -- Pré-condições: aplicação/ensaio parado; somente um Espaço padrão por usuário (condição do ensaio).
 -- Transação: não; cada comando é autocontido para permitir medir e diagnosticar a reversão.
 -- Desfazer o rollback: reaplicar w4_enforce.sql após refazer índices W2 que forem necessários.
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w4_enforce_rollback.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 ALTER TABLE ai_jobs DROP CONSTRAINT IF EXISTS ai_jobs_fit_workspace_check;
 ALTER TABLE email_delivery_notifications DROP CONSTRAINT IF EXISTS email_delivery_notifications_delivery_workspace_fk;

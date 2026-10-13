@@ -27,7 +27,10 @@ Os helpers `rehearsal_metrics.sql`, `rehearsal_invariants.sql` e `rehearsal_cut_
 - espaço livre para uma cópia isolada e para os índices concorrentes;
 - banco alvo com nome terminado literalmente em `_rehearsal`;
 - `REHEARSAL_CONFIRM` exatamente igual ao nome resolvido pelo PostgreSQL;
-- `REHEARSAL_DATABASE_URL` diferente de `DATABASE_URL`.
+- `REHEARSAL_DATABASE_URL` diferente de `DATABASE_URL`;
+- `--report-dir` (ou `REHEARSAL_REPORT_DIR`) obrigatório: o script só escreve nesse diretório e num temporário de `mktemp` em `$TMPDIR`/`/tmp`, nunca na própria pasta, que pode estar montada somente leitura.
+
+Cada arquivo `.sql` também se protege sozinho: começa com `\set ON_ERROR_STOP on` e, antes de qualquer DDL/DML (dentro do `BEGIN` nos transacionais), aborta com `RAISE EXCEPTION` quando `current_database()` não termina em `_rehearsal`. Assim, um `psql -f` direto no banco errado falha mesmo sem `-v ON_ERROR_STOP=1` e sem o runner.
 
 O script não carrega `.env`, não conhece credenciais de produção e não imprime a URL. A taxa sintética fica desligada por padrão. O relatório não contém hash agregado, timestamp de marco, e-mail, nome, termo, texto, id de usuário/edital ou qualquer linha.
 
@@ -40,7 +43,7 @@ createdb --host=127.0.0.1 --port=5432 --username=licita licita_spaces_01_rehears
 pg_restore \
   --host=127.0.0.1 --port=5432 --username=licita \
   --dbname=licita_spaces_01_rehearsal \
-  --clean --if-exists --no-owner --exit-on-error \
+  --no-owner --exit-on-error \
   /caminho/backup-validado.dump
 ```
 
@@ -88,6 +91,98 @@ ponto_aborto = janela_max − tempo medido do rollback de aplicação
 
 O relatório traz `lock_wait_ms`, `delta_rows`, durações por etapa, volume inicial, reconciliação e cada invariante com tolerância zero. Qualquer falha, lock acima de 5 s, delta acima de 3× o previsto, chegada ao ponto de não retorno ou gate externo de leitura reprova o corte. Use o pior ensaio, não a média.
 
+## No servidor atual (Docker Compose)
+
+> **Comandos para o dono executar no servidor, no próprio terminal (zsh).** A ferramenta e os agentes não acessam o servidor, o banco de produção nem os backups.
+
+No servidor, o PostgreSQL é o serviço `postgres` do `compose.macbook.yml` (`image: postgres:16`, usuário e banco `licita`, volume `licita_pg`), no container `licita-macbook-postgres-1`, **sem porta publicada** no host. Não há `createdb`/`pg_restore`/`psql` no host: tudo passa por `docker exec` no container do banco ou por um container cliente descartável da mesma imagem. Os backups são arquivos `pg_dump -Fc` em `~/backups/licita/`.
+
+**O restore usa a mesma instância do PostgreSQL da produção** (disco, memória e I/O). Rode em horário calmo, fora da coleta das 06:00 e da janela noturna 00:00–05:30, e mantenha uma cópia por vez.
+
+### 1. Antes de restaurar
+
+```zsh
+docker exec licita-macbook-postgres-1 psql -U licita -d licita -Atc \
+  "SELECT pg_size_pretty(pg_database_size('licita'))"
+docker exec licita-macbook-postgres-1 df -h /var/lib/postgresql/data
+df -h
+```
+
+**Só prossiga se o espaço livre for maior que 3× o tamanho do banco**, tanto no volume do Postgres (`/var/lib/postgresql/data`) quanto no disco do host. Caso contrário, pare.
+
+### 2. Restaurar a cópia 01
+
+```zsh
+ls -lh ~/backups/licita/
+docker exec -i licita-macbook-postgres-1 createdb -U licita licita_spaces_01_rehearsal
+docker exec -i licita-macbook-postgres-1 pg_restore -U licita -d licita_spaces_01_rehearsal \
+  --no-owner --exit-on-error < ~/backups/licita/<arquivo>.dump
+```
+
+O banco é novo, então não use `--clean`. Se o `pg_restore` falhar, descarte a cópia parcial com o `dropdb` do passo 5 antes de tentar de novo.
+
+### 3. Senha sem eco e sem histórico
+
+```zsh
+read -rs "PGPW?Senha do banco: "; echo
+export REHEARSAL_DATABASE_URL="postgres://licita:${PGPW}@127.0.0.1:5432/licita_spaces_01_rehearsal"
+export REHEARSAL_CONFIRM=licita_spaces_01_rehearsal
+```
+
+A senha é digitada no prompt e não vai para o histórico, que guarda só `${PGPW}`. Nunca cole a senha na linha de comando nem leia o `.env` com ferramenta ou agente. Se a senha tiver caracteres reservados de URL (`@ : / ? # %`), use `postgres://licita@127.0.0.1:5432/<banco>` como URL, rode `export PGPASSWORD="$PGPW"` e acrescente `-e PGPASSWORD` ao `docker run`.
+
+### 4. Executar o ensaio
+
+A partir da raiz do checkout do repositório no servidor:
+
+```zsh
+mkdir -p ~/ensaio-relatorios/01
+docker run --rm -it \
+  --network container:licita-macbook-postgres-1 \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/ops/rehearsal/workspaces:/rehearsal:ro" \
+  -v "$HOME/ensaio-relatorios/01:/reports" \
+  -e REHEARSAL_DATABASE_URL -e REHEARSAL_CONFIRM \
+  postgres:16 bash /rehearsal/run-rehearsal.sh --rollback --report-dir /reports
+```
+
+O cliente compartilha a rede do container do banco (por isso `127.0.0.1:5432`), lê os scripts somente leitura e escreve apenas em `/reports` e no `/tmp` do próprio container, que some no fim. `--user` faz os relatórios pertencerem ao dono. Use um subdiretório por cópia: dentro do container o nome do relatório se repete entre execuções.
+
+### 5. Segunda cópia, uma por vez
+
+Descarte a cópia 01 antes de restaurar a 02, para não dobrar o uso de disco:
+
+```zsh
+docker exec -i licita-macbook-postgres-1 dropdb -U licita licita_spaces_01_rehearsal
+
+docker exec -i licita-macbook-postgres-1 createdb -U licita licita_spaces_02_rehearsal
+docker exec -i licita-macbook-postgres-1 pg_restore -U licita -d licita_spaces_02_rehearsal \
+  --no-owner --exit-on-error < ~/backups/licita/<arquivo>.dump
+export REHEARSAL_DATABASE_URL="postgres://licita:${PGPW}@127.0.0.1:5432/licita_spaces_02_rehearsal"
+export REHEARSAL_CONFIRM=licita_spaces_02_rehearsal
+mkdir -p ~/ensaio-relatorios/02
+docker run --rm -it \
+  --network container:licita-macbook-postgres-1 \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/ops/rehearsal/workspaces:/rehearsal:ro" \
+  -v "$HOME/ensaio-relatorios/02:/reports" \
+  -e REHEARSAL_DATABASE_URL -e REHEARSAL_CONFIRM \
+  postgres:16 bash /rehearsal/run-rehearsal.sh --rollback --report-dir /reports
+
+docker exec -i licita-macbook-postgres-1 dropdb -U licita licita_spaces_02_rehearsal
+```
+
+### 6. Conferência final
+
+```zsh
+unset PGPW PGPASSWORD REHEARSAL_DATABASE_URL REHEARSAL_CONFIRM
+docker exec licita-macbook-postgres-1 psql -U licita -d licita -Atc \
+  "SELECT datname FROM pg_database ORDER BY datname"
+ls -l ~/ensaio-relatorios/01 ~/ensaio-relatorios/02
+```
+
+Nenhum banco listado pode terminar em `_rehearsal`. Guarde e compartilhe só os `.md`/`.json` dos relatórios.
+
 ## Decisões de SQL a validar
 
 1. **IDs:** o rascunho usa `ws_ || md5('pardal-digital:procurement:' || user_id)`. É repetível e não exige extensão, mas o formato opaco definitivo precisa de aprovação.
@@ -121,4 +216,4 @@ dropdb --host=127.0.0.1 --port=5432 --username=licita licita_spaces_01_rehearsal
 dropdb --host=127.0.0.1 --port=5432 --username=licita licita_spaces_02_rehearsal
 ```
 
-Não arquive dumps, logs do `psql` ou diretórios temporários junto do relatório compartilhável.
+No servidor atual, use os comandos `docker exec ... dropdb` da seção “No servidor atual (Docker Compose)”. Não arquive dumps, logs do `psql` ou diretórios temporários junto do relatório compartilhável.

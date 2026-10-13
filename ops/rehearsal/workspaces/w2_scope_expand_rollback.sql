@@ -1,8 +1,17 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: medir a reversão completa de W2 após W4/W3, removendo somente objetos nomeados por este ensaio.
 -- Pré-condições: W4 e W3 revertidos; nenhuma transação explícita aberta.
 -- Transação: não, porque os índices são removidos com DROP INDEX CONCURRENTLY.
 -- Desfazer o rollback: reaplicar w2_scope_expand.sql e w2_scope_expand_indexes.sql.
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w2_scope_expand_rollback.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 DROP INDEX CONCURRENTLY IF EXISTS company_tender_fits_workspace_idx;
 DROP INDEX CONCURRENTLY IF EXISTS company_tender_fits_workspace_cache_uidx;

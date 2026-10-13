@@ -1,5 +1,14 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Apoio da ferramenta: avalia somente gatilhos mensuráveis sem aplicação em runtime.
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: rehearsal_cut_gate.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
+
 DO $gate$
 DECLARE
   elapsed_seconds numeric;
