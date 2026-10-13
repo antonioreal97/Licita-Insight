@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { GetAuthSessionResponse } from "@workspace/api-zod";
-import { InvalidParameterError } from "../lib/api-error";
+import { InvalidParameterError, MaintenanceInProgressError } from "../lib/api-error";
 import {
   devLoginEnabled,
   googleOAuthConfigured,
@@ -119,12 +119,15 @@ router.get(
       setSessionCookie(res, session.token, session.expiresAt);
       res.redirect(302, new URL(state.returnTo, publicAppOrigin()).toString());
     } catch (error) {
+      // Only a new account can meet the cutover pause here; the login page asks to try again in a few minutes.
       res.redirect(
         302,
         loginRedirect(
-          error instanceof Error && error.name === "EmailNotVerifiedError"
-            ? "email_not_verified"
-            : "oauth_failed",
+          error instanceof MaintenanceInProgressError
+            ? "maintenance"
+            : error instanceof Error && error.name === "EmailNotVerifiedError"
+              ? "email_not_verified"
+              : "oauth_failed",
         ),
       );
     }

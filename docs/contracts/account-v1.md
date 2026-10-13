@@ -52,7 +52,8 @@ Se as credenciais Google não estiverem configuradas, responde 302 para
 
 Troca o code, valida `state`/PKCE/`id_token`, cria ou atualiza o usuário (chave: `sub` do Google;
 e-mail precisa estar verificado), cria sessão, seta `licita_session` e **302 para `returnTo`**.
-Erro → 302 para `/login?error=<code>` com `code ∈ { access_denied, invalid_state, email_not_verified, oauth_failed }`.
+Erro → 302 para `/login?error=<code>` com `code ∈ { access_denied, invalid_state, email_not_verified, oauth_failed, maintenance }`.
+`maintenance` só ocorre para conta nova durante a pausa do corte de Espaços ([contrato da flag](./workspace-cutover-v1.md#quando-a-porta-recusa)): nada é criado e a nova tentativa, depois da janela, funciona. Conta existente entra normalmente.
 
 ### `GET /api/v1/auth/session`
 

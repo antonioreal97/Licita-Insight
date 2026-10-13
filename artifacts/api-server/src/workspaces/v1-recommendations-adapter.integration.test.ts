@@ -114,11 +114,17 @@ test("v1 recommendations in legacy and workspaces modes", { skip: !process.env.P
     );
     return { cookie, userId };
   };
-  /** The default workspace W3 (or account creation, unit D5) gives every account; created here like the backfill. */
-  const createDefaultWorkspace = (userId: string) =>
-    withCutoverGate({ kind: "http" }, (tx) =>
+  /**
+   * The default workspace the W3 backfill gives an account created in legacy; created here the same way. An account
+   * created in workspaces mode is already born with it.
+   */
+  const createDefaultWorkspace = async (userId: string) => {
+    const existing = await owner.query("select 1 from workspaces where owner_user_id = $1 and is_default", [userId]);
+    if (existing.rowCount) return;
+    await withCutoverGate({ kind: "http" }, (tx) =>
       createWorkspace(tx, { ownerUserId: userId, type: "procurement", name: "Licitações", isDefault: true }),
     );
+  };
   const setState = (mode: "legacy" | "workspaces", writesPaused: boolean) =>
     owner.query(
       "insert into workspace_cutover_events (mode, writes_paused, actor, reason) values ($1, $2, 'teste', 'TEST')",

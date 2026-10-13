@@ -262,6 +262,35 @@ export async function createWorkspace(
   };
 }
 
+/** The name the W3 backfill gives the default workspace of every existing account. */
+export const DEFAULT_WORKSPACE_NAME = "Compras públicas";
+
+/**
+ * What the W3 backfill gives an existing account, for one created in `workspaces` mode: the default `procurement`
+ * workspace, its `owner` membership and the active-workspace preference. Runs in the gated transaction that inserts
+ * the user, so an account never exists without them.
+ */
+export async function createAccountDefaultWorkspace(
+  tx: GateTransaction,
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const workspace = await createWorkspace(tx, {
+    ownerUserId: userId,
+    type: "procurement",
+    name: DEFAULT_WORKSPACE_NAME,
+    isDefault: true,
+    now,
+  });
+  await tx
+    .update(workspaceMembersTable)
+    .set({ lastSelectedAt: now })
+    .where(and(eq(workspaceMembersTable.workspaceId, workspace.id), eq(workspaceMembersTable.userId, userId)));
+  await tx
+    .insert(userWorkspacePreferencesTable)
+    .values({ userId, activeWorkspaceId: workspace.id, updatedAt: now });
+}
+
 /**
  * Lists the caller's owner memberships. An invalid stored preference is resolved for the answer and never written:
  * a GET does not change state. In Phase 1 every membership is the owner's, so the slots are the caller's.
