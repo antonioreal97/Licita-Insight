@@ -22,9 +22,11 @@ import type {
 import {
   db,
   notificationsTable,
+  pool,
   savedSearchesTable,
   savedTendersTable,
   tendersTable,
+  type WorkspaceCutoverMode,
 } from "@workspace/db";
 import {
   ConflictError,
@@ -37,6 +39,9 @@ import type { SearchCriteria } from "../domain/search";
 import { canonicalSearchQuery } from "./saved-search-query";
 import { participationUpdate, type ParticipationPatch } from './participation';
 import { newTenderCutoff } from "../domain/new-tender";
+import { withCutoverGate, type GateDatabase } from "../workspaces/cutover-gate";
+import { readCutoverState } from "../workspaces/cutover-state";
+import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 
 const MAX_SAVED_TENDERS = 500;
 const MAX_SAVED_SEARCHES = 50;
@@ -105,6 +110,24 @@ const lockUser = async (tx: Transaction, userId: string) => {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
 };
 
+/**
+ * The `saved_tenders` rows a v1 route acts on: the user's in `legacy`; in `workspaces`, the default workspace's
+ * (never the active one), and new rows carry its id. The key stays `(user_id, tender_id)` until W4, so nothing here
+ * relies on uniqueness per workspace.
+ */
+const savedTenderScope = async (
+  executor: Pick<typeof db, "select">,
+  userId: string,
+  mode: WorkspaceCutoverMode,
+) => {
+  if (mode === "legacy") return { filter: eq(savedTendersTable.userId, userId), values: {} };
+  const { id } = await requireDefaultWorkspace(executor, userId);
+  return { filter: eq(savedTendersTable.workspaceId, id), values: { workspaceId: id } };
+};
+
+const savedTenderReadScope = async (userId: string) =>
+  (await savedTenderScope(db, userId, (await readCutoverState(pool)).mode)).filter;
+
 export const listSavedTenders = async (input: {
   userId: string;
   page: number;
@@ -115,7 +138,7 @@ export const listSavedTenders = async (input: {
   upcoming?: boolean;
 }): Promise<SavedTenderPage> => {
   const filter = and(
-    eq(savedTendersTable.userId, input.userId),
+    await savedTenderReadScope(input.userId),
     input.monitored === undefined
       ? undefined
       : eq(savedTendersTable.monitored, input.monitored),
@@ -144,7 +167,7 @@ export const savedTenderIds = async (userId: string) => {
   const rows = await db
     .select({ tenderId: savedTendersTable.tenderId, monitored: savedTendersTable.monitored })
     .from(savedTendersTable)
-    .where(eq(savedTendersTable.userId, userId));
+    .where(await savedTenderReadScope(userId));
   return {
     saved: rows.map(({ tenderId }) => tenderId),
     monitored: rows.filter(({ monitored }) => monitored).map(({ tenderId }) => tenderId),
@@ -154,17 +177,21 @@ export const savedTenderIds = async (userId: string) => {
 export const getSavedTender = async (userId: string, tenderId: string): Promise<SavedTender> => {
   const [row] = await db.select({ saved: savedTendersTable, tender: tendersTable })
     .from(savedTendersTable).innerJoin(tendersTable, eq(savedTendersTable.tenderId, tendersTable.id))
-    .where(and(eq(savedTendersTable.userId, userId), eq(savedTendersTable.tenderId, tenderId))).limit(1);
+    .where(and(await savedTenderReadScope(userId), eq(savedTendersTable.tenderId, tenderId))).limit(1);
   if (!row) throw new NotFoundError('Saved tender was not found');
   return toSavedTender(row.saved, row.tender);
 };
 
-export const putSavedTender = async (input: {
-  userId: string;
-  tenderId: string;
-  monitored?: boolean;
-} & ParticipationPatch): Promise<SavedTender> =>
-  db.transaction(async (tx) => {
+export const putSavedTender = async (
+  input: {
+    userId: string;
+    tenderId: string;
+    monitored?: boolean;
+  } & ParticipationPatch,
+  database?: GateDatabase,
+): Promise<SavedTender> =>
+  withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedTenderScope(tx, input.userId, state.mode);
     await lockUser(tx, input.userId);
     const [tender] = await tx
       .select()
@@ -175,12 +202,7 @@ export const putSavedTender = async (input: {
     const [existing] = await tx
       .select()
       .from(savedTendersTable)
-      .where(
-        and(
-          eq(savedTendersTable.userId, input.userId),
-          eq(savedTendersTable.tenderId, input.tenderId),
-        ),
-      )
+      .where(and(scope.filter, eq(savedTendersTable.tenderId, input.tenderId)))
       .limit(1);
     const now = new Date();
     const participation = participationUpdate(existing, input, now);
@@ -192,19 +214,14 @@ export const putSavedTender = async (input: {
             ...participation,
             monitoredAt: participation.monitored ? (existing.monitoredAt ?? now) : null,
           })
-          .where(
-            and(
-              eq(savedTendersTable.userId, input.userId),
-              eq(savedTendersTable.tenderId, input.tenderId),
-            ),
-          )
+          .where(and(scope.filter, eq(savedTendersTable.tenderId, input.tenderId)))
           .returning();
         saved = updated;
     } else {
       const [totalRow] = await tx
         .select({ value: count() })
         .from(savedTendersTable)
-        .where(eq(savedTendersTable.userId, input.userId));
+        .where(scope.filter);
       if (Number(totalRow?.value ?? 0) >= MAX_SAVED_TENDERS) {
         throw new ConflictError("Saved tender limit reached", [
           { field: "limit", issue: "max_saved_tenders" },
@@ -215,6 +232,7 @@ export const putSavedTender = async (input: {
         .insert(savedTendersTable)
         .values({
           userId: input.userId,
+          ...scope.values,
           tenderId: input.tenderId,
           savedAt: now,
           ...participation,
@@ -224,25 +242,29 @@ export const putSavedTender = async (input: {
     }
     if (!saved) throw new Error("Failed to save tender");
     return toSavedTender(saved, tender);
-  });
+  }, database);
 
 export const deleteSavedTender = async (
   userId: string,
   tenderId: string,
+  database?: GateDatabase,
 ): Promise<void> => {
-  await db
-    .delete(savedTendersTable)
-    .where(
-      and(
-        eq(savedTendersTable.userId, userId),
-        eq(savedTendersTable.tenderId, tenderId),
-      ),
-    );
+  await withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedTenderScope(tx, userId, state.mode);
+    await tx
+      .delete(savedTendersTable)
+      .where(and(scope.filter, eq(savedTendersTable.tenderId, tenderId)));
+  }, database);
 };
 
-export const importSavedTenders = async (userId: string, ids: string[]) => {
+export const importSavedTenders = async (
+  userId: string,
+  ids: string[],
+  database?: GateDatabase,
+) => {
   const uniqueIds = [...new Set(ids)];
-  return db.transaction(async (tx) => {
+  return withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await savedTenderScope(tx, userId, state.mode);
     await lockUser(tx, userId);
     const existingRows =
       uniqueIds.length === 0
@@ -250,12 +272,7 @@ export const importSavedTenders = async (userId: string, ids: string[]) => {
         : await tx
             .select({ tenderId: savedTendersTable.tenderId })
             .from(savedTendersTable)
-            .where(
-              and(
-                eq(savedTendersTable.userId, userId),
-                inArray(savedTendersTable.tenderId, uniqueIds),
-              ),
-            );
+            .where(and(scope.filter, inArray(savedTendersTable.tenderId, uniqueIds)));
     const tenderRows =
       uniqueIds.length === 0
         ? []
@@ -266,7 +283,7 @@ export const importSavedTenders = async (userId: string, ids: string[]) => {
     const totalRows = await tx
       .select({ value: count() })
       .from(savedTendersTable)
-      .where(eq(savedTendersTable.userId, userId));
+      .where(scope.filter);
     const existing = new Set(existingRows.map(({ tenderId }) => tenderId));
     const found = new Set(tenderRows.map(({ id }) => id));
     const notFound = uniqueIds.filter((id) => !found.has(id));
@@ -278,7 +295,7 @@ export const importSavedTenders = async (userId: string, ids: string[]) => {
         ? []
         : await tx
             .insert(savedTendersTable)
-            .values(accepted.map((tenderId) => ({ userId, tenderId })))
+            .values(accepted.map((tenderId) => ({ userId, ...scope.values, tenderId })))
             .onConflictDoNothing()
             .returning({ tenderId: savedTendersTable.tenderId });
     return {
@@ -287,7 +304,7 @@ export const importSavedTenders = async (userId: string, ids: string[]) => {
       notFound,
       skippedByLimit: candidates.length - accepted.length,
     };
-  });
+  }, database);
 };
 
 const savedSearchConflict = (existingId: string): ConflictError =>
