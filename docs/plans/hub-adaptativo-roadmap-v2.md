@@ -1,7 +1,7 @@
 # Hub adaptativo — roadmap v2
 
 Data de atualização: 13 out. 2026
-Status: **roadmap vigente, consolidado com as decisões aprovadas pelo dono em 12 e 13/10/2026**. Ele ordena trabalho futuro; esta consolidação é somente documental, não inicia a Fase 1 e não autoriza tabelas, migrações, flags ou telas.
+Status: **roadmap vigente, consolidado com as decisões aprovadas pelo dono em 12 e 13/10/2026**. Ele ordena trabalho futuro; esta consolidação é somente documental e não autoriza tabelas, migrações, flags ou telas em produção. Em 13/10/2026 o dono autorizou o código da Fase 1, desligado e sem migração em produção, e aprovou as decisões de execução do [plano da Fase 1](./hub-adaptativo-fase1-execucao.md#decisões-aprovadas-em-13102026).
 
 Referências: [plano original](./hub-adaptativo-2026-10-12.md), [revisão aprovada](./hub-adaptativo-revisao.md), [compatibilidade de `workspace_id`](./hub-adaptativo-compatibilidade.md) e contratos em `docs/contracts/`.
 
@@ -61,15 +61,17 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 - isolamento negativo coberto em API, jobs, cache e links;
 - rotas v1 mantêm payload, gates e comportamento no Espaço padrão;
 - conta grátis limitada a um Espaço e trial/assinatura a cinco; expiração não apaga dados e torna excedentes somente leitura;
-- rollback de aplicação e de dados ensaiados separadamente;
+- rollback pela flag (com cópia reversa do perfil) e rollback de dados ensaiados separadamente;
 - parâmetros iniciais da janela confirmados ou ajustados pelo dono após ensaio com volume real, executado por ele no servidor;
+- W4 aplicada em segunda janela, depois de 7 dias de observação sem incidente e com zero linhas do escopo com `workspace_id` nulo criadas depois da virada;
+- rotas novas de Espaços, criação de Espaços e jornadas respondendo somente depois de W4;
 - os três estados de onboarding preservados, com `complete` significando mínimo concluído.
 
 **Esforço indicativo:** 2–3 sprints, incluindo ensaio de backfill e rollout.
 
-**Gate:** aprovação explícita do SQL, backfill, relatório do dry run, backup/restore, valores finais da janela de corte após o ensaio, evidências de isolamento, checklist LGPD e validação ponta a ponta do Asaas. Esta aprovação ainda não existe.
+**Gate:** aprovação explícita do SQL, backfill, relatório do dry run, backup/restore, valores finais da janela de corte após o ensaio, evidências de isolamento, checklist LGPD e validação ponta a ponta do Asaas. Esta aprovação ainda não existe. A Fase 1 tem duas janelas em produção, cada uma com aprovação própria do dono: a da virada e a de W4, esta só depois da observação de 7 dias.
 
-**Execução do código:** [plano de execução da Fase 1](./hub-adaptativo-fase1-execucao.md) (branch de integração, unidades B–H e pontos a decidir).
+**Execução do código:** [plano de execução da Fase 1](./hub-adaptativo-fase1-execucao.md) (branch de integração, unidades B–H e decisões aprovadas em 13/10/2026).
 
 ## Fase 2 — catálogo e busca universal
 
@@ -172,22 +174,24 @@ Pesquisa começa como especialização/filtro de Fomento. Estudo permanece ocult
 
 Esta é uma ordem lógica, não nomes ou números de arquivos autorizados. Produção continua operada manualmente pelo dono, uma migração por vez, sempre após backup verificado. Antes de W1, o preflight não executa DDL: conta usuários e recursos, identifica órfãos/duplicidades, estima locks e registra contagens, checksums e marcos por tabela.
 
-| Ordem | Artefato lógico           | Conteúdo e disciplina operacional                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ----- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1    | fundação de Espaços       | criar `workspaces`, `workspace_members` apenas com associação `owner`, perfis, sinais e preferência ativa; não criar convites; garantir idempotência do Espaço padrão e da membership; incluir constraints e índices de propriedade, `limit_slot` e preferência ativa compatíveis com carga; o perfil nasce com o contador `revision` do controle otimista, separado de `profileVersion`; a preferência ativa referencia o Espaço com `ON DELETE SET NULL` e registra a última seleção por Espaço |
-| W2    | expansão de escopo        | adicionar colunas `workspace_id` anuláveis às tabelas pessoais da matriz; criar FKs como `NOT VALID` quando apropriado e índices concorrentes fora de transações quando o PostgreSQL exigir; a aplicação compatível tolera nulos até o corte                                                                                                                                                                                                                                                      |
-| W3    | backfill único            | executar procedimento idempotente e auditável: lote do Espaço `procurement`, perfil e artefatos; manter checkpoints e relatório por linha/conjunto; `ai_ask_requests` fica fora, por ser log pessoal da conta; durante o corte curto, drenar jobs, bloquear somente mutações afetadas, aplicar o delta desde os marcos e reconciliar invariantes; nunca manter escrita dupla                                                                                                                      |
-| W4    | enforcement               | validar FKs e contagens, eliminar nulos e só então aplicar `NOT NULL` e novas unicidades por Espaço; remover apenas constraints incompatíveis; manter estruturas legadas até uma release posterior comprovar ausência de leitores, writers e retries antigos                                                                                                                                                                                                                                      |
-| C1    | catálogo                  | criar a projeção universal e índices; backfill de `tenders` e `cultural_opportunities`; validar fingerprints e proveniência antes do cutover de leitura                                                                                                                                                                                                                                                                                                                                           |
-| A1    | artefatos                 | criar modelos universais de salvos, buscas, alertas e dashboard da Fase 3; copiar estados com verificação e trocar leituras antes de qualquer remoção futura                                                                                                                                                                                                                                                                                                                                      |
-| E1    | afinidade e elegibilidade | criar caches, rulesets, resultados e evidências separados da Fase 4                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| T1    | colaboração               | ampliar memberships para demais papéis e criar convites, equipes e organizações apenas na Fase 6                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Ordem | Artefato lógico           | Conteúdo e disciplina operacional                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1    | fundação de Espaços       | criar `workspaces`, `workspace_members` apenas com associação `owner`, perfis, sinais e preferência ativa; não criar convites; garantir idempotência do Espaço padrão e da membership; incluir constraints e índices de propriedade, `limit_slot` e preferência ativa compatíveis com carga; o perfil nasce com o contador `revision` do controle otimista, separado de `profileVersion`; a preferência ativa referencia o Espaço com `ON DELETE SET NULL` e registra a última seleção por Espaço                                                                 |
+| W2    | expansão de escopo        | adicionar colunas `workspace_id` anuláveis às tabelas pessoais da matriz; criar FKs como `NOT VALID` quando apropriado e índices concorrentes fora de transações quando o PostgreSQL exigir; a aplicação compatível tolera nulos até o corte                                                                                                                                                                                                                                                                                                                      |
+| W3    | backfill único            | executar procedimento idempotente e auditável: lote do Espaço `procurement`, perfil e artefatos; manter checkpoints e relatório por linha/conjunto; `ai_ask_requests` fica fora, por ser log pessoal da conta; durante o corte curto, drenar jobs, bloquear somente mutações afetadas, aplicar o delta desde os marcos (inclusive perfis editados ou apagados, cursor de alerta e preferência internacional) e reconciliar invariantes; nunca manter escrita dupla                                                                                                |
+| W4    | enforcement               | fora da janela de corte, em segunda janela curta, depois de 7 dias de observação com a flag ligada, sem incidente e com zero linhas do escopo com `workspace_id` nulo criadas depois da virada; validar FKs e contagens, eliminar nulos e só então aplicar `NOT NULL` e novas unicidades por Espaço; remover apenas constraints incompatíveis; manter estruturas legadas até uma release posterior comprovar ausência de leitores, writers e retries antigos; é o ponto sem volta do rollback pela flag e o que libera rotas novas, criação de Espaços e jornadas |
+| C1    | catálogo                  | criar a projeção universal e índices; backfill de `tenders` e `cultural_opportunities`; validar fingerprints e proveniência antes do cutover de leitura                                                                                                                                                                                                                                                                                                                                                                                                           |
+| A1    | artefatos                 | criar modelos universais de salvos, buscas, alertas e dashboard da Fase 3; copiar estados com verificação e trocar leituras antes de qualquer remoção futura                                                                                                                                                                                                                                                                                                                                                                                                      |
+| E1    | afinidade e elegibilidade | criar caches, rulesets, resultados e evidências separados da Fase 4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| T1    | colaboração               | ampliar memberships para demais papéis e criar convites, equipes e organizações apenas na Fase 6                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Nunca combinar criação, backfill massivo, constraint e remoção em uma única migração. Qualquer falha interrompe a sequência. Nenhuma remoção de coluna/tabela ocorre até uma release posterior comprovar que não há leitores, jobs ou retries antigos.
 
 ## Janela de corte
 
-O corte de W3 aceita uma janela curta de manutenção. Somente as mutações que escrevem nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis, assim como coleta global que não escreva nessas tabelas. O backfill em lote roda fora da janela; dentro dela ficam apenas a drenagem de jobs, o bloqueio no menor escopo, o delta desde os marcos, a conferência de invariantes e a troca para gravar só no modelo novo.
+O corte de W3 aceita uma janela curta de manutenção. Somente as mutações que escrevem nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis, assim como coleta global que não escreva nessas tabelas. O backfill em lote roda fora da janela; dentro dela ficam apenas a drenagem de jobs, o bloqueio no menor escopo, o delta desde os marcos, a conferência de invariantes e a troca para gravar só no modelo novo. A retomada das escritas é um passo separado da troca: o dono confere uma leitura pelas rotas v1 antes de liberar.
+
+W4 não entra nesta janela (decisão de 13/10/2026). Ela roda numa segunda janela curta, depois de 7 dias de observação, porque `SET NOT NULL` e a troca de chaves tomam `ACCESS EXCLUSIVE` nas tabelas do escopo. Enquanto W4 não é aplicada, o rollback pela flag continua possível nas condições da [Forma da troca](#forma-da-troca).
 
 Se o delta ou a validação excederem a janela aprovada, o corte é cancelado. A aplicação permanece ou retorna ao estado anterior conforme o runbook, e a escrita dupla nunca é introduzida como atalho.
 
@@ -226,12 +230,12 @@ O script de corte precisa de cronômetro com ponto de não retorno, `lock_timeou
 
 Decisão do dono em 13/10/2026: **troca por flag em runtime, com um deploy preparatório**.
 
-- O deploy preparatório leva schema e adaptadores com a flag de corte **desligada**: as migrações aditivas (W1 e W2) são aplicadas manualmente pelo dono, como toda migração de produção, e a aplicação compatível sobe em seguida. Isso acontece antes e fora da janela, como um deploy comum, e não muda o comportamento.
+- O deploy preparatório leva schema e adaptadores com a flag de corte **desligada**: as migrações aditivas (W1 e W2) são aplicadas manualmente pelo dono, como toda migração de produção, e a aplicação compatível sobe em seguida. Isso acontece antes e fora da janela, como um deploy comum, e não muda o comportamento. A `main` só recebe esse código depois do gate de migração (SQL aprovado, backup/restore, ensaio com volume real), e a versão nova exige W1 e W2 aplicadas para subir.
 - A virada é atômica e sem reinício: ligar a flag faz a aplicação passar a gravar somente no modelo novo, de uma vez, em todos os processos que gravam nas tabelas do escopo.
-- O rollback de aplicação é apenas desligar a flag, enquanto as estruturas legadas continuam intactas. Rollback de dados segue sendo um procedimento separado.
+- Rollback de aplicação pela flag (decisão de 13/10/2026): desligar a flag **só** é rollback se vier com a cópia reversa do perfil do Espaço padrão para o legado, feita na mesma transação, **antes de W4** e **sem nenhum Espaço não padrão**. Fora dessas condições, resta só o rollback de dados, que segue sendo um procedimento separado.
 - `FEATURE_JOURNEYS` é lida do ambiente na subida e exige reinício; por isso **não serve sozinha para o corte**. A Fase 1 precisa de uma flag de corte lida em runtime, com propagação medida no ensaio. O mecanismo (onde o valor mora, como é alterado e auditado, e como API e worker o enxergam ao mesmo tempo) é definido no contrato da Fase 1 e ainda não existe.
 - As flags de jornada continuam como estão: controlam disponibilidade de produto, não o corte de dados.
-- Mecanismo proposto, ainda em aprovação: [contrato da flag de corte](../contracts/workspace-cutover-v1.md).
+- Mecanismo, ferramenta (`psql` + `bash`), erro `503 MAINTENANCE_IN_PROGRESS` e regras de rollback: [contrato da flag de corte](../contracts/workspace-cutover-v1.md).
 
 ### Rotinas a drenar ou pausar
 
@@ -258,6 +262,8 @@ O ensaio usa cópia restaurada do backup de produção e a taxa de mutações ex
 
 Os [scripts W1–W4 e o runbook do ensaio](../../ops/rehearsal/workspaces/README.md) são **rascunhos exclusivos para ensaio**, não migrações aprovadas nem autorização para iniciar a Fase 1. O dono os executa somente no servidor e sobre a cópia isolada descrita abaixo.
 
+**Ensaio suspenso (decisão de 13/10/2026):** o rascunho atual aplica W4 dentro do corte e tem um delta W3 que não reconcilia perfis editados ou apagados, cursor de alerta nem preferência internacional. O ensaio no servidor aguarda o delta definitivo e a separação de W4 (unidade G do [plano de execução](./hub-adaptativo-fase1-execucao.md)) e será refeito com eles.
+
 - roda **no servidor, executado pelo dono**; agentes não acessam o banco de produção nem cópias dele;
 - a cópia é descartada ao fim do ensaio;
 - o relatório traz somente contagens, tempos e resultados de invariantes, sem dado pessoal;
@@ -271,7 +277,7 @@ O que o ensaio mede:
 4. tempo de aplicar o delta com escritas sintéticas nessa taxa durante o lote;
 5. tempo de drenagem da fila de IA e do envio de e-mails no pior caso;
 6. tempo de obter os locks e de rodar todas as conferências — os checksums são a parte mais provável de estourar;
-7. tempo da troca pela flag de corte e do rollback de aplicação (desligar a flag), cada um ensaiado de verdade;
+7. tempo da troca pela flag de corte e do rollback de aplicação (desligar a flag com a cópia reversa do perfil), cada um ensaiado de verdade;
 8. tempo de restaurar o backup, que não entra na janela mas decide se o rollback de dados é viável.
 
 ## Operação, backup, validação e rollback
@@ -293,7 +299,7 @@ Três condições são independentes e todas precisam de evidência:
 
 Rollback de código não reverte banco. O runbook deve distinguir:
 
-- **rollback de aplicação:** voltar o tráfego para a versão anterior enquanto estruturas legadas continuam intactas e, quando substituídas, somente leitura; só é válido se a versão anterior não tentar gravar nelas durante o retorno;
+- **rollback de aplicação:** voltar o tráfego para a versão anterior enquanto estruturas legadas continuam intactas e, quando substituídas, somente leitura; só é válido se a versão anterior não tentar gravar nelas durante o retorno. No corte da Fase 1, é desligar a flag **com** a cópia reversa do perfil, antes de W4 e sem Espaço não padrão; desligar a flag sem essas condições não é rollback;
 - **rollback de dados:** restaurar o backup ou executar procedimento de reversão validado, reconciliando também as gravações posteriores ao snapshot; nunca presumir que um `down.sql` recupera dados removidos ou transformados.
 
 Rollback por categoria:
@@ -301,7 +307,7 @@ Rollback por categoria:
 - DDL aditivo: desligar adaptadores/flags e voltar a aplicação; estruturas novas podem permanecer vazias até remoção planejada;
 - backfill: usar o relatório e as chaves determinísticas para remover apenas os dados identificados ou restaurar o backup, conforme runbook aprovado;
 - índices/constraints: cancelar operação longa e remover somente o índice novo inválido pelo nome exato; não relaxar constraint após o corte sem voltar primeiro a aplicação;
-- corte: voltar a aplicação enquanto o legado compatível permanece; escrita dupla não é mecanismo de rollback;
+- corte: desligar a flag com a cópia reversa do perfil, enquanto W4 não foi aplicada e só existe o Espaço padrão; depois de W4, só rollback de dados ou correção para frente; escrita dupla não é mecanismo de rollback;
 - falha de integridade ou isolamento: cancelar o corte, preservar ambos os conjuntos e evidências, restaurar quando necessário e não seguir para a próxima fase.
 
 ## Riscos para usuários existentes
@@ -328,7 +334,7 @@ Rollback por categoria:
 1. **Contrato:** dono aprova a Fase 0 consolidada, o contrato owner-only e as pendências registradas.
 2. **Asaas:** checkout, retorno, webhooks autenticados/idempotentes, estados de assinatura e reconciliação são validados ponta a ponta antes de ativar a Fase 1; isso não autoriza mudar gates atuais.
 3. **Migração:** revisão de SQL, estimativa de lock, backup/restore e dry run com volume real.
-4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; a troca é por flag em runtime, com deploy preparatório; depois do ensaio no servidor, o dono confirma os valores finais da janela e a lista de rotinas pausadas.
+4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; a troca é por flag em runtime, com deploy preparatório; depois do ensaio no servidor, refeito com o delta definitivo, o dono confirma os valores finais da janela e a lista de rotinas pausadas. W4 tem janela própria, aprovada depois de 7 dias de observação sem incidente e com zero linhas do escopo com `workspace_id` nulo criadas depois da virada; só depois dela respondem as rotas novas, a criação de Espaços e as jornadas.
 5. **Integridade, isolamento e reversibilidade:** as três evidências ficam verdes antes de `NOT NULL`, cutover ou liberação de mutações.
 6. **Catálogo:** proveniência, fingerprint, fontes e metas de busca aprovadas.
 7. **Artefatos/jornadas:** contratos, UX, acessibilidade, analytics, jobs e rollback de flag aprovados individualmente.
@@ -336,4 +342,4 @@ Rollback por categoria:
 9. **Fontes:** Pesquisa/Estudo avançam somente após homologação por fonte; Estudo permanece oculto sem fonte oficial.
 10. **Colaboração:** convites, papéis, equipes e organizações exigem contrato, política LGPD e decisão comercial próprios da Fase 6.
 
-Nenhuma fase começa automaticamente pela aprovação deste roadmap. Em especial, esta consolidação não inicia a Fase 1.
+Nenhuma fase começa automaticamente pela aprovação deste roadmap. O código da Fase 1 foi autorizado em 13/10/2026, desligado e sem migração em produção; migrações, virada e ativação continuam dependendo destes gates.
