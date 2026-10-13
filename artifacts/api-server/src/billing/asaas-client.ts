@@ -16,6 +16,7 @@ export type AsaasSubscription = {
   customer?: string;
   nextDueDate?: string;
   status?: string;
+  deleted?: boolean;
 };
 
 export type AsaasInvoice = {
@@ -23,6 +24,9 @@ export type AsaasInvoice = {
   status?: string;
   invoiceUrl?: string;
   dueDate?: string;
+  customer?: string;
+  subscription?: string;
+  paymentLink?: string;
 };
 
 type AsaasConfig = {
@@ -108,7 +112,15 @@ export async function getSubscription(id: string): Promise<AsaasSubscription> {
 
 export async function listSubscriptionPayments(id: string): Promise<AsaasInvoice[]> {
   const page = await asaas<{ data?: AsaasInvoice[] }>(
-    `/subscriptions/${encodeURIComponent(id)}/payments`,
+    `/subscriptions/${encodeURIComponent(id)}/payments?limit=100`,
+  );
+  return Array.isArray(page.data) ? page.data : [];
+}
+
+/** Payments created by our payment links carry the user id as `externalReference`. */
+export async function listPaymentsByExternalReference(reference: string): Promise<AsaasInvoice[]> {
+  const page = await asaas<{ data?: AsaasInvoice[] }>(
+    `/payments?externalReference=${encodeURIComponent(reference)}&limit=100`,
   );
   return Array.isArray(page.data) ? page.data : [];
 }
@@ -122,6 +134,8 @@ async function asaas<T>(
   init: { method?: string; body?: unknown } = {},
 ): Promise<T> {
   const { apiKey, baseUrl } = requireAsaasConfig();
+  // Query strings can carry the user id (`externalReference`); logs keep only the resource path.
+  const logPath = path.split("?")[0];
   let response: Response;
   try {
     response = await fetch(`${baseUrl}${path}`, {
@@ -136,7 +150,7 @@ async function asaas<T>(
       signal: timeoutSignal("ASAAS_HTTP_TIMEOUT_MS", 15_000),
     });
   } catch (error) {
-    logger.error({ err: error, path }, "Asaas request failed");
+    logger.error({ err: error, path: logPath }, "Asaas request failed");
     throw new BillingUnavailableError("Não foi possível falar com o Asaas.");
   }
 
@@ -151,7 +165,7 @@ async function asaas<T>(
   }
   if (!response.ok) {
     // Provider bodies can echo customer fields. Keep only operational metadata in application logs.
-    logger.error({ path, status: response.status }, "Asaas rejected the request");
+    logger.error({ path: logPath, status: response.status }, "Asaas rejected the request");
     throw new BillingUnavailableError(asaasErrorMessage(payload, response.status));
   }
   return payload as T;
