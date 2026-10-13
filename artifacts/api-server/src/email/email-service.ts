@@ -46,6 +46,18 @@ import {
 } from "./email-template";
 import type { EmailMessage, EmailSendResult, SendEmail } from "./email-client";
 import { sendWithEmailProvider } from "./email-provider";
+import {
+  CutoverModeChangedError,
+  withCutoverGate,
+  type GateTransaction,
+} from "../workspaces/cutover-gate";
+import {
+  cycleCaller,
+  discardedByCutover,
+  startCutoverCycle,
+  type CutoverCycle,
+} from "../workspaces/cutover-cycle";
+import { defaultWorkspaceId } from "../workspaces/workspace-service";
 
 type EmailMode = "digest" | "immediate";
 type DeliveryRow = typeof emailDeliveriesTable.$inferSelect;
@@ -57,17 +69,36 @@ type Recipient = {
 };
 
 type Candidate = EmailNotificationSnapshot & Recipient & {
+  workspaceId: string | null;
   trialEndsAt: Date;
   subscriptionStatus: string | null;
   currentPeriodEnd: Date | null;
   couponAccessUntil: Date | null;
 };
 
+/** One e-mail: a recipient and, in `workspaces` mode, the workspace its notifications and deadlines belong to. */
 type EmailGroup = {
   recipient: Recipient;
+  workspaceId: string | null;
   notifications: Candidate[];
   deadlines: EmailDeadlineSnapshot[];
 };
+
+/**
+ * In `legacy` an e-mail groups what belongs to the account. In `workspaces` it groups by recipient and workspace; a
+ * row still without a workspace joins the default one, so nothing is left out or sent in a second e-mail.
+ */
+const groupWorkspace = (cycle: CutoverCycle, userId: string, workspaceId: string | null): string | null =>
+  cycle.mode === "legacy" ? null : (workspaceId ?? defaultWorkspaceId(userId));
+
+const groupKey = (userId: string, workspaceId: string | null): string =>
+  workspaceId === null ? userId : `${userId}:${workspaceId}`;
+
+/** Until W4 the default workspace keeps the legacy key text, so a delivery made in one mode still dedupes in the other. */
+const scopedDedupeKey = (legacyKey: string, group: EmailGroup): string =>
+  group.workspaceId === null || group.workspaceId === defaultWorkspaceId(group.recipient.userId)
+    ? legacyKey
+    : `${legacyKey}:${group.workspaceId}`;
 
 export type EmailJobResult = {
   queued: number;
@@ -90,6 +121,7 @@ const addResult = (target: EmailJobResult, status: EmailSendResult["status"]) =>
 
 const notificationSelection = {
   id: notificationsTable.id,
+  workspaceId: notificationsTable.workspaceId,
   type: notificationsTable.type,
   createdAt: notificationsTable.createdAt,
   tenderId: notificationsTable.tenderId,
@@ -134,22 +166,26 @@ export const hasEmailAccess = (
     candidate.couponAccessUntil,
   );
 
-const groupByUser = (
+const groupByRecipient = (
+  cycle: CutoverCycle,
   rows: Candidate[],
   deadlines: Map<string, EmailGroup> = new Map(),
 ): EmailGroup[] => {
   const grouped = new Map<string, EmailGroup>();
   for (const row of rows) {
-    const group = grouped.get(row.userId) ?? {
+    const workspaceId = groupWorkspace(cycle, row.userId, row.workspaceId);
+    const key = groupKey(row.userId, workspaceId);
+    const group = grouped.get(key) ?? {
       recipient: { userId: row.userId, email: row.email, unsubscribeId: row.unsubscribeId },
+      workspaceId,
       notifications: [],
-      deadlines: deadlines.get(row.userId)?.deadlines ?? [],
+      deadlines: deadlines.get(key)?.deadlines ?? [],
     };
     group.notifications.push(row);
-    grouped.set(row.userId, group);
+    grouped.set(key, group);
   }
-  for (const [userId, group] of deadlines) {
-    if (!grouped.has(userId)) grouped.set(userId, group);
+  for (const [key, group] of deadlines) {
+    if (!grouped.has(key)) grouped.set(key, group);
   }
   return [...grouped.values()];
 };
@@ -160,6 +196,7 @@ const groupByUser = (
  * 3rd following day in Brasília. Same preference and access gate as the digest.
  */
 const digestDeadlines = async (
+  cycle: CutoverCycle,
   now: Date,
   betaEmails: ReadonlySet<string>,
 ): Promise<Map<string, EmailGroup>> => {
@@ -187,6 +224,7 @@ const digestDeadlines = async (
       stage: savedTendersTable.stage,
       nextAction: savedTendersTable.nextAction,
       nextActionDeadline: savedTendersTable.nextActionDeadline,
+      workspaceId: savedTendersTable.workspaceId,
     })
     .from(savedTendersTable)
     .innerJoin(usersTable, eq(usersTable.id, savedTendersTable.userId))
@@ -217,14 +255,17 @@ const digestDeadlines = async (
   const grouped = new Map<string, EmailGroup>();
   for (const row of rows) {
     if (!hasEmailAccess({ ...row, type: "digest_deadline" }, now, betaEmails)) continue;
-    const group = grouped.get(row.userId) ?? {
+    const workspaceId = groupWorkspace(cycle, row.userId, row.workspaceId);
+    const key = groupKey(row.userId, workspaceId);
+    const group = grouped.get(key) ?? {
       recipient: { userId: row.userId, email: row.email, unsubscribeId: row.unsubscribeId },
+      workspaceId,
       notifications: [],
       deadlines: [],
     };
     const deadline = deadlineForSavedTender(row, now);
     if (deadline) group.deadlines.push(deadline);
-    grouped.set(row.userId, group);
+    grouped.set(key, group);
   }
   for (const group of grouped.values()) group.deadlines = sortDeadlines(group.deadlines);
   return grouped;
@@ -327,6 +368,7 @@ const immediateKey = (userId: string, notificationIds: string[]): string => {
 };
 
 const queueDelivery = async (
+  cycle: CutoverCycle,
   mode: EmailMode,
   group: EmailGroup,
   dedupeKey: string,
@@ -334,13 +376,16 @@ const queueDelivery = async (
 ): Promise<DeliveryRow | null> => {
   const { recipient, notifications: candidates, deadlines } = group;
   if (candidates.length === 0 && deadlines.length === 0) return null;
-  return db.transaction(async (tx) => {
+  // The delivery and its links carry the same workspace, so one can never point across workspaces.
+  const workspace = group.workspaceId === null ? {} : { workspaceId: group.workspaceId };
+  return withCutoverGate(cycleCaller(cycle), async (tx) => {
     const id = randomUUID();
     const [created] = await tx
       .insert(emailDeliveriesTable)
       .values({
         id,
         userId: recipient.userId,
+        ...workspace,
         mode,
         dedupeKey,
         recipientEmail: recipient.email,
@@ -365,6 +410,7 @@ const queueDelivery = async (
               candidates.map((candidate) => ({
                 deliveryId: id,
                 notificationId: candidate.id,
+                ...workspace,
               })),
             )
             .onConflictDoNothing()
@@ -406,7 +452,25 @@ const retryDelay = (attempts: number): number => {
   return (minutes[Math.min(attempts - 1, minutes.length - 1)] ?? 30) * 60_000;
 };
 
+/**
+ * What happened to a send must be recorded, or the retry job would send the same e-mail again. The row is the same
+ * in both models, so when the cutover switched the mode between the send and this write, it is written in the mode
+ * the gate now finds; the cycle itself still stops at its next step.
+ */
+const recordDelivery = async (
+  cycle: CutoverCycle,
+  write: (tx: GateTransaction) => Promise<unknown>,
+): Promise<void> => {
+  try {
+    await withCutoverGate(cycleCaller(cycle), write);
+  } catch (error) {
+    if (!(error instanceof CutoverModeChangedError)) throw error;
+    await withCutoverGate({ kind: "job", cycleMode: error.currentMode }, write);
+  }
+};
+
 const deliver = async (
+  cycle: CutoverCycle,
   delivery: DeliveryRow,
   now: Date,
   sendEmail: SendEmail,
@@ -423,51 +487,80 @@ const deliver = async (
   );
   const attempts =
     result.status === "skipped" ? delivery.attempts : delivery.attempts + 1;
-  await db
-    .update(emailDeliveriesTable)
-    .set({
-      status: result.status,
-      attempts,
-      providerMessageId:
-        result.status === "sent" ? result.providerMessageId : null,
-      lastError: result.status === "sent" ? null : result.reason.slice(0, 1_000),
-      sentAt: result.status === "sent" ? now : null,
-      nextAttemptAt:
-        result.status === "failed" && result.retryable && attempts < 3
-          ? new Date(now.getTime() + retryDelay(attempts))
-          : null,
-      updatedAt: now,
-    })
-    .where(eq(emailDeliveriesTable.id, delivery.id));
+  await recordDelivery(cycle, (tx) =>
+    tx
+      .update(emailDeliveriesTable)
+      .set({
+        status: result.status,
+        attempts,
+        providerMessageId:
+          result.status === "sent" ? result.providerMessageId : null,
+        lastError: result.status === "sent" ? null : result.reason.slice(0, 1_000),
+        sentAt: result.status === "sent" ? now : null,
+        nextAttemptAt:
+          result.status === "failed" && result.retryable && attempts < 3
+            ? new Date(now.getTime() + retryDelay(attempts))
+            : null,
+        updatedAt: now,
+      })
+      .where(eq(emailDeliveriesTable.id, delivery.id)),
+  );
   return result;
 };
 
+/**
+ * Queues and sends one e-mail per group, adding to `result`. A delivery queued but not sent because the cycle was
+ * interrupted keeps its `next_attempt_at` and goes out with the retries; what was not queued yet is still unlinked
+ * and the next cycle picks it up. Either way each notification is e-mailed once.
+ */
 const queueGroups = async (
+  cycle: CutoverCycle,
   mode: EmailMode,
   groups: EmailGroup[],
   now: Date,
   sendEmail: SendEmail,
-): Promise<EmailJobResult> => {
-  const result = emptyResult();
+  result: EmailJobResult,
+): Promise<void> => {
   for (const group of groups) {
     const candidates =
       mode === "digest" ? group.notifications.slice(0, 100) : group.notifications;
-    const key =
+    const key = scopedDedupeKey(
       mode === "digest"
         ? digestKey(group.recipient.userId, now)
         : immediateKey(
             group.recipient.userId,
             candidates.map(({ id }) => id),
-          );
+          ),
+      group,
+    );
     const delivery = await queueDelivery(
+      cycle,
       mode,
       { ...group, notifications: candidates },
       key,
       now,
     );
     if (!delivery) continue;
-    const sent = await deliver(delivery, now, sendEmail);
+    const sent = await deliver(cycle, delivery, now, sendEmail);
     addResult(result, sent.status);
+  }
+};
+
+/**
+ * One e-mail job run is one cutover cycle: it does not start while writes are paused, and when the cutover
+ * interrupts it, it stops with what it already sent.
+ */
+const runEmailCycle = async (
+  operation: string,
+  run: (cycle: CutoverCycle, result: EmailJobResult) => Promise<void>,
+): Promise<EmailJobResult> => {
+  const result = emptyResult();
+  const cycle = await startCutoverCycle(operation);
+  if (!cycle) return result;
+  try {
+    await run(cycle, result);
+  } catch (error) {
+    if (!discardedByCutover(error, operation)) throw error;
   }
   return result;
 };
@@ -475,68 +568,76 @@ const queueGroups = async (
 export const runDailyEmailDigest = async (
   now = new Date(),
   sendEmail: SendEmail = sendWithEmailProvider,
-): Promise<EmailJobResult> => {
-  const betaEmails = await activeBetaGrantEmails(now);
-  const result = await queueGroups(
-    "digest",
-    groupByUser(
-      await digestCandidates(now, betaEmails),
-      await digestDeadlines(now, betaEmails),
-    ),
-    now,
-    sendEmail,
-  );
-  await db
-    .delete(emailDeliveriesTable)
-    .where(
-      lt(
-        emailDeliveriesTable.createdAt,
-        new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000),
+): Promise<EmailJobResult> =>
+  runEmailCycle("email_digest", async (cycle, result) => {
+    const betaEmails = await activeBetaGrantEmails(now);
+    await queueGroups(
+      cycle,
+      "digest",
+      groupByRecipient(
+        cycle,
+        await digestCandidates(now, betaEmails),
+        await digestDeadlines(cycle, now, betaEmails),
       ),
+      now,
+      sendEmail,
+      result,
     );
-  return result;
-};
+    await withCutoverGate(cycleCaller(cycle), (tx) =>
+      tx
+        .delete(emailDeliveriesTable)
+        .where(
+          lt(
+            emailDeliveriesTable.createdAt,
+            new Date(now.getTime() - 90 * 24 * 60 * 60 * 1_000),
+          ),
+        ),
+    );
+  });
 
 export const runImmediateEmailAlerts = async (
   now = new Date(),
   options: { windowMinutes?: number; sendEmail?: SendEmail } = {},
 ): Promise<EmailJobResult> =>
-  queueGroups(
-    "immediate",
-    groupByUser(await immediateCandidates(now, options.windowMinutes ?? 10)),
-    now,
-    options.sendEmail ?? sendWithEmailProvider,
+  runEmailCycle("email_immediate", async (cycle, result) =>
+    queueGroups(
+      cycle,
+      "immediate",
+      groupByRecipient(cycle, await immediateCandidates(now, options.windowMinutes ?? 10)),
+      now,
+      options.sendEmail ?? sendWithEmailProvider,
+      result,
+    ),
   );
 
 export const retryEmailDeliveries = async (
   now = new Date(),
   sendEmail: SendEmail = sendWithEmailProvider,
-): Promise<EmailJobResult> => {
-  const deliveries = await db
-    .select()
-    .from(emailDeliveriesTable)
-    .where(
-      or(
-        and(
-          eq(emailDeliveriesTable.status, "queued"),
-          lte(emailDeliveriesTable.nextAttemptAt, now),
+): Promise<EmailJobResult> =>
+  runEmailCycle("email_retry", async (cycle, result) => {
+    const deliveries = await db
+      .select()
+      .from(emailDeliveriesTable)
+      .where(
+        or(
+          and(
+            eq(emailDeliveriesTable.status, "queued"),
+            lte(emailDeliveriesTable.nextAttemptAt, now),
+          ),
+          and(
+            eq(emailDeliveriesTable.status, "failed"),
+            lte(emailDeliveriesTable.nextAttemptAt, now),
+            lt(emailDeliveriesTable.attempts, 3),
+          ),
         ),
-        and(
-          eq(emailDeliveriesTable.status, "failed"),
-          lte(emailDeliveriesTable.nextAttemptAt, now),
-          lt(emailDeliveriesTable.attempts, 3),
-        ),
-      ),
-    )
-    .orderBy(asc(emailDeliveriesTable.nextAttemptAt))
-    .limit(100);
-  const result = emptyResult();
-  for (const delivery of deliveries) {
-    const sent = await deliver(delivery, now, sendEmail);
-    addResult(result, sent.status);
-  }
-  return result;
-};
+      )
+      .orderBy(asc(emailDeliveriesTable.nextAttemptAt))
+      .limit(100);
+    for (const delivery of deliveries) {
+      const sent = await deliver(cycle, delivery, now, sendEmail);
+      addResult(result, sent.status);
+    }
+  });
 
 export const logEmailJobResult = (
   operation: string,
