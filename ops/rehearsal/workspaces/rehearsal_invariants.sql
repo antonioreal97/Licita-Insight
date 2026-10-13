@@ -1,5 +1,14 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Apoio da ferramenta: falha com tolerância zero e, opcionalmente, emite somente nome/boolean/contagem.
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: rehearsal_invariants.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
+
 CREATE TEMP TABLE IF NOT EXISTS rehearsal_invariant_results (
   invariant_name text PRIMARY KEY,
   failure_count bigint NOT NULL

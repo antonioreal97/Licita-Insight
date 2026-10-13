@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: remover somente associações e linhas determinísticas criadas por W3; o legado nunca é apagado nem recalculado.
 -- Pré-condições: W4 revertido; W2 ainda aplicado.
@@ -5,6 +6,14 @@
 -- Desfazer o rollback: reaplicar w3_backfill.sql em lote e delta.
 
 BEGIN;
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w3_backfill_rollback.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 UPDATE company_tender_fits row SET workspace_id = NULL
 FROM users u WHERE row.user_id = u.id AND row.workspace_id = 'ws_' || md5('pardal-digital:procurement:' || u.id);

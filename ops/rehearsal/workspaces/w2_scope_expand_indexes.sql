@@ -1,8 +1,17 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: criar índices de workspace e futuras unicidades sem bloquear escrita durante a carga.
 -- Pré-condições: w2_scope_expand.sql aplicado e nenhuma transação explícita aberta.
 -- Transação: não; CREATE INDEX CONCURRENTLY não pode rodar dentro de BEGIN/COMMIT.
 -- Desfazer: w2_scope_expand_rollback.sql remove estes índices pelos nomes explícitos.
+
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w2_scope_expand_indexes.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 CREATE INDEX CONCURRENTLY IF NOT EXISTS company_tender_fits_workspace_idx
   ON company_tender_fits (workspace_id, checked_at);

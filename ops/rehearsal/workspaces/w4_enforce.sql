@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Objetivo: validar FKs e invariantes, então impor NOT NULL e unicidades por Espaço.
 -- Pré-condições: W3 delta concluído sob bloqueio; nenhuma escrita concorrente nas tabelas de origem.
@@ -12,6 +13,15 @@
 \if :w4_manage_transaction
 BEGIN;
 \endif
+
+-- Fora do \if: com w4_manage_transaction=false a guarda roda dentro da transação do chamador.
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: w4_enforce.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
 
 DO $invariants$
 DECLARE

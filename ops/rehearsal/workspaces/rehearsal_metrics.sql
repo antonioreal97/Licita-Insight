@@ -1,5 +1,14 @@
+\set ON_ERROR_STOP on
 -- RASCUNHO DE ENSAIO — NÃO É MIGRAÇÃO APROVADA PARA PRODUÇÃO.
 -- Apoio da ferramenta: a saída contém apenas nome técnico, contagem, tamanho e hash agregado irreversível.
+DO $guard$
+BEGIN
+  IF current_database() !~ '_rehearsal$' THEN
+    RAISE EXCEPTION 'Recusado: rehearsal_metrics.sql é rascunho de ensaio e só roda em banco terminado em _rehearsal (banco atual: %).', current_database();
+  END IF;
+END
+$guard$;
+
 \pset tuples_only on
 \pset format unaligned
 \pset fieldsep '\t'
