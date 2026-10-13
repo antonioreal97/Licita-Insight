@@ -7,14 +7,38 @@ import {
   companyTenderFitsTable,
   db,
   notificationsTable,
+  pool,
   tenderAiDocumentsTable,
   tenderAiIndexesTable,
   tenderAiPassagesTable,
   tendersTable,
   usersTable,
+  workspaceProfileSignalsTable,
+  workspaceProfilesTable,
+  workspacesTable,
   type FitReasonRecord,
+  type WorkspaceCutoverMode,
 } from "@workspace/db";
+import {
+  WORKSPACE_PROFILE_SCHEMA_VERSION,
+  WorkspaceProfileSchema,
+} from "@workspace/api-zod/hub";
 import { SubscriptionRequiredError } from "../lib/api-error";
+import {
+  withCutoverGate,
+  type GateDatabase,
+  type GateTransaction,
+} from "../workspaces/cutover-gate";
+import { readCutoverState } from "../workspaces/cutover-state";
+import {
+  companyProfileToWorkspaceProfile,
+  workspaceProfileToCompanyProfile,
+  writeWorkspaceProfile,
+} from "../workspaces/workspace-profile-service";
+import {
+  defaultWorkspaceId,
+  requireDefaultWorkspace,
+} from "../workspaces/workspace-service";
 import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { hasAiAccess } from "./ask-tender-service";
@@ -58,9 +82,9 @@ export type TenderFit = {
 
 export const COMPANY_FIT_PROMPT_VERSION = 3;
 
-const toProfile = (
-  row: typeof companyProfilesTable.$inferSelect,
-): CompanyProfile => ({
+type CompanyProfileRow = typeof companyProfilesTable.$inferSelect;
+
+const toProfile = (row: CompanyProfileRow): CompanyProfile => ({
   description: row.description,
   offerings: row.offerings,
   exclusions: row.exclusions,
@@ -124,102 +148,217 @@ const sameFitInput = (
   return isDeepStrictEqual(savedFit, inputFit);
 };
 
+/**
+ * The v1 profile row from the model the cutover flag points to. In `workspaces` it is the default workspace profile
+ * (never the active one) turned back into a `company_profiles` row by the C1 inverse, so both modes answer the same.
+ */
+export async function readCompanyProfileRow(
+  userId: string,
+  mode?: WorkspaceCutoverMode,
+): Promise<CompanyProfileRow | null> {
+  if ((mode ?? (await readCutoverState(pool)).mode) === "legacy") {
+    const [row] = await db
+      .select()
+      .from(companyProfilesTable)
+      .where(eq(companyProfilesTable.userId, userId))
+      .limit(1);
+    return row ?? null;
+  }
+  const workspace = await requireDefaultWorkspace(db, userId);
+  const [profile] = await db
+    .select()
+    .from(workspaceProfilesTable)
+    .where(eq(workspaceProfilesTable.workspaceId, workspace.id))
+    .limit(1);
+  return profile ? workspaceProfileToCompanyProfile(userId, profile) : null;
+}
+
 export async function getCompanyProfile(
   userId: string,
 ): Promise<CompanyProfile | null> {
-  const [row] = await db
+  const row = await readCompanyProfileRow(userId);
+  return row ? toProfile(row) : null;
+}
+
+const companyProfileValues = (
+  userId: string,
+  input: CompanyProfileInput,
+  version: number,
+  now: Date,
+) => ({
+  userId,
+  description: input.description,
+  offerings: input.offerings,
+  exclusions: input.exclusions,
+  selectedCategories: input.selectedCategories,
+  selectedKeywords: input.selectedKeywords,
+  excludedKeywords: input.excludedKeywords,
+  registeredPlatforms: input.registeredPlatforms,
+  coverageScope: input.coverage.scope,
+  coverageStates:
+    input.coverage.scope === "custom" ? input.coverage.states : [],
+  coverageRegions:
+    input.coverage.scope === "custom" ? input.coverage.regions : [],
+  coverageMunicipalities:
+    input.coverage.scope === "custom"
+      ? input.coverage.municipalities.map(({ ibgeCode }) => ibgeCode)
+      : [],
+  headquartersMunicipalityIbge:
+    input.coverage.scope === "custom"
+      ? (input.coverage.radius?.center.ibgeCode ?? null)
+      : null,
+  coverageRadiusKm:
+    input.coverage.scope === "custom"
+      ? (input.coverage.radius?.km ?? null)
+      : null,
+  coverageMode: input.coverage.mode,
+  acceptsRemote: input.coverage.acceptsRemote,
+  valueMin:
+    input.valueRange.min === null ? null : input.valueRange.min.toFixed(2),
+  valueMax:
+    input.valueRange.max === null ? null : input.valueRange.max.toFixed(2),
+  size: input.size,
+  version,
+  lastAlertAt: now,
+  updatedAt: now,
+});
+
+async function putLegacyCompanyProfile(
+  tx: GateTransaction,
+  userId: string,
+  input: CompanyProfileInput,
+  now: Date,
+): Promise<CompanyProfileRow> {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext(${`company-profile:${userId}`}))`,
+  );
+  const [existing] = await tx
     .select()
     .from(companyProfilesTable)
     .where(eq(companyProfilesTable.userId, userId))
     .limit(1);
-  return row ? toProfile(row) : null;
+  if (existing && sameFitInput(toProfile(existing), input)) {
+    const [saved] = await tx
+      .update(companyProfilesTable)
+      .set({ registeredPlatforms: input.registeredPlatforms, updatedAt: now })
+      .where(eq(companyProfilesTable.userId, userId))
+      .returning();
+    return saved!;
+  }
+  await tx
+    .delete(companyTenderFitsTable)
+    .where(eq(companyTenderFitsTable.userId, userId));
+  const values = companyProfileValues(
+    userId,
+    input,
+    (existing?.version ?? 0) + 1,
+    now,
+  );
+  const [saved] = await tx
+    .insert(companyProfilesTable)
+    .values({ ...values, createdAt: now })
+    .onConflictDoUpdate({
+      target: companyProfilesTable.userId,
+      set: values,
+    })
+    .returning();
+  return saved!;
+}
+
+/**
+ * Same rules as the legacy save, decided on the legacy view of the stored profile: a change that only touches the
+ * registered platforms keeps the version, the alert cursor and the fits. Last write wins (no `baseRevision`), but
+ * `revision` still counts the save.
+ */
+async function putWorkspaceCompanyProfile(
+  tx: GateTransaction,
+  userId: string,
+  input: CompanyProfileInput,
+  now: Date,
+): Promise<CompanyProfileRow> {
+  const workspace = await requireDefaultWorkspace(tx, userId);
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`licitai:workspace-profile:${workspace.id}`}, 0))`,
+  );
+  const [current] = await tx
+    .select()
+    .from(workspaceProfilesTable)
+    .where(eq(workspaceProfilesTable.workspaceId, workspace.id))
+    .limit(1);
+  const existing = current
+    ? workspaceProfileToCompanyProfile(userId, current)
+    : undefined;
+  const fitChanged = !existing || !sameFitInput(toProfile(existing), input);
+  const { answers } = companyProfileToWorkspaceProfile({
+    ...companyProfileValues(userId, input, 1, now),
+    createdAt: now,
+  });
+  const { row } = await writeWorkspaceProfile(
+    tx,
+    workspace.id,
+    current,
+    WorkspaceProfileSchema.parse({
+      schemaVersion: WORKSPACE_PROFILE_SCHEMA_VERSION,
+      type: "procurement",
+      answers,
+    }),
+    fitChanged,
+    now,
+  );
+  return workspaceProfileToCompanyProfile(userId, row);
 }
 
 export async function putCompanyProfile(
   userId: string,
   input: CompanyProfileInput,
   now = new Date(),
+  database?: GateDatabase,
 ): Promise<CompanyProfile> {
-  const row = await db.transaction(async (tx) => {
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtext(${`company-profile:${userId}`}))`,
-    );
-    const [existing] = await tx
-      .select()
-      .from(companyProfilesTable)
-      .where(eq(companyProfilesTable.userId, userId))
-      .limit(1);
-    if (existing && sameFitInput(toProfile(existing), input)) {
-      const [saved] = await tx
-        .update(companyProfilesTable)
-        .set({ registeredPlatforms: input.registeredPlatforms, updatedAt: now })
-        .where(eq(companyProfilesTable.userId, userId))
-        .returning();
-      return saved!;
-    }
-    const version = (existing?.version ?? 0) + 1;
-    await tx
-      .delete(companyTenderFitsTable)
-      .where(eq(companyTenderFitsTable.userId, userId));
-    const values = {
-      userId,
-      description: input.description,
-      offerings: input.offerings,
-      exclusions: input.exclusions,
-      selectedCategories: input.selectedCategories,
-      selectedKeywords: input.selectedKeywords,
-      excludedKeywords: input.excludedKeywords,
-      registeredPlatforms: input.registeredPlatforms,
-      coverageScope: input.coverage.scope,
-      coverageStates:
-        input.coverage.scope === "custom" ? input.coverage.states : [],
-      coverageRegions:
-        input.coverage.scope === "custom" ? input.coverage.regions : [],
-      coverageMunicipalities:
-        input.coverage.scope === "custom"
-          ? input.coverage.municipalities.map(({ ibgeCode }) => ibgeCode)
-          : [],
-      headquartersMunicipalityIbge:
-        input.coverage.scope === "custom"
-          ? (input.coverage.radius?.center.ibgeCode ?? null)
-          : null,
-      coverageRadiusKm:
-        input.coverage.scope === "custom"
-          ? (input.coverage.radius?.km ?? null)
-          : null,
-      coverageMode: input.coverage.mode,
-      acceptsRemote: input.coverage.acceptsRemote,
-      valueMin:
-        input.valueRange.min === null ? null : input.valueRange.min.toFixed(2),
-      valueMax:
-        input.valueRange.max === null ? null : input.valueRange.max.toFixed(2),
-      size: input.size,
-      version,
-      lastAlertAt: now,
-      updatedAt: now,
-    };
-    const [saved] = await tx
-      .insert(companyProfilesTable)
-      .values({ ...values, createdAt: now })
-      .onConflictDoUpdate({
-        target: companyProfilesTable.userId,
-        set: values,
-      })
-      .returning();
-    return saved!;
-  });
+  const row = await withCutoverGate(
+    { kind: "http" },
+    (tx, state) =>
+      state.mode === "legacy"
+        ? putLegacyCompanyProfile(tx, userId, input, now)
+        : putWorkspaceCompanyProfile(tx, userId, input, now),
+    database,
+  );
   return toProfile(row);
 }
 
-export async function deleteCompanyProfile(userId: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
-      .delete(companyTenderFitsTable)
-      .where(eq(companyTenderFitsTable.userId, userId));
-    await tx
-      .delete(companyProfilesTable)
-      .where(eq(companyProfilesTable.userId, userId));
-  });
+export async function deleteCompanyProfile(
+  userId: string,
+  now = new Date(),
+  database?: GateDatabase,
+): Promise<void> {
+  await withCutoverGate(
+    { kind: "http" },
+    async (tx, state) => {
+      if (state.mode === "legacy") {
+        await tx
+          .delete(companyTenderFitsTable)
+          .where(eq(companyTenderFitsTable.userId, userId));
+        await tx
+          .delete(companyProfilesTable)
+          .where(eq(companyProfilesTable.userId, userId));
+        return;
+      }
+      const workspace = await requireDefaultWorkspace(tx, userId);
+      await tx
+        .delete(companyTenderFitsTable)
+        .where(eq(companyTenderFitsTable.workspaceId, workspace.id));
+      await tx
+        .delete(workspaceProfileSignalsTable)
+        .where(eq(workspaceProfileSignalsTable.workspaceId, workspace.id));
+      await tx
+        .delete(workspaceProfilesTable)
+        .where(eq(workspaceProfilesTable.workspaceId, workspace.id));
+      await tx
+        .update(workspacesTable)
+        .set({ onboardingStatus: "not_started", updatedAt: now })
+        .where(eq(workspacesTable.id, workspace.id));
+    },
+    database,
+  );
 }
 
 type TenderRow = Pick<
@@ -612,6 +751,7 @@ const publicFit = (
 
 async function ensureFit(
   userId: string,
+  mode: WorkspaceCutoverMode,
   profile: CompanyProfile,
   tender: TenderRow,
   wait: boolean,
@@ -626,7 +766,9 @@ async function ensureFit(
     .from(companyTenderFitsTable)
     .where(
       and(
-        eq(companyTenderFitsTable.userId, userId),
+        mode === "legacy"
+          ? eq(companyTenderFitsTable.userId, userId)
+          : eq(companyTenderFitsTable.workspaceId, defaultWorkspaceId(userId)),
         eq(companyTenderFitsTable.profileVersion, profile.version),
         eq(companyTenderFitsTable.tenderId, tender.id),
         eq(companyTenderFitsTable.requestedModel, config.model),
@@ -647,73 +789,122 @@ async function ensureFit(
       return publicFit(existing);
   }
   const id = existing?.id ?? randomUUID();
-  if (filters.length > 0) {
-    const [row] = await db
-      .insert(companyTenderFitsTable)
-      .values({
-        id,
-        userId,
-        tenderId: tender.id,
-        profileVersion: profile.version,
-        tenderFingerprint: fingerprint,
-        requestedModel: config.model,
-        promptVersion: COMPANY_FIT_PROMPT_VERSION,
-        status: "filtered",
-        level: "low",
-        score: "0",
-        reasons: filters,
-        checkedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [
-          companyTenderFitsTable.userId,
-          companyTenderFitsTable.profileVersion,
-          companyTenderFitsTable.tenderId,
-          companyTenderFitsTable.requestedModel,
-          companyTenderFitsTable.promptVersion,
-        ],
-        set: {
-          tenderFingerprint: fingerprint,
-          status: "filtered",
-          level: "low",
-          score: "0",
-          reasons: filters,
-          responseModel: null,
-          lexicalGatePass: null,
-          checkedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return publicFit(row!);
-  }
   const lexicalGatePass =
-    gateMode === "off"
+    filters.length > 0 || gateMode === "off"
       ? null
       : await lexicalGatePasses(tender.id, [
           ...profile.selectedKeywords,
           ...profile.offerings,
         ]);
-  if (gateMode === "on" && !lexicalGatePass) {
-    const checkedAt = new Date();
-    const [gated] = await db
+  // Only `tx` inside the gate: up to 100 fits run in parallel, and a second pool connection per fit could starve the pool.
+  const row = await withCutoverGate({ kind: "http" }, async (tx, state) => {
+    // Until W4 the conflict target and the dedupe key stay the legacy ones; the default workspace is the user's only one.
+    const scope =
+      state.mode === "workspaces" ? { workspaceId: defaultWorkspaceId(userId) } : {};
+    if (filters.length > 0) {
+      const [filtered] = await tx
+        .insert(companyTenderFitsTable)
+        .values({
+          id,
+          userId,
+          ...scope,
+          tenderId: tender.id,
+          profileVersion: profile.version,
+          tenderFingerprint: fingerprint,
+          requestedModel: config.model,
+          promptVersion: COMPANY_FIT_PROMPT_VERSION,
+          status: "filtered",
+          level: "low",
+          score: "0",
+          reasons: filters,
+          checkedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [
+            companyTenderFitsTable.userId,
+            companyTenderFitsTable.profileVersion,
+            companyTenderFitsTable.tenderId,
+            companyTenderFitsTable.requestedModel,
+            companyTenderFitsTable.promptVersion,
+          ],
+          set: {
+            ...scope,
+            tenderFingerprint: fingerprint,
+            status: "filtered",
+            level: "low",
+            score: "0",
+            reasons: filters,
+            responseModel: null,
+            lexicalGatePass: null,
+            checkedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return filtered!;
+    }
+    if (gateMode === "on" && !lexicalGatePass) {
+      const checkedAt = new Date();
+      const [gated] = await tx
+        .insert(companyTenderFitsTable)
+        .values({
+          id,
+          userId,
+          ...scope,
+          tenderId: tender.id,
+          profileVersion: profile.version,
+          tenderFingerprint: fingerprint,
+          requestedModel: config.model,
+          promptVersion: COMPANY_FIT_PROMPT_VERSION,
+          status: "ready",
+          level: "low",
+          score: "0",
+          reasons: [{ kind: "no_offering_term" }],
+          lexicalGatePass: false,
+          checkedAt,
+          updatedAt: checkedAt,
+        })
+        .onConflictDoUpdate({
+          target: [
+            companyTenderFitsTable.userId,
+            companyTenderFitsTable.profileVersion,
+            companyTenderFitsTable.tenderId,
+            companyTenderFitsTable.requestedModel,
+            companyTenderFitsTable.promptVersion,
+          ],
+          set: {
+            ...scope,
+            tenderFingerprint: fingerprint,
+            status: "ready",
+            level: "low",
+            score: "0",
+            reasons: [{ kind: "no_offering_term" }],
+            responseModel: null,
+            inputTokens: 0,
+            estimatedCostUsd: "0",
+            lexicalGatePass: false,
+            checkedAt,
+            updatedAt: checkedAt,
+          },
+        })
+        .returning();
+      return gated!;
+    }
+    const [processing] = await tx
       .insert(companyTenderFitsTable)
       .values({
         id,
         userId,
+        ...scope,
         tenderId: tender.id,
         profileVersion: profile.version,
         tenderFingerprint: fingerprint,
         requestedModel: config.model,
         promptVersion: COMPANY_FIT_PROMPT_VERSION,
-        status: "ready",
-        level: "low",
-        score: "0",
-        reasons: [{ kind: "no_offering_term" }],
-        lexicalGatePass: false,
-        checkedAt,
-        updatedAt: checkedAt,
+        status: "processing",
+        lexicalGatePass,
+        updatedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: [
@@ -724,98 +915,64 @@ async function ensureFit(
           companyTenderFitsTable.promptVersion,
         ],
         set: {
+          ...scope,
           tenderFingerprint: fingerprint,
-          status: "ready",
-          level: "low",
-          score: "0",
-          reasons: [{ kind: "no_offering_term" }],
+          status: "processing",
+          level: null,
+          score: null,
+          reasons: [],
           responseModel: null,
-          inputTokens: 0,
-          estimatedCostUsd: "0",
-          lexicalGatePass: false,
-          checkedAt,
-          updatedAt: checkedAt,
+          lexicalGatePass,
+          checkedAt: null,
+          updatedAt: new Date(),
         },
       })
       .returning();
-    return publicFit(gated!);
-  }
-  const [row] = await db
-    .insert(companyTenderFitsTable)
-    .values({
-      id,
-      userId,
-      tenderId: tender.id,
-      profileVersion: profile.version,
-      tenderFingerprint: fingerprint,
-      requestedModel: config.model,
-      promptVersion: COMPANY_FIT_PROMPT_VERSION,
-      status: "processing",
-      lexicalGatePass,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [
-        companyTenderFitsTable.userId,
-        companyTenderFitsTable.profileVersion,
-        companyTenderFitsTable.tenderId,
-        companyTenderFitsTable.requestedModel,
-        companyTenderFitsTable.promptVersion,
-      ],
-      set: {
-        tenderFingerprint: fingerprint,
-        status: "processing",
-        level: null,
-        score: null,
-        reasons: [],
-        responseModel: null,
-        lexicalGatePass,
-        checkedAt: null,
-        updatedAt: new Date(),
+    const queued = await enqueueAiJob(
+      {
+        kind: "fit",
+        dedupeKey: `fit:${key}`,
+        tenderId: tender.id,
+        userId,
+        payload: { fitId: processing!.id },
+        lane: "batch",
+        ...scope,
       },
-    })
-    .returning();
-  const queued = await enqueueAiJob({
-    kind: "fit",
-    dedupeKey: `fit:${key}`,
-    tenderId: tender.id,
-    userId,
-    payload: { fitId: row!.id },
-    lane: "batch",
-  });
-  if (queued.reason === "queue_full") {
-    await db
-      .update(companyTenderFitsTable)
-      .set({ status: "failed", updatedAt: new Date() })
-      .where(eq(companyTenderFitsTable.id, row!.id));
-  }
-  if (wait) {
-    if (appRoleFromEnv() === "all") {
-      await runEnqueuedAiJobNow(`fit:${key}`);
-    } else {
-      for (let attempt = 0; attempt < 600; attempt += 1) {
-        const [current] = await db
-          .select({ status: companyTenderFitsTable.status })
-          .from(companyTenderFitsTable)
-          .where(eq(companyTenderFitsTable.id, row!.id))
-          .limit(1);
-        if (
-          current?.status === "ready" ||
-          current?.status === "filtered" ||
-          current?.status === "failed"
-        )
-          break;
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
+      tx,
+    );
+    if (queued.reason === "queue_full") {
+      await tx
+        .update(companyTenderFitsTable)
+        .set({ status: "failed", updatedAt: new Date() })
+        .where(eq(companyTenderFitsTable.id, processing!.id));
     }
-    const [completed] = await db
-      .select()
-      .from(companyTenderFitsTable)
-      .where(eq(companyTenderFitsTable.id, row!.id))
-      .limit(1);
-    return completed ? publicFit(completed) : publicFit(row!);
+    return processing!;
+  });
+  if (row.status !== "processing" || !wait) return publicFit(row);
+  if (appRoleFromEnv() === "all") {
+    await runEnqueuedAiJobNow(`fit:${key}`);
+  } else {
+    for (let attempt = 0; attempt < 600; attempt += 1) {
+      const [current] = await db
+        .select({ status: companyTenderFitsTable.status })
+        .from(companyTenderFitsTable)
+        .where(eq(companyTenderFitsTable.id, row.id))
+        .limit(1);
+      if (
+        current?.status === "ready" ||
+        current?.status === "filtered" ||
+        current?.status === "failed"
+      )
+        break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
-  return publicFit(row!);
+  const [completed] = await db
+    .select()
+    .from(companyTenderFitsTable)
+    .where(eq(companyTenderFitsTable.id, row.id))
+    .limit(1);
+  return completed ? publicFit(completed) : publicFit(row);
 }
 
 export async function getTenderFits(
@@ -826,8 +983,10 @@ export async function getTenderFits(
   profileVersion: number | null;
   results: Record<string, TenderFit>;
 }> {
-  const profile = await getCompanyProfile(userId);
-  if (!profile) return { profileVersion: null, results: {} };
+  const { mode } = await readCutoverState(pool);
+  const row = await readCompanyProfileRow(userId, mode);
+  if (!row) return { profileVersion: null, results: {} };
+  const profile = toProfile(row);
   if (!(await hasAiAccess(userId))) throw new SubscriptionRequiredError();
   const rows = await db
     .select({
@@ -851,7 +1010,7 @@ export async function getTenderFits(
       async (tender) =>
         [
           tender.id,
-          await ensureFit(userId, profile, tender, options.wait ?? false),
+          await ensureFit(userId, mode, profile, tender, options.wait ?? false),
         ] as const,
     ),
   );

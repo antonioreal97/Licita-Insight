@@ -111,6 +111,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "workspaces",
     "workspace_members",
     "user_workspace_preferences",
+    "workspace_profiles",
+    "workspace_profile_signals",
+    "workspace_cutover_events",
   ]) {
     await pool.query(`CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`);
   }

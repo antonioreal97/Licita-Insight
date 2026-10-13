@@ -110,32 +110,49 @@ export async function saveWorkspaceProfileStep(
     answers: current?.answers ?? {},
   });
   const profile = mergeWorkspaceProfileStep(before, stepSave);
-  const completeness = workspaceProfileCompleteness(profile);
   const fitChanged = !current || !sameFitAnswers(member.type, before.answers, profile.answers);
+  const { row, completeness } = await writeWorkspaceProfile(tx, member.workspaceId, current, profile, fitChanged, now);
+  return { profile, completeness, profileVersion: row.profileVersion, revision: row.revision };
+}
+
+/**
+ * Writes a profile already merged and validated, under the caller's `licitai:workspace-profile` lock. `revision`
+ * counts every save; `profileVersion`, the alert cursor and the cached fits move only when `fitChanged`. Signals and
+ * the onboarding status are rebuilt on every save.
+ */
+export async function writeWorkspaceProfile(
+  tx: GateTransaction,
+  workspaceId: string,
+  current: WorkspaceProfileRow | undefined,
+  profile: WorkspaceProfile,
+  fitChanged: boolean,
+  now: Date,
+): Promise<{ row: WorkspaceProfileRow; completeness: WorkspaceProfileCompleteness }> {
+  const completeness = workspaceProfileCompleteness(profile);
   const profileVersion = current ? current.profileVersion + (fitChanged ? 1 : 0) : 1;
-  const revision = (current?.revision ?? 0) + 1;
   const values = {
     schemaVersion: WORKSPACE_PROFILE_SCHEMA_VERSION,
     profileVersion,
-    revision,
+    revision: (current?.revision ?? 0) + 1,
     answers: profile.answers as Record<string, unknown>,
     completenessPercent: completeness.percent,
     completenessComplete: completeness.complete,
     updatedAt: now,
     ...(fitChanged ? { lastAlertAt: now } : {}),
   };
-  await tx
+  const [row] = await tx
     .insert(workspaceProfilesTable)
-    .values({ workspaceId: member.workspaceId, ...values, createdAt: now })
-    .onConflictDoUpdate({ target: workspaceProfilesTable.workspaceId, set: values });
+    .values({ workspaceId, ...values, createdAt: now })
+    .onConflictDoUpdate({ target: workspaceProfilesTable.workspaceId, set: values })
+    .returning();
   if (fitChanged) {
-    await tx.delete(companyTenderFitsTable).where(eq(companyTenderFitsTable.workspaceId, member.workspaceId));
+    await tx.delete(companyTenderFitsTable).where(eq(companyTenderFitsTable.workspaceId, workspaceId));
   }
-  await tx.delete(workspaceProfileSignalsTable).where(eq(workspaceProfileSignalsTable.workspaceId, member.workspaceId));
+  await tx.delete(workspaceProfileSignalsTable).where(eq(workspaceProfileSignalsTable.workspaceId, workspaceId));
   const signals = workspaceProfileSignals(profile).map((signal) => {
     if (signal.kind === "remote") throw new Error("The remote signal has no column in workspace_profile_signals");
     return {
-      workspaceId: member.workspaceId,
+      workspaceId,
       kind: signal.kind,
       value: signal.value,
       weight: signal.weight.toFixed(3),
@@ -155,8 +172,8 @@ export async function saveWorkspaceProfileStep(
           : "not_started",
       updatedAt: now,
     })
-    .where(eq(workspacesTable.id, member.workspaceId));
-  return { profile, completeness, profileVersion, revision };
+    .where(eq(workspacesTable.id, workspaceId));
+  return { row: row!, completeness };
 }
 
 /**

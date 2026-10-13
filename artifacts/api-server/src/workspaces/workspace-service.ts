@@ -174,6 +174,30 @@ export async function requireWorkspaceMember(
   return { workspaceId, ...member, accessMode };
 }
 
+/**
+ * The v1 routes act on the default workspace, never the active one. In `workspaces` mode every account has one (W3
+ * backfill, account creation), so a missing one is a broken cutover and fails instead of reading as an empty account.
+ */
+export async function requireDefaultWorkspace(
+  executor: Executor,
+  userId: string,
+): Promise<{ id: string; showInternationalOpportunities: boolean }> {
+  const [workspace] = await executor
+    .select({ id: workspacesTable.id, showInternationalOpportunities: workspacesTable.showInternationalOpportunities })
+    .from(workspaceMembersTable)
+    .innerJoin(workspacesTable, eq(workspacesTable.id, workspaceMembersTable.workspaceId))
+    .where(
+      and(
+        eq(workspaceMembersTable.userId, userId),
+        eq(workspacesTable.ownerUserId, userId),
+        eq(workspacesTable.isDefault, true),
+      ),
+    )
+    .limit(1);
+  if (!workspace) throw new Error(`User ${userId} has no default workspace while the cutover mode is workspaces`);
+  return workspace;
+}
+
 /** Archived answers 409 before read-only answers 402, as in the isolation matrix of docs/contracts/workspaces-v1.md. */
 export function assertWorkspaceWritable(member: WorkspaceMember): void {
   if (member.archivedAt !== null) throw new WorkspaceArchivedError();

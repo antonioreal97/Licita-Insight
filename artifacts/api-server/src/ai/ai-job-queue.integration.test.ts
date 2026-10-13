@@ -18,7 +18,8 @@ test("durable queue deduplicates, prioritizes and recovers visibility", {
       lane text not null, status text not null default 'queued', attempts integer not null default 0,
       max_attempts integer not null default 6, run_after timestamptz not null default now(),
       locked_by text, locked_until timestamptz, last_error text,
-      created_at timestamptz not null default now(), started_at timestamptz, finished_at timestamptz
+      created_at timestamptz not null default now(), started_at timestamptz, finished_at timestamptz,
+      workspace_id text
     )
   `);
   try {

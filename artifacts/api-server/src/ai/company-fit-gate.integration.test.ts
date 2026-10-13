@@ -18,7 +18,7 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
   await pool.query(`create schema "${schema}"`);
   for (const table of [
     "users", "subscriptions", "tenders", "company_profiles",
-    "company_tender_fits", "ai_fit_daily_usage", "ai_jobs",
+    "company_tender_fits", "ai_fit_daily_usage", "ai_jobs", "workspace_cutover_events",
   ]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
