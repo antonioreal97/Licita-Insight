@@ -43,3 +43,7 @@ O endpoint não lê usuário, cookie, assinatura ou banco e não varia por coort
 ## Operação
 
 Alterar `FEATURE_JOURNEYS` requer deploy/restart da API e aprovação da fase correspondente. Rollback é remover o valor e reiniciar. Desligar uma flag futura não apaga espaços ou dados; somente impede novas entradas e segue a política de leitura definida pelo contrato da fase.
+
+## O que esta flag não faz
+
+`FEATURE_JOURNEYS` controla a disponibilidade de jornadas e só muda com reinício. Ela **não** é o mecanismo do corte de dados para Espaços: por decisão de 13/10/2026, a virada da Fase 1 usa uma flag própria, lida em runtime, ligada e desligada sem reinício. Essa flag de corte ainda não existe e será especificada no contrato da Fase 1; ver “Forma da troca” no [roadmap](../plans/hub-adaptativo-roadmap-v2.md#forma-da-troca).

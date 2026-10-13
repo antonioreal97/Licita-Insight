@@ -93,6 +93,7 @@ As decisões abaixo foram **aprovadas pelo dono em 13/10/2026** e fecham ou refi
 9. **Busca com `workspaceId`:** `401` sem sessão; `400` para id malformado; para id inexistente, de outro usuário ou sem acesso, `200` com resultado universal, sem personalização, sem cache e com corpo idêntico nos três casos.
 10. **Edição simultânea do perfil:** controle otimista somente na rota nova, com contador `revision` separado de `profileVersion`; a rota v1 continua com última gravação vence.
 11. **Histórico de perguntas de IA:** log pessoal da conta, sem `workspace_id`, com a retenção atual de 90 dias e fora do backfill.
+12. **Forma da troca no corte:** por flag em runtime, com um deploy preparatório que leva schema e adaptadores com a flag desligada. A virada é atômica e sem reinício; o rollback de aplicação é desligar a flag. `FEATURE_JOURNEYS`, lida do ambiente e dependente de reinício, não serve sozinha para o corte.
 
 Nenhuma dessas decisões autoriza a Fase 1, a criação de migrações ou qualquer mudança em produção.
 
