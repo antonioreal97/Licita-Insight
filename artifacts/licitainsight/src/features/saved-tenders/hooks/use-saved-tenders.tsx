@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError, type SavedTenderIdsResponse } from '@/api';
+import { isMaintenance } from '@/api/maintenance';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
 import { useSession } from '@/features/auth/hooks/use-session';
@@ -83,6 +84,8 @@ function useImportLegacySaved(entitled: boolean) {
       (error) => {
         // The key stays: the next page load tries again.
         console.error('[saved-tenders] Falha ao importar os editais salvos neste navegador.', error);
+        // Nobody asked for this import: during the cutover window it just waits for the next load.
+        if (isMaintenance(error)) return;
         toast({ variant: 'destructive', title: 'Não foi possível trazer os editais salvos neste navegador', description: errorDescription(error) });
       },
     );
@@ -124,8 +127,8 @@ export function useSavedTenders() {
     onError: (error, change, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.previous);
       console.error('[saved-tenders] Falha ao atualizar edital salvo.', error);
-      // 401 is announced once, globally ("Sua sessão expirou").
-      if (isApiError(error) && error.status === 401) return;
+      // 401 ("Sua sessão expirou") and the maintenance window are announced once, globally.
+      if ((isApiError(error) && error.status === 401) || isMaintenance(error)) return;
       const title = !change.save
         ? 'Não foi possível remover o edital'
         : change.monitored === undefined

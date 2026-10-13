@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isApiError, type SavedTender, type SavedTenderIdsResponse, type SaveTenderBody } from '@/api';
+import { isMaintenance } from '@/api/maintenance';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
 import { useRequireEntitled } from '@/features/billing/hooks/use-billing';
@@ -109,8 +110,8 @@ export function useUpdateParticipation() {
       if (context?.detail) queryClient.setQueryData(queryKeys.me.savedTenders.detail(change.tenderId), context.detail);
       if (context?.ids) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.ids);
       console.error('[participation] Falha ao atualizar a participação.', error);
-      // 401 is announced once, globally ("Sua sessão expirou").
-      if (isApiError(error) && error.status === 401) return;
+      // 401 ("Sua sessão expirou") and the maintenance window are announced once, globally.
+      if ((isApiError(error) && error.status === 401) || isMaintenance(error)) return;
       toast({ variant: 'destructive', title: errorTitle(change), description: errorDescription(error) });
     },
     onSuccess: (data, change) => {

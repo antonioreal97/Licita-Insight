@@ -22,8 +22,12 @@ export class ApiError extends Error {
     return this.details.find((d) => d.issue === issue);
   }
 
-  /** Errors worth retrying automatically (transient on the server or network). */
+  /**
+   * Errors worth retrying automatically (transient on the server or network). Maintenance is a 503 too, but the API
+   * asks to wait (`Retry-After`): the person tries again, the app does not.
+   */
   get isTransient() {
+    if (this.code === 'MAINTENANCE_IN_PROGRESS') return false;
     return this.code === 'NETWORK_ERROR' || this.code === 'SEARCH_UNAVAILABLE' || this.code === 'RATE_LIMITED' || this.code === 'SERVICE_OVERLOADED' || this.status >= 500;
   }
 

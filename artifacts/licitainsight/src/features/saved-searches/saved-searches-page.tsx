@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowRight, BookmarkPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { isApiError, type SavedSearch } from '@/api';
+import { isMaintenance, MAINTENANCE_MESSAGE } from '@/api/maintenance';
 import { Button, buttonClass } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState } from '@/components/common/query-states';
@@ -17,6 +18,7 @@ import { searchParamsFromUrl } from '@/services/search-service';
 import { useDeleteSavedSearch, useMarkSavedSearchSeen, useRestoreSavedSearch, useSavedSearches, useUpdateSavedSearch } from './hooks/use-saved-searches';
 
 function errorDescription(error: unknown) {
+  if (isMaintenance(error)) return MAINTENANCE_MESSAGE;
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas.';
   if (isApiError(error) && error.code === 'INVALID_PARAMETER') return 'Use um nome de 1 a 80 caracteres.';
   if (isApiError(error) && error.code === 'NETWORK_ERROR') return 'Sem conexão com o servidor. Tente de novo.';
@@ -78,6 +80,8 @@ export default function SavedSearchesPage() {
                 restore.mutate(search.id, {
                   onError: (error) => {
                     console.error('[saved-searches] Falha ao desfazer exclusão.', error);
+                    // The maintenance window is announced once, globally.
+                    if (isMaintenance(error)) return;
                     toast({ variant: 'destructive', ...restoreErrorToast(error) });
                   },
                 })
@@ -208,6 +212,8 @@ function SavedSearchRow({ search, highlighted, onDelete }: { search: SavedSearch
       {
         onError: (error) => {
           console.error('[saved-searches] Falha ao alterar alertas.', error);
+          // The maintenance window is announced once, globally.
+          if (isMaintenance(error)) return;
           toast({
             variant: 'destructive',
             title: alertsEnabled ? 'Não foi possível ligar os alertas' : 'Não foi possível desligar os alertas',

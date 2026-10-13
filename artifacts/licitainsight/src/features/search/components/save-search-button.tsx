@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { isApiError } from '@/api';
+import { isMaintenance, MAINTENANCE_MESSAGE } from '@/api/maintenance';
 import { Button } from '@/components/common/action-button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +19,7 @@ import { SearchSummary } from './search-summary';
 const NAME_MAX = 80;
 
 function saveErrorMessage(error: unknown) {
+  if (isMaintenance(error)) return MAINTENANCE_MESSAGE;
   if (isApiError(error) && error.code === 'SUBSCRIPTION_REQUIRED') return 'Assine para salvar e acompanhar editais.';
   if (isApiError(error) && error.code === 'CONFLICT') return 'Você atingiu o limite de 50 buscas salvas. Exclua uma em Buscas salvas e tente de novo.';
   if (isApiError(error) && error.code === 'INVALID_PARAMETER')

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Redirect, useSearch } from 'wouter';
 import { CircleAlert, LockKeyhole } from 'lucide-react';
+import { MAINTENANCE_TITLE } from '@/api/maintenance';
 import { BrandLogo } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
@@ -29,6 +30,8 @@ const errorCopy: Record<string, { title: string; detail: string }> = {
     detail: 'Login com Google ainda não está configurado neste ambiente. Fale com o administrador.',
   },
   oauth_failed: { title: 'Não foi possível entrar com o Google', detail: 'Houve uma falha ao concluir o login. Tente novamente em instantes.' },
+  // A new account met the cutover window (workspace-cutover-v1): nothing was created, and trying again later works.
+  maintenance: { title: MAINTENANCE_TITLE, detail: 'Ainda não foi possível criar sua conta. Tente de novo em alguns minutos.' },
 };
 const unknownError = { title: 'Não foi possível entrar', detail: 'Ocorreu um erro inesperado no login. Tente novamente.' };
 

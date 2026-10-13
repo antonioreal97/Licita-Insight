@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { isMaintenance, MAINTENANCE_MESSAGE } from '@/api/maintenance';
 import { Button } from '@/components/common/action-button';
 import { Switch } from '@/components/ui/switch';
 import { useDeleteRecommendationHistory, useRecommendationPreferences, useUpdateRecommendationPreferences } from '../hooks/use-recommendations';
@@ -65,7 +66,7 @@ export function RecommendationPreferencesSection() {
       </div>
       {(preferences.isError || update.isError || clear.isError) && (
         <p role="alert" className="mt-3 type-meta text-destructive-subtle-foreground">
-          Não foi possível atualizar a preferência. Tente novamente.
+          {isMaintenance(update.error) || isMaintenance(clear.error) ? MAINTENANCE_MESSAGE : 'Não foi possível atualizar a preferência. Tente novamente.'}
         </p>
       )}
     </section>

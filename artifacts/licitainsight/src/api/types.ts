@@ -318,7 +318,9 @@ export type ApiErrorCode =
   // scale-protection-v1: overload protection (all transient, retryable)
   | 'SERVICE_OVERLOADED'
   | 'REQUEST_TIMEOUT'
-  | 'PAYLOAD_TOO_LARGE';
+  | 'PAYLOAD_TOO_LARGE'
+  // workspace-cutover-v1: writes only, during the cutover window (comes with `Retry-After`)
+  | 'MAINTENANCE_IN_PROGRESS';
 
 export type ApiErrorBody = {
   error: {

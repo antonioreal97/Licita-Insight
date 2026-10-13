@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { BellOff, CheckCheck, Target } from 'lucide-react';
 import { isApiError, type Notification } from '@/api';
+import { isMaintenance } from '@/api/maintenance';
 import { Button } from '@/components/common/action-button';
 import { EmptyState } from '@/components/common/empty-state';
 import { PageTitle } from '@/components/common/page-title';
@@ -45,6 +46,8 @@ function NotificationsSection() {
 
   const reportMarkError = (error: unknown) => {
     console.error('[monitoring] Falha ao marcar notificações como lidas.', error);
+    // The maintenance window is announced once, globally.
+    if (isMaintenance(error)) return;
     toast({
       variant: 'destructive',
       title: 'Não foi possível marcar como lida',
