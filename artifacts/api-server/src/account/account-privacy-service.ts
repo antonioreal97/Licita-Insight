@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, getTableColumns, inArray } from "drizzle-orm";
 import {
   aiAskRequestsTable,
   aiDailyTendersTable,
@@ -52,6 +52,12 @@ export const ACCOUNT_EXPORT_TABLES = {
   user_recommendations: "recommendations",
   ai_jobs: "aiJobs",
 } as const;
+
+// The export keeps its current shape until it covers workspaces; `workspace_id` stays out of it until then.
+const { workspaceId: _eventWorkspace, ...recommendationEventColumns } = getTableColumns(recommendationEventsTable);
+const { workspaceId: _dismissalWorkspace, ...recommendationDismissalColumns } = getTableColumns(recommendationDismissalsTable);
+const { workspaceId: _interestWorkspace, ...recommendationInterestColumns } = getTableColumns(recommendationInterestProfilesTable);
+const { workspaceId: _recommendationWorkspace, ...userRecommendationColumns } = getTableColumns(userRecommendationsTable);
 
 export async function exportAccountData(userId: string, now = new Date()) {
   const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
@@ -225,10 +231,10 @@ export async function exportAccountData(userId: string, now = new Date()) {
         checkedAt: companyTenderFitsTable.checkedAt,
       }).from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId)),
       db.select().from(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId)),
-      db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId)),
-      db.select().from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId)),
-      db.select().from(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId)).limit(1),
-      db.select().from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId)),
+      db.select(recommendationEventColumns).from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId)),
+      db.select(recommendationDismissalColumns).from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId)),
+      db.select(recommendationInterestColumns).from(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId)).limit(1),
+      db.select(userRecommendationColumns).from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId)),
     ]);
 
   const user = users[0];
