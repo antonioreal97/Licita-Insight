@@ -1,6 +1,6 @@
 # Perfis e experiências de Espaços v1 — rascunho
 
-Status: rascunho da Fase 0; sem persistência ou rota ativa  
+Status: rascunho da Fase 0; sem persistência ou rota ativa
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 O contrato executável está em `@workspace/api-zod/hub`, nos módulos `workspace-profiles.ts` e `experience-registry.ts`. Ele não é gerado pelo OpenAPI e não é importado pela aplicação em produção nesta fase.

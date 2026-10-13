@@ -1,6 +1,6 @@
 # Baseline do funil atual — hub adaptativo
 
-Status: especificação e consultas; nenhuma consulta executada em produção  
+Status: especificação e consultas; nenhuma consulta executada em produção
 Plano de referência: [hub adaptativo](./hub-adaptativo-2026-10-12.md)
 
 ## Objetivo e janela

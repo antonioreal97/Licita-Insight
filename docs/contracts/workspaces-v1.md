@@ -1,6 +1,6 @@
 # API de Espaços v1 — rascunho
 
-Status: somente contrato; nenhuma rota, tabela ou migração implementada  
+Status: somente contrato; nenhuma rota, tabela ou migração implementada
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 Todas as rotas usam a sessão atual no cookie HttpOnly `licita_session`. Nenhuma aceita token de sessão ou perfil em `localStorage`. Escritas mantêm a proteção CSRF atual (`X-Requested-With`) e são `Cache-Control: no-store`.

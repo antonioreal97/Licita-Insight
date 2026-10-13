@@ -1,6 +1,6 @@
 # Catálogo de oportunidades v2 — rascunho
 
-Status: contrato da Fase 0; sem tabela, backfill ou rota v2  
+Status: contrato da Fase 0; sem tabela, backfill ou rota v2
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 O schema e os mapeadores puros ficam em `@workspace/api-zod/hub/opportunity-catalog`. O OpenAPI e seus arquivos gerados não foram alterados.

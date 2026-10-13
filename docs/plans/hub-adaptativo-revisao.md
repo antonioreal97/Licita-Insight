@@ -1,6 +1,6 @@
 # Revisão aprovada — hub adaptativo de oportunidades
 
-Data: 12 out. 2026  
+Data: 12 out. 2026
 Status: **ajustes e decisões aprovados pelo dono em 12/10/2026**
 
 Este documento complementa, sem alterar, o [plano técnico original](./hub-adaptativo-2026-10-12.md). Aprovação de arquitetura não autoriza iniciar a Fase 1, criar/aplicar migração ou ativar mudança visível.

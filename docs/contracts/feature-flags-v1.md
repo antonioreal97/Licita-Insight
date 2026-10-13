@@ -1,6 +1,6 @@
 # Feature flags de jornadas v1
 
-Status: contrato ativo da Fase 0; nenhuma jornada consumida pela UI  
+Status: contrato ativo da Fase 0; nenhuma jornada consumida pela UI
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 ## Configuração

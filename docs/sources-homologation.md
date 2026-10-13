@@ -1,6 +1,6 @@
 # Homologação de fontes de oportunidades
 
-Status: checklist verificável da Fase 0  
+Status: checklist verificável da Fase 0
 Plano de referência: [hub adaptativo](./plans/hub-adaptativo-2026-10-12.md)
 
 Este documento registra apenas evidência encontrada no código e na documentação local. “A verificar” significa que a fonte não pode ser considerada aprovada naquele item, ainda que o coletor exista.
