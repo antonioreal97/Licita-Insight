@@ -1,6 +1,7 @@
 # Hub adaptativo — revisão de compatibilidade de `workspace_id`
 
-Status: revisão de impacto para uma futura Fase 1. Este documento não autoriza nem contém migração, backfill ou mudança de rota.
+Data de atualização: 13 out. 2026
+Status: revisão de impacto consolidada para uma futura Fase 1. Este documento não autoriza nem contém migração, backfill ou mudança de rota.
 
 Referências: [plano técnico](./hub-adaptativo-2026-10-12.md), [decisões aprovadas](./hub-adaptativo-revisao.md), [contrato de Espaços](../contracts/workspaces-v1.md) e schemas atuais em `lib/db/src/schema/`.
 
@@ -10,22 +11,24 @@ Referências: [plano técnico](./hub-adaptativo-2026-10-12.md), [decisões aprov
 - Haverá um Espaço por objetivo; “Explorar tudo” continua universal e fora dos Espaços.
 - Catálogo é único. Um item pode aparecer no catálogo universal e no Espaço de Compras sem duplicação da oportunidade.
 - A migração inicial será um backfill único, seguido por adaptadores nas rotas v1; não haverá escrita dupla.
-- Conta gratuita terá um Espaço; teste ou assinatura, até cinco. Expiração não apaga Espaços excedentes. A regra exata de leitura/reativação desses Espaços ainda requer decisão operacional.
+- Conta gratuita terá um Espaço; teste ou assinatura, até cinco. Na expiração, nenhum dado é apagado: o Espaço não arquivado de menor slot permanece gravável e os excedentes ficam somente leitura, ainda listáveis, selecionáveis, consultáveis e exportáveis.
+- `workspace_members` entra na Fase 1 somente com a associação `owner`. Convites, demais papéis, equipes, gerenciamento de membros e colaboração ficam na Fase 6.
 - Assinatura, sessão e identidade continuam na conta. Salvos, buscas salvas, monitoramento, alertas e personalização passam a ter contexto de Espaço.
 
 ## Regra de autorização
 
-Toda operação autenticada com recurso de Espaço deve executar `requireWorkspaceMember(userId, workspaceId)` antes de consultar, alterar ou revelar se o recurso existe. O filtro de persistência deve conter simultaneamente o identificador do recurso e `workspace_id`; verificar a associação e depois consultar apenas pelo `id` mantém risco de IDOR e não é suficiente.
+Toda operação autenticada com recurso de Espaço deve executar `requireWorkspaceMember(userId, workspaceId)` antes de consultar, alterar ou revelar se o recurso existe. Na Fase 1, essa regra é satisfeita somente por uma associação `owner`; o nome é preservado para a ampliação de papéis na Fase 6. O filtro de persistência deve conter simultaneamente o identificador do recurso e `workspace_id`; verificar a associação e depois consultar apenas pelo `id` mantém risco de IDOR e não é suficiente.
 
 Ordem recomendada para mutações pagas:
 
 1. validar sessão pelo cookie HttpOnly `licita_session`;
 2. resolver o Espaço explícito ou, apenas no adaptador v1, o Espaço padrão;
 3. exigir associação ao Espaço;
-4. exigir assinatura para salvar, monitorar ou alertar;
-5. executar a consulta sempre limitada por `workspace_id`.
+4. calcular `accessMode` pelo entitlement e slot; rejeitar mutações em Espaço somente leitura;
+5. exigir assinatura para salvar, monitorar ou alertar;
+6. executar a consulta sempre limitada por `workspace_id`.
 
-Erros devem ser indistinguíveis entre Espaço inexistente e Espaço de terceiro (`404 WORKSPACE_NOT_FOUND`). Limite de plano usa `403 WORKSPACE_LIMIT_REACHED`; gate de assinatura existente continua `402 SUBSCRIPTION_REQUIRED`.
+Erros devem ser indistinguíveis entre Espaço inexistente e Espaço de terceiro (`404 WORKSPACE_NOT_FOUND`). Criação acima do limite usa HTTP `402` com `WORKSPACE_LIMIT_REACHED`; mutação em excedente usa HTTP `402` com `WORKSPACE_READ_ONLY`; o gate de assinatura existente continua `402 SUBSCRIPTION_REQUIRED` para ações premium.
 
 ## Inventário de persistência
 
@@ -70,14 +73,14 @@ O backfill preserva `saved_at`, monitoramento, etapa, protocolo, checklist, hist
 
 ### IA e jobs
 
-| Estrutura atual                                                                                           | Escopo futuro           | Compatibilidade                                                                                                                   |
-| --------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `tender_ai_indexes`, `tender_ai_documents`, `tender_ai_passages`, `tender_ai_answers`, `tender_ai_sheets` | catálogo/global         | não adicionar `workspace_id`; conteúdo público e indexação são compartilháveis                                                    |
-| `ai_daily_usage`, `ai_daily_tenders`, `ai_sheet_daily_usage`                                              | quota de conta          | manter por `user_id`; o limite comercial não multiplica por Espaço                                                                |
-| `ai_ask_requests`                                                                                         | histórico/cache pessoal | incluir `workspace_id` se o histórico for exibido ou reutilizado no contexto do Espaço; cache público por hash continua global    | adaptar chave de cache pessoal e retenção; pergunta bruta nunca entra em analytics |
-| `company_tender_fits`                                                                                     | resultado personalizado | obrigatório `workspace_id`                                                                                                        | versão do perfil sozinha não identifica o Espaço                                   |
-| `ai_jobs`                                                                                                 | misto                   | jobs globais (`index`, OCR, ficha e título) permanecem sem Espaço; job `fit` recebe e valida `workspace_id` no registro e payload | dedupe de `fit` inclui Espaço; worker revalida associação antes de persistir       |
-| `job_run_audit`                                                                                           | operacional/global      | nenhuma mudança                                                                                                                   | não registrar PII nem termos                                                       |
+| Estrutura atual                                                                                           | Escopo futuro           | Compatibilidade                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tender_ai_indexes`, `tender_ai_documents`, `tender_ai_passages`, `tender_ai_answers`, `tender_ai_sheets` | catálogo/global         | não adicionar `workspace_id`; conteúdo público e indexação são compartilháveis                                                                                   |
+| `ai_daily_usage`, `ai_daily_tenders`, `ai_sheet_daily_usage`                                              | quota de conta          | manter por `user_id`; o limite comercial não multiplica por Espaço                                                                                               |
+| `ai_ask_requests`                                                                                         | histórico/cache pessoal | nenhuma: permanece log pessoal da conta, sem `workspace_id` e fora do backfill (decisão de 13/10/2026); retenção de 90 dias e cache público por hash inalterados | excluir um Espaço não toca nesse log; pergunta bruta nunca entra em analytics |
+| `company_tender_fits`                                                                                     | resultado personalizado | obrigatório `workspace_id`                                                                                                                                       | versão do perfil sozinha não identifica o Espaço                              |
+| `ai_jobs`                                                                                                 | misto                   | jobs globais (`index`, OCR, ficha e título) permanecem sem Espaço; job `fit` recebe e valida `workspace_id` no registro e payload                                | dedupe de `fit` inclui Espaço; worker revalida associação antes de persistir  |
+| `job_run_audit`                                                                                           | operacional/global      | nenhuma mudança                                                                                                                                                  | não registrar PII nem termos                                                  |
 
 ## Rotas e adaptadores v1
 
@@ -132,10 +135,15 @@ Casos que precisam de tratamento explícito:
 - retries de e-mail/job em andamento com dedupe antigo;
 - trial/assinatura expirando durante a operação;
 - conta gratuita que, por erro ou retry, receba mais de um Espaço;
-- convite pendente para e-mail que já é dono de outro Espaço;
 - oportunidade internacional com `scope = 'international'`: domínio aprovado `procurement` para Banco Mundial, preservando país, fonte e regra de elegibilidade como dimensões distintas.
 
 Validações quantitativas mínimas: usuários = Espaços padrão = memberships `owner`; linhas atribuídas antes/depois iguais; zero `workspace_id` nulo nas tabelas convertidas; zero recurso cujo usuário não seja membro; zero colisão de chave; amostra reversível de mapeamento do perfil.
+
+### Janela de corte
+
+O corte aceita uma janela curta de manutenção. Somente as mutações nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis. Jobs que escrevem nesses conjuntos são drenados ou pausados, o delta após os marcos é aplicado e as invariantes são validadas antes da troca.
+
+Os parâmetros iniciais da janela, os gatilhos de aborto, a lista de rotinas a drenar e as condições do ensaio foram aprovados em 13/10/2026 e estão na seção [Janela de corte](./hub-adaptativo-roadmap-v2.md#janela-de-corte) do roadmap. Os valores finais são confirmados pelo dono depois do ensaio com volume real, que ele executa no servidor. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não é introduzida como atalho.
 
 ## Cache, links e clientes
 
@@ -148,30 +156,38 @@ Validações quantitativas mínimas: usuários = Espaços padrão = memberships 
 
 ## LGPD e cobrança
 
-Exportação de dados deve identificar o Espaço de cada dado contextual e incluir memberships/invites. Exclusão da conta remove todos os Espaços de propriedade exclusiva ou aplica a política definida para Espaços compartilhados; exclusão de um Espaço não pode apagar a conta nem caches globais do catálogo. Logs e métricas usam IDs técnicos e não registram respostas de perfil, termos, e-mail ou nome.
+Exportação de dados deve identificar o Espaço de cada dado contextual e incluir memberships `owner`. Convites e dados colaborativos só passam a integrar exportação/exclusão na Fase 6. Exclusão da conta remove todos os Espaços de propriedade exclusiva; exclusão de um Espaço não pode apagar a conta nem caches globais do catálogo. Logs e métricas usam IDs técnicos e não registram respostas de perfil, termos, e-mail ou nome.
 
-Billing permanece por conta. O limite de criação consulta entitlement no servidor; o webhook Asaas nunca recebe nem deriva `workspace_id`. Antes de qualquer mudança nos gates (Fase 3), checkout, confirmação por webhook, cancelamento, atraso, cupom, trial e retomada precisam ser homologados ponta a ponta. Na expiração, Espaços excedentes são preservados; quais ficam graváveis/selecionáveis será decidido antes da Fase 1 entrar em produção.
+Billing permanece por conta. O limite de criação e o `accessMode` consultam entitlement no servidor; o webhook Asaas nunca recebe nem deriva `workspace_id`. Antes de ativar a Fase 1, checkout, confirmação por webhook, cancelamento, atraso, cupom, trial e retomada precisam ser homologados ponta a ponta. Isso não autoriza mudar gates atuais. Na expiração, o menor slot não arquivado permanece gravável e os excedentes ficam somente leitura; a UI informa antes da expiração qual continuará editável.
 
 ## Matriz mínima de aceitação da futura Fase 1
 
-| Cenário                                          | Resultado esperado                                         |
-| ------------------------------------------------ | ---------------------------------------------------------- |
-| membro consulta seu Espaço                       | `200`, somente dados daquele Espaço                        |
-| usuário autenticado usa UUID de terceiro         | `404`, sem diferença entre inexistente e proibido          |
-| recurso pertence a outro Espaço do mesmo usuário | não é lido nem alterado                                    |
-| owner remove membro durante request/job          | próxima autorização falha; job não persiste resultado      |
-| usuário grátis cria segundo Espaço               | `403 WORKSPACE_LIMIT_REACHED`                              |
-| assinatura expira com cinco Espaços              | nenhum dado é apagado; regra aprovada de acesso é aplicada |
-| adaptador v1 após backfill                       | mesmo contrato e recursos no Espaço padrão                 |
-| mesmo item salvo em dois Espaços                 | estados de acompanhamento independentes                    |
-| busca/alerta/recomendação                        | sinais e resultados não atravessam Espaços                 |
-| exportação/exclusão                              | cobre todos os dados contextuais e mantém catálogo global  |
-| cache/link de e-mail manipulado                  | associação é revalidada e nenhum dado vaza                 |
-| job em retry                                     | conserva `workspace_id` e dedupe corretos                  |
+| Cenário                                          | Resultado esperado                                        |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| owner consulta seu Espaço                        | `200`, somente dados daquele Espaço                       |
+| usuário autenticado usa UUID de terceiro         | `404`, sem diferença entre inexistente e proibido         |
+| recurso pertence a outro Espaço do mesmo usuário | não é lido nem alterado                                   |
+| membership `owner` falta durante request/job     | próxima autorização falha; job não persiste resultado     |
+| usuário grátis cria segundo Espaço               | `402 WORKSPACE_LIMIT_REACHED`                             |
+| assinatura expira com cinco Espaços              | menor slot gravável; demais legíveis e somente leitura    |
+| usuário seleciona Espaço somente leitura         | seleção e leitura permitidas; mutação dá `402`            |
+| adaptador v1 após backfill                       | mesmo contrato e recursos no Espaço padrão                |
+| mesmo item salvo em dois Espaços                 | estados de acompanhamento independentes                   |
+| busca/alerta/recomendação                        | sinais e resultados não atravessam Espaços                |
+| exportação/exclusão                              | cobre todos os dados contextuais e mantém catálogo global |
+| cache/link de e-mail manipulado                  | associação é revalidada e nenhum dado vaza                |
+| job em retry                                     | conserva `workspace_id` e dedupe corretos                 |
+
+## Decisões de 13/10/2026 que afetam a compatibilidade
+
+- **Espaço ativo:** a preferência referencia o Espaço com `ON DELETE SET NULL` e guarda a última seleção por Espaço. Preferência inválida é resolvida na leitura, sem gravar, pela ordem do [contrato](../contracts/workspaces-v1.md#resolução-do-espaço-ativo). O backfill grava o Espaço padrão como ativo e como última seleção.
+- **Perfil:** `workspace_profiles` ganha o contador `revision`, separado de `profileVersion`. O backfill inicia `revision` de forma determinística a partir do perfil convertido; a rota v1 de perfil continua sem checagem de conflito e também incrementa `revision`, para que a rota nova perceba gravações feitas pelo adaptador.
+- **Busca:** `workspaceId` na busca nunca muda a resposta para quem não é membro e sempre desliga o cache público; a busca v1 sem o parâmetro segue idêntica.
+- **Onboarding:** os estados permanecem `not_started | in_progress | complete`. Perfis convertidos pelo backfill ficam `complete` quando têm palavras-chave e região, e `in_progress` quando falta um dos dois.
+- **Perguntas de IA:** `ai_ask_requests` e as cotas de IA permanecem na conta; nenhuma coluna, índice ou job dessa área muda na Fase 1.
 
 ## Pontos ainda a decidir pelo dono
 
-- regra de leitura, seleção e reativação dos Espaços excedentes após fim de trial/assinatura;
-- política de transferência/exclusão de Espaço com mais de um membro;
-- se histórico de perguntas de IA será um artefato visível do Espaço ou somente log pessoal sujeito à retenção;
-- duração e UX de convites, sem impacto no contrato de autorização.
+- valores finais da janela de corte (duração máxima e ponto de não retorno), depois do ensaio com volume real;
+- mecanismo da flag de corte em runtime (a forma da troca já está decidida: por flag, sem reinício, com deploy preparatório);
+- política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6.
