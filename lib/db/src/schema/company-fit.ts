@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { usersTable } from "./accounts";
 import { tendersTable } from "./tenders";
+import { workspacesTable } from "./workspaces";
 
 export type CompanyCoverageScope = "national" | "states" | "custom";
 export type CompanyCoverageMode = "strict" | "prioritize";
@@ -208,6 +209,7 @@ export const companyTenderFitsTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     uniqueIndex("company_tender_fits_cache_uidx").on(
@@ -221,6 +223,16 @@ export const companyTenderFitsTable = pgTable(
       table.userId,
       table.checkedAt,
     ),
+    index("company_tender_fits_workspace_idx").on(table.workspaceId, table.checkedAt),
+    uniqueIndex("company_tender_fits_workspace_cache_uidx")
+      .on(
+        table.workspaceId,
+        table.profileVersion,
+        table.tenderId,
+        table.requestedModel,
+        table.promptVersion,
+      )
+      .where(sql`${table.workspaceId} is not null`),
     check(
       "company_tender_fits_status_check",
       sql`${table.status} in ('processing', 'ready', 'filtered', 'failed')`,

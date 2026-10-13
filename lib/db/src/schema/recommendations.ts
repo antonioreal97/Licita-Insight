@@ -10,10 +10,12 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { usersTable } from "./accounts";
 import { tendersTable, type TenderCategory } from "./tenders";
+import { workspacesTable } from "./workspaces";
 
 export type RecommendationReason = {
   kind:
@@ -77,6 +79,7 @@ export const recommendationEventsTable = pgTable(
     occurredAt: timestamp("occurred_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     check(
@@ -93,6 +96,7 @@ export const recommendationEventsTable = pgTable(
       table.occurredAt,
     ),
     index("recommendation_events_retention_idx").on(table.occurredAt),
+    index("recommendation_events_workspace_time_idx").on(table.workspaceId, table.occurredAt),
   ],
 );
 
@@ -116,12 +120,17 @@ export const recommendationDismissalsTable = pgTable(
     dismissedAt: timestamp("dismissed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.tenderId] }),
     index("recommendation_dismissals_user_time_idx").on(
       table.userId,
       table.dismissedAt,
+    ),
+    uniqueIndex("recommendation_dismissals_workspace_tender_uidx").on(
+      table.workspaceId,
+      table.tenderId,
     ),
   ],
 );
@@ -137,7 +146,11 @@ export const recommendationInterestProfilesTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
+  (table) => [
+    uniqueIndex("recommendation_interest_profiles_workspace_uidx").on(table.workspaceId),
+  ],
 );
 
 export const userRecommendationsTable = pgTable(
@@ -158,6 +171,7 @@ export const userRecommendationsTable = pgTable(
     generatedAt: timestamp("generated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.tenderId] }),
@@ -166,6 +180,11 @@ export const userRecommendationsTable = pgTable(
       sql`${table.rank} between 1 and 50`,
     ),
     index("user_recommendations_user_rank_idx").on(table.userId, table.rank),
+    uniqueIndex("user_recommendations_workspace_tender_uidx").on(
+      table.workspaceId,
+      table.tenderId,
+    ),
+    index("user_recommendations_workspace_rank_idx").on(table.workspaceId, table.rank),
   ],
 );
 

@@ -8,3 +8,4 @@ export * from "./recommendations";
 export * from "./tenders";
 export * from "./title-examples";
 export * from "./transparency";
+export * from "./workspaces";

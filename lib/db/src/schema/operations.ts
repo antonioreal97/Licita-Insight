@@ -12,6 +12,7 @@ import {
 import { sql } from "drizzle-orm";
 import { usersTable } from "./accounts";
 import { tendersTable } from "./tenders";
+import { workspacesTable } from "./workspaces";
 
 export type AiJobKind = "index" | "document_ocr" | "fit" | "sheet" | "sheet_summary" | "title_rewrite";
 export type AiJobLane = "interactive" | "batch";
@@ -48,9 +49,17 @@ export const aiJobsTable = pgTable(
       .defaultNow(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
+    /** Only `fit` jobs are personal; index, OCR, sheet and title jobs stay global and null. */
+    workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "set null" }),
   },
   (table) => [
     uniqueIndex("ai_jobs_dedupe_uidx").on(table.dedupeKey),
+    index("ai_jobs_workspace_created_idx")
+      .on(table.workspaceId, table.createdAt)
+      .where(sql`${table.workspaceId} is not null`),
+    uniqueIndex("ai_jobs_workspace_dedupe_uidx")
+      .on(table.workspaceId, table.dedupeKey)
+      .where(sql`${table.workspaceId} is not null`),
     index("ai_jobs_claim_idx")
       .on(table.lane, table.runAfter, table.createdAt)
       .where(sql`${table.status} = 'queued'`),
