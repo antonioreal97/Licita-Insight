@@ -189,5 +189,5 @@ Billing permanece por conta. O limite de criação e o `accessMode` consultam en
 ## Pontos ainda a decidir pelo dono
 
 - valores finais da janela de corte (duração máxima e ponto de não retorno), depois do ensaio com volume real;
-- forma da troca no corte: por flag, sem reinício, ou por deploy, aceitando interromper o job noturno de classificação naquela noite;
+- mecanismo da flag de corte em runtime (a forma da troca já está decidida: por flag, sem reinício, com deploy preparatório);
 - política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6.

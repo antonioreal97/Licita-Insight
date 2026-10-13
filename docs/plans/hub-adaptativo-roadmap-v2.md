@@ -220,6 +220,16 @@ Abortar significa soltar os locks, manter as flags desligadas, reabrir as mutaç
 
 O script de corte precisa de cronômetro com ponto de não retorno, `lock_timeout` explícito, relatório das invariantes antes da troca e um comando de aborto ensaiado.
 
+### Forma da troca
+
+Decisão do dono em 13/10/2026: **troca por flag em runtime, com um deploy preparatório**.
+
+- O deploy preparatório leva schema e adaptadores com a flag de corte **desligada**: as migrações aditivas (W1 e W2) são aplicadas manualmente pelo dono, como toda migração de produção, e a aplicação compatível sobe em seguida. Isso acontece antes e fora da janela, como um deploy comum, e não muda o comportamento.
+- A virada é atômica e sem reinício: ligar a flag faz a aplicação passar a gravar somente no modelo novo, de uma vez, em todos os processos que gravam nas tabelas do escopo.
+- O rollback de aplicação é apenas desligar a flag, enquanto as estruturas legadas continuam intactas. Rollback de dados segue sendo um procedimento separado.
+- `FEATURE_JOURNEYS` é lida do ambiente na subida e exige reinício; por isso **não serve sozinha para o corte**. A Fase 1 precisa de uma flag de corte lida em runtime, com propagação medida no ensaio. O mecanismo (onde o valor mora, como é alterado e auditado, e como API e worker o enxergam ao mesmo tempo) é definido no contrato da Fase 1 e ainda não existe.
+- As flags de jornada continuam como estão: controlam disponibilidade de produto, não o corte de dados.
+
 ### Rotinas a drenar ou pausar
 
 Além da fila de IA, a API mantém agendadores que gravam continuamente em tabelas do escopo. Todos entram na drenagem e ficam pausados até a troca ou o aborto. Lista levantada a partir de `startSchedulers` em `artifacts/api-server/src/index.ts` e conferida no código de cada rotina em 13/10/2026; deve ser refeita antes do ensaio, porque agendadores novos podem ter entrado.
@@ -237,7 +247,7 @@ Além da fila de IA, a API mantém agendadores que gravam continuamente em tabel
 | notificações de mudança de edital               | geradas pela coleta e atualização do PNCP                        | notificações de prazo, status, valor e documento; nenhuma coleta do PNCP pode estar em andamento na janela                                                      |
 | reconciliação de prazos e status                | `ingest/reconcile-tender-deadlines.ts`                           | nada no escopo: atualiza apenas `tenders` por SQL direto e não chama o serviço de notificações; não precisa ser drenada                                         |
 
-O job noturno de classificação de categorias (00:00–05:30) não grava em tabelas de usuário e não precisa ser drenado. Porém, se a troca for feita por deploy, o reinício do app o interrompe naquela noite. Esse efeito deve ser aceito explicitamente no runbook ou evitado fazendo a troca por flag, sem reinício.
+O job noturno de classificação de categorias (00:00–05:30) não grava em tabelas de usuário e não precisa ser drenado. Como a troca é feita por flag em runtime, sem reinício, ele não é interrompido pelo corte.
 
 ### Ensaio com volume real
 
@@ -256,7 +266,7 @@ O que o ensaio mede:
 4. tempo de aplicar o delta com escritas sintéticas nessa taxa durante o lote;
 5. tempo de drenagem da fila de IA e do envio de e-mails no pior caso;
 6. tempo de obter os locks e de rodar todas as conferências — os checksums são a parte mais provável de estourar;
-7. tempo da troca (flag ou deploy) e do rollback de aplicação, cada um ensaiado de verdade;
+7. tempo da troca pela flag de corte e do rollback de aplicação (desligar a flag), cada um ensaiado de verdade;
 8. tempo de restaurar o backup, que não entra na janela mas decide se o rollback de dados é viável.
 
 ## Operação, backup, validação e rollback
@@ -313,7 +323,7 @@ Rollback por categoria:
 1. **Contrato:** dono aprova a Fase 0 consolidada, o contrato owner-only e as pendências registradas.
 2. **Asaas:** checkout, retorno, webhooks autenticados/idempotentes, estados de assinatura e reconciliação são validados ponta a ponta antes de ativar a Fase 1; isso não autoriza mudar gates atuais.
 3. **Migração:** revisão de SQL, estimativa de lock, backup/restore e dry run com volume real.
-4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; depois do ensaio no servidor, o dono confirma os valores finais da janela, a lista de rotinas pausadas e a forma da troca (flag ou deploy).
+4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; a troca é por flag em runtime, com deploy preparatório; depois do ensaio no servidor, o dono confirma os valores finais da janela e a lista de rotinas pausadas.
 5. **Integridade, isolamento e reversibilidade:** as três evidências ficam verdes antes de `NOT NULL`, cutover ou liberação de mutações.
 6. **Catálogo:** proveniência, fingerprint, fontes e metas de busca aprovadas.
 7. **Artefatos/jornadas:** contratos, UX, acessibilidade, analytics, jobs e rollback de flag aprovados individualmente.
