@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
-import { pool } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { db, pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import type { GateTransaction } from "../workspaces/cutover-gate";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { incrementMetric, observeMetric } from "../metrics";
 
@@ -107,6 +109,8 @@ export type EnqueueAiJobInput = {
   maxAttempts?: number;
   /** Durable producer-owned queues (currently the paid title teacher) must never drop overflow. */
   ignoreQueueDepth?: boolean;
+  /** `fit` jobs written in `workspaces` mode; the dedupe key keeps the legacy string until W4. */
+  workspaceId?: string | null;
 };
 
 export type EnqueueAiJobResult = {
@@ -115,57 +119,44 @@ export type EnqueueAiJobResult = {
   jobId: string | null;
 };
 
-export async function enqueueAiJob(input: EnqueueAiJobInput): Promise<EnqueueAiJobResult> {
+/**
+ * Runs in its own transaction, or inside `tx` when the caller must enqueue in the same transaction as its write (the
+ * `fit` job behind the workspace cutover gate). Inside a gated transaction it must not take a second pool connection.
+ */
+export async function enqueueAiJob(input: EnqueueAiJobInput, tx?: GateTransaction): Promise<EnqueueAiJobResult> {
+  if (!tx) return db.transaction((own) => enqueueAiJob(input, own));
   const config = aiJobQueueConfig();
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`licitai:ai-queue:${input.kind}`]);
-    const existing = await client.query<{ id: string }>("select id from ai_jobs where dedupe_key = $1", [input.dedupeKey]);
-    if (existing.rows[0]) {
-      await client.query("commit");
-      return { enqueued: false, reason: "deduplicated", jobId: existing.rows[0].id };
-    }
-    if (input.enforceIndexUserRate && input.kind === "index" && input.userId) {
-      const recent = await client.query<{ count: string }>(
-        `select count(*)::text as count from ai_jobs
-         where kind = 'index' and user_id = $1 and created_at >= now() - interval '1 hour'`,
-        [input.userId],
-      );
-      if (Number(recent.rows[0]?.count ?? 0) >= config.indexPerUserPerHour) {
-        await client.query("commit");
-        incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "user_rate_limited" });
-        return { enqueued: false, reason: "user_rate_limited", jobId: null };
-      }
-    }
-    if (!input.ignoreQueueDepth) {
-      const depth = await client.query<{ count: string }>(
-        "select count(*)::text as count from ai_jobs where kind = $1 and status in ('queued', 'running')",
-        [input.kind],
-      );
-      if (Number(depth.rows[0]?.count ?? 0) >= config.maxDepth[input.kind]) {
-        await client.query("commit");
-        incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "queue_full" });
-        return { enqueued: false, reason: "queue_full", jobId: null };
-      }
-    }
-    const id = randomUUID();
-    await client.query(
-      `insert into ai_jobs
-       (id, kind, dedupe_key, tender_id, user_id, payload, lane, max_attempts)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)`,
-      [id, input.kind, input.dedupeKey, input.tenderId, input.userId ?? null,
-        JSON.stringify(input.payload), input.lane, input.maxAttempts ?? 6],
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`licitai:ai-queue:${input.kind}`}, 0))`);
+  const existing = await tx.execute<{ id: string }>(sql`select id from ai_jobs where dedupe_key = ${input.dedupeKey}`);
+  if (existing.rows[0]) return { enqueued: false, reason: "deduplicated", jobId: existing.rows[0].id };
+  if (input.enforceIndexUserRate && input.kind === "index" && input.userId) {
+    const recent = await tx.execute<{ count: string }>(
+      sql`select count(*)::text as count from ai_jobs
+       where kind = 'index' and user_id = ${input.userId} and created_at >= now() - interval '1 hour'`,
     );
-    await client.query("select pg_notify('ai_jobs', $1)", [input.kind]);
-    await client.query("commit");
-    return { enqueued: true, reason: "created", jobId: id };
-  } catch (error) {
-    await client.query("rollback").catch(() => undefined);
-    throw error;
-  } finally {
-    client.release();
+    if (Number(recent.rows[0]?.count ?? 0) >= config.indexPerUserPerHour) {
+      incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "user_rate_limited" });
+      return { enqueued: false, reason: "user_rate_limited", jobId: null };
+    }
   }
+  if (!input.ignoreQueueDepth) {
+    const depth = await tx.execute<{ count: string }>(
+      sql`select count(*)::text as count from ai_jobs where kind = ${input.kind} and status in ('queued', 'running')`,
+    );
+    if (Number(depth.rows[0]?.count ?? 0) >= config.maxDepth[input.kind]) {
+      incrementMetric("licitai_ai_job_enqueue_rejected_total", { kind: input.kind, reason: "queue_full" });
+      return { enqueued: false, reason: "queue_full", jobId: null };
+    }
+  }
+  const id = randomUUID();
+  await tx.execute(
+    sql`insert into ai_jobs
+     (id, kind, dedupe_key, tender_id, user_id, payload, lane, max_attempts, workspace_id)
+     values (${id}, ${input.kind}, ${input.dedupeKey}, ${input.tenderId}, ${input.userId ?? null},
+       ${JSON.stringify(input.payload)}::jsonb, ${input.lane}, ${input.maxAttempts ?? 6}, ${input.workspaceId ?? null})`,
+  );
+  await tx.execute(sql`select pg_notify('ai_jobs', ${input.kind})`);
+  return { enqueued: true, reason: "created", jobId: id };
 }
 
 const TITLE_PRIORITY_ORDER = `

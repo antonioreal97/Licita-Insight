@@ -35,7 +35,7 @@ test("plataforma: ingest, backfill idempotente, filtro com contagem e perfil", {
   const { companyProfilesTable, db, pool, tendersTable, usersTable } = await import("@workspace/db");
   const { eq, inArray } = await import("drizzle-orm");
   await pool.query(`create schema "${schema}"`);
-  for (const table of ["users", "tenders", "company_profiles", "company_tender_fits", "job_run_audit"]) {
+  for (const table of ["users", "tenders", "company_profiles", "company_tender_fits", "job_run_audit", "workspace_cutover_events"]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
   try {

@@ -9,6 +9,7 @@ import {
 } from "./cutover-state";
 
 export type GateTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type GateDatabase = Pick<typeof db, "transaction">;
 
 /**
  * HTTP never waits for the lock and refuses while writes are paused. A job cycle that started before the pause may
@@ -37,7 +38,7 @@ export class CutoverModeChangedError extends Error {
 export async function withCutoverGate<T>(
   caller: CutoverCaller,
   mutation: (tx: GateTransaction, state: CutoverState) => Promise<T>,
-  database: Pick<typeof db, "transaction"> = db,
+  database: GateDatabase = db,
 ): Promise<T> {
   return database.transaction(async (tx) => {
     if (caller.kind === "job") await tx.execute(sql`set local lock_timeout = '5s'`);

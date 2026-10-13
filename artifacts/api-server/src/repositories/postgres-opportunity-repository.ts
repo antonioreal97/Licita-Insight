@@ -5,6 +5,7 @@ import {
   culturalOpportunitiesTable,
   db,
   ingestRunsTable,
+  pool,
   usersTable,
   type BrazilEligibility,
   type OpportunityDeadlinePrecision,
@@ -40,8 +41,11 @@ import {
   type InternationalRegion,
 } from "../ingest/international-countries";
 import type { InternationalDetail } from "../ingest/international-draft";
+import { readCompanyProfileRow } from "../ai/company-fit-service";
 import { queryTokens } from "../domain/normalize";
 import type { OpportunityCriteria } from "../lib/opportunity-query";
+import { readCutoverState } from "../workspaces/cutover-state";
+import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 import {
   onOrAfterSaoPauloDate,
   onOrBeforeSaoPauloDate,
@@ -520,22 +524,21 @@ const profileContextFor = async (
   userId: string | undefined,
 ): Promise<ProfileContext> => {
   if (!userId) return NO_PROFILE;
-  const [[profile], [user]] = await Promise.all([
-    db
-      .select()
-      .from(companyProfilesTable)
-      .where(eq(companyProfilesTable.userId, userId))
-      .limit(1),
-    db
-      .select({ international: usersTable.showInternationalOpportunities })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1),
+  const { mode } = await readCutoverState(pool);
+  const [profile, international] = await Promise.all([
+    readCompanyProfileRow(userId, mode),
+    mode === "legacy"
+      ? db
+          .select({ international: usersTable.showInternationalOpportunities })
+          .from(usersTable)
+          .where(eq(usersTable.id, userId))
+          .limit(1)
+          .then(([user]) => user?.international === true)
+      : requireDefaultWorkspace(db, userId).then(
+          (workspace) => workspace.showInternationalOpportunities,
+        ),
   ]);
-  return {
-    profile: profile ?? null,
-    international: user?.international === true,
-  };
+  return { profile, international };
 };
 
 const countRows = async (where: SQL | undefined): Promise<number> => {

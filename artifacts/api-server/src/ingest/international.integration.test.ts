@@ -27,6 +27,7 @@ test(
       "ingest_runs",
       "company_profiles",
       "users",
+      "workspace_cutover_events",
     ]) {
       await pool.query(
         `create table "${schema}"."${table}" (like public."${table}" including all)`,

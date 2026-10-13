@@ -13,6 +13,7 @@ import {
 import {
   companyProfilesTable,
   db,
+  pool,
   recommendationDismissalsTable,
   recommendationEventsTable,
   recommendationInterestProfilesTable,
@@ -22,12 +23,17 @@ import {
   tendersTable,
   userRecommendationsTable,
   usersTable,
+  workspacesTable,
   type RecommendationInterestProfile,
   type RecommendationReason,
   type TenderCategory,
   type WeightedRecommendationValue,
 } from "@workspace/db";
+import { readCompanyProfileRow } from "../ai/company-fit-service";
 import { normalizeText, queryTokens } from "../domain/normalize";
+import { withCutoverGate, type GateDatabase } from "../workspaces/cutover-gate";
+import { readCutoverState } from "../workspaces/cutover-state";
+import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { NotFoundError } from "../lib/api-error";
 import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
@@ -260,12 +266,8 @@ export async function rebuildInterestProfile(
   now = new Date(),
 ): Promise<RecommendationInterestProfile> {
   const cutoff = new Date(now.getTime() - RETENTION_DAYS * 86_400_000);
-  const [profiles, saved, searches, events] = await Promise.all([
-    db
-      .select()
-      .from(companyProfilesTable)
-      .where(eq(companyProfilesTable.userId, userId))
-      .limit(1),
+  const [profile, saved, searches, events] = await Promise.all([
+    readCompanyProfileRow(userId),
     db
       .select({ saved: savedTendersTable, tender: tendersTable })
       .from(savedTendersTable)
@@ -291,7 +293,6 @@ export async function rebuildInterestProfile(
       )
       .orderBy(desc(recommendationEventsTable.occurredAt)),
   ]);
-  const profile = profiles[0];
   const maps = {
     terms: new Map(),
     categories: new Map(),
@@ -1024,9 +1025,14 @@ export async function getRecommendationPreferences(userId: string) {
     .where(eq(usersTable.id, userId))
     .limit(1);
   if (!user) throw new NotFoundError("Account was not found");
+  const { mode } = await readCutoverState(pool);
   return {
     personalizationEnabled: user.enabled,
-    showInternationalOpportunities: user.showInternationalOpportunities,
+    showInternationalOpportunities:
+      mode === "legacy"
+        ? user.showInternationalOpportunities
+        : (await requireDefaultWorkspace(db, userId))
+            .showInternationalOpportunities,
     updatedAt: user.updatedAt,
   };
 }
@@ -1038,28 +1044,43 @@ export async function updateRecommendationPreferences(
   now = new Date(),
   /** Left as it is when the request does not send it. */
   showInternationalOpportunities?: boolean,
+  database?: GateDatabase,
 ) {
-  const showInternational = await db.transaction(async (tx) => {
-    const [saved] = await tx
-      .update(usersTable)
-      .set({
-        recommendationPersonalizationEnabled: enabled,
-        ...(showInternationalOpportunities === undefined
-          ? {}
-          : { showInternationalOpportunities }),
-        recommendationPreferencesUpdatedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(usersTable.id, userId))
-      .returning({
-        showInternationalOpportunities: usersTable.showInternationalOpportunities,
-      });
-    if (!enabled && deleteHistory)
+  const showInternational = await withCutoverGate(
+    { kind: "http" },
+    async (tx, state) => {
+      const legacy = state.mode === "legacy";
+      const [saved] = await tx
+        .update(usersTable)
+        .set({
+          recommendationPersonalizationEnabled: enabled,
+          ...(!legacy || showInternationalOpportunities === undefined
+            ? {}
+            : { showInternationalOpportunities }),
+          recommendationPreferencesUpdatedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(usersTable.id, userId))
+        .returning({
+          showInternationalOpportunities:
+            usersTable.showInternationalOpportunities,
+        });
+      if (!enabled && deleteHistory)
+        await tx
+          .delete(recommendationEventsTable)
+          .where(eq(recommendationEventsTable.userId, userId));
+      if (legacy) return saved?.showInternationalOpportunities ?? false;
+      const workspace = await requireDefaultWorkspace(tx, userId);
+      if (showInternationalOpportunities === undefined)
+        return workspace.showInternationalOpportunities;
       await tx
-        .delete(recommendationEventsTable)
-        .where(eq(recommendationEventsTable.userId, userId));
-    return saved?.showInternationalOpportunities ?? false;
-  });
+        .update(workspacesTable)
+        .set({ showInternationalOpportunities, updatedAt: now })
+        .where(eq(workspacesTable.id, workspace.id));
+      return showInternationalOpportunities;
+    },
+    database,
+  );
   scheduleRecommendationRebuild(userId, 0);
   return {
     personalizationEnabled: enabled,
