@@ -1,5 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
-import { ApiError, NotFoundError } from "../lib/api-error";
+import { ApiError, MaintenanceInProgressError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { pgErrorCode } from "../lib/pg-error";
 
@@ -50,6 +50,9 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   }
 
   if (error instanceof ApiError) {
+    if (error instanceof MaintenanceInProgressError) {
+      res.setHeader("Retry-After", String(error.retryAfterSeconds));
+    }
     res.status(error.status).json({
       error: {
         code: error.code,

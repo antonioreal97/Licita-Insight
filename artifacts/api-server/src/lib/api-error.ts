@@ -14,7 +14,13 @@ export type ApiErrorCode =
   | "AI_UNAVAILABLE"
   | "SERVICE_OVERLOADED"
   | "REQUEST_TIMEOUT"
-  | "PAYLOAD_TOO_LARGE";
+  | "PAYLOAD_TOO_LARGE"
+  | "MAINTENANCE_IN_PROGRESS"
+  | "WORKSPACE_NOT_FOUND"
+  | "WORKSPACE_LIMIT_REACHED"
+  | "WORKSPACE_READ_ONLY"
+  | "WORKSPACE_ARCHIVED"
+  | "PROFILE_VERSION_CONFLICT";
 
 export interface ApiErrorDetail {
   field: string;
@@ -27,7 +33,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: ApiErrorCode,
     message: string,
-    readonly details?: ApiErrorDetail[],
+    readonly details?: ApiErrorDetail[] | Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -35,6 +41,8 @@ export class ApiError extends Error {
 }
 
 export class InvalidParameterError extends ApiError {
+  declare readonly details: ApiErrorDetail[];
+
   constructor(message: string, details: ApiErrorDetail[]) {
     super(400, "INVALID_PARAMETER", message, details);
   }
@@ -79,6 +87,46 @@ export class BillingUnavailableError extends ApiError {
 export class AiQuotaExceededError extends ApiError {
   constructor(message = "The daily AI question limit has been reached", details?: ApiErrorDetail[]) {
     super(429, "AI_QUOTA_EXCEEDED", message, details);
+  }
+}
+
+/** Workspace cutover pause or state change (docs/contracts/workspace-cutover-v1.md); writes only, never reads. */
+export class MaintenanceInProgressError extends ApiError {
+  readonly retryAfterSeconds = 60;
+
+  constructor() {
+    super(503, "MAINTENANCE_IN_PROGRESS", "Manutenção rápida em andamento. Tente de novo em alguns minutos.");
+  }
+}
+
+/** Same answer for a missing workspace and someone else's, so ids cannot be enumerated. */
+export class WorkspaceNotFoundError extends ApiError {
+  constructor() {
+    super(404, "WORKSPACE_NOT_FOUND", "Workspace was not found");
+  }
+}
+
+export class WorkspaceLimitReachedError extends ApiError {
+  constructor(maximum: number) {
+    super(402, "WORKSPACE_LIMIT_REACHED", `The account can have at most ${maximum} active workspaces`);
+  }
+}
+
+export class WorkspaceReadOnlyError extends ApiError {
+  constructor() {
+    super(402, "WORKSPACE_READ_ONLY", "This workspace is read-only on the current plan");
+  }
+}
+
+export class WorkspaceArchivedError extends ApiError {
+  constructor() {
+    super(409, "WORKSPACE_ARCHIVED", "This workspace is archived");
+  }
+}
+
+export class ProfileVersionConflictError extends ApiError {
+  constructor(current: { revision: number; answers: Record<string, unknown> }) {
+    super(409, "PROFILE_VERSION_CONFLICT", "The profile was changed elsewhere; reload before saving", current);
   }
 }
 
