@@ -28,14 +28,20 @@ import {
   type RecommendationReason,
   type TenderCategory,
   type WeightedRecommendationValue,
+  type WorkspaceCutoverMode,
 } from "@workspace/db";
 import { readCompanyProfileRow } from "../ai/company-fit-service";
 import { normalizeText, queryTokens } from "../domain/normalize";
-import { withCutoverGate, type GateDatabase } from "../workspaces/cutover-gate";
-import { readCutoverState } from "../workspaces/cutover-state";
+import {
+  CutoverModeChangedError,
+  withCutoverGate,
+  type GateDatabase,
+} from "../workspaces/cutover-gate";
+import { readCutoverState, type CutoverState } from "../workspaces/cutover-state";
 import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { NotFoundError } from "../lib/api-error";
+import { pgErrorCode } from "../lib/pg-error";
 import { tenderRowToDetail } from "../repositories/postgres-tender-repository";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
@@ -261,24 +267,75 @@ const addTenderSignals = (
   addWeight(maps.modalities, tender.modality, weight);
 };
 
+/**
+ * The rows the v1 recommendation routes and their rebuild act on: the user's in `legacy`; in `workspaces`, the
+ * default workspace's (never the active one), and new rows carry its id. The keys stay the legacy ones until W4.
+ * The personalization opt-in and the daily metrics stay with the account and are not scoped.
+ */
+type RecommendationScope = {
+  userId: string;
+  mode: WorkspaceCutoverMode;
+  workspaceId: string | null;
+};
+
+const recommendationScope = async (
+  executor: Pick<typeof db, "select">,
+  userId: string,
+  mode: WorkspaceCutoverMode,
+): Promise<RecommendationScope> => ({
+  userId,
+  mode,
+  workspaceId:
+    mode === "legacy"
+      ? null
+      : (await requireDefaultWorkspace(executor, userId)).id,
+});
+
+const scoped = (
+  scope: RecommendationScope,
+  table:
+    | typeof savedTendersTable
+    | typeof savedSearchesTable
+    | typeof recommendationEventsTable
+    | typeof recommendationDismissalsTable
+    | typeof userRecommendationsTable,
+) =>
+  scope.workspaceId === null
+    ? eq(table.userId, scope.userId)
+    : eq(table.workspaceId, scope.workspaceId);
+
+const stamp = (scope: RecommendationScope) =>
+  scope.workspaceId === null ? {} : { workspaceId: scope.workspaceId };
+
+/**
+ * The cutover got in the way of a rebuild: the mode changed after the cycle read its inputs, or a state change held
+ * the lock past the job's `lock_timeout`. The result is dropped and the next rebuild redoes it in the current model.
+ */
+const interruptedByCutover = (error: unknown): boolean =>
+  error instanceof CutoverModeChangedError || pgErrorCode(error) === "55P03";
+
 export async function rebuildInterestProfile(
   userId: string,
   now = new Date(),
+  cycle?: RecommendationScope,
 ): Promise<RecommendationInterestProfile> {
+  const scope =
+    cycle ??
+    (await recommendationScope(db, userId, (await readCutoverState(pool)).mode));
   const cutoff = new Date(now.getTime() - RETENTION_DAYS * 86_400_000);
   const [profile, saved, searches, events] = await Promise.all([
-    readCompanyProfileRow(userId),
+    readCompanyProfileRow(userId, scope.mode),
     db
       .select({ saved: savedTendersTable, tender: tendersTable })
       .from(savedTendersTable)
       .innerJoin(tendersTable, eq(tendersTable.id, savedTendersTable.tenderId))
-      .where(eq(savedTendersTable.userId, userId)),
+      .where(scoped(scope, savedTendersTable)),
     db
       .select({ query: savedSearchesTable.query })
       .from(savedSearchesTable)
       .where(
         and(
-          eq(savedSearchesTable.userId, userId),
+          scoped(scope, savedSearchesTable),
           isNull(savedSearchesTable.deletedAt),
         ),
       ),
@@ -287,7 +344,7 @@ export async function rebuildInterestProfile(
       .from(recommendationEventsTable)
       .where(
         and(
-          eq(recommendationEventsTable.userId, userId),
+          scoped(scope, recommendationEventsTable),
           gt(recommendationEventsTable.occurredAt, cutoff),
         ),
       )
@@ -433,13 +490,22 @@ export async function rebuildInterestProfile(
     registeredPlatforms: profile?.registeredPlatforms ?? [],
     signalCount,
   };
-  await db
-    .insert(recommendationInterestProfilesTable)
-    .values({ userId, profile: interest, signalCount, updatedAt: now })
-    .onConflictDoUpdate({
-      target: recommendationInterestProfilesTable.userId,
-      set: { profile: interest, signalCount, updatedAt: now },
-    });
+  // An upsert rewrites the row, so it also stamps the workspace; the conflict target stays the legacy key until W4.
+  const row = {
+    ...stamp(scope),
+    profile: interest,
+    signalCount,
+    updatedAt: now,
+  };
+  await withCutoverGate({ kind: "job", cycleMode: scope.mode }, (tx) =>
+    tx
+      .insert(recommendationInterestProfilesTable)
+      .values({ userId, ...row })
+      .onConflictDoUpdate({
+        target: recommendationInterestProfilesTable.userId,
+        set: row,
+      }),
+  );
   return interest;
 }
 
@@ -677,7 +743,7 @@ export function scoreRecommendation(
 
 const queryCandidates = async (
   profile: RecommendationInterestProfile,
-  userId: string,
+  scope: RecommendationScope,
   now: Date,
 ): Promise<ScoreCandidate[]> => {
   const terms = profile.terms.slice(0, 12).map((term) => term.value);
@@ -739,14 +805,14 @@ const queryCandidates = async (
       savedTendersTable,
       and(
         eq(savedTendersTable.tenderId, tendersTable.id),
-        eq(savedTendersTable.userId, userId),
+        scoped(scope, savedTendersTable),
       ),
     )
     .leftJoin(
       recommendationDismissalsTable,
       and(
         eq(recommendationDismissalsTable.tenderId, tendersTable.id),
-        eq(recommendationDismissalsTable.userId, userId),
+        scoped(scope, recommendationDismissalsTable),
       ),
     )
     .where(
@@ -788,31 +854,42 @@ const diversify = <T extends { candidate: ScoreCandidate }>(
   return [...selected, ...deferred].slice(0, RESULT_LIMIT);
 };
 
+/**
+ * One rebuild is one job cycle: it reads the cutover state when it starts, does not start while writes are paused,
+ * and writes through the gate in the mode it read. Crossing the cutover raises `CutoverModeChangedError`.
+ */
 export async function rebuildRecommendationsForUser(
   userId: string,
   now = new Date(),
+  state?: CutoverState,
 ): Promise<number> {
-  const profile = await rebuildInterestProfile(userId, now);
+  const { mode, writesPaused } = state ?? (await readCutoverState(pool));
+  if (writesPaused) return 0;
+  const scope = await recommendationScope(db, userId, mode);
+  const gate = { kind: "job", cycleMode: mode } as const;
+  const profile = await rebuildInterestProfile(userId, now, scope);
   if (
     profile.signalCount === 0 ||
     (profile.terms.length === 0 &&
       profile.categories.length === 0 &&
       profile.states.length === 0)
   ) {
-    await db
-      .delete(userRecommendationsTable)
-      .where(eq(userRecommendationsTable.userId, userId));
+    await withCutoverGate(gate, (tx) =>
+      tx
+        .delete(userRecommendationsTable)
+        .where(scoped(scope, userRecommendationsTable)),
+    );
     return 0;
   }
   const [candidates, dismissed] = await Promise.all([
-    queryCandidates(profile, userId, now),
+    queryCandidates(profile, scope, now),
     db
       .select({
         terms: recommendationDismissalsTable.terms,
         categories: recommendationDismissalsTable.categories,
       })
       .from(recommendationDismissalsTable)
-      .where(eq(recommendationDismissalsTable.userId, userId)),
+      .where(scoped(scope, recommendationDismissalsTable)),
   ]);
   const ranked = diversify(
     candidates
@@ -825,14 +902,15 @@ export async function rebuildRecommendationsForUser(
           b.score - a.score || a.candidate.id.localeCompare(b.candidate.id),
       ),
   );
-  await db.transaction(async (tx) => {
+  await withCutoverGate(gate, async (tx) => {
     await tx
       .delete(userRecommendationsTable)
-      .where(eq(userRecommendationsTable.userId, userId));
+      .where(scoped(scope, userRecommendationsTable));
     if (ranked.length)
       await tx.insert(userRecommendationsTable).values(
         ranked.map((item, index) => ({
           userId,
+          ...stamp(scope),
           tenderId: item.candidate.id,
           rank: index + 1,
           score: item.score.toFixed(5),
@@ -854,7 +932,12 @@ export function scheduleRecommendationRebuild(
   const timer = setTimeout(() => {
     pendingRebuilds.delete(userId);
     void rebuildRecommendationsForUser(userId).catch((error) =>
-      logger.error({ err: error, userId }, "Recommendation rebuild failed"),
+      interruptedByCutover(error)
+        ? logger.warn(
+            { err: error, userId },
+            "Recommendation rebuild discarded because of the cutover",
+          )
+        : logger.error({ err: error, userId }, "Recommendation rebuild failed"),
     );
   }, delayMs);
   timer.unref?.();
@@ -885,16 +968,23 @@ export async function listRecommendations(
   page: number,
   pageSize: number,
 ) {
-  let [{ total: storedTotal }] = await db
+  const state = await readCutoverState(pool);
+  const scope = await recommendationScope(db, userId, state.mode);
+  const [{ total: storedTotal }] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(userRecommendationsTable)
-    .where(eq(userRecommendationsTable.userId, userId));
+    .where(scoped(scope, userRecommendationsTable));
   if (Number(storedTotal) === 0) {
-    await rebuildRecommendationsForUser(userId);
+    // A read never fails or waits because of the cutover: without a rebuild it answers what is stored.
+    await rebuildRecommendationsForUser(userId, new Date(), state).catch(
+      (error) => {
+        if (!interruptedByCutover(error)) throw error;
+      },
+    );
   }
   const now = new Date();
   const valid = and(
-    eq(userRecommendationsTable.userId, userId),
+    scoped(scope, userRecommendationsTable),
     eq(tendersTable.status, "open"),
     gt(tendersTable.proposalDeadline, now),
     isNull(savedTendersTable.tenderId),
@@ -914,7 +1004,7 @@ export async function listRecommendations(
         savedTendersTable,
         and(
           eq(savedTendersTable.tenderId, tendersTable.id),
-          eq(savedTendersTable.userId, userId),
+          scoped(scope, savedTendersTable),
         ),
       )
       .where(valid)
@@ -932,7 +1022,7 @@ export async function listRecommendations(
         savedTendersTable,
         and(
           eq(savedTendersTable.tenderId, tendersTable.id),
-          eq(savedTendersTable.userId, userId),
+          scoped(scope, savedTendersTable),
         ),
       )
       .where(valid),
@@ -974,18 +1064,21 @@ export async function dismissRecommendation(
   userId: string,
   tenderId: string,
   now = new Date(),
+  database?: GateDatabase,
 ) {
-  const [tender] = await db
-    .select()
-    .from(tendersTable)
-    .where(eq(tendersTable.id, tenderId))
-    .limit(1);
-  if (!tender) throw new NotFoundError("Tender was not found");
-  await db.transaction(async (tx) => {
+  await withCutoverGate({ kind: "http" }, async (tx, state) => {
+    const scope = await recommendationScope(tx, userId, state.mode);
+    const [tender] = await tx
+      .select()
+      .from(tendersTable)
+      .where(eq(tendersTable.id, tenderId))
+      .limit(1);
+    if (!tender) throw new NotFoundError("Tender was not found");
     await tx
       .insert(recommendationDismissalsTable)
       .values({
         userId,
+        ...stamp(scope),
         tenderId,
         terms: normalizeSignalTerms(
           `${tender.title} ${tender.objectSummary ?? ""}`,
@@ -999,17 +1092,17 @@ export async function dismissRecommendation(
           recommendationDismissalsTable.userId,
           recommendationDismissalsTable.tenderId,
         ],
-        set: { dismissedAt: now },
+        set: { ...stamp(scope), dismissedAt: now },
       });
     await tx
       .delete(userRecommendationsTable)
       .where(
         and(
-          eq(userRecommendationsTable.userId, userId),
+          scoped(scope, userRecommendationsTable),
           eq(userRecommendationsTable.tenderId, tenderId),
         ),
       );
-  });
+  }, database);
   await incrementMetric("dismissals", 1, now);
   scheduleRecommendationRebuild(userId);
 }
@@ -1065,6 +1158,7 @@ export async function updateRecommendationPreferences(
           showInternationalOpportunities:
             usersTable.showInternationalOpportunities,
         });
+      // The opt-in belongs to the account, so turning it off erases every event of the account in both modes.
       if (!enabled && deleteHistory)
         await tx
           .delete(recommendationEventsTable)
@@ -1089,12 +1183,19 @@ export async function updateRecommendationPreferences(
   };
 }
 
+/** Like the opt-in, the history is the account's: the erasure reaches every event of the user in both modes. */
 export async function deleteRecommendationHistory(
   userId: string,
+  database?: GateDatabase,
 ): Promise<void> {
-  await db
-    .delete(recommendationEventsTable)
-    .where(eq(recommendationEventsTable.userId, userId));
+  await withCutoverGate(
+    { kind: "http" },
+    (tx) =>
+      tx
+        .delete(recommendationEventsTable)
+        .where(eq(recommendationEventsTable.userId, userId)),
+    database,
+  );
   scheduleRecommendationRebuild(userId, 0);
 }
 
@@ -1106,18 +1207,20 @@ export async function recordRecommendationEvent(
     | { type: "click" }
     | { type: "interest"; tenderId: string },
   now = new Date(),
+  database?: GateDatabase,
 ): Promise<boolean> {
   if (input.type === "click") {
     await incrementMetric("clicks", 1, now);
     return true;
   }
   if (input.type === "interest") {
-    return db.transaction(async (tx) => {
+    return withCutoverGate({ kind: "http" }, async (tx, state) => {
+      const scope = await recommendationScope(tx, userId, state.mode);
       const removed = await tx
         .delete(userRecommendationsTable)
         .where(
           and(
-            eq(userRecommendationsTable.userId, userId),
+            scoped(scope, userRecommendationsTable),
             eq(userRecommendationsTable.tenderId, input.tenderId),
           ),
         )
@@ -1135,7 +1238,7 @@ export async function recordRecommendationEvent(
           },
         });
       return true;
-    });
+    }, database);
   }
   const [user] = await db
     .select({ enabled: usersTable.recommendationPersonalizationEnabled })
@@ -1143,12 +1246,13 @@ export async function recordRecommendationEvent(
     .where(eq(usersTable.id, userId))
     .limit(1);
   if (!user?.enabled) return false;
+  let event:
+    | { type: "search"; normalizedTerms: string[] }
+    | { type: "tender_view"; tenderId: string };
   if (input.type === "search") {
     const normalizedTerms = normalizeSignalTerms(input.query);
     if (!normalizedTerms.length) return false;
-    await db
-      .insert(recommendationEventsTable)
-      .values({ userId, type: "search", normalizedTerms, occurredAt: now });
+    event = { type: "search", normalizedTerms };
   } else {
     const [tender] = await db
       .select({ id: tendersTable.id })
@@ -1156,13 +1260,18 @@ export async function recordRecommendationEvent(
       .where(eq(tendersTable.id, input.tenderId))
       .limit(1);
     if (!tender) throw new NotFoundError("Tender was not found");
-    await db.insert(recommendationEventsTable).values({
-      userId,
-      type: "tender_view",
-      tenderId: input.tenderId,
-      occurredAt: now,
-    });
+    event = { type: "tender_view", tenderId: input.tenderId };
   }
+  await withCutoverGate(
+    { kind: "http" },
+    async (tx, state) => {
+      const scope = await recommendationScope(tx, userId, state.mode);
+      await tx
+        .insert(recommendationEventsTable)
+        .values({ userId, ...stamp(scope), ...event, occurredAt: now });
+    },
+    database,
+  );
   scheduleRecommendationRebuild(userId);
   return true;
 }
@@ -1170,20 +1279,37 @@ export async function recordRecommendationEvent(
 export async function runDailyRecommendations(
   now = new Date(),
 ): Promise<{ users: number; recommendations: number; deletedEvents: number }> {
+  const state = await readCutoverState(pool);
+  if (state.writesPaused) {
+    logger.info("Daily recommendations skipped while cutover writes are paused");
+    return { users: 0, recommendations: 0, deletedEvents: 0 };
+  }
   const cutoff = new Date(now.getTime() - RETENTION_DAYS * 86_400_000);
-  const deleted = await db
-    .delete(recommendationEventsTable)
-    .where(lt(recommendationEventsTable.occurredAt, cutoff))
-    .returning({ id: recommendationEventsTable.id });
-  const users = await db.select({ id: usersTable.id }).from(usersTable);
+  let users = 0;
   let recommendations = 0;
-  for (const user of users)
-    recommendations += await rebuildRecommendationsForUser(user.id, now);
-  return {
-    users: users.length,
-    recommendations,
-    deletedEvents: deleted.length,
-  };
+  let deletedEvents = 0;
+  try {
+    const deleted = await withCutoverGate(
+      { kind: "job", cycleMode: state.mode },
+      (tx) =>
+        tx
+          .delete(recommendationEventsTable)
+          .where(lt(recommendationEventsTable.occurredAt, cutoff))
+          .returning({ id: recommendationEventsTable.id }),
+    );
+    deletedEvents = deleted.length;
+    for (const user of await db.select({ id: usersTable.id }).from(usersTable)) {
+      recommendations += await rebuildRecommendationsForUser(user.id, now, state);
+      users += 1;
+    }
+  } catch (error) {
+    if (!(error instanceof CutoverModeChangedError)) throw error;
+    logger.warn(
+      { err: error, users },
+      "Daily recommendations stopped because the cutover mode changed",
+    );
+  }
+  return { users, recommendations, deletedEvents };
 }
 
 export function startRecommendationScheduler(): () => void {

@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 import { readCutoverState, verifyWorkspaceSchema } from "./cutover-state";
+import { dropTestDatabase } from "./drop-test-database";
 
 const migrationsFolder = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -133,10 +134,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
   t.after(async () => {
     await upgraded.end();
     await concurrent.end();
-    for (const name of [upgradedName, concurrentName]) {
-      await admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1", [name]);
-      await admin.query(`drop database if exists "${name}"`);
-    }
+    for (const name of [upgradedName, concurrentName]) await dropTestDatabase(admin, name);
     await admin.end();
   });
 

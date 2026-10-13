@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
+import { dropTestDatabase } from "./drop-test-database";
 
 const migrationsFolder = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -83,8 +84,7 @@ test("v1 saved searches and notifications in legacy and workspaces modes", { ski
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
     await pool.end();
     await owner.end();
-    await admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1", [databaseName]);
-    await admin.query(`drop database if exists "${databaseName}"`);
+    await dropTestDatabase(admin, databaseName);
     await admin.end();
   });
 

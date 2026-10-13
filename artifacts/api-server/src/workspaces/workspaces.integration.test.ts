@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import express from "express";
 import pg from "pg";
+import { dropTestDatabase } from "./drop-test-database";
 
 const migrationsFolder = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -59,8 +60,7 @@ test("workspace domain and write gate with PostgreSQL", { skip: !process.env.PNC
     await restricted?.end();
     await pool.end();
     await owner.end();
-    await admin.query("select pg_terminate_backend(pid) from pg_stat_activity where datname = $1", [databaseName]);
-    await admin.query(`drop database if exists "${databaseName}"`);
+    await dropTestDatabase(admin, databaseName);
     await admin.query(`drop role if exists "${restrictedRole}"`);
     await admin.end();
   });
