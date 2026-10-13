@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { Check, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
+import { isMaintenance, MAINTENANCE_MESSAGE } from '@/api/maintenance';
 import { isApiError, type CompanyMacroregion, type CompanyProfile, type CompanyProfileInput, type CompanySize, type MunicipalityReference } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -155,6 +156,8 @@ const toInput = (draft: Draft): CompanyProfileInput => ({
 
 /** API `details[].field` ("coverage.states", "offerings[2]") → the field that shows the message. */
 function serverErrors(error: unknown): Errors {
+  // Nothing typed is lost: the form stays as it is and saving again works after the window.
+  if (isMaintenance(error)) return { form: MAINTENANCE_MESSAGE };
   if (!isApiError(error) || error.code !== 'INVALID_PARAMETER' || error.details.length === 0) {
     return {
       form:

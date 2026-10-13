@@ -1,5 +1,6 @@
 import { CircleAlert, FilterX, RefreshCw } from 'lucide-react';
 import { isApiError } from '@/api';
+import { MAINTENANCE_DETAIL, MAINTENANCE_TITLE } from '@/api/maintenance';
 import { Button } from './action-button';
 
 const bar = 'animate-pulse rounded-lg bg-muted';
@@ -60,6 +61,8 @@ function describe(error: unknown) {
       return { title: 'Sistema com muito acesso agora', detail: 'Estamos com muitos acessos ao mesmo tempo. Tente de novo em alguns segundos.' };
     case 'REQUEST_TIMEOUT':
       return { title: 'A consulta demorou demais', detail: 'Tente de novo. Se persistir, refine a busca com mais termos ou filtros.' };
+    case 'MAINTENANCE_IN_PROGRESS':
+      return { title: MAINTENANCE_TITLE, detail: MAINTENANCE_DETAIL };
     case 'PAYLOAD_TOO_LARGE':
       return { title: 'Envio grande demais', detail: 'Reduza o tamanho do que está sendo enviado e tente novamente.' };
     case 'NOT_FOUND':

@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { User } from '@/api';
+import { isMaintenance } from '@/api/maintenance';
 import { BrandLogo } from '@/components/brand-icon';
 import { Button } from '@/components/common/action-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -438,6 +439,8 @@ function NotificationPanel({ unreadCount, onClose }: { unreadCount: number; onCl
   const notifications = list.data?.data ?? [];
   const markFailed = (error: unknown) => {
     console.error('[notifications] Falha ao marcar como lida.', error);
+    // The maintenance window is announced once, globally.
+    if (isMaintenance(error)) return;
     toast({ variant: 'destructive', title: 'Não foi possível marcar como lida', description: 'Verifique a conexão e tente novamente.' });
   };
 

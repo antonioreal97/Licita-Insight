@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { isApiError } from '@/api';
+import { createMaintenanceNotifier } from '@/api/maintenance';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -42,9 +43,18 @@ const onUnauthenticated = (error: unknown) => {
   toast({ variant: 'destructive', title: 'Sua sessão expirou', description: 'Entre de novo com o Google para continuar.' });
 };
 
+// A write refused by the cutover window (503 MAINTENANCE_IN_PROGRESS) is announced here, once, for every mutation.
+// Reads are not paused, so queries never raise it; background telemetry does not go through mutations.
+const announceMaintenance = createMaintenanceNotifier(toast);
+
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: onUnauthenticated }),
-  mutationCache: new MutationCache({ onError: onUnauthenticated }),
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      onUnauthenticated(error);
+      announceMaintenance(error);
+    },
+  }),
 });
 // Account data: retry only transient failures (network, 5xx, 429). A 401/403/404 won't pass on retry.
 const retryTransient = (failureCount: number, error: unknown) => isApiError(error) && error.isTransient && failureCount < 2;
