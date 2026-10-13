@@ -9,8 +9,12 @@ import { betaAccessGrantsTable, db, usersTable } from "@workspace/db";
 const activeGrant = (now: Date) =>
   and(isNull(betaAccessGrantsTable.revokedAt), gt(betaAccessGrantsTable.accessUntil, now));
 
-export async function userHasBetaGrant(userId: string, now: Date): Promise<boolean> {
-  const [row] = await db
+export async function userHasBetaGrant(
+  userId: string,
+  now: Date,
+  executor: Pick<typeof db, "select"> = db,
+): Promise<boolean> {
+  const [row] = await executor
     .select({ email: betaAccessGrantsTable.email })
     .from(betaAccessGrantsTable)
     .innerJoin(usersTable, sql`lower(${usersTable.email}) = lower(${betaAccessGrantsTable.email})`)

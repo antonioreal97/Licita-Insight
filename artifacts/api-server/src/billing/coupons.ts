@@ -199,8 +199,12 @@ export async function redeemCoupon(userId: string, input: unknown, now = new Dat
   });
 }
 
-export async function activeCouponAccessUntil(userId: string, now = new Date()): Promise<Date | null> {
-  const [row] = await db
+export async function activeCouponAccessUntil(
+  userId: string,
+  now = new Date(),
+  executor: Pick<typeof db, "select"> = db,
+): Promise<Date | null> {
+  const [row] = await executor
     .select({ accessUntil: couponRedemptionsTable.accessUntil })
     .from(couponRedemptionsTable)
     .innerJoin(couponCodesTable, eq(couponCodesTable.id, couponRedemptionsTable.couponId))

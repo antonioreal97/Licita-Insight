@@ -22,7 +22,10 @@ import {
 } from "@workspace/db/schema";
 
 export type CutoverState = { mode: WorkspaceCutoverMode; writesPaused: boolean };
-type CutoverRow = { mode: string; writes_paused: boolean };
+export type CutoverRow = { mode: string; writes_paused: boolean };
+
+export const CUTOVER_STATE_QUERY =
+  "select mode, writes_paused from workspace_cutover_events order by id desc limit 1";
 type Queryable = Pick<Pool, "query">;
 
 const foundationTables = [
@@ -59,9 +62,7 @@ export const cutoverStateFromRow = (row: CutoverRow | undefined): CutoverState =
 
 /** Read errors propagate: the caller must never pick a mode it could not read. */
 export const readCutoverState = async (client: Queryable): Promise<CutoverState> => {
-  const { rows } = await client.query<CutoverRow>(
-    "select mode, writes_paused from workspace_cutover_events order by id desc limit 1",
-  );
+  const { rows } = await client.query<CutoverRow>(CUTOVER_STATE_QUERY);
   return cutoverStateFromRow(rows[0]);
 };
 
