@@ -73,14 +73,14 @@ O backfill preserva `saved_at`, monitoramento, etapa, protocolo, checklist, hist
 
 ### IA e jobs
 
-| Estrutura atual                                                                                           | Escopo futuro           | Compatibilidade                                                                                                                   |
-| --------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `tender_ai_indexes`, `tender_ai_documents`, `tender_ai_passages`, `tender_ai_answers`, `tender_ai_sheets` | catálogo/global         | não adicionar `workspace_id`; conteúdo público e indexação são compartilháveis                                                    |
-| `ai_daily_usage`, `ai_daily_tenders`, `ai_sheet_daily_usage`                                              | quota de conta          | manter por `user_id`; o limite comercial não multiplica por Espaço                                                                |
-| `ai_ask_requests`                                                                                         | histórico/cache pessoal | incluir `workspace_id` se o histórico for exibido ou reutilizado no contexto do Espaço; cache público por hash continua global    | adaptar chave de cache pessoal e retenção; pergunta bruta nunca entra em analytics |
-| `company_tender_fits`                                                                                     | resultado personalizado | obrigatório `workspace_id`                                                                                                        | versão do perfil sozinha não identifica o Espaço                                   |
-| `ai_jobs`                                                                                                 | misto                   | jobs globais (`index`, OCR, ficha e título) permanecem sem Espaço; job `fit` recebe e valida `workspace_id` no registro e payload | dedupe de `fit` inclui Espaço; worker revalida associação antes de persistir       |
-| `job_run_audit`                                                                                           | operacional/global      | nenhuma mudança                                                                                                                   | não registrar PII nem termos                                                       |
+| Estrutura atual                                                                                           | Escopo futuro           | Compatibilidade                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tender_ai_indexes`, `tender_ai_documents`, `tender_ai_passages`, `tender_ai_answers`, `tender_ai_sheets` | catálogo/global         | não adicionar `workspace_id`; conteúdo público e indexação são compartilháveis                                                                                   |
+| `ai_daily_usage`, `ai_daily_tenders`, `ai_sheet_daily_usage`                                              | quota de conta          | manter por `user_id`; o limite comercial não multiplica por Espaço                                                                                               |
+| `ai_ask_requests`                                                                                         | histórico/cache pessoal | nenhuma: permanece log pessoal da conta, sem `workspace_id` e fora do backfill (decisão de 13/10/2026); retenção de 90 dias e cache público por hash inalterados | excluir um Espaço não toca nesse log; pergunta bruta nunca entra em analytics |
+| `company_tender_fits`                                                                                     | resultado personalizado | obrigatório `workspace_id`                                                                                                                                       | versão do perfil sozinha não identifica o Espaço                              |
+| `ai_jobs`                                                                                                 | misto                   | jobs globais (`index`, OCR, ficha e título) permanecem sem Espaço; job `fit` recebe e valida `workspace_id` no registro e payload                                | dedupe de `fit` inclui Espaço; worker revalida associação antes de persistir  |
+| `job_run_audit`                                                                                           | operacional/global      | nenhuma mudança                                                                                                                                                  | não registrar PII nem termos                                                  |
 
 ## Rotas e adaptadores v1
 
@@ -143,7 +143,7 @@ Validações quantitativas mínimas: usuários = Espaços padrão = memberships 
 
 O corte aceita uma janela curta de manutenção. Somente as mutações nas tabelas afetadas são bloqueadas; busca e detalhes públicos continuam disponíveis. Jobs que escrevem nesses conjuntos são drenados ou pausados, o delta após os marcos é aplicado e as invariantes são validadas antes da troca.
 
-A duração máxima e o critério objetivo de aborto serão definidos pelo dono após ensaio com volume real. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não é introduzida como atalho.
+Os parâmetros iniciais da janela, os gatilhos de aborto, a lista de rotinas a drenar e as condições do ensaio foram aprovados em 13/10/2026 e estão na seção [Janela de corte](./hub-adaptativo-roadmap-v2.md#janela-de-corte) do roadmap. Os valores finais são confirmados pelo dono depois do ensaio com volume real, que ele executa no servidor. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não é introduzida como atalho.
 
 ## Cache, links e clientes
 
@@ -178,9 +178,16 @@ Billing permanece por conta. O limite de criação e o `accessMode` consultam en
 | cache/link de e-mail manipulado                  | associação é revalidada e nenhum dado vaza                |
 | job em retry                                     | conserva `workspace_id` e dedupe corretos                 |
 
+## Decisões de 13/10/2026 que afetam a compatibilidade
+
+- **Espaço ativo:** a preferência referencia o Espaço com `ON DELETE SET NULL` e guarda a última seleção por Espaço. Preferência inválida é resolvida na leitura, sem gravar, pela ordem do [contrato](../contracts/workspaces-v1.md#resolução-do-espaço-ativo). O backfill grava o Espaço padrão como ativo e como última seleção.
+- **Perfil:** `workspace_profiles` ganha o contador `revision`, separado de `profileVersion`. O backfill inicia `revision` de forma determinística a partir do perfil convertido; a rota v1 de perfil continua sem checagem de conflito e também incrementa `revision`, para que a rota nova perceba gravações feitas pelo adaptador.
+- **Busca:** `workspaceId` na busca nunca muda a resposta para quem não é membro e sempre desliga o cache público; a busca v1 sem o parâmetro segue idêntica.
+- **Onboarding:** os estados permanecem `not_started | in_progress | complete`. Perfis convertidos pelo backfill ficam `complete` quando têm palavras-chave e região, e `in_progress` quando falta um dos dois.
+- **Perguntas de IA:** `ai_ask_requests` e as cotas de IA permanecem na conta; nenhuma coluna, índice ou job dessa área muda na Fase 1.
+
 ## Pontos ainda a decidir pelo dono
 
-- duração máxima e critério objetivo de aborto da janela de corte, após ensaio com volume real;
-- se histórico de perguntas de IA será um artefato visível do Espaço ou somente log pessoal sujeito à retenção;
-- política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6;
-- algoritmo final de fallback do Espaço ativo quando o selecionado for arquivado ou removido, conforme pendência do contrato.
+- valores finais da janela de corte (duração máxima e ponto de não retorno), depois do ensaio com volume real;
+- forma da troca no corte: por flag, sem reinício, ou por deploy, aceitando interromper o job noturno de classificação naquela noite;
+- política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6.

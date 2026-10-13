@@ -32,6 +32,8 @@ type WorkspaceSummary = {
 
 IDs são opacos. O servidor calcula papel, completude, status e `accessMode`; o cliente não os grava diretamente. `accessMode` é derivado do entitlement atual e do slot estável do Espaço, não persistido como fonte de verdade.
 
+`onboardingStatus` tem somente estes três estados (decisão de 13/10/2026). `not_started` e `in_progress` distinguem quem ainda não respondeu nada de quem começou; `complete` significa **mínimo aprovado concluído** — palavras-chave e região —, que é o que libera a primeira busca útil. A riqueza do perfil além do mínimo é dado derivado (`completeness.nextStep` e a contagem de etapas opcionais pendentes), nunca um quarto estado.
+
 Na Fase 1, somente `procurement`, `funding` e `culture` podem ser criados, e ainda dependem de feature flag. Pesquisa é uma especialização de `funding`, não um tipo próprio. `study` permanece reservado e responde `FEATURE_DISABLED` enquanto não houver fonte oficial homologada.
 
 ## Limites e downgrade
@@ -64,6 +66,8 @@ Resposta `200`:
 ```
 
 Lista somente Espaços em que o usuário possui membership `owner`, cada um com `accessMode` calculado. Arquivados podem ser incluídos por `?archived=true`; padrão `false`. O limite é 1 para conta gratuita e 5 durante teste ou assinatura ativa.
+
+Se a preferência gravada apontar para um Espaço arquivado, excluído ou sem acesso, `activeWorkspaceId` devolve o resultado da [resolução do Espaço ativo](#resolução-do-espaço-ativo) **sem gravar**: um `GET` não muda estado.
 
 ### `POST /api/v1/me/workspaces`
 
@@ -104,7 +108,7 @@ Aceita subconjunto de:
 { "name": "Novo nome", "archived": false }
 ```
 
-Exige membership `owner` e `accessMode = write`. Arquivar o Espaço ativo deve escolher outro acessível ou deixar `activeWorkspaceId = null` na mesma transação, preservando o comportamento definido pela base da `main`.
+Exige membership `owner` e `accessMode = write`. Arquivar o Espaço ativo aplica a [resolução do Espaço ativo](#resolução-do-espaço-ativo) e grava a nova preferência na mesma transação.
 
 ### `PUT /api/v1/me/workspaces/{id}/profile`
 
@@ -114,11 +118,16 @@ Salva uma etapa validada:
 {
   "schemaVersion": 1,
   "step": "objective",
+  "baseRevision": 3,
   "answers": { "selectedKeywords": ["manutenção predial"] }
 }
 ```
 
-O tipo vem do Espaço, não do cliente. Resposta `200` devolve documento mesclado, completude calculada e `profileVersion`. Exige membership `owner` e `accessMode = write`. Campo de outra etapa, tipo inválido ou versão desconhecida responde `INVALID_PARAMETER` com detalhes, sem atualização parcial.
+O tipo vem do Espaço, não do cliente. Resposta `200` devolve documento mesclado, completude calculada, `profileVersion` e a nova `revision`. Exige membership `owner` e `accessMode = write`. Campo de outra etapa, tipo inválido ou versão desconhecida responde `INVALID_PARAMETER` com detalhes, sem atualização parcial.
+
+Controle otimista (decisão de 13/10/2026): `baseRevision` é obrigatório e deve ser a `revision` que o cliente leu; no primeiro salvamento é `0`. `revision` sobe a **toda** gravação do perfil e é independente de `profileVersion`, que continua subindo apenas quando muda algo que afeta afinidade — reaproveitar `profileVersion` deixaria passar conflitos em campos que não a alteram e invalidaria cache sem necessidade. A comparação acontece dentro da transação que já serializa a gravação do perfil. Divergência responde `409 PROFILE_VERSION_CONFLICT` com a `revision` e as respostas atuais em `details`, para a UI oferecer recarregar; nada é gravado. Etapas diferentes continuam sendo mescladas no servidor; o conflito protege a mesma etapa aberta em duas abas ou dispositivos.
+
+A rota v1 `PUT /api/v1/me/company-profile` não muda: continua sem `baseRevision`, com a semântica atual de última gravação vence.
 
 ### `PUT /api/v1/me/active-workspace`
 
@@ -126,7 +135,20 @@ O tipo vem do Espaço, não do cliente. Resposta `200` devolve documento mesclad
 { "workspaceId": "ws_opaco" }
 ```
 
-Resposta `200`: `{ "activeWorkspaceId": "ws_opaco" }`. Aplica associação antes de gravar preferência. Espaço somente leitura pode ser selecionado. Espaço arquivado responde `WORKSPACE_ARCHIVED`.
+Resposta `200`: `{ "activeWorkspaceId": "ws_opaco" }`. Aplica associação antes de gravar preferência e registra o momento da seleção, usado pela resolução abaixo. Espaço somente leitura pode ser selecionado. Espaço arquivado responde `WORKSPACE_ARCHIVED`.
+
+### Resolução do Espaço ativo
+
+Decisão de 13/10/2026. Um único resolvedor determinístico é usado quando a preferência deixa de ser válida:
+
+1. considerar os Espaços não arquivados com `accessMode = write`;
+2. entre eles, escolher o selecionado mais recentemente;
+3. em empate ou sem histórico de seleção, o criado primeiro e, depois, o de menor `id`;
+4. se não houver nenhum Espaço não arquivado, `activeWorkspaceId = null`, e a UI leva a “Explorar tudo” ou à criação de um Espaço.
+
+O resolvedor roda em dois lugares: na transação que arquiva o Espaço ativo, gravando a nova preferência, e na leitura de `GET /api/v1/me/workspaces` quando a preferência é inválida, devolvendo o resultado sem gravar. Depois de um downgrade, o critério 1 coincide com o Espaço não arquivado de menor slot, que é o único gravável; como esse Espaço existe sempre que há algum não arquivado, os critérios 1 a 3 cobrem todos os casos antes do `null`.
+
+A preferência referencia o Espaço com `ON DELETE SET NULL`, para que a exclusão de um Espaço caia na resolução sem erro. O momento da última seleção por Espaço é persistido (por exemplo, `last_selected_at`); a forma física é definida no SQL da W1, que ainda não está autorizado.
 
 ## Artefatos por espaço
 
@@ -140,7 +162,22 @@ Todas aplicam `requireWorkspaceMember(id)`. A forma detalhada será fechada na f
 | `/api/v1/me/workspaces/{id}/notifications`       | `GET`, `PATCH /read`                                              | assinatura ativa; ids filtrados por Espaço e usuário   |
 | `/api/v1/me/workspaces/{id}/dashboard`           | `GET` com widgets tipados e métricas simples                      | leitura do membro; não faz N consultas pelo frontend   |
 
-Busca e detalhe universais continuam públicos. `workspaceId` em busca é opcional e somente personaliza depois de validar sessão + associação; id inválido ou de terceiro não deve revelar existência.
+Busca e detalhe universais continuam públicos. `workspaceId` em busca é opcional e somente personaliza depois de validar sessão + associação.
+
+### `workspaceId` na busca universal
+
+Decisão de 13/10/2026, alinhada ao que a busca v1 já faz com parâmetros pessoais (`myRegion`, `notification`):
+
+| Caso                                                               | Resposta                                                                                                             |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| sem sessão, com `workspaceId`                                      | `401 UNAUTHENTICATED`                                                                                                |
+| com sessão, id malformado                                          | `400 INVALID_PARAMETER`; a validação é só de sintaxe e não consulta dados                                            |
+| com sessão, id inexistente, de outro usuário ou sem acesso         | `200` com o resultado universal, sem personalização, e `meta.workspace = null`; corpo **idêntico** nos três subcasos |
+| com sessão, Espaço próprio, inclusive arquivado ou somente leitura | `200` personalizado; ler não é mutação                                                                               |
+
+O `401` sem sessão evita mostrar resultado genérico como se fosse personalizado quando a sessão expirou. Com sessão, nunca `404` nem `401`: qualquer variação entre “não existe” e “não é seu” permitiria enumerar Espaços. `meta.workspace = null` permite ao frontend detectar um id obsoleto e chamar a resolução do Espaço ativo.
+
+A validação usa a mesma consulta de `requireWorkspaceMember` (id + associação em uma única leitura). Toda resposta de busca que receba `workspaceId` é `Cache-Control: no-store`, personalizada ou não.
 
 ## `requireWorkspaceMember`
 
@@ -163,40 +200,48 @@ Não aceitar `owner_user_id` enviado pelo cliente nem autorizar apenas porque `w
 
 Mantém o envelope v1 atual `{ error: { code, message, requestId, details? } }`.
 
-| HTTP | Código                     | Quando                                                                   |
-| ---- | -------------------------- | ------------------------------------------------------------------------ |
-| 400  | `INVALID_PARAMETER`        | payload, etapa, versão ou paginação inválidos                            |
-| 401  | `UNAUTHENTICATED`          | sessão ausente/expirada                                                  |
-| 402  | `SUBSCRIPTION_REQUIRED`    | ação premium sem acesso                                                  |
-| 402  | `WORKSPACE_LIMIT_REACHED`  | criação excede o limite 1/5                                              |
-| 402  | `WORKSPACE_READ_ONLY`      | mutação em Espaço excedente após downgrade                               |
-| 403  | `WORKSPACE_ROLE_REQUIRED`  | reservado à Fase 6 para membro conhecido sem papel suficiente            |
-| 404  | `WORKSPACE_NOT_FOUND`      | inexistente ou sem membership, sem distinção                             |
-| 409  | `WORKSPACE_ARCHIVED`       | escrita ou seleção em Espaço arquivado                                   |
-| 409  | `PROFILE_VERSION_CONFLICT` | atualização baseada em versão obsoleta, se controle otimista for adotado |
-| 422  | `FEATURE_DISABLED`         | jornada ainda não habilitada                                             |
+| HTTP | Código                     | Quando                                                                 |
+| ---- | -------------------------- | ---------------------------------------------------------------------- |
+| 400  | `INVALID_PARAMETER`        | payload, etapa, versão, paginação ou `workspaceId` malformado na busca |
+| 401  | `UNAUTHENTICATED`          | sessão ausente/expirada                                                |
+| 402  | `SUBSCRIPTION_REQUIRED`    | ação premium sem acesso                                                |
+| 402  | `WORKSPACE_LIMIT_REACHED`  | criação excede o limite 1/5                                            |
+| 402  | `WORKSPACE_READ_ONLY`      | mutação em Espaço excedente após downgrade                             |
+| 403  | `WORKSPACE_ROLE_REQUIRED`  | reservado à Fase 6 para membro conhecido sem papel suficiente          |
+| 404  | `WORKSPACE_NOT_FOUND`      | inexistente ou sem membership, sem distinção                           |
+| 409  | `WORKSPACE_ARCHIVED`       | escrita ou seleção em Espaço arquivado                                 |
+| 409  | `PROFILE_VERSION_CONFLICT` | `baseRevision` diferente da `revision` atual em `PUT .../profile`      |
+| 422  | `FEATURE_DISABLED`         | jornada ainda não habilitada                                           |
 
 ## Matriz mínima de isolamento
 
-| Cenário                                       | Ação                                         | Esperado                                                                       |
-| --------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
-| A acessa Espaço de A                          | listar/detalhar                              | 200                                                                            |
-| A usa id inexistente                          | detalhar                                     | 404                                                                            |
-| A usa Espaço de B                             | detalhar                                     | mesmo 404, corpo e timing de classe equivalentes                               |
-| A altera perfil de B                          | `PUT profile`                                | 404; nenhuma linha alterada                                                    |
-| A seleciona Espaço de B                       | `PUT active-workspace`                       | 404; preferência anterior preservada                                           |
-| A seleciona seu Espaço somente leitura        | `PUT active-workspace`                       | 200; seleção permitida                                                         |
-| A altera seu Espaço somente leitura           | qualquer mutação                             | 402 `WORKSPACE_READ_ONLY`; nada alterado                                       |
-| A lista salvos de B                           | `GET saved-opportunities`                    | 404; nenhum id ou contagem vazada                                              |
-| A usa `searchId` de B dentro do Espaço de A   | alterar/excluir                              | 404                                                                            |
-| papel futuro `viewer` tenta escrever (Fase 6) | qualquer mutação                             | 403 após associação; nada alterado                                             |
-| papel futuro `editor` arquiva (Fase 6)        | `PATCH`                                      | 403                                                                            |
-| owner arquiva                                 | `PATCH`                                      | 200; ativo reconciliado                                                        |
-| owner usa Espaço arquivado                    | leitura permitida conforme endpoint; escrita | 409 na escrita                                                                 |
-| request público envia `workspaceId` de B      | busca                                        | ignora personalização ou 401 conforme contrato final; nunca aplica sinais de B |
-| job foi enfileirado e vínculo removido        | executar                                     | cancela/ignora sem ler dados do Espaço                                         |
-| A e B fazem requests concorrentes             | cache/React Query/API                        | chaves e predicados incluem `workspaceId`; zero mistura                        |
-| id válido com assinatura inativa              | salvar/alertar                               | 402 somente depois da associação; não revela Espaço de terceiro                |
+| Cenário                                       | Ação                                         | Esperado                                                        |
+| --------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------- |
+| A acessa Espaço de A                          | listar/detalhar                              | 200                                                             |
+| A usa id inexistente                          | detalhar                                     | 404                                                             |
+| A usa Espaço de B                             | detalhar                                     | mesmo 404, corpo e timing de classe equivalentes                |
+| A altera perfil de B                          | `PUT profile`                                | 404; nenhuma linha alterada                                     |
+| A seleciona Espaço de B                       | `PUT active-workspace`                       | 404; preferência anterior preservada                            |
+| A seleciona seu Espaço somente leitura        | `PUT active-workspace`                       | 200; seleção permitida                                          |
+| A altera seu Espaço somente leitura           | qualquer mutação                             | 402 `WORKSPACE_READ_ONLY`; nada alterado                        |
+| A lista salvos de B                           | `GET saved-opportunities`                    | 404; nenhum id ou contagem vazada                               |
+| A usa `searchId` de B dentro do Espaço de A   | alterar/excluir                              | 404                                                             |
+| papel futuro `viewer` tenta escrever (Fase 6) | qualquer mutação                             | 403 após associação; nada alterado                              |
+| papel futuro `editor` arquiva (Fase 6)        | `PATCH`                                      | 403                                                             |
+| owner arquiva                                 | `PATCH`                                      | 200; ativo reconciliado                                         |
+| owner usa Espaço arquivado                    | leitura permitida conforme endpoint; escrita | 409 na escrita                                                  |
+| request sem sessão envia `workspaceId`        | busca                                        | 401; nenhum resultado                                           |
+| A envia `workspaceId` malformado              | busca                                        | 400 por sintaxe, sem consulta a dados                           |
+| A envia `workspaceId` inexistente             | busca                                        | 200 universal, `meta.workspace = null`, `no-store`              |
+| A envia `workspaceId` de B                    | busca                                        | mesmo corpo do id inexistente; nunca aplica sinais de B         |
+| A envia seu Espaço arquivado ou só leitura    | busca                                        | 200 personalizado                                               |
+| preferência de A aponta para Espaço arquivado | `GET workspaces`                             | ativo resolvido pela ordem definida; nada é gravado             |
+| Espaço ativo de A é excluído                  | `GET workspaces`                             | preferência vira `NULL` e a resolução se aplica, sem erro       |
+| A grava a mesma etapa em duas abas            | `PUT profile` com `baseRevision` obsoleto    | 409 `PROFILE_VERSION_CONFLICT`; nada alterado                   |
+| A grava etapas diferentes em duas abas        | `PUT profile` com `baseRevision` atual       | 200 em ambas, respeitando a ordem; respostas mescladas          |
+| job foi enfileirado e vínculo removido        | executar                                     | cancela/ignora sem ler dados do Espaço                          |
+| A e B fazem requests concorrentes             | cache/React Query/API                        | chaves e predicados incluem `workspaceId`; zero mistura         |
+| id válido com assinatura inativa              | salvar/alertar                               | 402 somente depois da associação; não revela Espaço de terceiro |
 
 Os cenários de `viewer` e `editor` preservam a cobertura futura da matriz original, mas não autorizam esses papéis na Fase 1. Também são obrigatórios testes de exportação/exclusão LGPD, paginação limitada, transação de criação+owner, corrida no limite/slot e tentativas de mass assignment.
 
@@ -220,13 +265,15 @@ Cada usuário existente recebe exatamente um Espaço `procurement` e uma members
 
 Antes do lote, o operador registra contagens, checksums, órfãos e um marco por tabela. O lote é idempotente e auditável. No corte, somente as mutações afetadas entram em manutenção; busca e detalhes públicos continuam disponíveis; jobs afetados são drenados; as tabelas são bloqueadas no menor escopo; o delta após os marcos é aplicado; e integridade, isolamento e reversibilidade são conferidos antes de trocar a aplicação para o modelo novo.
 
-A duração máxima e o critério de aborto da janela serão definidos pelo dono depois do ensaio com volume real. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não é introduzida como atalho.
+Os parâmetros iniciais da janela (início às 03:30 de `America/Sao_Paulo`, teto de 15 minutos de mutações bloqueadas, ponto de não retorno em T+10 min) e os gatilhos de aborto foram aprovados em 13/10/2026 e estão no [roadmap](../plans/hub-adaptativo-roadmap-v2.md#janela-de-corte); os valores finais dependem do ensaio com volume real. Se o delta ou a validação excederem a janela aprovada, o corte é cancelado; escrita dupla não é introduzida como atalho.
+
+O histórico de perguntas de IA (`ai_ask_requests`) não entra no backfill: é log pessoal do usuário, sem `workspace_id`.
 
 Criação concorrente serializa a alocação do slot e revalida o entitlement dentro da transação. O mesmo usuário não pode receber dois Espaços padrão, duas memberships `owner` para o mesmo Espaço nem slots conflitantes por retry.
 
 ## LGPD
 
-A exportação inclui Espaços, memberships `owner`, perfis, sinais e todos os artefatos pertencentes ao usuário, com seus `workspace_id`. A exclusão de conta remove Espaços de proprietário único e seus dados por cascata ou procedimento transacional validado. A regra será revista antes da Fase 6, porque um Espaço compartilhado não poderá ser apagado apenas pela saída de um membro.
+A exportação inclui Espaços, memberships `owner`, perfis, sinais e todos os artefatos pertencentes ao usuário, com seus `workspace_id`. O histórico de perguntas de IA continua exportado e excluído pela conta, com a retenção atual de 90 dias; excluir um Espaço não toca nesse log. A exclusão de conta remove Espaços de proprietário único e seus dados por cascata ou procedimento transacional validado. A regra será revista antes da Fase 6, porque um Espaço compartilhado não poderá ser apagado apenas pela saída de um membro.
 
 ## Critérios de aceite da Fase 1
 
@@ -242,12 +289,16 @@ A exportação inclui Espaços, memberships `owner`, perfis, sinais e todos os a
 10. exportação e exclusão LGPD cobrem as novas tabelas;
 11. rollback de aplicação e restauração de banco são ensaiados como procedimentos distintos;
 12. checkout e webhooks do Asaas são validados ponta a ponta sem alterar os gates atuais;
-13. duração máxima e critério de aborto do corte são aprovados após ensaio com volume real;
-14. nenhuma flag de jornada é ativada e nenhuma migração é executada sem gate explícito.
+13. duração máxima e critério de aborto do corte são confirmados após ensaio com volume real, a partir dos parâmetros iniciais aprovados;
+14. nenhuma flag de jornada é ativada e nenhuma migração é executada sem gate explícito;
+15. preferência de Espaço ativo inválida é resolvida de forma determinística, sem gravação em leitura;
+16. busca com `workspaceId` inexistente ou alheio devolve o mesmo corpo, sem personalização e sem cache;
+17. gravação simultânea da mesma etapa do perfil responde conflito em vez de sobrescrever em silêncio.
 
 ## Pendências
 
-- **Fallback do Espaço ativo:** o contrato paralelo propõe sempre selecionar o menor slot quando a preferência aponta para Espaço arquivado ou ausente; a base da `main` permite escolher outro Espaço acessível ou deixar `activeWorkspaceId = null`. Mantém-se a regra da `main`; o algoritmo determinístico final ainda precisa ser fechado.
-- **Estados de onboarding:** o contrato paralelo usa `pending | minimum_complete | complete`; a base da `main` usa `not_started | in_progress | complete`. Mantém-se a enumeração da `main`; a representação explícita do mínimo concluído permanece para decisão futura.
-- **Busca pública com `workspaceId` inválido ou alheio:** a matriz da `main` preserva as alternativas de ignorar personalização ou responder `401`. O comportamento final e sua proteção contra enumeração ainda precisam ser definidos.
-- **Concorrência otimista de perfil:** `PROFILE_VERSION_CONFLICT` permanece condicionado à adoção de controle otimista; a decisão ainda não foi tomada.
+As quatro pendências registradas na consolidação (fallback do Espaço ativo, estados de onboarding, busca com `workspaceId` inválido e concorrência otimista de perfil) foram decididas pelo dono em 13/10/2026 e estão incorporadas às seções acima. Continuam em aberto:
+
+- **Valores finais da janela de corte:** duração máxima e ponto de não retorno são confirmados depois do ensaio com volume real; até lá valem os parâmetros iniciais do roadmap.
+- **Forma física de `revision` e da última seleção por Espaço:** descritas aqui como contrato; colunas e índices são definidos no SQL da W1, ainda não autorizado.
+- **Transferência e exclusão de Espaço com mais de um membro:** escopo da Fase 6.
