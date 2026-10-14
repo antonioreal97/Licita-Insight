@@ -19,10 +19,42 @@ export type EmailNotificationSnapshot = {
   tenderOrganizationName: string | null;
   tenderProposalDeadline: Date | null;
   change: NotificationChangeRecord | null;
+  savedSearchId?: string | null;
   savedSearchName: string | null;
   savedSearchQuery: string | null;
   matchCount: number | null;
   profileMatches?: ProfileMatchNotificationRecord[];
+  /** Digest card of several `saved_search_new_matches` of the same saved search (see groupSavedSearchNotifications). */
+  groupedCount?: number;
+};
+
+/**
+ * One digest card per saved search: rows older than the daily notification (one per evaluation cycle) and a day's
+ * continuation after an e-mail would otherwise each be a card. The card keeps the place of the first row, sums
+ * `matchCount` and takes id (link), name and query from the most recent row, whose snapshot link stays valid.
+ */
+export const groupSavedSearchNotifications = <T extends EmailNotificationSnapshot>(
+  notifications: readonly T[],
+): Array<T & Pick<EmailNotificationSnapshot, "groupedCount">> => {
+  const grouped: Array<T & Pick<EmailNotificationSnapshot, "groupedCount">> = [];
+  const bySearch = new Map<string, number>();
+  for (const notification of notifications) {
+    const searchId = notification.type === "saved_search_new_matches" ? notification.savedSearchId : null;
+    const index = searchId ? bySearch.get(searchId) : undefined;
+    if (!searchId || index === undefined) {
+      if (searchId) bySearch.set(searchId, grouped.length);
+      grouped.push(notification);
+      continue;
+    }
+    const card = grouped[index]!;
+    const latest = notification.createdAt >= card.createdAt ? notification : card;
+    grouped[index] = {
+      ...latest,
+      matchCount: (card.matchCount ?? 0) + (notification.matchCount ?? 0),
+      groupedCount: (card.groupedCount ?? 1) + 1,
+    };
+  }
+  return grouped;
 };
 
 const escapeHtml = (value: string): string =>
@@ -118,16 +150,29 @@ const notificationLink = (
   return `${origin}/settings#notificacoes`;
 };
 
+/** A grouped card also links the saved search itself: the snapshot link only holds the latest row's ids. */
+const groupedSearchLink = (
+  notification: EmailNotificationSnapshot,
+  origin: string,
+): string | null =>
+  (notification.groupedCount ?? 1) > 1 && notification.savedSearchQuery !== null
+    ? `${origin}${savedSearchHref(notification.savedSearchQuery)}`
+    : null;
+
 const itemText = (
   notification: EmailNotificationSnapshot,
   origin: string,
 ): string => {
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
+    const searchLink = groupedSearchLink(notification, origin);
     return [
       `Busca salva: ${notification.savedSearchName ?? "Busca salva"}`,
       quantity(matchCount, "novo resultado", "novos resultados"),
-      notificationLink(notification, origin),
+      searchLink
+        ? `Últimos resultados: ${notificationLink(notification, origin)}`
+        : notificationLink(notification, origin),
+      ...(searchLink ? [`Abrir a busca salva: ${searchLink}`] : []),
     ].join("\n");
   }
   if (notification.type === "profile_new_matches") {
@@ -267,11 +312,14 @@ const itemHtml = (
   const link = notificationLink(notification, origin);
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
+    const searchLink = groupedSearchLink(notification, origin);
     return itemBlock({
       tag: "Busca salva",
       title: escapeHtml(notification.savedSearchName ?? "Busca salva"),
       body: metaHtml(quantity(matchCount, "novo resultado", "novos resultados")),
-      cta: linkHtml(link, "Ver resultados"),
+      cta: searchLink
+        ? `${linkHtml(link, "Ver os últimos resultados")} &nbsp;·&nbsp; ${linkHtml(searchLink, "Abrir a busca salva")}`
+        : linkHtml(link, "Ver resultados"),
       count: { value: matchCount, label: matchCount === 1 ? "novo" : "novos" },
     });
   }
@@ -413,6 +461,7 @@ export const renderNotificationEmail = (input: {
   now?: Date;
 }) => {
   const now = input.now ?? new Date();
+  const notifications = groupSavedSearchNotifications(input.notifications);
   const unsubscribeApiUrl = `${input.origin}/api/v1/email/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const unsubscribePageUrl = `${input.origin}/descadastro?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const settingsUrl = `${input.origin}/settings#notificacoes`;
@@ -434,19 +483,19 @@ export const renderNotificationEmail = (input: {
         ? "Você recebe este resumo porque ele está ligado nas suas preferências do Pardal Digital. Os prazos vêm dos editais que você salvou nas etapas Analisando ou Preparando documentos; a etapa é sua, não o status oficial do edital."
         : "Você recebe este resumo porque ele está ligado nas suas preferências do Pardal Digital."
       : "Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados.";
-  const itemsText = input.notifications
+  const itemsText = notifications
     .map((notification) => itemText(notification, input.origin))
     .join("\n\n");
-  const itemsHtml = input.notifications
+  const itemsHtml = notifications
     .map((notification) => itemHtml(notification, input.origin))
     .join("");
-  const updates = quantity(input.notifications.length, "atualização", "atualizações");
+  const updates = quantity(notifications.length, "atualização", "atualizações");
   const subject =
     input.mode === "immediate"
       ? "Pardal Digital: alerta importante em suas oportunidades"
       : deadlineCount === 0
         ? `Pardal Digital: ${updates} no seu resumo`
-        : input.notifications.length === 0
+        : notifications.length === 0
           ? `Pardal Digital: ${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`
           : `Pardal Digital: ${quantity(deadlineCount, "prazo", "prazos")} e ${updates} no seu resumo`;
   const summary =
@@ -454,18 +503,18 @@ export const renderNotificationEmail = (input: {
       ? `${updates} em um edital que você monitora.`
       : [
           ...(deadlineCount > 0 ? [`${quantity(deadlineCount, "prazo", "prazos")} nos próximos dias`] : []),
-          ...(input.notifications.length > 0 ? [updates] : []),
+          ...(notifications.length > 0 ? [updates] : []),
         ].join(" e ") + ".";
   const eyebrow = input.mode === "digest" ? `Resumo diário · ${longDate(now)}` : "Alerta imediato";
   const sectionsText = [
     ...(deadlines ? [deadlines.text] : []),
-    ...(input.notifications.length > 0
+    ...(notifications.length > 0
       ? [deadlines ? `Novidades\n\n${itemsText}` : itemsText]
       : []),
   ].join("\n\n");
   const sectionsHtml = [
     ...(deadlines ? [deadlines.html] : []),
-    ...(input.notifications.length > 0
+    ...(notifications.length > 0
       ? [`${deadlines ? sectionHeading("Novidades") : ""}${itemsTable(itemsHtml)}`]
       : []),
   ].join("");
