@@ -1,376 +1,149 @@
 #!/usr/bin/env bash
-# RASCUNHO DE ENSAIO — NÃO É FERRAMENTA AUTORIZADA PARA PRODUÇÃO.
-# Requer somente bash e psql; não lê .env e nunca imprime a URL do banco.
-
+# Definitive W3 rehearsal on a restored, isolated _rehearsal database.
 set -Eeuo pipefail
 umask 077
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROLLBACK=false
-ABORT_DRILL=false
-REPORT_DIR="${REHEARSAL_REPORT_DIR:-}"
-BATCH_SIZE="${REHEARSAL_BATCH_SIZE:-500}"
-POINT_OF_NO_RETURN_SECONDS="${REHEARSAL_POINT_OF_NO_RETURN_SECONDS:-600}"
-EXPECTED_DELTA_ROWS="${REHEARSAL_EXPECTED_DELTA_ROWS:-0}"
-PUBLIC_ERROR_PERCENT="${REHEARSAL_PUBLIC_ERROR_PERCENT:-0}"
-PUBLIC_P95_RATIO="${REHEARSAL_PUBLIC_P95_RATIO:-1}"
-DRAIN_SECONDS="${REHEARSAL_DRAIN_SECONDS:-0}"
-SYNTHETIC_RATE="${REHEARSAL_SYNTHETIC_RATE_PER_MINUTE:-0}"
-
-usage() {
-  printf '%s\n' \
-    'Uso: REHEARSAL_DATABASE_URL=... REHEARSAL_CONFIRM=<banco> run-rehearsal.sh [--rollback] [--abort-drill] --report-dir DIR' \
-    'O nome do banco precisa terminar em _rehearsal. A ferramenta nunca lê .env e só escreve em DIR e no diretório temporário.'
-}
-
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOOL="$DIR/../../workspaces/cutover.sh"
+URL="${REHEARSAL_DATABASE_URL:-}"
+CONFIRM="${REHEARSAL_CONFIRM:-}"
+REPORT="${REHEARSAL_REPORT_DIR:-}"
 while (($#)); do
   case "$1" in
-    --rollback) ROLLBACK=true ;;
-    --abort-drill) ABORT_DRILL=true ;;
-    --report-dir)
-      shift
-      (($#)) || { printf 'Falta o diretório de relatório.\n' >&2; exit 64; }
-      REPORT_DIR="$1"
-      ;;
-    --help|-h) usage; exit 0 ;;
-    *) printf 'Argumento desconhecido: %s\n' "$1" >&2; usage >&2; exit 64 ;;
+    --report-dir) REPORT="${2:?}"; shift 2 ;;
+    --help|-h) printf 'Usage: REHEARSAL_DATABASE_URL=... REHEARSAL_CONFIRM=... REHEARSAL_APP_BASE_URL=... run-rehearsal.sh --report-dir DIR\n'; exit 0 ;;
+    *) printf 'Unknown option: %s\n' "$1" >&2; exit 64 ;;
   esac
-  shift
 done
-
-[[ -n "${REHEARSAL_DATABASE_URL:-}" ]] || { printf 'REHEARSAL_DATABASE_URL é obrigatório.\n' >&2; exit 64; }
-[[ -n "${REHEARSAL_CONFIRM:-}" ]] || { printf 'REHEARSAL_CONFIRM é obrigatório.\n' >&2; exit 64; }
-[[ -n "$REPORT_DIR" ]] || { printf -- '--report-dir (ou REHEARSAL_REPORT_DIR) é obrigatório; a pasta dos scripts pode estar montada somente leitura.\n' >&2; exit 64; }
-if [[ -n "${DATABASE_URL:-}" && "$REHEARSAL_DATABASE_URL" == "$DATABASE_URL" ]]; then
-  printf 'Recusado: REHEARSAL_DATABASE_URL é igual a DATABASE_URL.\n' >&2
-  exit 65
-fi
-[[ "$BATCH_SIZE" =~ ^[1-9][0-9]*$ ]] || { printf 'REHEARSAL_BATCH_SIZE inválido.\n' >&2; exit 64; }
-[[ "$POINT_OF_NO_RETURN_SECONDS" =~ ^[1-9][0-9]*$ ]] || { printf 'Ponto de não retorno inválido.\n' >&2; exit 64; }
-[[ "$EXPECTED_DELTA_ROWS" =~ ^[0-9]+$ ]] || { printf 'Delta esperado inválido.\n' >&2; exit 64; }
-[[ "$DRAIN_SECONDS" =~ ^[0-9]+$ ]] || { printf 'Duração de drenagem inválida.\n' >&2; exit 64; }
-[[ "$SYNTHETIC_RATE" =~ ^[0-9]+$ ]] || { printf 'Taxa sintética inválida.\n' >&2; exit 64; }
-
-command -v psql >/dev/null 2>&1 || { printf 'psql não encontrado.\n' >&2; exit 69; }
-PSQL=(psql "$REHEARSAL_DATABASE_URL" -X --no-psqlrc -v ON_ERROR_STOP=1)
-database_name="$("${PSQL[@]}" -Atqc 'SELECT current_database()')"
-[[ "$database_name" == *_rehearsal ]] || { printf 'Recusado: o banco alvo não termina em _rehearsal.\n' >&2; exit 65; }
-[[ "$REHEARSAL_CONFIRM" == "$database_name" ]] || { printf 'Recusado: REHEARSAL_CONFIRM não coincide com o banco alvo.\n' >&2; exit 65; }
-
-mkdir -p "$REPORT_DIR"
-[[ -w "$REPORT_DIR" ]] || { printf 'Sem permissão de escrita no diretório de relatório: %s\n' "$REPORT_DIR" >&2; exit 73; }
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pardal-workspaces-rehearsal.XXXXXX")"
-SYNTH_PID=''
-RUN_TOKEN="${BASHPID:-$$}"
+[[ "$CONFIRM" == *_rehearsal && -n "$URL" && -n "$REPORT" && -n "${REHEARSAL_APP_BASE_URL:-}" ]] || {
+  printf 'Isolated _rehearsal database, app URL and report directory are required.\n' >&2; exit 65;
+}
+[[ "$URL" != "${DATABASE_URL:-}" ]] || { printf 'Rehearsal URL equals DATABASE_URL.\n' >&2; exit 65; }
+[[ "${REHEARSAL_EXPECTED_DELTA_ROWS:-}" =~ ^[0-9]+$ ]] || { printf 'Expected delta row count is required.\n' >&2; exit 64; }
+export CUTOVER_DATABASE_URL="$URL" CUTOVER_CONFIRM_DB="$CONFIRM"
+# The cutover tool prompts for the password unless CUTOVER_PGPASSWORD is set.
+mkdir -p "$REPORT"
+[[ -w "$REPORT" ]] || exit 73
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/workspaces-definitive.XXXXXX")"
+PROBE_PID=''
 cleanup() {
-  if [[ -n "$SYNTH_PID" ]]; then
-    kill "$SYNTH_PID" 2>/dev/null || true
-    wait "$SYNTH_PID" 2>/dev/null || true
-  fi
-  rm -rf "$TMP_DIR"
+  [[ -z "$PROBE_PID" ]] || { kill "$PROBE_PID" 2>/dev/null || true; wait "$PROBE_PID" 2>/dev/null || true; }
+  rm -rf "$TMP"
 }
-trap cleanup EXIT INT TERM
-
-set_duration() {
-  local stage="$1" value="$2"
-  eval "DURATION_${stage}=\$value"
-}
-get_duration() {
-  local stage="$1"
-  eval "printf '%s' \"\${DURATION_${stage}:-}\""
-}
-set_duration drain_observed $((DRAIN_SECONDS * 1000))
-now_ms() {
-  "${PSQL[@]}" -Atqc "SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint"
-}
-run_sql_file() {
-  local stage="$1" file="$2" start finish
+trap cleanup EXIT
+now_ms() { perl -MTime::HiRes=time -e 'printf "%.0f", time()*1000'; }
+record_time() {
+  local stage="$1" start end
+  shift
   start="$(now_ms)"
-  "${PSQL[@]}" -q -f "$file" >"$TMP_DIR/${stage}.log"
-  finish="$(now_ms)"
-  set_duration "$stage" $((finish - start))
+  "$@" >"$TMP/${stage}.out"
+  end="$(now_ms)"
+  printf '%s\t%s\n' "$stage" "$((end-start))" >> "$REPORT/timings.tsv"
 }
-capture_metrics() {
-  local destination="$1"
-  "${PSQL[@]}" -q -f "$SCRIPT_DIR/rehearsal_metrics.sql" >"$destination"
+public_metrics() {
+  local begin="$1" end="$2"
+  awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="public" {n++; if ($3!="200") bad++; print $4}' "$TMP/probes.tsv" | sort -n > "$TMP/public-latencies"
+  local count bad ratio
+  count="$(wc -l < "$TMP/public-latencies" | tr -d ' ')"
+  ((count >= 15)) || { printf 'Too few public reads in probe interval.\n' >&2; return 1; }
+  bad="$(awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="public" && $3!="200" {n++} END {print n+0}' "$TMP/probes.tsv")"
+  PUBLIC_ERROR_PERCENT="$(awk -v b="$bad" -v n="$count" 'BEGIN {printf "%.3f", 100*b/n}')"
+  PUBLIC_P95="$(awk -v n="$count" 'BEGIN {r=int(n*0.95+0.999)} NR==r {print; exit}' "$TMP/public-latencies")"
 }
-
-printf 'Preflight somente leitura...\n'
-preflight_start="$(now_ms)"
-capture_metrics "$TMP_DIR/preflight.tsv"
-"${PSQL[@]}" -qAt -F $'\t' >"$TMP_DIR/preflight_checks.tsv" <<'SQL'
-SELECT 'legacy_orphans',
-  (SELECT count(*) FROM company_profiles row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM company_tender_fits row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM saved_tenders row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM saved_searches row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM notifications row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM email_deliveries row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM recommendation_events row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM recommendation_dismissals row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM recommendation_interest_profiles row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL) +
-  (SELECT count(*) FROM user_recommendations row LEFT JOIN users u ON u.id = row.user_id WHERE u.id IS NULL)
-UNION ALL
-SELECT 'legacy_duplicates',
-  (SELECT count(*) FROM (SELECT user_id, tender_id FROM saved_tenders GROUP BY 1,2 HAVING count(*) > 1) d) +
-  (SELECT count(*) FROM (SELECT user_id, query FROM saved_searches WHERE deleted_at IS NULL GROUP BY 1,2 HAVING count(*) > 1) d) +
-  (SELECT count(*) FROM (SELECT user_id, dedupe_key FROM notifications GROUP BY 1,2 HAVING count(*) > 1) d);
-SQL
-PREFLIGHT_FAILURES=0
-while IFS=$'\t' read -r check_name failure_count; do
-  PREFLIGHT_FAILURES=$((PREFLIGHT_FAILURES + failure_count))
-done <"$TMP_DIR/preflight_checks.tsv"
-((PREFLIGHT_FAILURES == 0)) || {
-  printf 'Preflight reprovado: órfãos ou duplicatas legadas detectados (%s).\n' "$PREFLIGHT_FAILURES" >&2
-  exit 70
-}
-preflight_finish="$(now_ms)"
-set_duration preflight $((preflight_finish - preflight_start))
-
-run_sql_file w1 "$SCRIPT_DIR/w1_foundation.sql"
-run_sql_file w2 "$SCRIPT_DIR/w2_scope_expand.sql"
-run_sql_file w2_indexes "$SCRIPT_DIR/w2_scope_expand_indexes.sql"
-
-synthetic_writer() {
-  local sequence=0 pause_seconds
-  if ((SYNTHETIC_RATE <= 0)); then return; fi
-  pause_seconds=$((60 / SYNTHETIC_RATE))
-  ((pause_seconds < 1)) && pause_seconds=1
+printf 'stage\tduration_ms\n' > "$REPORT/timings.tsv"
+"$DIR/probe-app.sh" "$TMP/probes.tsv" &
+PROBE_PID="$!"
+sleep 10
+kill -0 "$PROBE_PID"
+BASELINE_START="$(date +%s)"
+record_time batch "$TOOL" batch
+sleep 60
+BASELINE_END="$(date +%s)"
+public_metrics "$BASELINE_START" "$BASELINE_END"
+BASELINE_P95="$PUBLIC_P95"
+record_time pause "$TOOL" pause --actor rehearsal --reason 'synthetic measurement'
+PAUSE_START="$(date +%s)"
+sleep 30
+PAUSE_END="$(date +%s)"
+public_metrics "$PAUSE_START" "$PAUSE_END"
+ERROR_PERCENT="$PUBLIC_ERROR_PERCENT"
+P95_RATIO="$(awk -v a="$PUBLIC_P95" -v b="$BASELINE_P95" 'BEGIN {if (b<=0) exit 1; printf "%.3f", a/b}')"
+printf 'public_error_percent\t%s\npublic_p95_ratio\t%s\n' "$ERROR_PERCENT" "$P95_RATIO" >> "$REPORT/timings.tsv"
+wait_v1_read() {
+  local since="$1" started
+  started="$(date +%s)"
   while true; do
-    sequence=$((sequence + 1))
-    "${PSQL[@]}" -q \
-      -v synthetic_id="rehearsal_synth_${RUN_TOKEN}_${sequence}" \
-      -v synthetic_email="rehearsal+${RUN_TOKEN}-${sequence}@invalid.example" \
-      -v synthetic_suffix="${RUN_TOKEN}_${sequence}" >/dev/null <<'SQL'
-INSERT INTO users (id, email, name) VALUES (:'synthetic_id', :'synthetic_email', 'REHEARSAL SYNTHETIC')
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO saved_searches (id, user_id, name, query)
-VALUES ('rehearsal_search_' || :'synthetic_suffix', :'synthetic_id', 'REHEARSAL SYNTHETIC', 'REHEARSAL SYNTHETIC')
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO notifications (id, user_id, type, dedupe_key)
-VALUES ('rehearsal_notification_' || :'synthetic_suffix', :'synthetic_id', 'rehearsal_synthetic', 'rehearsal:' || :'synthetic_suffix')
-ON CONFLICT (id) DO NOTHING;
-SQL
-    sleep "$pause_seconds"
+    if awk -F '\t' -v since="$since" '$1>=since && $2=="v1read" && $3=="200" {found=1} END {exit !found}' "$TMP/probes.tsv"; then
+      return 0
+    fi
+    if (( $(date +%s) - started >= 10 )); then printf 'No successful v1 read after cut.\n' >&2; return 1; fi
+    sleep 1
   done
 }
-
-if ((SYNTHETIC_RATE > 0)); then
-  synthetic_writer &
-  SYNTH_PID=$!
-fi
-
-printf 'W3 lote por faixas de %s usuários...\n' "$BATCH_SIZE"
-batch_start="$(now_ms)"
-last_user=''
-while true; do
-  next_user="$("${PSQL[@]}" -v previous="$last_user" -v batch_size="$BATCH_SIZE" -Atq <<'SQL'
-SELECT COALESCE(max(id), '')
-FROM (SELECT id FROM users WHERE (:'previous' = '' OR id > :'previous') ORDER BY id LIMIT :batch_size) batch;
-SQL
-)"
-  [[ -n "$next_user" ]] || break
-  "${PSQL[@]}" -q \
-    -v w3_phase=batch -v w3_from_user_id="$last_user" -v w3_to_user_id="$next_user" \
-    -f "$SCRIPT_DIR/w3_backfill.sql" >"$TMP_DIR/w3_batch.log"
-  last_user="$next_user"
-done
-batch_finish="$(now_ms)"
-set_duration w3_batch $((batch_finish - batch_start))
-
-if [[ -n "$SYNTH_PID" ]]; then
-  kill "$SYNTH_PID" 2>/dev/null || true
-  wait "$SYNTH_PID" 2>/dev/null || true
-  SYNTH_PID=''
-fi
-
-capture_metrics "$TMP_DIR/cut_baseline.tsv"
-
-cut_start="$(now_ms)"
-if $ABORT_DRILL; then
-  printf 'Exercitando aborto antes da troca...\n'
-  if ! "${PSQL[@]}" -qAt -F '|' >"$TMP_DIR/cut.log" <<SQL
-BEGIN;
-SET LOCAL lock_timeout = '5s';
-CREATE TEMP TABLE rehearsal_cut_timing AS
-  SELECT clock_timestamp() AS cut_started, NULL::timestamptz AS lock_acquired,
-    NULL::timestamptz AS delta_started, NULL::timestamptz AS delta_finished,
-    NULL::timestamptz AS w4_started, NULL::timestamptz AS w4_finished,
-    0::bigint AS delta_rows;
-LOCK TABLE users, company_profiles, company_tender_fits, saved_tenders, saved_searches,
-  notifications, email_deliveries, email_delivery_notifications, recommendation_events,
-  recommendation_dismissals, recommendation_interest_profiles, user_recommendations, ai_jobs
-  IN SHARE ROW EXCLUSIVE MODE;
-UPDATE rehearsal_cut_timing SET lock_acquired = clock_timestamp();
-ROLLBACK;
-SQL
-  then
-    printf 'Abort drill falhou ao adquirir/soltar locks.\n' >&2
-    exit 70
-  fi
-  CUT_STATUS='aborted_expected'
-  set_duration w3_delta 0
-  set_duration w4 0
-  DELTA_ROWS=0
-  LOCK_WAIT_MS=$(( $(now_ms) - cut_start ))
-else
-  printf 'Corte simulado: locks, delta, invariantes, gate e W4...\n'
-  if ! "${PSQL[@]}" -qAt -F '|' >"$TMP_DIR/cut.log" <<SQL
-BEGIN;
-SET LOCAL lock_timeout = '5s';
-SELECT set_config('rehearsal.point_of_no_return_seconds', '$POINT_OF_NO_RETURN_SECONDS', true);
-SELECT set_config('rehearsal.expected_delta_rows', '$EXPECTED_DELTA_ROWS', true);
-SELECT set_config('rehearsal.public_error_percent', '$PUBLIC_ERROR_PERCENT', true);
-SELECT set_config('rehearsal.public_p95_ratio', '$PUBLIC_P95_RATIO', true);
-SELECT set_config('rehearsal.drain_seconds', '$DRAIN_SECONDS', true);
-CREATE TEMP TABLE rehearsal_cut_timing AS
-  SELECT clock_timestamp() AS cut_started, NULL::timestamptz AS lock_acquired,
-    NULL::timestamptz AS delta_started, NULL::timestamptz AS delta_finished,
-    NULL::timestamptz AS w4_started, NULL::timestamptz AS w4_finished,
-    ((SELECT count(*) FROM users u WHERE NOT EXISTS (SELECT 1 FROM workspaces w WHERE w.owner_user_id = u.id AND w.is_default)) +
-     (SELECT count(*) FROM company_tender_fits WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM saved_tenders WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM saved_searches WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM notifications WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM recommendation_events WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM recommendation_dismissals WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM recommendation_interest_profiles WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM user_recommendations WHERE workspace_id IS NULL) +
-     (SELECT count(*) FROM ai_jobs WHERE kind = 'fit' AND workspace_id IS NULL))::bigint AS delta_rows;
-LOCK TABLE users, company_profiles, company_tender_fits, saved_tenders, saved_searches,
-  notifications, email_deliveries, email_delivery_notifications, recommendation_events,
-  recommendation_dismissals, recommendation_interest_profiles, user_recommendations, ai_jobs
-  IN SHARE ROW EXCLUSIVE MODE;
-UPDATE rehearsal_cut_timing SET lock_acquired = clock_timestamp();
-UPDATE rehearsal_cut_timing SET delta_started = clock_timestamp();
-\set w3_phase delta
-\set w3_from_user_id ''
-\set w3_to_user_id ''
-\set w3_manage_transaction false
-\ir $SCRIPT_DIR/w3_backfill.sql
-UPDATE rehearsal_cut_timing SET delta_finished = clock_timestamp();
-\set invariant_output false
-\ir $SCRIPT_DIR/rehearsal_invariants.sql
-\ir $SCRIPT_DIR/rehearsal_cut_gate.sql
-UPDATE rehearsal_cut_timing SET w4_started = clock_timestamp();
-\set w4_manage_transaction false
-\ir $SCRIPT_DIR/w4_enforce.sql
-UPDATE rehearsal_cut_timing SET w4_finished = clock_timestamp();
-SELECT 'CUT_METRICS',
-  floor(extract(epoch FROM (lock_acquired - cut_started)) * 1000)::bigint,
-  delta_rows,
-  floor(extract(epoch FROM (delta_finished - delta_started)) * 1000)::bigint,
-  floor(extract(epoch FROM (w4_finished - w4_started)) * 1000)::bigint
-FROM rehearsal_cut_timing;
-COMMIT;
-SQL
-  then
-    printf 'Corte abortado por lock, gate ou invariantes; nenhuma troca foi confirmada.\n' >&2
-    exit 70
-  fi
-  CUT_STATUS='completed'
-  cut_metrics=''
-  while IFS= read -r line; do
-    [[ "$line" == CUT_METRICS* ]] && cut_metrics="$line"
-  done <"$TMP_DIR/cut.log"
-  IFS='|' read -r _ LOCK_WAIT_MS DELTA_ROWS W3_DELTA_MS W4_MS <<<"$cut_metrics"
-  LOCK_WAIT_MS="${LOCK_WAIT_MS:-0}"
-  DELTA_ROWS="${DELTA_ROWS:-0}"
-  set_duration w3_delta "${W3_DELTA_MS:-0}"
-  set_duration w4 "${W4_MS:-0}"
-fi
-cut_finish="$(now_ms)"
-set_duration cut $((cut_finish - cut_start))
-
-if ! $ABORT_DRILL; then
-  capture_metrics "$TMP_DIR/post.tsv"
-  "${PSQL[@]}" -q -v invariant_output=true -f "$SCRIPT_DIR/rehearsal_invariants.sql" >"$TMP_DIR/invariants.tsv"
-else
-  cp "$TMP_DIR/cut_baseline.tsv" "$TMP_DIR/post.tsv"
-  printf 'abort_before_switch\ttrue\t0\n' >"$TMP_DIR/invariants.tsv"
-fi
-
-RECONCILIATION_FAILURES=0
-while IFS=$'\t' read -r baseline_table baseline_count baseline_bytes baseline_checksum; do
-  found=false
-  while IFS=$'\t' read -r post_table post_count post_bytes post_checksum; do
-    [[ "$post_table" == "$baseline_table" ]] || continue
-    found=true
-    if [[ "$baseline_count" != "$post_count" || "$baseline_checksum" != "$post_checksum" ]]; then
-      RECONCILIATION_FAILURES=$((RECONCILIATION_FAILURES + 1))
+record_time cut "$TOOL" cut --actor rehearsal --expected-delta-rows "$REHEARSAL_EXPECTED_DELTA_ROWS" \
+  --public-error-percent "$ERROR_PERCENT" --public-p95-ratio "$P95_RATIO"
+FIRST_CUT_COMMIT_TS="$(date +%s)"
+if ! wait_v1_read "$FIRST_CUT_COMMIT_TS"; then "$TOOL" rollback --actor rehearsal; exit 70; fi
+record_time resume "$TOOL" resume --actor rehearsal --reason 'v1 read checked'
+FIRST_RESUME_TS="$(date +%s)"
+wait_mutation() {
+  local since="$1" started
+  started="$(date +%s)"
+  while true; do
+    if awk -F '\t' -v since="$since" '$1>=since && $2=="mutation" && $3=="200" {found=1} END {exit !found}' "$TMP/probes.tsv"; then
+      return 0
     fi
-    break
-  done <"$TMP_DIR/post.tsv"
-  if ! $found; then
-    RECONCILIATION_FAILURES=$((RECONCILIATION_FAILURES + 1))
-  fi
-done <"$TMP_DIR/cut_baseline.tsv"
-((RECONCILIATION_FAILURES == 0)) || { printf 'Reconciliação de contagem/checksum falhou.\n' >&2; exit 70; }
-
-ROLLBACK_PERFORMED=false
-if $ROLLBACK; then
-  printf 'Medindo rollback...\n'
-  if ! $ABORT_DRILL; then run_sql_file rollback_w4 "$SCRIPT_DIR/w4_enforce_rollback.sql"; fi
-  run_sql_file rollback_w3 "$SCRIPT_DIR/w3_backfill_rollback.sql"
-  run_sql_file rollback_w2 "$SCRIPT_DIR/w2_scope_expand_rollback.sql"
-  run_sql_file rollback_w1 "$SCRIPT_DIR/w1_foundation_rollback.sql"
-  if ((SYNTHETIC_RATE > 0)); then
-    "${PSQL[@]}" -q -v prefix="rehearsal_synth_${RUN_TOKEN}_%" -c "DELETE FROM users WHERE id LIKE :'prefix'" >/dev/null
-  fi
-  ROLLBACK_PERFORMED=true
+    if (( $(date +%s) - started >= 15 )); then printf 'No successful mutation after resume.\n' >&2; return 1; fi
+    sleep 1
+  done
+}
+wait_mutation "$FIRST_RESUME_TS"
+sleep 8
+FIRST_OBSERVE_END="$(date +%s)"
+record_time rollback "$TOOL" rollback --actor rehearsal
+record_time pause_again "$TOOL" pause --actor rehearsal
+record_time cut_again "$TOOL" cut --actor rehearsal --expected-delta-rows "$REHEARSAL_EXPECTED_DELTA_ROWS" \
+  --public-error-percent "$ERROR_PERCENT" --public-p95-ratio "$P95_RATIO"
+SECOND_CUT_COMMIT_TS="$(date +%s)"
+if ! wait_v1_read "$SECOND_CUT_COMMIT_TS"; then "$TOOL" rollback --actor rehearsal; exit 70; fi
+record_time resume_again "$TOOL" resume --actor rehearsal
+SECOND_RESUME_TS="$(date +%s)"
+wait_mutation "$SECOND_RESUME_TS"
+if [[ "${REHEARSAL_MEASURE_W4:-false}" == true ]]; then
+  record_time w4_pause "$TOOL" pause --actor rehearsal --reason 'second window simulation'
+  record_time w4 "$TOOL" w4 --actor rehearsal --rehearsal-observation-override
+  record_time w4_resume "$TOOL" resume --actor rehearsal --reason 'W4 checked'
 fi
-
-REPORT_JSON="$REPORT_DIR/rehearsal-${RUN_TOKEN}.json"
-REPORT_MD="$REPORT_DIR/rehearsal-${RUN_TOKEN}.md"
-
-{
-  printf '{\n'
-  printf '  "status": "%s",\n' "$CUT_STATUS"
-  printf '  "abort_drill": %s,\n' "$ABORT_DRILL"
-  printf '  "rollback_performed": %s,\n' "$ROLLBACK_PERFORMED"
-  printf '  "lock_wait_ms": %s,\n' "$LOCK_WAIT_MS"
-  printf '  "delta_rows": %s,\n' "$DELTA_ROWS"
-  printf '  "reconciliation_failures": %s,\n' "$RECONCILIATION_FAILURES"
-  printf '  "durations_ms": {\n'
-  first=true
-  for stage in drain_observed preflight w1 w2 w2_indexes w3_batch w3_delta w4 cut rollback_w4 rollback_w3 rollback_w2 rollback_w1; do
-    duration="$(get_duration "$stage")"
-    [[ -n "$duration" ]] || continue
-    $first || printf ',\n'; first=false
-    printf '    "%s": %s' "$stage" "$duration"
-  done
-  printf '\n  },\n  "tables": [\n'
-  first=true
-  while IFS=$'\t' read -r table count bytes checksum; do
-    $first || printf ',\n'; first=false
-    printf '    {"table": "%s", "rows": %s, "bytes": %s}' "$table" "$count" "$bytes"
-  done <"$TMP_DIR/preflight.tsv"
-  printf '\n  ],\n  "invariants": [\n'
-  first=true
-  while IFS=$'\t' read -r invariant passed failures; do
-    $first || printf ',\n'; first=false
-    printf '    {"name": "%s", "passed": %s, "failures": %s}' "$invariant" "$passed" "$failures"
-  done <"$TMP_DIR/invariants.tsv"
-  printf '\n  ]\n}\n'
-} >"$REPORT_JSON"
-
-{
-  printf '# Relatório do ensaio de Espaços\n\n'
-  printf -- '- Resultado: `%s`\n' "$CUT_STATUS"
-  printf -- '- Abort drill: `%s`\n' "$ABORT_DRILL"
-  printf -- '- Rollback medido: `%s`\n' "$ROLLBACK_PERFORMED"
-  printf -- '- Espera total por locks: `%s ms`\n' "$LOCK_WAIT_MS"
-  printf -- '- Tamanho do delta: `%s linhas`\n' "$DELTA_ROWS"
-  printf -- '- Falhas de reconciliação: `%s`\n\n' "$RECONCILIATION_FAILURES"
-  printf '## Durações\n\n| etapa | ms |\n|---|---:|\n'
-  for stage in drain_observed preflight w1 w2 w2_indexes w3_batch w3_delta w4 cut rollback_w4 rollback_w3 rollback_w2 rollback_w1; do
-    duration="$(get_duration "$stage")"
-    [[ -n "$duration" ]] && printf '| %s | %s |\n' "$stage" "$duration"
-  done
-  printf '\n## Volume inicial\n\n| tabela | linhas | bytes |\n|---|---:|---:|\n'
-  while IFS=$'\t' read -r table count bytes checksum; do printf '| %s | %s | %s |\n' "$table" "$count" "$bytes"; done <"$TMP_DIR/preflight.tsv"
-  printf '\n## Invariantes\n\n| invariante | passou | falhas |\n|---|---|---:|\n'
-  while IFS=$'\t' read -r invariant passed failures; do printf '| %s | %s | %s |\n' "$invariant" "$passed" "$failures"; done <"$TMP_DIR/invariants.tsv"
-} >"$REPORT_MD"
-
-printf 'Relatórios sem dados de linha: %s e %s\n' "$REPORT_MD" "$REPORT_JSON"
+CUT_TS="$(date +%s)"
+sleep 3
+kill "$PROBE_PID" 2>/dev/null || true
+wait "$PROBE_PID" 2>/dev/null || true
+PROBE_PID=''
+awk -F '\t' -v since="$PAUSE_START" -v until="$CUT_TS" '
+  $1>=since && $1<=until && $2=="mutation" && $3=="503" {n++}
+  END {print "maintenance_503_count\t" n+0}
+' "$TMP/probes.tsv" >> "$REPORT/timings.tsv"
+awk -F '\t' -v since="$PAUSE_START" -v until="$CUT_TS" '
+  $1>=since && $1<=until && $2=="mutation" && $3=="503" {bucket=int($1/60); count[bucket]++}
+  END {for (bucket in count) if (count[bucket]>max) max=count[bucket]; print "maintenance_503_per_minute_max\t" max+0}
+' "$TMP/probes.tsv" >> "$REPORT/timings.tsv"
+mutation_p95() {
+  local begin="$1" end="$2" count
+  awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="mutation" && $3=="200" {print $4}' "$TMP/probes.tsv" | sort -n > "$TMP/mutation-latencies"
+  count="$(wc -l < "$TMP/mutation-latencies" | tr -d ' ')"
+  ((count >= 3)) || { printf 'Too few successful mutations to measure p95.\n' >&2; return 1; }
+  awk -v n="$count" 'BEGIN {r=int(n*0.95+0.999)} NR==r {print; exit}' "$TMP/mutation-latencies"
+}
+BASELINE_MUTATION_P95="$(mutation_p95 "$BASELINE_START" "$BASELINE_END")"
+WORKSPACE_MUTATION_P95="$(mutation_p95 "$FIRST_RESUME_TS" "$FIRST_OBSERVE_END")"
+printf 'mutation_p95_baseline_seconds\t%s\nmutation_p95_after_resume_seconds\t%s\n' \
+  "$BASELINE_MUTATION_P95" "$WORKSPACE_MUTATION_P95" >> "$REPORT/timings.tsv"
+FIRST_WORKSPACE_MUTATION_TS="$(awk -F '\t' -v since="$FIRST_RESUME_TS" '$1>=since && $2=="mutation" && $3=="200" {print $1; exit}' "$TMP/probes.tsv")"
+if [[ -n "$FIRST_WORKSPACE_MUTATION_TS" ]]; then
+  printf 'first_workspace_mutation_after_cut_seconds\t%s\n' "$((FIRST_WORKSPACE_MUTATION_TS-FIRST_CUT_COMMIT_TS))" >> "$REPORT/timings.tsv"
+  printf 'first_workspace_mutation_after_resume_seconds\t%s\n' "$((FIRST_WORKSPACE_MUTATION_TS-FIRST_RESUME_TS))" >> "$REPORT/timings.tsv"
+fi
+"$TOOL" status | awk -F '=' '$1=="null_context_since_cut" || $1=="nondefault_workspaces" {print $1 "\t" $2}' >> "$REPORT/timings.tsv"
+# Keep the invariant report (names and counts) from both cuts, no row values.
+awk -F '\t' 'NF==2 && $2 ~ /^[0-9]+$/ {print}' "$TMP/cut.out" > "$REPORT/invariants.tsv"
+awk -F '\t' 'NF==2 && $2 ~ /^[0-9]+$/ {print}' "$TMP/cut_again.out" >> "$REPORT/invariants.tsv"
+printf 'Definitive rehearsal completed; report contains only counts and timings.\n'

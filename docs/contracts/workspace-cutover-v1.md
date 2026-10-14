@@ -1,7 +1,7 @@
 # Flag de corte de Espaços v1 — rascunho
 
 Data de atualização: 13 out. 2026
-Status: **contrato vigente**. Em 13/10/2026 o dono aprovou as dez decisões do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md#decisões-aprovadas-em-13102026) que afetam este contrato: W4 fora da janela, 7 dias de observação, rollback estrito, W1/W2 obrigatórias na subida, retomada separada, ferramenta em `psql` + `bash`, `503 MAINTENANCE_IN_PROGRESS` e rotas novas só depois de W4. O armazenamento e a porta de escrita são o desenho de referência para o código e podem ser refinados nos PRs, sem mudar as garantias. Nada aqui está implementado; nenhuma tabela, migração ou flag existe. O código da Fase 1 foi autorizado apenas desligado e sem migração em produção.
+Status: **contrato vigente**. Em 13/10/2026 o dono aprovou as dez decisões do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md#decisões-aprovadas-em-13102026) que afetam este contrato: W4 fora da janela, 7 dias de observação, rollback estrito, W1/W2 obrigatórias na subida, retomada separada, ferramenta em `psql` + `bash`, `503 MAINTENANCE_IN_PROGRESS` e rotas novas só depois de W4. O armazenamento e a porta de escrita são o desenho de referência para o código e podem ser refinados nos PRs, sem mudar as garantias. A tabela, a porta e a ferramenta existem na branch da Fase 1, desligadas; nenhuma migração foi aplicada em produção.
 
 Referências: [roadmap v2 — Forma da troca](../plans/hub-adaptativo-roadmap-v2.md#forma-da-troca), [compatibilidade de `workspace_id`](../plans/hub-adaptativo-compatibilidade.md), [contrato de Espaços](./workspaces-v1.md), [flags de jornada](./feature-flags-v1.md), [ensaio W1–W4](../../ops/rehearsal/workspaces/README.md) e [plano de execução da Fase 1](../plans/hub-adaptativo-fase1-execucao.md).
 
@@ -131,9 +131,9 @@ Regras:
 
 ## Como o dono vira, desvira e confere
 
-Alteração em produção é sempre do dono. A ferramenta é um conjunto de scripts `psql` + `bash` (decisão de 13/10/2026), no mesmo formato do ensaio (`ops/rehearsal/workspaces/run-rehearsal.sh`), para que o SQL medido no ensaio seja o mesmo executado em produção e o servidor não precise de Node no host. Ela será entregue na unidade G do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md); os comandos abaixo são a interface prevista, não comandos existentes.
+Alteração em produção é sempre do dono. A ferramenta é um conjunto de scripts `psql` + `bash` (decisão de 13/10/2026), no mesmo formato do ensaio (`ops/rehearsal/workspaces/run-rehearsal.sh`), para que o SQL medido no ensaio seja o mesmo executado em produção e o servidor não precise de Node no host. A unidade G a entrega em [`ops/workspaces/`](../../ops/workspaces/); o [procedimento de produção](../migrations/workspace-w3-w4-production.md) permanece dependente da aprovação do dono.
 
-| Comando previsto                     | O que faz                                                                                                                                                                        |
+| Comando                     | O que faz                                                                                                                                                                        |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cutover.sh status`                  | estado vigente, últimas mudanças, W4 aplicada ou não, Espaços não padrão existentes, linhas com `workspace_id` nulo criadas depois da última virada                              |
 | `cutover.sh pause --actor <nome>`    | insere `mode` atual + `writes_paused = true`; inicia o cronômetro da janela                                                                                                      |
@@ -241,7 +241,7 @@ Decisões de 13/10/2026: W4 fica fora da janela de corte e vira um passo própri
 
 Aplicar W4 é o **ponto sem volta pela flag**. Daí em diante restam rollback de dados (restaurar backup e reconciliar gravações posteriores) ou correção para frente. A segunda janela existe porque `SET NOT NULL` e a troca de PK tomam `ACCESS EXCLUSIVE` nas tabelas, inclusive `saved_tenders`, lida pela busca com `includeMonitored`.
 
-O rascunho de ensaio atual ainda aplica W4 dentro da transação do corte; a versão definitiva (unidade G do [plano de execução](../plans/hub-adaptativo-fase1-execucao.md)) separa os dois passos.
+A versão definitiva em `ops/workspaces/w4-enforce.sql` aplica W4 numa transação própria, depois de nova pausa e drenagem.
 
 ## Relação com W1–W4 e com a janela
 

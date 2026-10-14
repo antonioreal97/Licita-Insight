@@ -233,7 +233,7 @@ Decisão do dono em 13/10/2026: **troca por flag em runtime, com um deploy prepa
 - O deploy preparatório leva schema e adaptadores com a flag de corte **desligada**: as migrações aditivas (W1 e W2) são aplicadas manualmente pelo dono, como toda migração de produção, e a aplicação compatível sobe em seguida. Isso acontece antes e fora da janela, como um deploy comum, e não muda o comportamento. A `main` só recebe esse código depois do gate de migração (SQL aprovado, backup/restore, ensaio com volume real), e a versão nova exige W1 e W2 aplicadas para subir.
 - A virada é atômica e sem reinício: ligar a flag faz a aplicação passar a gravar somente no modelo novo, de uma vez, em todos os processos que gravam nas tabelas do escopo.
 - Rollback de aplicação pela flag (decisão de 13/10/2026): desligar a flag **só** é rollback se vier com a cópia reversa do perfil do Espaço padrão para o legado, feita na mesma transação, **antes de W4** e **sem nenhum Espaço não padrão**. Fora dessas condições, resta só o rollback de dados, que segue sendo um procedimento separado.
-- `FEATURE_JOURNEYS` é lida do ambiente na subida e exige reinício; por isso **não serve sozinha para o corte**. A Fase 1 precisa de uma flag de corte lida em runtime, com propagação medida no ensaio. O mecanismo (onde o valor mora, como é alterado e auditado, e como API e worker o enxergam ao mesmo tempo) é definido no contrato da Fase 1 e ainda não existe.
+- `FEATURE_JOURNEYS` é lida do ambiente na subida e exige reinício; por isso **não serve sozinha para o corte**. A Fase 1 precisa de uma flag de corte lida em runtime, com propagação medida no ensaio. O mecanismo está implementado na branch da Fase 1; a propagação na cópia do servidor ainda precisa ser medida pelo dono.
 - As flags de jornada continuam como estão: controlam disponibilidade de produto, não o corte de dados.
 - Mecanismo, ferramenta (`psql` + `bash`), erro `503 MAINTENANCE_IN_PROGRESS` e regras de rollback: [contrato da flag de corte](../contracts/workspace-cutover-v1.md).
 
@@ -264,9 +264,9 @@ O job noturno de classificação de categorias (00:00–05:30) não grava em tab
 
 O ensaio usa cópia restaurada do backup de produção e a taxa de mutações extraída dos logs; contém dado pessoal. Condições aprovadas:
 
-Os [scripts W1–W4 e o runbook do ensaio](../../ops/rehearsal/workspaces/README.md) são **rascunhos exclusivos para ensaio**, não migrações aprovadas nem autorização para iniciar a Fase 1. O dono os executa somente no servidor e sobre a cópia isolada descrita abaixo.
+O [runbook do ensaio definitivo](../../ops/rehearsal/workspaces/README.md) usa os SQLs versionados de [`ops/workspaces/`](../../ops/workspaces/). Os rascunhos históricos W1–W4 da pasta de ensaio não são migrações aprovadas nem autorizam a Fase 1. O dono executa o ensaio no servidor somente sobre a cópia isolada descrita abaixo.
 
-**Ensaio suspenso (decisão de 13/10/2026):** o rascunho atual aplica W4 dentro do corte e tem um delta W3 que não reconcilia perfis editados ou apagados, cursor de alerta nem preferência internacional. O ensaio no servidor aguarda o delta definitivo e a separação de W4 (unidade G do [plano de execução](./hub-adaptativo-fase1-execucao.md)) e será refeito com eles.
+**Ensaio no servidor pendente do dono:** a unidade G disponibiliza o delta definitivo, a cópia reversa e W4 em segunda janela. O dono refaz o ensaio com eles antes de aprovar qualquer corte em produção; o resultado local não substitui as duas cópias com volume real.
 
 - roda **no servidor, executado pelo dono**; agentes não acessam o banco de produção nem cópias dele;
 - a cópia é descartada ao fim do ensaio;
