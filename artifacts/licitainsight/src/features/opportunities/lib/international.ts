@@ -181,32 +181,6 @@ export function facetOptions(buckets: { value: string; label: string; count: num
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'pt-BR'));
 }
 
-/**
- * Switching between national and international calls keeps the text and the deadline status and drops the
- * filters that only exist on the other side.
- */
-export function scopePatch(scope: OpportunityScope): Partial<OpportunitySearchParams> {
-  return {
-    scope: scope === 'international' ? 'international' : undefined,
-    state: undefined,
-    city: undefined,
-    installation: undefined,
-    organization: undefined,
-    area: undefined,
-    program: undefined,
-    kind: undefined,
-    source: undefined,
-    includeIndividual: undefined,
-    agency: undefined,
-    region: undefined,
-    country: undefined,
-    language: undefined,
-    opportunityType: undefined,
-    eligibility: undefined,
-    funding: undefined,
-  };
-}
-
 /** Toggles the "projects in Brazil" shortcut. */
 export function brazilProjectsPatch(params: OpportunitySearchParams): Partial<OpportunitySearchParams> {
   return { country: params.country?.includes('BR') ? undefined : ['BR'] };

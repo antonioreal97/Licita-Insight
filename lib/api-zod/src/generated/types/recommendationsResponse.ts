@@ -5,10 +5,13 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { OpportunityRecommendation } from './opportunityRecommendation';
 import type { Pagination } from './pagination';
 import type { Recommendation } from './recommendation';
 
 export interface RecommendationsResponse {
   data: Recommendation[];
+  /** Declared-purpose matches; absent when no purposes were answered */
+  opportunities?: OpportunityRecommendation[];
   pagination: Pagination;
 }

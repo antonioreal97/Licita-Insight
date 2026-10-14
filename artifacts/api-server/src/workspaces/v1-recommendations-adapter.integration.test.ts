@@ -368,8 +368,8 @@ test("v1 recommendations in legacy and workspaces modes", { skip: !process.env.P
   });
 
   await t.test("the subscription gate answers the same in both modes, before the workspace is resolved", () => {
-    // Today `/v1/me/*` sits behind the account router's subscription gate, so the preferences answer 402 too.
-    assert.deepEqual(deniedInLegacy, [402, 402, 402, 202]);
+    // Recommendation privacy preferences are available before the account router subscription gate.
+    assert.deepEqual(deniedInLegacy, [402, 402, 200, 202]);
     assert.deepEqual(deniedInWorkspaces, deniedInLegacy);
   });
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'wouter';
 import { ExternalLink, Info } from 'lucide-react';
-import type { BrazilEligibility, OpportunityEligibilityAnswer, OpportunityScope, OpportunitySearchParams, OpportunitySearchResponse, OpportunitySummary } from '@/api';
+import type { BrazilEligibility, OpportunityEligibilityAnswer, OpportunitySearchParams, OpportunitySearchResponse, OpportunitySummary } from '@/api';
 import { INTERNATIONAL_REGIONS } from '@/services/opportunity-service';
 import {
   amountLine,
@@ -70,36 +70,6 @@ export function OfficialNoticeBanner({ className = '' }: { className?: string })
       <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
       {OFFICIAL_NOTICE_PREVAILS}
     </p>
-  );
-}
-
-const scopes: { scope: OpportunityScope; label: string }[] = [
-  { scope: 'national', label: 'Nacionais' },
-  { scope: 'international', label: 'Internacionais' },
-];
-
-/** National calls or international ones: two lists, so deadlines and currencies of the two never mix. */
-export function ScopeTabs({ scope, onChange }: { scope: OpportunityScope; onChange: (scope: OpportunityScope) => void }) {
-  return (
-    <div role="group" aria-label="Abrangência das oportunidades" className="mb-4 inline-flex rounded-lg border border-border bg-surface p-1">
-      {scopes.map((item) => {
-        const active = item.scope === scope;
-        return (
-          <button
-            key={item.scope}
-            type="button"
-            aria-pressed={active}
-            data-testid={`button-opportunity-scope-${item.scope}`}
-            onClick={() => onChange(item.scope)}
-            className={`rounded-md px-4 py-2 type-ui font-semibold transition-colors duration-fast ease-standard focus-visible:focus-ring ${
-              active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

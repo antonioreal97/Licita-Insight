@@ -80,6 +80,16 @@ rota não é registrada (404). Serve para QA/testes automatizados sem conta Goog
 
 ---
 
+## Finalidade de uso e tipo de proponente (extensão aditiva)
+
+`GET /api/v1/me/usage-profile` lê `{ usagePurposes, applicantTypes, usageInviteDismissed }` e `PATCH` na mesma rota altera somente os campos enviados. Ambas exigem apenas sessão; o `PATCH` exige CSRF e validação Zod. As respostas são opcionais e arrays vazios significam ausência de resposta. A dispensa do convite no painel é um booleano da conta, não do navegador. O formulário em Configurações permite seleção múltipla e limpeza das respostas.
+
+`usagePurposes` usa os tipos de jornada do hub (`lib/api-zod/src/hub/workspace-profiles.ts`): `procurement` (vender para o governo), `culture` (captar recursos para cultura), `funding` (buscar fomento e projetos), `research` (pesquisa), `study` (estudar). `applicantTypes` usa o sinal `applicant_type`: `individual` (pessoa física), `mei` (MEI), `company` (empresa), `nonprofit` (organização sem fins lucrativos). Valores repetidos ou fora das listas recebem `400 INVALID_PARAMETER`.
+
+Os três campos ficam em `users` e entram no objeto `user` da exportação LGPD. Excluir a conta exclui a linha e as respostas. A escolha por colunas evita uma tabela adicional para três atributos 1:1 e preserva os defaults vazios de contas anteriores.
+
+Na Fase 1 de Espaços, o backfill deve usar `usagePurposes` para sugerir/criar o Espaço inicial correspondente à finalidade principal e copiar `applicantTypes` como ponto de partida para `applicant_type` onde houver esse sinal. Respostas vazias não devem ser inferidas como finalidade ou proponente, e o perfil mínimo continua palavras-chave e região. A migração desta extensão é `0042` na `main`; as migrações W1/W2 da Fase 1 são `0043` e `0044` após a sincronização.
+
 ## 2. Editais salvos e monitorados
 
 Monitorar implica salvar: `monitored` é um atributo do edital salvo.
@@ -283,7 +293,7 @@ type NotificationPreferences = {
 
 ## 6. Perfil da empresa e filtros inteligentes
 
-O perfil da empresa exige sessão **e acesso ativo** (gate `402` de `/v1/me`), porque alimenta alertas e aderência, que são recursos pagos — decisão do dono de 13/10/2026.
+O perfil da empresa (`GET|PUT|DELETE /api/v1/me/company-profile`) exige apenas sessão, com CSRF no `PUT` e no `DELETE`. A prévia da região exige acesso ativo (`402 SUBSCRIPTION_REQUIRED` sem acesso); alertas e aderência continuam pagos. A exportação LGPD permanece acessível com apenas sessão. Decisão do dono de 13/10/2026: o perfil da empresa continua disponível sem acesso ativo.
 
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
@@ -350,7 +360,7 @@ As rotas desta seção exigem sessão e usam o limite leve geral de leitura aute
 
 O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 
-O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
+O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente no host. Na imagem de produção, use `docker exec licita-macbook-app-1 node artifacts/api-server/dist/refresh-profile-keywords.mjs`; ele toma o mesmo lock. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
 
 ## Assinatura (Asaas)
 
@@ -405,7 +415,7 @@ teste vigente. Em produção a variável é sempre ignorada, mesmo se definida c
 Cupons são armazenados por digest SHA-256, aceitam duração de 7 ou 30 dias, podem ter janela de validade e limite de resgates. O resgate grava uma linha por conta e calcula
 `accessUntil` a partir do maior entre agora, o período pago/trial vigente e outro cupom ativo; portanto estende acesso sem alterar a assinatura no Asaas. `GET /me/billing` expõe `couponAccessUntil` e usa `source: 'coupon'` quando o cupom é a fonte vigente (assinatura paga continua tendo prioridade).
 
-Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nextDueDate` da assinatura;
+Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até o vencimento da próxima cobrança existente (ou `nextDueDate` da assinatura, se ela ainda não existe);
 `PAYMENT_OVERDUE` marca `past_due`; `PAYMENT_REFUNDED` cancela e encerra o período. Cobrança paga ou
 vencida com `dueDate` anterior ao fim do período já pago não altera a linha — assim reenvio e entrega fora
 de ordem não recalculam o período, não reativam uma assinatura vencida e não derrubam um cancelamento

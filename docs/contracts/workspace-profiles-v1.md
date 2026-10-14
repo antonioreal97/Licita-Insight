@@ -42,6 +42,8 @@ Cada etapa possui uma lista fechada de campos. `parseWorkspaceProfileStep` rejei
 
 `regions` distingue `national`, `international` e `custom`, com países ISO alfa-2, UFs e opção remota. `coverage` de `procurement` conserva exatamente a forma vigente: nacional ou customizada com macrorregiões, UFs, municípios e raio.
 
+Antes da Fase 1, a conta pode guardar finalidades usando os mesmos `type` (`procurement`, `culture`, `funding`, `research`, `study`) e tipos de proponente para o sinal `applicant_type`: `individual` = pessoa física, `mei` = MEI, `company` = empresa, `nonprofit` = organização sem fins lucrativos. São respostas opcionais e não substituem as palavras-chave e a região do perfil mínimo. O backfill de Espaços pode copiá-las como valores iniciais; não deve inferir valores quando os arrays estiverem vazios.
+
 ## Completude
 
 `workspaceProfileCompleteness` implementa a decisão aprovada na [revisão](../plans/hub-adaptativo-revisao.md): perfil mínimo requer somente palavras-chave e região. Para `procurement`, `selectedKeywords` ou `offerings` satisfaz palavras-chave; `coverage` satisfaz região. A função retorna `percent` (0, 50 ou 100), `complete`, `missing` e `nextStep`.

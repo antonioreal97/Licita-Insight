@@ -250,7 +250,7 @@ export async function getLatestCultureIngest() {
   };
 }
 
-const isCli = process.argv[1]?.includes("collect-opportunities");
+const isCli = process.argv[1]?.endsWith("collect-opportunities.ts");
 
 if (isCli) {
   logger.info(

@@ -157,7 +157,7 @@ Para separar API e worker (fila de IA com extração de PDF, ficha e aderência)
 
 ## Documentação
 
-- Contratos da API: [`docs/contracts/`](docs/contracts/) — busca em [`search-v1.md`](docs/contracts/search-v1.md), conta e assinatura em [`account-v1.md`](docs/contracts/account-v1.md), oportunidades em [`opportunities-v1.md`](docs/contracts/opportunities-v1.md), editais abertos por UF (mapa da página inicial) em [`public-tenders-by-state-v1.md`](docs/contracts/public-tenders-by-state-v1.md).
+- Contratos da API: [`docs/contracts/`](docs/contracts/) — busca em [`search-v1.md`](docs/contracts/search-v1.md), conta e assinatura em [`account-v1.md`](docs/contracts/account-v1.md) e oportunidades em [`opportunities-v1.md`](docs/contracts/opportunities-v1.md).
 - Arquitetura do frontend: [`artifacts/licitainsight/ARCHITECTURE.md`](artifacts/licitainsight/ARCHITECTURE.md).
 - Design system: [`design-system/`](design-system/README.md) e a página viva em `/design-system`.
 - Escala e custos: [`docs/architecture-scale.md`](docs/architecture-scale.md). Alertas operacionais: [`docs/ops/alerts.md`](docs/ops/alerts.md).

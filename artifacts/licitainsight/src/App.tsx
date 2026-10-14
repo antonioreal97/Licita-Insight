@@ -72,7 +72,7 @@ const routeTitles: Record<string, string> = {
   '/termos': 'Termos de Uso · Pardal Digital',
   '/dashboard': 'Visão geral · Pardal Digital',
   '/search': 'Explorar editais · Pardal Digital',
-  '/oportunidades': 'Chamadas culturais · Pardal Digital',
+  '/oportunidades': 'Editais nacionais · Pardal Digital',
   '/transparencia': 'Transparência · Pardal Digital',
   '/saved-searches': 'Buscas salvas · Pardal Digital',
   '/saved-tenders': 'Editais salvos · Pardal Digital',

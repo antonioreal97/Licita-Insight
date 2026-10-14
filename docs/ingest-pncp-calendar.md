@@ -15,6 +15,7 @@ Execute `pnpm --filter @workspace/api-server run collect:pncp` sem `PNCP_FROM`
 ou `PNCP_TO`. Sem calendário, a janela inicial é de `PNCP_LOOKBACK_DAYS` (30 por
 padrão), incluindo hoje. Nas execuções seguintes, o coletor pula as partições
 seladas e consulta somente lacunas, UFs incompletas e dias ainda abertos.
+Na imagem de produção, execute `docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-pncp.mjs`; `--help` mostra o uso sem consultar o banco. O comando usa o lock `pncp_collect`, como a agenda.
 O calendário não amplia o intervalo configurado: para recuperar dias anteriores
 à janela após uma parada longa, aumentar `PNCP_LOOKBACK_DAYS` (até 366) ou usar
 um backfill com datas explícitas.

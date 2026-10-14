@@ -3,12 +3,24 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { cp, rm } from "node:fs/promises";
+import { cp, rm, writeFile } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const productionCommands = [
+  "collect-pncp",
+  "collect-transparency",
+  "collect-opportunities",
+  "collect-funding",
+  "collect-culture-federal",
+  "collect-international",
+  "backfill-platform",
+  "backfill-display-titles",
+  "review-estimated-values",
+  "refresh-profile-keywords",
+];
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
@@ -33,6 +45,7 @@ async function buildAll() {
         artifactDir,
         "src/billing/reconcile-billing-cli.ts",
       ),
+      "manual-commands": path.resolve(artifactDir, "src/manual-commands.ts"),
     },
     platform: "node",
     bundle: true,
@@ -143,6 +156,11 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     path.resolve(distDir, "certificates"),
     { recursive: true },
   );
+
+  // Small entry points share one bundled implementation and need no tsx or src/ at runtime.
+  await Promise.all(productionCommands.map((name) =>
+    writeFile(path.resolve(distDir, `${name}.mjs`), 'import "./manual-commands.mjs";\n'),
+  ));
 }
 
 buildAll().catch((err) => {

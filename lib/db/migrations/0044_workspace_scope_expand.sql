@@ -4,9 +4,9 @@
 --
 -- The Drizzle migrator runs pending migrations inside one transaction, so this file builds the indexes with a
 -- plain CREATE INDEX (SHARE lock: reads continue, writes to that table wait). In production, run
--- manual/0043_workspace_scope_expand_concurrently.sql first; it creates the same columns, foreign keys and
+-- manual/0044_workspace_scope_expand_concurrently.sql first; it creates the same columns, foreign keys and
 -- indexes without blocking writes, and every statement below then becomes a no-op.
--- Procedure: docs/migrations/0043-workspace-scope-expand.md.
+-- Procedure: docs/migrations/0044-workspace-scope-expand.md.
 
 -- Nullable without default: metadata only, no table rewrite.
 ALTER TABLE "company_tender_fits" ADD COLUMN IF NOT EXISTS "workspace_id" text;

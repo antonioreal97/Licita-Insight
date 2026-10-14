@@ -8,7 +8,6 @@ import featureFlagsRouter from "./feature-flags";
 import ingestRouter from "./ingest";
 import opportunitiesRouter from "./opportunities";
 import profileRouter from "./profile";
-import publicRouter from "./public";
 import recommendationsRouter from "./recommendations";
 import searchRouter from "./search";
 import transparencyRouter from "./transparency";
@@ -24,13 +23,14 @@ router.use(billingRouter);
 router.use(aiRouter);
 router.use(workspacesRouter);
 router.use(workspaceArtifactsRouter);
+// Privacy controls under /v1/me need only a session; register them before
+// accountRouter's subscription gate for paid /v1/me routes.
+router.use(recommendationsRouter);
 router.use(accountRouter);
 router.use(searchRouter);
-router.use(publicRouter);
 router.use(transparencyRouter);
 router.use(opportunitiesRouter);
 router.use(profileRouter);
-router.use(recommendationsRouter);
 router.use(ingestRouter);
 
 export default router;

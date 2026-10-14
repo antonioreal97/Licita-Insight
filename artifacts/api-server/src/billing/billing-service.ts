@@ -23,7 +23,7 @@ import {
 } from "./billing-access";
 import { userHasBetaGrant } from "./beta-grants";
 import { activeCouponAccessUntil } from "./coupons";
-import { webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
+import { paidPeriodNextDueDate, webhookPatch, type AsaasPaymentFields } from "./asaas-webhook";
 import { TRIAL_DAYS } from "./trial-access";
 
 const HANDLED = new Set([
@@ -179,8 +179,11 @@ export async function applyAsaasWebhook(body: unknown): Promise<void> {
     (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") &&
     payment.subscription
   ) {
-    const remote = await getSubscription(payment.subscription);
-    nextDueDate = remote.nextDueDate ?? null;
+    const [remote, payments] = await Promise.all([
+      getSubscription(payment.subscription),
+      listSubscriptionPayments(payment.subscription),
+    ]);
+    nextDueDate = paidPeriodNextDueDate(payment.dueDate, payments, remote.nextDueDate);
   }
 
   let patch;
