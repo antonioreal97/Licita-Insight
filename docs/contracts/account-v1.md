@@ -282,6 +282,8 @@ type NotificationPreferences = {
 
 ## 6. Perfil da empresa e filtros inteligentes
 
+O perfil da empresa exige sessão **e acesso ativo** (gate `402` de `/v1/me`), porque alimenta alertas e aderência, que são recursos pagos — decisão do dono de 13/10/2026.
+
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
 ```ts
@@ -364,7 +366,7 @@ da origem é `subscription > coupon > trial > dev > beta` (em produção `dev` n
 type BillingResponse = {
   status: "none" | "pending" | "active" | "past_due" | "canceled";
   entitled: boolean;
-  source: 'subscription' | 'coupon' | 'trial' | 'beta' | 'dev' | null;
+  source: "subscription" | "coupon" | "trial" | "beta" | "dev" | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   couponAccessUntil: string | null;
@@ -389,15 +391,15 @@ Em desenvolvimento, `BILLING_DEV_ENTITLED=true` libera o gate para qualquer usu�
 somente quando `NODE_ENV !== 'production'`. `source: 'dev'` só aparece quando não há assinatura nem
 teste vigente. Em produção a variável é sempre ignorada, mesmo se definida como `true`.
 
-| Método | Caminho | Auth | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/billing` | sessão | `BillingResponse` |
-| GET | `/api/v1/billing/plan` | pública | `{ monthlyBrl: number | null, trialDays: 7, currency: 'BRL' }` |
-| POST | `/api/v1/me/billing/checkout` | sessão + CSRF | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). Permitido durante o teste; 409 somente se já houver assinatura elegível. |
-| POST | `/api/v1/me/billing/cancel` | sessão + CSRF | `BillingResponse` — cancela no Asaas; o período já pago continua. |
-| POST | `/api/v1/me/billing/coupon` | sessão + CSRF | `{ accessUntil, durationDays, alreadyRedeemed }` — resgata um código de 7 ou 30 dias; repetir o mesmo código é idempotente. |
-| POST | `/api/v1/billing/coupons` | header `x-coupon-admin-token` | Emite um cupom; o código em texto puro aparece apenas nesta resposta. Requer `COUPON_ADMIN_TOKEN`. |
-| POST | `/api/v1/billing/asaas/webhook` | header `asaas-access-token` | `{ received: true }`. Sem cookie e sem CSRF. |
+| Método | Caminho                         | Auth                          | Resposta                                                                                                                               |
+| ------ | ------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/me/billing`            | sessão                        | `BillingResponse`                                                                                                                      |
+| GET    | `/api/v1/billing/plan`          | pública                       | `{ monthlyBrl: number                                                                                                                  | null, trialDays: 7, currency: 'BRL' }` |
+| POST   | `/api/v1/me/billing/checkout`   | sessão + CSRF                 | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). Permitido durante o teste; 409 somente se já houver assinatura elegível. |
+| POST   | `/api/v1/me/billing/cancel`     | sessão + CSRF                 | `BillingResponse` — cancela no Asaas; o período já pago continua.                                                                      |
+| POST   | `/api/v1/me/billing/coupon`     | sessão + CSRF                 | `{ accessUntil, durationDays, alreadyRedeemed }` — resgata um código de 7 ou 30 dias; repetir o mesmo código é idempotente.            |
+| POST   | `/api/v1/billing/coupons`       | header `x-coupon-admin-token` | Emite um cupom; o código em texto puro aparece apenas nesta resposta. Requer `COUPON_ADMIN_TOKEN`.                                     |
+| POST   | `/api/v1/billing/asaas/webhook` | header `asaas-access-token`   | `{ received: true }`. Sem cookie e sem CSRF.                                                                                           |
 
 Cupons são armazenados por digest SHA-256, aceitam duração de 7 ou 30 dias, podem ter janela de validade e limite de resgates. O resgate grava uma linha por conta e calcula
 `accessUntil` a partir do maior entre agora, o período pago/trial vigente e outro cupom ativo; portanto estende acesso sem alterar a assinatura no Asaas. `GET /me/billing` expõe `couponAccessUntil` e usa `source: 'coupon'` quando o cupom é a fonte vigente (assinatura paga continua tendo prioridade).
