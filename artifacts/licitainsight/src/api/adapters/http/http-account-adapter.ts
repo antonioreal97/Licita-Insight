@@ -1,5 +1,7 @@
 import type { AccountAdapter } from '../account-adapter';
 import type {
+  AccountUsageProfile,
+  AccountUsageProfilePatch,
   BillingCheckoutResponse,
   BillingResponse,
   CouponRedemptionResponse,
@@ -26,6 +28,8 @@ const enc = encodeURIComponent;
 /** Account API v1 (CODEX_BACKEND_AGENT) — contract: docs/contracts/account-v1.md. */
 export const httpAccountAdapter: AccountAdapter = {
   getSession: (signal) => getJson<SessionResponse>('/v1/auth/session', {}, signal),
+  getUsageProfile: (signal) => getJson<AccountUsageProfile>('/v1/me/usage-profile', {}, signal),
+  updateUsageProfile: (body: AccountUsageProfilePatch) => sendJson<AccountUsageProfile>('PATCH', '/v1/me/usage-profile', body),
   googleStartUrl: (returnTo) => `${apiBaseUrl}/v1/auth/google/start${toQueryString({ returnTo })}`,
   logout: () => sendJson<void>('POST', '/v1/auth/logout'),
 

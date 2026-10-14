@@ -5,7 +5,9 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { ApplicantType } from './applicantType';
 import type { EmailDigestPreference } from './emailDigestPreference';
+import type { UsagePurpose } from './usagePurpose';
 
 export interface AccountExportUser {
   id: string;
@@ -18,6 +20,9 @@ export interface AccountExportUser {
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
+  usagePurposes: UsagePurpose[];
+  applicantTypes: ApplicantType[];
+  usageInviteDismissed: boolean;
   recommendationPersonalizationEnabled: boolean;
   showInternationalOpportunities: boolean;
   /** @nullable */

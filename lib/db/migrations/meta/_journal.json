@@ -295,6 +295,13 @@
       "when": 1791482410000,
       "tag": "0041_international_opportunities",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791892800000,
+      "tag": "0042_account_usage_profile",
+      "breakpoints": true
     }
   ]
 }

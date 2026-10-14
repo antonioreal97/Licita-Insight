@@ -8,6 +8,7 @@ import {
   type UnsubscribeScope,
   type UpdateNotificationPreferencesBody,
   type User,
+  type AccountUsageProfilePatch,
 } from '@/api';
 import { searchParamsToUrl } from './search-service';
 
@@ -47,6 +48,8 @@ export const accountService = {
   },
   /** `returnTo` must be an app path (starts with `/`); the API falls back to `/dashboard` otherwise. */
   googleSignInUrl: (returnTo: string) => accountAdapter.googleStartUrl(returnTo),
+  getUsageProfile: (signal?: AbortSignal) => accountAdapter.getUsageProfile(signal),
+  updateUsageProfile: (body: AccountUsageProfilePatch) => accountAdapter.updateUsageProfile(body),
   logout: () => accountAdapter.logout(),
   exportAccountData: () => accountAdapter.exportAccountData(),
   deleteAccount: () => accountAdapter.deleteAccount(),

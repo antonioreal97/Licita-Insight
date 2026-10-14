@@ -663,6 +663,38 @@ paths:
                 $ref: "#/components/schemas/AccountExport"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /v1/me/usage-profile:
+    get:
+      operationId: getUsageProfile
+      tags: [account]
+      summary: Read optional declared usage and applicant types
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Current account answers
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountUsageProfile" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    patch:
+      operationId: updateUsageProfile
+      tags: [account]
+      summary: Update optional declared usage and applicant types
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountUsageProfilePatch" }
+      responses:
+        "200":
+          description: Saved account answers
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountUsageProfile" }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/me/billing:
     get:
       operationId: getBilling
@@ -1769,6 +1801,42 @@ components:
           type: string
           format: date-time
       required: [id, email, name, avatarUrl, createdAt]
+    UsagePurpose:
+      type: string
+      enum: [procurement, culture, funding, research, study]
+    ApplicantType:
+      type: string
+      enum: [individual, mei, company, nonprofit]
+    AccountUsageProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        usagePurposes:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
+      required: [usagePurposes, applicantTypes, usageInviteDismissed]
+    AccountUsageProfilePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        usagePurposes:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          uniqueItems: true
+          maxItems: 4
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
+      minProperties: 1
     AuthSessionResponse:
       type: object
       properties:
@@ -2001,6 +2069,13 @@ components:
           $ref: "#/components/schemas/EmailDigestPreference"
         emailImmediateCritical: { type: boolean }
         profileAlerts: { type: boolean }
+        usagePurposes:
+          type: array
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
         recommendationPersonalizationEnabled: { type: boolean }
         showInternationalOpportunities: { type: boolean }
         recommendationPreferencesUpdatedAt:
@@ -2018,6 +2093,9 @@ components:
           emailDigest,
           emailImmediateCritical,
           profileAlerts,
+          usagePurposes,
+          applicantTypes,
+          usageInviteDismissed,
           recommendationPersonalizationEnabled,
           showInternationalOpportunities,
           recommendationPreferencesUpdatedAt,
@@ -3167,8 +3245,22 @@ components:
         data:
           type: array
           items: { $ref: "#/components/schemas/Recommendation" }
+        opportunities:
+          type: array
+          description: Declared-purpose matches; absent when no purposes were answered
+          items: { $ref: "#/components/schemas/OpportunityRecommendation" }
         pagination: { $ref: "#/components/schemas/Pagination" }
       required: [data, pagination]
+    OpportunityRecommendation:
+      type: object
+      additionalProperties: false
+      properties:
+        opportunity: { $ref: "#/components/schemas/OpportunitySummary" }
+        score: { type: number }
+        reasons:
+          type: array
+          items: { type: string }
+      required: [opportunity, score, reasons]
     TenderItem:
       type: object
       properties:

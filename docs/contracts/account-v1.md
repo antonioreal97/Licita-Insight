@@ -79,6 +79,16 @@ rota não é registrada (404). Serve para QA/testes automatizados sem conta Goog
 
 ---
 
+## Finalidade de uso e tipo de proponente (extensão aditiva)
+
+`GET /api/v1/me/usage-profile` lê `{ usagePurposes, applicantTypes, usageInviteDismissed }` e `PATCH` na mesma rota altera somente os campos enviados. Ambas exigem apenas sessão; o `PATCH` exige CSRF e validação Zod. As respostas são opcionais e arrays vazios significam ausência de resposta. A dispensa do convite no painel é um booleano da conta, não do navegador. O formulário em Configurações permite seleção múltipla e limpeza das respostas.
+
+`usagePurposes` usa os tipos de jornada do hub (`lib/api-zod/src/hub/workspace-profiles.ts`): `procurement` (vender para o governo), `culture` (captar recursos para cultura), `funding` (buscar fomento e projetos), `research` (pesquisa), `study` (estudar). `applicantTypes` usa o sinal `applicant_type`: `individual` (pessoa física), `mei` (MEI), `company` (empresa), `nonprofit` (organização sem fins lucrativos). Valores repetidos ou fora das listas recebem `400 INVALID_PARAMETER`.
+
+Os três campos ficam em `users` e entram no objeto `user` da exportação LGPD. Excluir a conta exclui a linha e as respostas. A escolha por colunas evita uma tabela adicional para três atributos 1:1 e preserva os defaults vazios de contas anteriores.
+
+Na Fase 1 de Espaços, o backfill deve usar `usagePurposes` para sugerir/criar o Espaço inicial correspondente à finalidade principal e copiar `applicantTypes` como ponto de partida para `applicant_type` onde houver esse sinal. Respostas vazias não devem ser inferidas como finalidade ou proponente, e o perfil mínimo continua palavras-chave e região. A migração desta extensão é `0042` na `main`; os números `0042` e `0043` provisórios da branch da Fase 1 devem ser renumerados ao sincronizar.
+
 ## 2. Editais salvos e monitorados
 
 Monitorar implica salvar: `monitored` é um atributo do edital salvo.
