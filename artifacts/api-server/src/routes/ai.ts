@@ -23,7 +23,6 @@ const router: IRouter = Router();
 router.get(
   "/v1/me/company-profile",
   requireAuth,
-  requireSubscription,
   asyncHandler(async (_req, res) => {
     res.json({ profile: await getCompanyProfile(authContext(res).user.id) });
   }),
@@ -33,7 +32,6 @@ router.put(
   "/v1/me/company-profile",
   requireAuth,
   requireCsrf,
-  requireSubscription,
   asyncHandler(async (req, res) => {
     const input = parseCompanyProfileInput(req.body);
     const userId = authContext(res).user.id;
@@ -46,7 +44,6 @@ router.delete(
   "/v1/me/company-profile",
   requireAuth,
   requireCsrf,
-  requireSubscription,
   asyncHandler(async (_req, res) => {
     await deleteCompanyProfile(authContext(res).user.id);
     scheduleRecommendationRebuild(authContext(res).user.id);

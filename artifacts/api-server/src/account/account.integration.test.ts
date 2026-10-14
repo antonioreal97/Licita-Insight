@@ -606,22 +606,44 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.equal(exportWithoutSubscription.status, 200);
   });
 
-  await t.test("lets unsubscribed users manage recommendation privacy while paid account routes stay gated", async () => {
+  await t.test("lets unsubscribed users manage recommendation privacy and company profiles while paid routes stay gated", async () => {
     const cookie = await login("recommendation-consent-withdrawal@example.test", false);
     const session = await request("/v1/auth/session", {}, cookie);
     const userId = ((await session.json()) as { user: { id: string } }).user.id;
     await db.update(usersTable)
       .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
       .where(eq(usersTable.id, userId));
+    const profile = {
+      description: "Empresa que fornece equipamentos de informática.",
+      offerings: ["computadores"],
+      exclusions: [],
+      coverage: { scope: "national" },
+      valueRange: { min: null, max: null },
+      size: "other",
+    };
 
     assert.equal((await request("/v1/me/saved-tenders/ids", {}, cookie)).status, 402);
-    assert.equal((await request("/v1/me/company-profile", {}, cookie)).status, 402);
+    const emptyProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(emptyProfile.status, 200);
+    assert.deepEqual(await emptyProfile.json(), { profile: null });
     assert.equal((await request("/v1/me/company-profile", {
-      method: "PUT", headers: csrf, body: JSON.stringify({ description: "Teste" }),
-    }, cookie)).status, 402);
+      method: "PUT", body: JSON.stringify(profile),
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "PUT", headers: csrf, body: JSON.stringify(profile),
+    }, cookie)).status, 200);
+    const savedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(savedProfile.status, 200);
+    assert.equal(((await savedProfile.json()) as { profile: { description: string } }).profile.description, profile.description);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "DELETE",
+    }, cookie)).status, 403);
     assert.equal((await request("/v1/me/company-profile", {
       method: "DELETE", headers: csrf,
-    }, cookie)).status, 402);
+    }, cookie)).status, 204);
+    const deletedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(deletedProfile.status, 200);
+    assert.deepEqual(await deletedProfile.json(), { profile: null });
     assert.equal((await request("/v1/me/company-profile/region-preview", {}, cookie)).status, 402);
     assert.equal((await request("/v1/me/recommendation-preferences", {}, cookie)).status, 200);
     assert.equal((await request("/v1/me/recommendation-preferences", {
@@ -1085,12 +1107,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
           expiredCookie,
         )
       ).status,
-      402,
+      200,
     );
-    assert.deepEqual(await (await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, expiredCookie)).json(), {
-      profileVersion: null,
-      results: {},
-    });
+    assert.equal((await request(`/v1/me/fit?tenderIds=${encodeURIComponent(tenderId)}`, {}, expiredCookie)).status, 402);
 
     assert.equal((await request("/v1/me/company-profile", { method: "DELETE", headers: csrf }, authenticatedCookie)).status, 204);
     assert.equal((await db.select().from(companyProfilesTable).where(eq(companyProfilesTable.userId, userId))).length, 0);
