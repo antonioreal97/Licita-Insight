@@ -64,7 +64,7 @@ O cache inclui usuário, versão do perfil, edital, fingerprint do conteúdo do 
 
 ## Alertas
 
-`notification-preferences` inclui `profileAlerts:boolean`. A avaliação diária considera somente editais criados após o último checkpoint do perfil, somente resultados `high`, contas com acesso e no máximo uma notificação `profile_new_matches` por usuário/dia. A notificação contém a contagem e até cinco snapshots em `profileMatches`; ela aparece no sino e entra no resumo diário já existente, sem e-mail separado.
+`notification-preferences` inclui `profileAlerts:boolean`. A avaliação diária considera somente editais criados após o último checkpoint do perfil, somente resultados `high`, contas com acesso e no máximo uma notificação `profile_new_matches` por usuário/dia. A notificação contém a contagem e até cinco snapshots em `profileMatches`; ela aparece no sino e entra no resumo diário já existente, sem e-mail separado. No resumo, cada edital citado traz os destaques já armazenados (motivo da aderência, exigências da ficha pronta e aviso de plataforma sem cadastro), sem nova chamada de IA — ver `account-v1.md`, seção 5.
 
 ## Privacidade
 
