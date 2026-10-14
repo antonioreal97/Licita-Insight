@@ -2512,11 +2512,6 @@ export type PageSizeParameter = number;
 
 export type FacetsParameter = boolean;
 
-/**
- * With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).
- */
-export type IncludeMonitoredParameter = boolean;
-
 export type ReadinessCheck200 = {
   status: 'ok';
 };
@@ -2529,10 +2524,6 @@ export type SearchTendersParams = {
 q?: QueryParameter;
 mode?: SearchModeParameter;
 status?: StatusFilterParameter;
-/**
- * With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).
- */
-includeMonitored?: IncludeMonitoredParameter;
 modality?: ModalityFilterParameter;
 /**
  * @items.pattern ^[A-Za-z]{2}$
