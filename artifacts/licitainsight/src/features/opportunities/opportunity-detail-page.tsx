@@ -57,7 +57,7 @@ function OpportunityDetail() {
       return (
         <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
           <h1 className="type-section">Chamada não encontrada</h1>
-          <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">Esse id não está na coleta de chamadas culturais.</p>
+          <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">Esse id não está na coleta de editais nacionais.</p>
           <Link href="/oportunidades" className="mt-4 inline-block type-ui font-semibold text-primary hover:underline">
             Voltar às chamadas
           </Link>
@@ -80,7 +80,7 @@ function OpportunityDetail() {
         href={international ? '/oportunidades?scope=international' : '/oportunidades'}
         className="type-meta font-semibold text-primary hover:underline"
       >
-        {international ? 'Oportunidades internacionais' : 'Chamadas culturais'}
+        {international ? 'Oportunidades internacionais' : 'Editais nacionais'}
       </Link>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <OpportunityStatusBadge status={opportunity.status} />

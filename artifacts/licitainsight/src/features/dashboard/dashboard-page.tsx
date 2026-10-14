@@ -127,7 +127,7 @@ function OpportunitiesCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-opportunities">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="type-section text-foreground">Chamadas culturais</h2>
+        <h2 className="type-section text-foreground">Editais nacionais</h2>
         {locked && <IncludedInAccessHint />}
       </div>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">Fomento audiovisual do Mapa da Cultura e das secretarias que publicam no Mapas Culturais.</p>

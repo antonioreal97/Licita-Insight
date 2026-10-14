@@ -293,7 +293,7 @@ function OpportunitySearch() {
         unavailable ? (
           <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
             <h2 className="type-section">Chamadas temporariamente indisponíveis</h2>
-            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de chamadas culturais não respondeu. Tente de novo em instantes.</p>
+            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de editais nacionais não respondeu. Tente de novo em instantes.</p>
           </div>
         ) : (
           <ErrorState error={search.error} onRetry={() => search.refetch()} />

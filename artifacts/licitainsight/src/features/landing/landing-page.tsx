@@ -114,7 +114,7 @@ type Kind = {
 // One color per kind of opportunity, shared by the hero chips and the "what you find" cards.
 const kinds = {
   tenders: { icon: Landmark, label: 'Licitações', fill: 'bg-salvia' },
-  culture: { icon: Clapperboard, label: 'Chamadas culturais', fill: 'bg-aqua' },
+  culture: { icon: Clapperboard, label: 'Editais nacionais', fill: 'bg-aqua' },
   international: { icon: Globe2, label: 'Internacionais', fill: 'bg-oliva' },
 } satisfies Record<string, Kind>;
 
@@ -174,7 +174,7 @@ function Hero({ reducedMotion }: { reducedMotion: boolean }) {
           <span className="block text-hero-highlight">num lugar só.</span>
         </h1>
         <p className="mt-6 max-w-xl type-corpo text-muted-foreground sm:type-corpo-grande">
-          Licitações do PNCP, chamadas culturais e oportunidades internacionais. Salve o que interessa e o Pardal
+          Licitações do PNCP, editais nacionais e oportunidades internacionais. Salve o que interessa e o Pardal
           avisa quando surgir algo para você.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -247,10 +247,10 @@ const finds: { id: string; kind: Kind; source: string; text: string; href: strin
   {
     id: 'culture',
     kind: kinds.culture,
-    source: 'Mapas Culturais',
-    text: 'Fomento ao audiovisual e à cultura, separado das compras públicas.',
+    source: 'Cultura e fomento',
+    text: 'Editais de cultura, fomento e pesquisa de órgãos públicos, separados das compras.',
     href: '/oportunidades',
-    cta: 'Ver chamadas culturais',
+    cta: 'Ver editais nacionais',
     tilt: 'lg:-translate-y-2',
   },
   {
@@ -322,7 +322,7 @@ function FindsSection() {
 }
 
 const planIncludes = [
-  'Licitações, chamadas culturais e internacionais na mesma busca',
+  'Licitações, editais nacionais e internacionais na mesma busca',
   'Editais salvos e buscas monitoradas, sem limite',
   'Alertas no app e resumo diário por e-mail',
   'Cancele quando quiser, nas Configurações',
@@ -392,7 +392,7 @@ function FaqSection() {
     },
     {
       q: 'De onde vêm as oportunidades?',
-      a: 'As licitações vêm do PNCP (Portal Nacional de Contratações Públicas) e são atualizadas todos os dias. As chamadas culturais vêm do Mapas Culturais, e as internacionais, de organismos que publicam editais abertos. Cada uma leva ao documento oficial.',
+      a: 'As licitações vêm do PNCP (Portal Nacional de Contratações Públicas) e são atualizadas todos os dias. Os editais nacionais vêm do Mapas Culturais e de órgãos federais de cultura e fomento, e as internacionais, de organismos que publicam editais abertos. Cada uma leva ao documento oficial.',
     },
     {
       q: 'Como funciona o teste grátis?',

@@ -263,7 +263,7 @@ function BillingSection() {
         Assinatura
       </h2>
       <p className="mt-1 type-meta text-muted-foreground">
-        Um plano mensal libera salvar editais, guardar buscas, receber alertas no app e por e-mail e ver as chamadas culturais.
+        Um plano mensal libera salvar editais, guardar buscas, receber alertas no app e por e-mail e ver os editais nacionais.
         {price !== null ? ` ${formatCurrencyPrecise(price)} por mês.` : ''}
       </p>
       {billingFlag === 'required' && trial.kind !== 'expired' && (
@@ -293,7 +293,7 @@ function BillingSection() {
                 {plan.data ? `Seu teste de ${plan.data.trialDays} dias terminou` : 'Seu teste terminou'} {trialEndPhrase(trial.endsAt)}.
               </p>
               <p className="mt-0.5 type-meta">
-                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver as chamadas culturais. Seus editais e buscas salvos
+                Assine para voltar a salvar e monitorar editais, receber alertas no app e por e-mail e ver os editais nacionais. Seus editais e buscas salvos
                 continuam guardados na sua conta.
               </p>
             </div>
