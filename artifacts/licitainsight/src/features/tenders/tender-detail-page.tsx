@@ -32,7 +32,7 @@ import { ErrorState } from '@/components/common/query-states';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
-import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber } from '@/lib/format';
+import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber, formatTime } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { DecisionPanel } from '@/features/participation/components/decision-panel';
@@ -434,9 +434,12 @@ export default function TenderDetailPage() {
 
 function DateValue({ value, withTime = false }: { value: string | null; withTime?: boolean }) {
   if (!value) return <span className="text-sm font-semibold text-muted-foreground">Não informado</span>;
+  // The time goes on its own line: in the six-column grid, date and time side by side overflowed into the next column.
+  const time = withTime ? formatTime(value) : null;
   return (
-    <time dateTime={value} className="text-sm xl:whitespace-nowrap font-semibold tabular-nums">
-      {withTime ? formatDateTime(value) : formatDate(value)}
+    <time dateTime={value} title={withTime ? formatDateTime(value) : undefined} className="block text-sm font-semibold tabular-nums">
+      <span className="block">{formatDate(value)}</span>
+      {time && <span className="type-meta block font-medium text-muted-foreground">{time}</span>}
     </time>
   );
 }
