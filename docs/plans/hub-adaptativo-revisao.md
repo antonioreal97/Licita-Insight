@@ -108,6 +108,13 @@ Também em 13/10/2026, o dono autorizou o código da Fase 1 (“flag de corte em
 21. **Erro `503 MAINTENANCE_IN_PROGRESS`**, com o texto “Manutenção rápida em andamento. Tente de novo em alguns minutos.”
 22. **Rotas novas, criação de Espaços e jornadas só depois de W4**; a Fase 1 tem duas janelas em produção, a da virada e a de W4.
 
+Decisões de 13/10/2026 sobre pontos levantados durante o código da Fase 1:
+
+23. **Teto de 5 Espaços para qualquer acesso ativo** — assinatura, teste, cupom ou acesso beta; sem acesso ativo, 1.
+24. **Coleta durante a pausa:** a coleta em andamento falha no primeiro edital monitorado alterado e é refeita na coleta seguinte, em vez de concluir no modo em que começou. Exceção registrada no contrato da flag de corte.
+25. **Edital salvo sem `workspace_id` depois da virada** continua fora das leituras, e salvar o mesmo edital de novo responde erro, de propósito: é o sinal de gravação fora da porta que bloqueia W4.
+26. **Ids de eventos do Asaas:** guardar os ids já processados (para que um pagamento reentregue depois de um estorno não reative a assinatura) fica para antes de ligar a chave de produção do Asaas; pede migração própria.
+
 Nenhuma dessas decisões autoriza migração, virada da flag ou qualquer mudança em produção.
 
 ## 5. Checkout Asaas antes de ativar a Fase 1
