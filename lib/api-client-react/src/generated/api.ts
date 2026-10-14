@@ -21,6 +21,8 @@ import type {
 
 import type {
   AccountExport,
+  AccountUsageProfile,
+  AccountUsageProfilePatch,
   AiQuotaExceededResponse,
   AiUnavailableResponse,
   ApplyAsaasBillingWebhook200,
@@ -63,7 +65,6 @@ import type {
   NotFoundResponse,
   NotificationPage,
   NotificationPreferences,
-  OpenTendersByStateResponse,
   OpportunitySearchResponse,
   OpportunitySummary,
   ProfileCategoriesResponse,
@@ -1817,84 +1818,6 @@ export function useGetWorkspaceDashboard<TData = Awaited<ReturnType<typeof getWo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetWorkspaceDashboardQueryOptions(id,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getGetOpenTendersByStateUrl = () => {
-
-
-
-
-  return `/api/v1/public/tenders/by-state`
-}
-
-/**
- * Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes and served from memory in between.
- * @summary Count open tenders and sum their estimated values by state
- */
-export const getOpenTendersByState = async ( options?: Parameters<typeof customFetch>[1]): Promise<OpenTendersByStateResponse> => {
-
-  return customFetch<OpenTendersByStateResponse>(getGetOpenTendersByStateUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetOpenTendersByStateQueryKey = () => {
-    return [
-    `/api/v1/public/tenders/by-state`
-    ] as const;
-    }
-
-
-export const getGetOpenTendersByStateQueryOptions = <TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetOpenTendersByStateQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpenTendersByState>>> = ({ signal }) => getOpenTendersByState({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetOpenTendersByStateQueryResult = NonNullable<Awaited<ReturnType<typeof getOpenTendersByState>>>
-export type GetOpenTendersByStateQueryError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>
-
-
-/**
- * @summary Count open tenders and sum their estimated values by state
- */
-
-export function useGetOpenTendersByState<TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetOpenTendersByStateQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3929,6 +3852,171 @@ export function useExportAccountData<TData = Awaited<ReturnType<typeof exportAcc
 
 
 
+
+export const getGetUsageProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me/usage-profile`
+}
+
+/**
+ * @summary Read optional declared usage and applicant types
+ */
+export const getUsageProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccountUsageProfile> => {
+
+  return customFetch<AccountUsageProfile>(getGetUsageProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsageProfileQueryKey = () => {
+    return [
+    `/api/v1/me/usage-profile`
+    ] as const;
+    }
+
+
+export const getGetUsageProfileQueryOptions = <TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageProfile>>> = ({ signal }) => getUsageProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUsageProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getUsageProfile>>>
+export type GetUsageProfileQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Read optional declared usage and applicant types
+ */
+
+export function useGetUsageProfile<TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUsageProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateUsageProfileUrl = () => {
+
+
+
+
+  return `/api/v1/me/usage-profile`
+}
+
+/**
+ * @summary Update optional declared usage and applicant types
+ */
+export const updateUsageProfile = async (accountUsageProfilePatch: AccountUsageProfilePatch, options?: Parameters<typeof customFetch>[1]): Promise<AccountUsageProfile> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AccountUsageProfile>(getUpdateUsageProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(accountUsageProfilePatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateUsageProfileMutationKey = () => ['updateUsageProfile'] as const;
+
+export const getUpdateUsageProfileMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUsageProfile>>, TError,UpdateUsageProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUsageProfile>>, TError,UpdateUsageProfileMutationVariables, TContext> => {
+
+const mutationKey = getUpdateUsageProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUsageProfile>>, UpdateUsageProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateUsageProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUsageProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateUsageProfile>>>
+    export type UpdateUsageProfileMutationBody = BodyType<AccountUsageProfilePatch>
+    export type UpdateUsageProfileMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type UpdateUsageProfileMutationVariables = {data: BodyType<AccountUsageProfilePatch>}
+
+    /**
+ * @summary Update optional declared usage and applicant types
+ */
+export const useUpdateUsageProfile = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUsageProfile>>, TError,UpdateUsageProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUsageProfile>>,
+        TError,
+        UpdateUsageProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateUsageProfileMutationOptions(options));
+    }
 
 export const getGetBillingUrl = () => {
 

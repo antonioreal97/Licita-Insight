@@ -17,11 +17,27 @@ export type WebhookPatch = {
   currentPeriodEnd: Date | null;
 };
 
+/** The next generated charge marks the end of the paid period, even if Asaas has advanced nextDueDate. */
+export function paidPeriodNextDueDate(
+  paidDueDate: string | null | undefined,
+  payments: readonly { dueDate?: string | null }[],
+  subscriptionNextDueDate: string | null | undefined,
+): string | null {
+  const nextCharge = paidDueDate
+    ? payments
+        .map((payment) => payment.dueDate)
+        .filter((due): due is string => Boolean(due && due > paidDueDate))
+        .sort()[0]
+    : undefined;
+  return nextCharge ?? subscriptionNextDueDate ?? null;
+}
+
 /**
  * Maps an Asaas payment event onto the local subscription.
  * `null` means the event does not change access (unknown event, or a paid/overdue charge due before the period
  * already paid ends — a redelivered or out-of-order event).
- * Activating events require `nextDueDate` (`YYYY-MM-DD` from the Asaas subscription).
+ * Activating events require the next period boundary (`YYYY-MM-DD`), derived from the next
+ * generated charge or, when no such charge exists, from the Asaas subscription's `nextDueDate`.
  */
 export function webhookPatch(
   event: string,

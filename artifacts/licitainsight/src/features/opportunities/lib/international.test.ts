@@ -14,7 +14,6 @@ import {
   OFFICIAL_NOTICE_PREVAILS,
   originalTitle,
   placeLabel,
-  scopePatch,
   selectedEligibility,
 } from './international';
 
@@ -127,21 +126,6 @@ test('opções de organismo, região, idioma e tipo vêm das facetas, com o valo
     ],
   );
   assert.deepEqual(facetOptions(undefined), []);
-});
-
-test('trocar de aba mantém a busca e o prazo e limpa os filtros do outro lado', () => {
-  const patch = scopePatch('international');
-  assert.equal(patch.scope, 'international');
-  for (const key of ['state', 'city', 'area', 'installation', 'includeIndividual', 'source', 'kind'] as const) {
-    assert.ok(key in patch && patch[key] === undefined, key);
-  }
-  assert.ok(!('q' in patch));
-  assert.ok(!('status' in patch));
-  const back = scopePatch('national');
-  assert.equal(back.scope, undefined);
-  for (const key of ['agency', 'region', 'country', 'language', 'opportunityType', 'eligibility', 'funding'] as const) {
-    assert.ok(key in back && back[key] === undefined, key);
-  }
 });
 
 test('atalho "só projetos no Brasil", título original e local', () => {

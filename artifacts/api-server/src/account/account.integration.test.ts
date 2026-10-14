@@ -224,6 +224,57 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   const userACookie = await login("user-a@example.test");
   const userBCookie = await login("user-b@example.test");
 
+  await t.test("usage profile validates, persists, exports and is deleted with account", async () => {
+    const cookie = await login("usage-profile@example.test", false);
+    const endpoint = "/v1/me/usage-profile";
+    assert.equal((await request(endpoint)).status, 401);
+    const initial = await request(endpoint, {}, cookie);
+    assert.deepEqual(await initial.json(), { usagePurposes: [], applicantTypes: [], usageInviteDismissed: false });
+    const baseline = await request("/v1/recommendations?page=1&pageSize=10", {}, cookie);
+    assert.equal(baseline.status, 200);
+    const baselineRecommendations = await baseline.json();
+    assert.equal((await request(endpoint, { method: "PATCH", headers: csrf, body: JSON.stringify({ usageInviteDismissed: true }) }, cookie)).status, 200);
+    const afterDismissal = await request("/v1/recommendations?page=1&pageSize=10", {}, cookie);
+    assert.deepEqual(await afterDismissal.json(), baselineRecommendations);
+    assert.equal((await request(endpoint, { method: "PATCH", body: JSON.stringify({ usagePurposes: ["culture"] }) }, cookie)).status, 403);
+    for (const body of [
+      { usagePurposes: ["unknown"] },
+      { usagePurposes: ["culture", "culture"] },
+      { applicantTypes: ["other"] },
+      { usageInviteDismissed: "true" },
+    ]) {
+      assert.equal((await request(endpoint, { method: "PATCH", headers: csrf, body: JSON.stringify(body) }, cookie)).status, 400);
+    }
+    const saved = await request(endpoint, { method: "PATCH", headers: csrf,
+      body: JSON.stringify({ usagePurposes: ["culture", "research"], applicantTypes: ["individual", "mei"], usageInviteDismissed: true }) }, cookie);
+    assert.equal(saved.status, 200);
+    assert.deepEqual(await saved.json(), { usagePurposes: ["culture", "research"], applicantTypes: ["individual", "mei"], usageInviteDismissed: true });
+    await db.insert(culturalOpportunitiesTable).values([
+      { id: "usage-culture-unknown", installationId: "br", externalId: "usage-unknown", kind: "culture", source: "mapas", title: "Chamada cultural TEST DATA", organizationName: "Cultura", audience: null, status: "open", searchText: "chamada cultural", rawPayload: {}, fetchedAt: new Date() },
+      { id: "usage-culture-individual", installationId: "br", externalId: "usage-individual", kind: "culture", source: "mapas", title: "Chamada cultural TEST DATA", organizationName: "Cultura", audience: "Pessoa física", status: "open", searchText: "chamada cultural pessoa física", rawPayload: {}, fetchedAt: new Date() },
+    ]);
+    const recommendations = await request("/v1/recommendations?page=1&pageSize=10", {}, cookie);
+    assert.equal(recommendations.status, 200);
+    const offered = await recommendations.json() as { opportunities: Array<{ opportunity: { id: string }; score: number }> };
+    const matched = offered.opportunities.find((item) => item.opportunity.id === "usage-culture-individual");
+    const unknown = offered.opportunities.find((item) => item.opportunity.id === "usage-culture-unknown");
+    assert.ok(matched && unknown);
+    assert.ok(matched.score > unknown.score);
+    const patch = await request(endpoint, { method: "PATCH", headers: csrf, body: JSON.stringify({ applicantTypes: ["nonprofit"] }) }, cookie);
+    assert.equal(patch.status, 200);
+    assert.deepEqual(await patch.json(), { usagePurposes: ["culture", "research"], applicantTypes: ["nonprofit"], usageInviteDismissed: true });
+    const exported = await request("/v1/me/export", {}, cookie);
+    assert.equal(exported.status, 200);
+    const data = await exported.json() as { user: { usagePurposes: string[]; applicantTypes: string[]; usageInviteDismissed: boolean } };
+    assert.deepEqual(data.user.usagePurposes, ["culture", "research"]);
+    assert.deepEqual(data.user.applicantTypes, ["nonprofit"]);
+    assert.equal(data.user.usageInviteDismissed, true);
+    const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "usage-profile@example.test"));
+    assert.ok(user);
+    assert.equal((await request("/v1/me", { method: "DELETE", headers: csrf, body: JSON.stringify({ confirm: "EXCLUIR" }) }, cookie)).status, 204);
+    assert.equal((await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, user.id))).length, 0);
+  });
+
   await t.test("grants a 7-day trial, gates cultural opportunities, and prefers subscriptions", async () => {
     const cookie = await login("trial-access@example.test", false);
     const [user] = await db
@@ -610,6 +661,72 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
     const exportWithoutSubscription = await request("/v1/me/export", {}, cookie);
     assert.equal(exportWithoutSubscription.status, 200);
+  });
+
+  await t.test("lets unsubscribed users manage recommendation privacy and company profiles while paid routes stay gated", async () => {
+    const cookie = await login("recommendation-consent-withdrawal@example.test", false);
+    const session = await request("/v1/auth/session", {}, cookie);
+    const userId = ((await session.json()) as { user: { id: string } }).user.id;
+    await db.update(usersTable)
+      .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+      .where(eq(usersTable.id, userId));
+    const profile = {
+      description: "Empresa que fornece equipamentos de informática.",
+      offerings: ["computadores"],
+      exclusions: [],
+      coverage: { scope: "national" },
+      valueRange: { min: null, max: null },
+      size: "other",
+    };
+
+    assert.equal((await request("/v1/me/saved-tenders/ids", {}, cookie)).status, 402);
+    const emptyProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(emptyProfile.status, 200);
+    assert.deepEqual(await emptyProfile.json(), { profile: null });
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "PUT", body: JSON.stringify(profile),
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "PUT", headers: csrf, body: JSON.stringify(profile),
+    }, cookie)).status, 200);
+    const savedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(savedProfile.status, 200);
+    assert.equal(((await savedProfile.json()) as { profile: { description: string } }).profile.description, profile.description);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "DELETE",
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "DELETE", headers: csrf,
+    }, cookie)).status, 204);
+    const deletedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(deletedProfile.status, 200);
+    assert.deepEqual(await deletedProfile.json(), { profile: null });
+    assert.equal((await request("/v1/me/company-profile/region-preview", {}, cookie)).status, 402);
+    assert.equal((await request("/v1/me/recommendation-preferences", {}, cookie)).status, 200);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", body: JSON.stringify({ personalizationEnabled: true }),
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: true }),
+    }, cookie)).status, 200);
+
+    const event = () => request("/v1/recommendations/events", {
+      method: "POST", headers: csrf, body: JSON.stringify({ type: "search", query: "consentimento" }),
+    }, cookie);
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, true);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 1);
+    assert.equal((await request("/v1/me/recommendation-history", { method: "DELETE" }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/recommendation-history", { method: "DELETE", headers: csrf }, cookie)).status, 204);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, true);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: false }),
+    }, cookie)).status, 200);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, false);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+    assert.equal((await request("/v1/me/saved-searches", {}, cookie)).status, 402);
   });
 
   await t.test("expires and revokes sessions", async () => {

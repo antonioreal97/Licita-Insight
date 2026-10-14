@@ -74,6 +74,17 @@ Retorna o mesmo `OpportunitySummary` da busca, incluindo documentos oficiais e a
 - Deduplicação usa o índice compatível `(installationId, externalId)`; nas fontes de fomento `installationId` é o id da fonte e `externalId` é o SHA-256 truncado da URL canônica. Isso preserva ids iguais publicados por instalações Mapas diferentes.
 - Encerramento é derivado de `registrationTo`; prazo futuro usa `upcoming` e ausência de data usa `undated` (ou `open` quando a própria lista oficial declara que a chamada está aberta).
 
+Na imagem de produção, os comandos manuais são:
+
+```sh
+docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-opportunities.mjs
+docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-funding.mjs
+docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-culture-federal.mjs
+docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-international.mjs
+```
+
+Cada executável aceita `--help` sem banco. As execuções com gravação usam o mesmo lock da agenda correspondente; as variáveis `*_DRY_RUN` documentadas abaixo continuam disponíveis via `docker exec -e`.
+
 FINEP atualmente publica `Disallow: /`; portanto o adaptador e o parser ficam prontos, mas a coleta real retorna zero e `blocked_by_robots` até autorização/alteração oficial. CNPq usa a página “Abertas para Submissão”. CAPES usa a seção “Editais Abertos”; o catálogo CKAN não continha, na pesquisa de referência, um recurso que substituísse integralmente essa lista.
 
 ### Fontes federais de cultura

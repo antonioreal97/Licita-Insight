@@ -437,6 +437,7 @@ de 1 s, registra o progresso de cada lote no log e pode ser interrompido e retom
 `PLATFORM_BACKFILL_BATCH_SIZE` ajusta o lote (1–5000) e `PLATFORM_BACKFILL_DAILY=false` desliga o
 agendamento. Para uso local, `pnpm --filter @workspace/api-server run backfill:platform` executa o mesmo
 percurso sem pausa.
+Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/backfill-platform.mjs`. Usa o mesmo lock `tender_platform_backfill` do job agendado.
 
 ### Filtro e facet
 
@@ -498,7 +499,6 @@ estimated_value > 0 group by modality`. Nenhum limite pode ficar abaixo de R$ 10
 | `sort=value_desc` / `value_asc`                  | vai para o fim, depois dos editais sem valor                            |
 | `valueMin` / `valueMax`                          | não casa com nenhuma faixa, como um valor ausente                       |
 | `facets.valueRange` (mín., máx., histograma)     | fica fora                                                               |
-| `GET /api/v1/public/tenders/by-state`            | conta em `openTenders`, não soma em `estimatedValueTotal`               |
 | Recomendações                                    | não alarga a faixa inferida dos salvos; não pontua a favor nem contra   |
 | Aderência ao perfil (`out_of_value_range`)       | não elimina o edital                                                    |
 
@@ -512,6 +512,7 @@ em lotes de 1.000 com pausa de 1 s, e só grava onde o flag muda — uma segunda
 execução interrompida é simplesmente repetida. `ESTIMATED_VALUE_REVIEW_BATCH_SIZE` ajusta o lote (1–5000) e
 `ESTIMATED_VALUE_REVIEW_DAILY=false` desliga o agendamento. Para uso local,
 `pnpm --filter @workspace/api-server run review:estimated-values` executa o mesmo percurso sem pausa.
+Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/review-estimated-values.mjs`. Usa o mesmo lock `tender_estimated_value_review` do job agendado.
 
 ## Performance esperada
 

@@ -337,6 +337,10 @@ export type ApiErrorDetail = { field: string; issue: string; existingId?: string
 // Account API v1 — source of truth: docs/contracts/account-v1.md.
 
 export type User = { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string };
+export type UsagePurpose = 'procurement' | 'culture' | 'funding' | 'research' | 'study';
+export type ApplicantType = 'individual' | 'mei' | 'company' | 'nonprofit';
+export type AccountUsageProfile = { usagePurposes: UsagePurpose[]; applicantTypes: ApplicantType[]; usageInviteDismissed: boolean };
+export type AccountUsageProfilePatch = Partial<AccountUsageProfile>;
 
 export type SessionResponse = { user: User };
 
@@ -356,21 +360,6 @@ export type BillingResponse = {
   /** End of the free trial (ISO; length from `GET /billing/plan`). Absent on APIs without CODEX_HANDOFF-007. */
   trialEndsAt?: string | null;
   source?: BillingSource | null;
-};
-
-/** One state in public `GET /api/v1/public/tenders/by-state` — contract: docs/contracts/public-tenders-by-state-v1.md. */
-export type OpenTendersByState = {
-  state: string;
-  openTenders: number;
-  /** Sum of the published estimated values, without the ones flagged as implausible; `null` when the state has none to add. */
-  estimatedValueTotal: number | null;
-  updatedAt: string | null;
-};
-
-/** Always the 27 states. The server recomputes it at most once every 15 minutes. */
-export type OpenTendersByStateResponse = {
-  data: OpenTendersByState[];
-  meta: { totalOpenTenders: number; generatedAt: string; indexUpdatedAt: string | null; cacheTtlSeconds: number };
 };
 
 /** Public `GET /api/v1/billing/plan` (no session): the single plan and the trial length. */
@@ -530,7 +519,7 @@ export type RecommendationReason = {
   text: string;
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
-export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
+export type RecommendationsResponse = { data: Recommendation[]; opportunities?: Array<{ opportunity: OpportunitySummary; score: number; reasons: string[] }>; pagination: Pagination };
 export type RecommendationEvent =
   { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string } | { type: 'interest'; tenderId: string };
 

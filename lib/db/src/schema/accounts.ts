@@ -45,6 +45,9 @@ export const usersTable = pgTable(
       .notNull()
       .default(true),
     profileAlerts: boolean("profile_alerts").notNull().default(true),
+    usagePurposes: text("usage_purposes").array().notNull().default(sql`'{}'::text[]`).$type<Array<"procurement" | "culture" | "funding" | "research" | "study">>(),
+    applicantTypes: text("applicant_types").array().notNull().default(sql`'{}'::text[]`).$type<Array<"individual" | "mei" | "company" | "nonprofit">>(),
+    usageInviteDismissed: boolean("usage_invite_dismissed").notNull().default(false),
     recommendationPersonalizationEnabled: boolean("recommendation_personalization_enabled")
       .notNull()
       .default(false),
@@ -77,6 +80,8 @@ export const usersTable = pgTable(
       "users_email_digest_check",
       sql`${table.emailDigest} in ('daily', 'off')`,
     ),
+    check("users_usage_purposes_check", sql`${table.usagePurposes} <@ ARRAY['procurement','culture','funding','research','study']::text[]`),
+    check("users_applicant_types_check", sql`${table.applicantTypes} <@ ARRAY['individual','mei','company','nonprofit']::text[]`),
   ],
 );
 

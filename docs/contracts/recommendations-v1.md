@@ -10,6 +10,8 @@ A preferência `recommendationPersonalizationEnabled` nasce `false`. Sem opt-in,
 
 Sinais que não dependem do opt-in: perfil da empresa, editais salvos e monitorados, buscas salvas e feedback de desinteresse. O opt-in acrescenta somente termos normalizados de busca e ids de editais abertos. A exportação `pardal-digital-dados-YYYY-MM-DD.json` inclui preferência, eventos ainda retidos, feedback, perfil calculado e recomendações materializadas. Excluir a conta remove tudo por `ON DELETE CASCADE`.
 
+As finalidades e os tipos de proponente do perfil da conta são dados **declarados** pelo usuário. Eles pesam materiais sem depender do opt-in de personalização comportamental. Sem resposta de finalidade, o fluxo, formato e ordenação de recomendações permanecem como antes.
+
 ## Endpoints
 
 | Método | Rota                                         | Contrato                                                                                                 |
@@ -63,5 +65,7 @@ São candidatos somente editais `open`, com `proposal_deadline > now`, não salv
 Pontuação documentada (máximos aproximados): categoria `25`, termos/`ts_rank` `30`, UF/cobertura `14`, órgão `8`, faixa de valor `8`, prazo `6`, novidade `6`. Fora das UFs de cobertura recebe `-35`; fora da faixa, `-5`; categorias/termos parecidos com dismiss recebem penalidade leve de até `-7`. Qualquer ocorrência de uma exclusão livre ou palavra-chave excluída explicitamente elimina o candidato. Os alertas de perfil reutilizam os filtros explícitos antes da avaliação: palavra-chave escolhida soma `0,20` e categoria escolhida soma `0,25` ao score normalizado, enquanto exclusões encerram o candidato sem chamada de modelo. No topo, entram no máximo dois itens do mesmo órgão e três da mesma categoria primária antes dos itens adiados.
 
 O resultado final (top 50, score e até três motivos legíveis) fica em `user_recommendations`. A leitura faz apenas join por rank. Salvar, monitorar, alterar perfil/busca salva e dar feedback agendam rebuild assíncrono com debounce. O job diário roda às 03:00 (`America/Sao_Paulo`), fora da coleta PNCP das 06:00, e também limpa eventos vencidos.
+
+Com finalidades declaradas, a resposta acrescenta `opportunities`: chamadas abertas de `cultural_opportunities`, ordenadas por `kind`, `source`, `areas` e termos de `audience`/`opportunity_type`/título/resumo conforme a finalidade. `culture` prioriza cultura e fontes culturais; `funding` prioriza fomento, bolsas e apoio; `research` prioriza CNPq, CAPES, FINEP e chamadas de pesquisa/inovação. O tipo de proponente soma apenas um bônus quando há indício textual de público correspondente; público ausente ou incerto nunca exclui uma chamada. Exemplos: uma pessoa física interessada em cultura recebe uma chamada Mapas Culturais acima de uma chamada sem público informado; uma empresa interessada em pesquisa recebe uma chamada FINEP acima de uma chamada cultural sem relação. Sem `procurement`, a primeira página limita licitações a três para que não dominem a seção. `study` é aceito e não gera conteúdo artificial, pois não há fonte homologada. A preferência internacional existente continua controlando se chamadas internacionais entram.
 
 Sem sinal útil e sem perfil não há fallback genérico: retorna lista vazia e a UI convida a cadastrar o perfil de atividade.

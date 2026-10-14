@@ -69,7 +69,6 @@ paths:
         - $ref: "#/components/parameters/Query"
         - $ref: "#/components/parameters/SearchMode"
         - $ref: "#/components/parameters/StatusFilter"
-        - $ref: "#/components/parameters/IncludeMonitored"
         - $ref: "#/components/parameters/ModalityFilter"
         - $ref: "#/components/parameters/StateFilter"
         - $ref: "#/components/parameters/CityFilter"
@@ -335,33 +334,6 @@ paths:
         "200": { description: Workspace widgets, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceDashboard" } } } }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/FeatureDisabled" }
-  /v1/public/tenders/by-state:
-    get:
-      operationId: getOpenTendersByState
-      tags: [search]
-      summary: Count open tenders and sum their estimated values by state
-      description: >-
-        Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes
-        and served from memory in between.
-      security: []
-      responses:
-        "200":
-          description: Open tenders by state
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                example: public, max-age=300, stale-while-revalidate=600
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OpenTendersByStateResponse"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-        "500":
-          $ref: "#/components/responses/InternalError"
-        "503":
-          $ref: "#/components/responses/SearchUnavailable"
   /v1/tenders/{id}:
     get:
       operationId: getTenderById
@@ -921,6 +893,38 @@ paths:
                 $ref: "#/components/schemas/AccountExport"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /v1/me/usage-profile:
+    get:
+      operationId: getUsageProfile
+      tags: [account]
+      summary: Read optional declared usage and applicant types
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Current account answers
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountUsageProfile" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    patch:
+      operationId: updateUsageProfile
+      tags: [account]
+      summary: Update optional declared usage and applicant types
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountUsageProfilePatch" }
+      responses:
+        "200":
+          description: Saved account answers
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountUsageProfile" }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/me/billing:
     get:
       operationId: getBilling
@@ -1939,16 +1943,6 @@ components:
       schema:
         type: boolean
         default: true
-    IncludeMonitored:
-      name: includeMonitored
-      in: query
-      description: >-
-        With a status filter and a signed-in user, also returns the tenders that user monitors,
-        whatever their status (e.g. an open-only search still lists a monitored tender that closed).
-        Ignored without a session. Such responses are private (never publicly cached).
-      schema:
-        type: boolean
-        default: false
   responses:
     FeatureDisabled:
       description: Workspace cutover, W4 constraints or the journey is not enabled
@@ -2153,6 +2147,42 @@ components:
           type: string
           format: date-time
       required: [id, email, name, avatarUrl, createdAt]
+    UsagePurpose:
+      type: string
+      enum: [procurement, culture, funding, research, study]
+    ApplicantType:
+      type: string
+      enum: [individual, mei, company, nonprofit]
+    AccountUsageProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        usagePurposes:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
+      required: [usagePurposes, applicantTypes, usageInviteDismissed]
+    AccountUsageProfilePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        usagePurposes:
+          type: array
+          uniqueItems: true
+          maxItems: 5
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          uniqueItems: true
+          maxItems: 4
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
+      minProperties: 1
     AuthSessionResponse:
       type: object
       properties:
@@ -2235,53 +2265,6 @@ components:
         durationDays: { type: integer, enum: [7, 30] }
         alreadyRedeemed: { type: boolean }
       required: [accessUntil, durationDays, alreadyRedeemed]
-    OpenTendersByState:
-      type: object
-      properties:
-        state:
-          type: string
-          pattern: "^[A-Z]{2}$"
-          description: State code (UF)
-        openTenders:
-          type: integer
-          minimum: 0
-        estimatedValueTotal:
-          type: [number, "null"]
-          minimum: 0
-          description: >-
-            Sum of the estimated values that were published, leaving out the ones flagged as implausible
-            (`estimatedValueFlag`); null when no open tender in the state has a value to add
-        updatedAt:
-          type: [string, "null"]
-          format: date-time
-          description: Most recent fetch among the open tenders of the state; null when it has none
-      required: [state, openTenders, estimatedValueTotal, updatedAt]
-    OpenTendersByStateMeta:
-      type: object
-      properties:
-        totalOpenTenders: { type: integer, minimum: 0 }
-        generatedAt:
-          type: string
-          format: date-time
-          description: When the aggregate was computed
-        indexUpdatedAt:
-          type: [string, "null"]
-          format: date-time
-          description: Most recent fetch among all counted tenders
-        cacheTtlSeconds: { type: integer, minimum: 0 }
-      required: [totalOpenTenders, generatedAt, indexUpdatedAt, cacheTtlSeconds]
-    OpenTendersByStateResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          minItems: 27
-          maxItems: 27
-          items:
-            $ref: "#/components/schemas/OpenTendersByState"
-        meta:
-          $ref: "#/components/schemas/OpenTendersByStateMeta"
-      required: [data, meta]
     BillingPlanResponse:
       type: object
       properties:
@@ -2432,6 +2415,13 @@ components:
           $ref: "#/components/schemas/EmailDigestPreference"
         emailImmediateCritical: { type: boolean }
         profileAlerts: { type: boolean }
+        usagePurposes:
+          type: array
+          items: { $ref: "#/components/schemas/UsagePurpose" }
+        applicantTypes:
+          type: array
+          items: { $ref: "#/components/schemas/ApplicantType" }
+        usageInviteDismissed: { type: boolean }
         recommendationPersonalizationEnabled: { type: boolean }
         showInternationalOpportunities: { type: boolean }
         recommendationPreferencesUpdatedAt:
@@ -2449,6 +2439,9 @@ components:
           emailDigest,
           emailImmediateCritical,
           profileAlerts,
+          usagePurposes,
+          applicantTypes,
+          usageInviteDismissed,
           recommendationPersonalizationEnabled,
           showInternationalOpportunities,
           recommendationPreferencesUpdatedAt,
@@ -3598,8 +3591,22 @@ components:
         data:
           type: array
           items: { $ref: "#/components/schemas/Recommendation" }
+        opportunities:
+          type: array
+          description: Declared-purpose matches; absent when no purposes were answered
+          items: { $ref: "#/components/schemas/OpportunityRecommendation" }
         pagination: { $ref: "#/components/schemas/Pagination" }
       required: [data, pagination]
+    OpportunityRecommendation:
+      type: object
+      additionalProperties: false
+      properties:
+        opportunity: { $ref: "#/components/schemas/OpportunitySummary" }
+        score: { type: number }
+        reasons:
+          type: array
+          items: { type: string }
+      required: [opportunity, score, reasons]
     TenderItem:
       type: object
       properties:

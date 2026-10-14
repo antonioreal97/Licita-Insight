@@ -301,6 +301,8 @@ O comando abaixo processa somente linhas sem fonte ou com fonte `rules` cuja ver
 pnpm --filter @workspace/api-server run backfill:display-titles -- --batch 1000
 ```
 
+Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/backfill-display-titles.mjs --batch 1000`. O executável também aceita `--dry-run`, `--limit`, `--cursor` e `--help`.
+
 A versão 2 das regras exige rodar o backfill de novo para atualizar os títulos `rules` da versão 1.
 
 Categorias vazias do acervo usam um backfill separado, idempotente quanto à propriedade `teacher`:

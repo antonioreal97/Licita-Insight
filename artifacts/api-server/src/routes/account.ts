@@ -38,8 +38,16 @@ import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 import { parseParticipationPatch, parseStage } from '../account/participation';
 import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
+import { getUsageProfile, updateUsageProfile } from "../account/usage-profile-service";
 
 const router: IRouter = Router();
+
+router.get("/v1/me/usage-profile", requireAuth, asyncHandler(async (_req, res) => {
+  res.json(await getUsageProfile(authContext(res).user.id));
+}));
+router.patch("/v1/me/usage-profile", requireAuth, requireCsrf, asyncHandler(async (req, res) => {
+  res.json(await updateUsageProfile(authContext(res).user.id, req.body));
+}));
 
 const recordBody = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
