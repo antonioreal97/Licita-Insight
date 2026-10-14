@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { Building2, CalendarDays, MapPin } from 'lucide-react';
-import type { TenderFit, TenderSummary } from '@/api';
+import type { TenderFit, TenderHighlights as TenderHighlightsData, TenderSummary } from '@/api';
 import { FitBadge } from '@/features/company-profile/components/fit-badge';
 import { useRegisteredPlatforms } from '@/features/company-profile/hooks/use-company-profile';
 import { formatDate } from '@/lib/format';
@@ -15,6 +15,7 @@ import { PlatformBadge } from './platform-badge';
 import { RelevanceMeter } from './relevance-meter';
 import { SaveButton } from './save-button';
 import { StatusBadge } from './status-badge';
+import { TenderHighlights } from './tender-highlights';
 import { ValueDisplay } from './value-display';
 
 type Props = {
@@ -27,6 +28,8 @@ type Props = {
   relevanceVaries?: boolean;
   /** Aderência ao perfil da empresa; nothing renders while pending or without a profile. */
   fit?: TenderFit;
+  /** Requirement highlights read from the tender's ready sheet; with `fit`, they explain the row in up to two lines. */
+  highlights?: TenderHighlightsData;
   onOpen?: () => void;
   /** Recommendation cards use explicit feedback actions instead of a duplicate bookmark. */
   showSave?: boolean;
@@ -38,7 +41,7 @@ type Props = {
  * Layout (grid): mobile stacks facts under the text; ≥sm moves value/deadline/relevance to a right-aligned column
  * so values line up vertically across rows for fast scanning. The whole row opens the detail (title link overlay).
  */
-export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit, onOpen, showSave = true }: Props) {
+export function TenderRow({ tender, saved, onSave, compact = false, relevanceVaries = false, fit, highlights, onOpen, showSave = true }: Props) {
   const place = formatPlace(tender.location);
   const titleFragment = highlightFor(tender, 'title');
   const snippet = highlightFor(tender, 'objectSummary') ?? highlightFor(tender, 'items');
@@ -112,6 +115,8 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
             <HighlightedText fragment={snippet} fallback="" />
           </p>
         )}
+
+        <TenderHighlights highlights={highlights} fit={fit} />
 
         {!compact && tender.categories.length > 0 && (
           <ul aria-label="Categorias" className="relative z-raised mt-2.5 flex w-fit max-w-full flex-wrap gap-1.5">
