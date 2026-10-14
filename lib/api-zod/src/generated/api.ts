@@ -1277,6 +1277,34 @@ export const GetTenderFitsResponse = zod.object({
 
 
 /**
+ * Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+export const getTenderHighlightsQueryTenderIdsItemMax = 200;
+
+export const getTenderHighlightsQueryTenderIdsMax = 100;
+
+
+
+export const GetTenderHighlightsQueryParams = zod.object({
+  "tenderIds": zod.array(zod.coerce.string().min(1).max(getTenderHighlightsQueryTenderIdsItemMax)).min(1).max(getTenderHighlightsQueryTenderIdsMax)
+})
+
+export const getTenderHighlightsResponseResultsRequirementsMax = 3;
+
+
+
+export const GetTenderHighlightsResponse = zod.object({
+  "results": zod.record(zod.string(), zod.object({
+  "requirements": zod.array(zod.object({
+  "code": zod.enum(['me_epp_exclusive', 'me_epp_quota', 'site_visit', 'bid_guarantee', 'samples', 'technical_certificate', 'technical_qualification', 'minimum_capital', 'contract_guarantee']),
+  "label": zod.string()
+})).min(1).max(getTenderHighlightsResponseResultsRequirementsMax)
+}))
+})
+
+
+/**
  * @summary Get search autocomplete suggestions
  */
 export const getSearchSuggestionsQueryQMin = 2;

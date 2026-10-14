@@ -48,6 +48,7 @@ import type {
   GetCompanyRegionPreview200,
   GetSearchSuggestionsParams,
   GetTenderFitsParams,
+  GetTenderHighlightsParams,
   HealthStatus,
   ImportSavedTendersRequest,
   InternalErrorResponse,
@@ -95,6 +96,7 @@ import type {
   TenderAskStatus,
   TenderDetail,
   TenderFitsResponse,
+  TenderHighlightsResponse,
   TenderSheet,
   TransparencyContractsResponse,
   TransparencyTenderContractsResponse,
@@ -1741,6 +1743,97 @@ export function useGetTenderFits<TData = Awaited<ReturnType<typeof getTenderFits
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTenderFitsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderHighlightsUrl = (params: GetTenderHighlightsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["tenderIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/tender-highlights?${stringifiedParams}` : `/api/v1/me/tender-highlights`
+}
+
+/**
+ * Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+export const getTenderHighlights = async (params: GetTenderHighlightsParams, options?: Parameters<typeof customFetch>[1]): Promise<TenderHighlightsResponse> => {
+
+  return customFetch<TenderHighlightsResponse>(getGetTenderHighlightsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderHighlightsQueryKey = (params?: GetTenderHighlightsParams,) => {
+    return [
+    `/api/v1/me/tender-highlights`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTenderHighlightsQueryOptions = <TData = Awaited<ReturnType<typeof getTenderHighlights>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(params: GetTenderHighlightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderHighlightsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderHighlights>>> = ({ signal }) => getTenderHighlights(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderHighlightsQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderHighlights>>>
+export type GetTenderHighlightsQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>
+
+
+/**
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+
+export function useGetTenderHighlights<TData = Awaited<ReturnType<typeof getTenderHighlights>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(
+ params: GetTenderHighlightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderHighlightsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
