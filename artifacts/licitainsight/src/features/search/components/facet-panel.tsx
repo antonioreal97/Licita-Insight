@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useState, type ComponentProps, type ReactNod
 import { ChevronDown, Search } from 'lucide-react';
 import type { FacetBucket, SearchFacets, TenderSearchParams } from '@/api';
 import { Checkbox } from '@/components/ui/checkbox';
+import { GlossaryTerm } from '@/features/help/components/glossary-term';
+import { entryForLabel } from '@/features/help/lib/term-detection';
 import { formatNumber } from '@/lib/format';
 import { isCalendarDate, MAX_MONEY } from '@/services/search-service';
 import { FACET_GROUPS, labelFor, selectedValues, type FacetGroupConfig } from '../lib/facet-config';
@@ -117,11 +119,13 @@ function FacetGroup({
           {shown.map((option) => {
             const checked = selected.includes(option.value);
             const id = `${groupId}-${option.value}`;
+            // Modality options get a help icon beside the label (a button can't sit inside the checkbox label).
+            const termId = config.param === 'modality' ? entryForLabel(option.label) : undefined;
             return (
-              <li key={option.value}>
+              <li key={option.value} className={termId ? 'flex items-center gap-0.5' : undefined}>
                 <label
                   htmlFor={id}
-                  className={`flex ${row} cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui transition-colors duration-fast ease-standard hover:bg-surface-sunken ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
+                  className={`flex ${row} min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui transition-colors duration-fast ease-standard hover:bg-surface-sunken ${countsKnown && option.count === 0 && !checked ? 'text-muted-foreground' : 'text-foreground'}`}
                 >
                   <Checkbox
                     id={id}
@@ -135,6 +139,7 @@ function FacetGroup({
                   </span>
                   <span className="shrink-0 type-data text-xs text-muted-foreground">{countsKnown ? formatNumber(option.count) : '—'}</span>
                 </label>
+                {termId && <GlossaryTerm termId={termId} variant="icon" className={density === 'comfortable' ? 'size-10' : undefined} />}
               </li>
             );
           })}
