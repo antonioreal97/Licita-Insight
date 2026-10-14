@@ -349,7 +349,7 @@ As rotas desta seção exigem sessão e usam o limite leve geral de leitura aute
 
 O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 
-O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
+O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente no host. Na imagem de produção, use `docker exec licita-macbook-app-1 node artifacts/api-server/dist/refresh-profile-keywords.mjs`; ele toma o mesmo lock. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
 
 ## Assinatura (Asaas)
 

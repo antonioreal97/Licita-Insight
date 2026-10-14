@@ -437,6 +437,7 @@ de 1 s, registra o progresso de cada lote no log e pode ser interrompido e retom
 `PLATFORM_BACKFILL_BATCH_SIZE` ajusta o lote (1–5000) e `PLATFORM_BACKFILL_DAILY=false` desliga o
 agendamento. Para uso local, `pnpm --filter @workspace/api-server run backfill:platform` executa o mesmo
 percurso sem pausa.
+Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/backfill-platform.mjs`. Usa o mesmo lock `tender_platform_backfill` do job agendado.
 
 ### Filtro e facet
 
@@ -512,6 +513,7 @@ em lotes de 1.000 com pausa de 1 s, e só grava onde o flag muda — uma segunda
 execução interrompida é simplesmente repetida. `ESTIMATED_VALUE_REVIEW_BATCH_SIZE` ajusta o lote (1–5000) e
 `ESTIMATED_VALUE_REVIEW_DAILY=false` desliga o agendamento. Para uso local,
 `pnpm --filter @workspace/api-server run review:estimated-values` executa o mesmo percurso sem pausa.
+Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/review-estimated-values.mjs`. Usa o mesmo lock `tender_estimated_value_review` do job agendado.
 
 ## Performance esperada
 
