@@ -137,7 +137,7 @@ export async function collectCultureFederal(
   }
 }
 
-const isCli = process.argv[1]?.includes("collect-culture-federal");
+const isCli = process.argv[1]?.endsWith("collect-culture-federal.ts");
 if (isCli) {
   // CULTURE_FEDERAL_DRY_RUN=true reads the sources and prints what it found, without touching the database.
   const dryRun = process.env.CULTURE_FEDERAL_DRY_RUN === "true";

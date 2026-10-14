@@ -758,7 +758,7 @@ export async function getLatestIngest() {
   };
 }
 
-const isCli = process.argv[1]?.includes("collect-pncp");
+const isCli = process.argv[1]?.endsWith("collect-pncp.ts");
 
 if (isCli) {
   const options = collectOptionsFromEnv();

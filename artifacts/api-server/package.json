@@ -42,7 +42,8 @@
     "test:dist-pdf": "node ./build.mjs && node scripts/verify-dist-pdf.mjs",
     "test:dist-sheet": "node ./build.mjs && node scripts/verify-dist-sheet.mjs",
     "test:dist-reconcile": "node ./build.mjs && node scripts/verify-dist-reconcile-billing.mjs",
-    "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet && node scripts/verify-dist-reconcile-billing.mjs",
+    "test:dist-manual": "node ./build.mjs && node scripts/verify-dist-manual-commands.mjs",
+    "test": "tsx --test 'src/**/*.test.ts' && pnpm run test:dist-sheet && node scripts/verify-dist-reconcile-billing.mjs && node scripts/verify-dist-manual-commands.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
