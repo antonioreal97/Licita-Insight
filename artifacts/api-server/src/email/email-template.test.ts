@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EmailDeadlineSnapshot } from "./digest-deadlines";
-import { renderNotificationEmail, savedSearchHref } from "./email-template";
+import {
+  groupSavedSearchNotifications,
+  renderNotificationEmail,
+  savedSearchHref,
+} from "./email-template";
 
 describe("notification email template", () => {
   it("renders a deadline change without repeating the current deadline", () => {
@@ -125,6 +129,76 @@ describe("notification email template", () => {
       /https:\/\/licitai\.example\/search\?status=all&notification=saved-search-link/,
     );
     assert.doesNotMatch(rendered.text, /newOnly/);
+  });
+
+  it("groups the digest's saved-search notifications into one card per saved search", () => {
+    const row = (id: string, savedSearchId: string, hour: number, matchCount: number) => ({
+      id,
+      type: "saved_search_new_matches",
+      createdAt: new Date(`2026-10-13T${String(hour).padStart(2, "0")}:00:00Z`),
+      tenderId: null,
+      tenderTitle: null,
+      tenderOrganizationName: null,
+      tenderProposalDeadline: null,
+      change: null,
+      savedSearchId,
+      savedSearchName: savedSearchId === "limpeza" ? "limpeza" : "Software",
+      savedSearchQuery: savedSearchId === "limpeza" ? "q=limpeza" : "q=software",
+      matchCount,
+    });
+    const document = {
+      ...row("document", "", 9, 0),
+      type: "tender_document_added",
+      savedSearchId: null,
+      savedSearchName: null,
+      savedSearchQuery: null,
+      matchCount: null,
+      tenderId: "tender-1",
+      tenderTitle: "Edital monitorado",
+    };
+    // Old rows: one per 15-minute cycle, before the daily notification.
+    const notifications = [
+      row("limpeza-1", "limpeza", 10, 140),
+      row("software-1", "software", 11, 3),
+      document,
+      row("limpeza-2", "limpeza", 12, 77),
+      row("limpeza-3", "limpeza", 13, 1),
+      row("software-2", "software", 14, 2),
+    ];
+    assert.deepEqual(
+      groupSavedSearchNotifications(notifications).map(({ id, matchCount, groupedCount }) => ({
+        id,
+        matchCount,
+        groupedCount,
+      })),
+      [
+        { id: "limpeza-3", matchCount: 218, groupedCount: 3 },
+        { id: "software-2", matchCount: 5, groupedCount: 2 },
+        { id: "document", matchCount: null, groupedCount: undefined },
+      ],
+    );
+
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications,
+      deadlines: [],
+    });
+    assert.equal(rendered.subject, "Pardal Digital: 3 atualizações no seu resumo");
+    assert.equal(rendered.text.match(/Busca salva: limpeza/g)?.length, 1);
+    assert.match(rendered.text, /218 novos resultados/);
+    assert.match(
+      rendered.text,
+      /Últimos resultados: https:\/\/licitai\.example\/search\?status=all&notification=limpeza-3/,
+    );
+    assert.match(
+      rendered.text,
+      /Abrir a busca salva: https:\/\/licitai\.example\/search\?q=limpeza&status=all/,
+    );
+    assert.doesNotMatch(rendered.text, /notification=limpeza-1/);
+    assert.equal(rendered.html.match(/>Busca salva</g)?.length, 2);
+    assert.match(rendered.html, /Abrir a busca salva/);
   });
 
   it("shows only the new deadline when the previous value is unavailable", () => {

@@ -208,11 +208,29 @@ Regras de geração:
 - **Editais monitorados:** ao fazer upsert/revisão de um edital, comparar com o estado anterior
   persistido; para cada campo alterado e cada usuário que monitora o edital, uma notificação.
   Não notificar na primeira ingestão do edital.
-- **Buscas salvas com `alertsEnabled`:** um job independente da coleta avalia a busca contra os
-  editais **vistos pela primeira vez** desde `lastCheckedAt`; se houver ≥ 1, criar uma notificação
-  `saved_search_new_matches` com `matchCount` e até 20 `tenderIds`, somar em `newMatchesCount` e
-  atualizar `lastCheckedAt`. O link abre `/search?status=all&notification=<id>`, que preserva o
-  snapshot mesmo depois da janela de novos; a busca original fica disponível como ação secundária.
+- **Buscas salvas com `alertsEnabled`:** um job independente da coleta (a cada
+  `SAVED_SEARCH_JOB_INTERVAL_MINUTES`, padrão 15) avalia a busca contra os editais **vistos pela
+  primeira vez** desde `lastCheckedAt`; se houver ≥ 1, registra-os na notificação
+  `saved_search_new_matches` do dia, soma em `newMatchesCount` e atualiza `lastCheckedAt`. O link abre
+  `/search?status=all&notification=<id>`, que preserva o snapshot mesmo depois da janela de novos; a
+  busca original fica disponível como ação secundária.
+  - **No máximo uma notificação por busca salva e por dia de Brasília**, com `dedupeKey`
+    `saved-search:<savedSearchId>:<AAAA-MM-DD>`. O primeiro ciclo do dia com resultados cria a
+    notificação; os seguintes somam `matchCount`, acrescentam os novos `tenderIds` até o teto de 20
+    (ficam os 20 primeiros na ordem de chegada, a mesma regra de um ciclo isolado; o total continua em
+    `matchCount` e a busca mostra "Mostrando os 20 primeiros de N"), voltam `readAt` para `null`,
+    movem `createdAt` para o horário do ciclo (a notificação sobe no feed) e atualizam nome e query
+    da busca. As janelas de cada ciclo (`lastCheckedAt`, horário do ciclo] não se sobrepõem, então
+    nenhum edital conta duas vezes; o advisory lock por busca serializa ciclos concorrentes.
+  - **Depois de entrar num e-mail, a notificação do dia não muda mais.** Se ela já está vinculada a
+    uma entrega, os ciclos seguintes do mesmo dia abrem uma continuação (`…:<AAAA-MM-DD>:2`, `:3`…),
+    que segue a mesma regra e vai no próximo resumo. Assim nenhum resultado fica fora do e-mail e
+    nenhum é enviado duas vezes. Exemplo (resumo às 07:00): ciclos às 06:15 (+40), 06:30 (+12) e 06:45
+    (+3) formam uma notificação com 55, enviada às 07:00; ciclos às 09:00 (+5) e 15:30 (+2) formam a
+    continuação com 7, enviada no resumo do dia seguinte; à meia-noite de Brasília começa a
+    notificação do novo dia. No feed, o dia aparece uma vez antes do resumo e no máximo duas depois.
+  - Notificações antigas (uma por ciclo, `dedupeKey` `saved-search:<id>:<since>:<ciclo>`) não são
+    apagadas nem consolidadas; o resumo diário as agrupa por busca (seção 5).
 - **Fim do teste:** um scheduler da API avalia a cada 6 horas usuários cujo `trialEndsAt` está entre
   agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
 - **Perfil da empresa:** antes do digest diário, avaliar somente editais novos desde o checkpoint do
@@ -255,6 +273,18 @@ type NotificationPreferences = {
   descadastro em um clique.
 - O digest roda às 07:00 em `America/Sao_Paulo` por padrão, agrega notificações lidas ou não que
   ainda não foram vinculadas a uma entrega e não envia e-mail vazio.
+- **Buscas salvas no digest:** um card por busca salva. As notificações `saved_search_new_matches`
+  da mesma busca no período (inclusive as antigas, uma por ciclo, e a continuação do dia) viram um
+  card com o total de `matchCount` ("N novos resultados"), o nome da busca e o link
+  `notification=<id>` da notificação mais recente; quando o card junta mais de uma notificação, ele
+  também leva "Abrir a busca salva" (`/search?<query>&status=all` quando a query não tem `status`),
+  porque o snapshot só guarda os ids da mais recente. O assunto e o resumo do topo contam cards
+  ("1 atualização" para uma busca com 42 linhas antigas), não linhas. Antes do vínculo, o digest trava
+  (`FOR SHARE`) e relê as notificações de busca salva: um ciclo em andamento termina antes e entra
+  neste e-mail; um ciclo seguinte espera, vê o vínculo e abre a continuação.
+- **Buscas salvas não geram e-mail imediato**, mesmo com `immediateCritical`: o aviso imediato
+  continua restrito às mudanças críticas abaixo, e a notificação do dia vai só no digest. Por isso
+  as atualizações ao longo do dia não disparam e-mail por ciclo nem reenviam o que já saiu.
 - **Seus prazos** (seção do digest, antes das novidades): editais salvos do usuário nas etapas
   pessoais `analyzing` (Analisando) e `participating` (Preparando documentos) cujo `nextActionDeadline`
   (prazo pessoal, informado pelo usuário, com o texto de `nextAction`) ou prazo oficial de proposta

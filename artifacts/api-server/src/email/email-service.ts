@@ -97,6 +97,7 @@ const notificationSelection = {
   tenderOrganizationName: notificationsTable.tenderOrganizationName,
   tenderProposalDeadline: notificationsTable.tenderProposalDeadline,
   change: notificationsTable.change,
+  savedSearchId: notificationsTable.savedSearchId,
   savedSearchName: notificationsTable.savedSearchName,
   savedSearchQuery: notificationsTable.savedSearchQuery,
   matchCount: notificationsTable.matchCount,
@@ -326,6 +327,34 @@ const immediateKey = (userId: string, notificationIds: string[]): string => {
   return `email:immediate:${userId}:${hash}`;
 };
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * The saved-search job keeps adding to the day's notification until it is linked to an e-mail (see
+ * recordSavedSearchMatches). The candidates were read before this transaction, so the saved-search ones are
+ * locked and read again before the link: a cycle in progress commits first and its matches go in this e-mail;
+ * a later cycle waits for this transaction, sees the link and opens a new notification.
+ */
+const lockSavedSearchSnapshots = async (
+  tx: Transaction,
+  candidates: Candidate[],
+): Promise<Map<string, Pick<Candidate, "createdAt" | "matchCount" | "savedSearchName" | "savedSearchQuery">>> => {
+  if (candidates.length === 0) return new Map();
+  const rows = await tx
+    .select({
+      id: notificationsTable.id,
+      createdAt: notificationsTable.createdAt,
+      matchCount: notificationsTable.matchCount,
+      savedSearchName: notificationsTable.savedSearchName,
+      savedSearchQuery: notificationsTable.savedSearchQuery,
+    })
+    .from(notificationsTable)
+    .where(inArray(notificationsTable.id, candidates.map(({ id }) => id)))
+    .orderBy(asc(notificationsTable.id))
+    .for("share");
+  return new Map(rows.map(({ id, ...snapshot }) => [id, snapshot]));
+};
+
 const queueDelivery = async (
   mode: EmailMode,
   group: EmailGroup,
@@ -356,6 +385,10 @@ const queueDelivery = async (
       .returning();
     if (!created) return null;
 
+    const refreshed = await lockSavedSearchSnapshots(
+      tx,
+      candidates.filter(({ type }) => type === "saved_search_new_matches"),
+    );
     const linked =
       candidates.length === 0
         ? []
@@ -375,9 +408,9 @@ const queueDelivery = async (
     }
 
     const linkedIds = new Set(linked.map(({ notificationId }) => notificationId));
-    const notifications = candidates.filter(({ id: notificationId }) =>
-      linkedIds.has(notificationId),
-    );
+    const notifications = candidates
+      .filter(({ id: notificationId }) => linkedIds.has(notificationId))
+      .map((candidate) => ({ ...candidate, ...refreshed.get(candidate.id) }));
     const rendered = renderNotificationEmail({
       mode,
       notifications,
