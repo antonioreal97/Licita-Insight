@@ -477,6 +477,7 @@ type AccountExport = {
     savedAt: string;
     monitored: boolean;
     monitoredAt: string | null;
+    workspaceId: string | null;
   }>;
   savedSearches: Array<SavedSearch & { deletedAt: string | null }>;
   notifications: Array<Record<string, unknown>>;
@@ -494,6 +495,8 @@ type AccountExport = {
     createdAt: string;
     updatedAt: string;
     sentAt: string | null;
+    workspaceId: string | null;
+    notificationIds: string[];
   }>;
   aiQuestions: Array<{
     question: string;
@@ -514,6 +517,7 @@ type AccountExport = {
     status: string;
     attempts: number;
     createdAt: string;
+    workspaceId: string | null;
   }>;
   companyProfile: Record<string, unknown> | null;
   companyFits: Array<Record<string, unknown>>;
@@ -532,7 +536,79 @@ type AccountExport = {
     currentPeriodEnd: string | null;
     updatedAt: string;
   } | null;
+  workspaces: Array<{
+    id: string;
+    type: "procurement" | "funding" | "study" | "research" | "culture";
+    name: string;
+    isDefault: boolean;
+    limitSlot: number;
+    onboardingStatus: "not_started" | "in_progress" | "complete";
+    showInternationalOpportunities: boolean;
+    archivedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    role: "owner";
+    memberSince: string;
+    lastSelectedAt: string | null;
+  }>;
+  workspaceProfiles: Array<Record<string, unknown> & { workspaceId: string }>;
+  workspaceProfileSignals: Array<Record<string, unknown> & { workspaceId: string }>;
+  workspacePreference: {
+    activeWorkspaceId: string | null;
+    updatedAt: string;
+  } | null;
 };
+```
+
+#### Compatibilidade do formato com Espaços (Fase 1)
+
+A Fase 1 não remove nem renomeia nenhuma seção ou campo anterior. Ela acrescenta quatro seções no fim do
+objeto (`workspaces`, `workspaceProfiles`, `workspaceProfileSignals` e `workspacePreference`), acrescenta
+`workspaceId: string | null` aos artefatos que ganharam escopo de Espaço e acrescenta `notificationIds` a
+cada item de `emailDeliveries`. A membership `owner` é exportada junto ao respectivo item de `workspaces`,
+nos campos `role`, `memberSince` e `lastSelectedAt`; não há uma segunda cópia do `userId`, que já identifica
+o titular no próprio arquivo.
+
+Os arrays que recebem `workspaceId` são `savedTenders`, `savedSearches`, `notifications`,
+`emailDeliveries`, `aiJobs`, `companyFits`, `recommendationEvents`, `recommendationDismissals` e
+`recommendations`; `recommendationInterestProfile`, quando presente, recebe o mesmo campo. Linhas do
+modelo legado usam `workspaceId: null`. A exportação lê os dois modelos independentemente do modo atual da
+flag, portanto uma desvirada não esconde dados que continuem nas tabelas de Espaços.
+
+Exemplo reduzido do formato anterior:
+
+```json
+{
+  "savedTenders": [{ "tenderId": "edital-1", "monitored": true }],
+  "emailDeliveries": [{ "id": "email-1", "status": "sent" }]
+}
+```
+
+O mesmo trecho depois da Fase 1, ainda em `legacy`, preserva tudo e só acrescenta campos/seções:
+
+```json
+{
+  "savedTenders": [{ "tenderId": "edital-1", "monitored": true, "workspaceId": null }],
+  "emailDeliveries": [
+    { "id": "email-1", "status": "sent", "workspaceId": null, "notificationIds": ["notificacao-1"] }
+  ],
+  "workspaces": [],
+  "workspaceProfiles": [],
+  "workspaceProfileSignals": [],
+  "workspacePreference": null
+}
+```
+
+Depois do corte, os mesmos campos anteriores permanecem e os novos identificam o Espaço:
+
+```json
+{
+  "savedTenders": [{ "tenderId": "edital-1", "monitored": true, "workspaceId": "ws_..." }],
+  "workspaces": [
+    { "id": "ws_...", "name": "Compras públicas", "role": "owner", "lastSelectedAt": "2026-10-13T12:00:00.000Z" }
+  ],
+  "workspacePreference": { "activeWorkspaceId": "ws_...", "updatedAt": "2026-10-13T12:00:00.000Z" }
+}
 ```
 
 Todas as sessões ainda retidas são exportadas, inclusive revogadas/expiradas aguardando o expurgo. Tokens,
@@ -558,6 +634,15 @@ Quando existe assinatura remota não cancelada, a API cancela primeiro no Asaas.
 ocorre em uma única transação. Se essa transação falhar, os dados permanecem íntegros e a compensação
 marca localmente a assinatura como `canceled`, permitindo repetir a exclusão sem cobrar/cancelar de
 novo.
+
+A transação local de exclusão entra pela porta de corte. Enquanto `writes_paused = true`, responde
+`503 MAINTENANCE_IN_PROGRESS` antes de pedir cancelamento ao Asaas e não altera a conta. Em qualquer modo,
+ela apaga explicitamente a preferência ativa e os Espaços de proprietário único; as memberships `owner`,
+perfis, sinais e artefatos com FK de cascata são removidos junto. Artefatos preservados ao excluir apenas um
+Espaço, como entregas de e-mail e jobs, são apagados explicitamente pelo `user_id` na exclusão da conta. Os
+dados do modelo legado, `ai_ask_requests`, sessões, cotas, cobrança local e demais registros com `user_id`
+continuam sendo removidos como antes. Assim, a conta que passou por uma virada e posterior desvirada também
+é apagada dos dois modelos, sem afetar contas vizinhas.
 
 O tombstone antiabuso do teste é deliberadamente preservado após a exclusão. Ele não possui FK para
 `users` e contém somente HMAC não reversível do Google `sub`, `trialEndsAt` e `createdAt`, com

@@ -1,4 +1,4 @@
-import { eq, getTableColumns, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import {
   aiAskRequestsTable,
   aiDailyTendersTable,
@@ -15,6 +15,7 @@ import {
   emailDeliveryNotificationsTable,
   googleTrialTombstonesTable,
   notificationsTable,
+  pool,
   recommendationDismissalsTable,
   recommendationEventsTable,
   recommendationInterestProfilesTable,
@@ -24,11 +25,18 @@ import {
   sessionsTable,
   subscriptionsTable,
   usersTable,
+  userWorkspacePreferencesTable,
+  workspaceMembersTable,
+  workspaceProfileSignalsTable,
+  workspaceProfilesTable,
+  workspacesTable,
 } from "@workspace/db";
 import { sessionSecret } from "../auth/config";
 import { deleteSubscription } from "../billing/asaas-client";
 import { googleTrialSubjectHash } from "../billing/trial-access";
-import { NotFoundError } from "../lib/api-error";
+import { MaintenanceInProgressError, NotFoundError } from "../lib/api-error";
+import { withCutoverGate } from "../workspaces/cutover-gate";
+import { readCutoverState } from "../workspaces/cutover-state";
 import { logger } from "../lib/logger";
 
 /** Registry checked against information_schema in the integration test. */
@@ -51,16 +59,32 @@ export const ACCOUNT_EXPORT_TABLES = {
   recommendation_interest_profiles: "recommendationInterestProfile",
   user_recommendations: "recommendations",
   ai_jobs: "aiJobs",
+  workspace_members: "workspaces",
+  user_workspace_preferences: "workspacePreference",
 } as const;
 
-// The export keeps its current shape until it covers workspaces; `workspace_id` stays out of it until then.
-const { workspaceId: _eventWorkspace, ...recommendationEventColumns } = getTableColumns(recommendationEventsTable);
-const { workspaceId: _dismissalWorkspace, ...recommendationDismissalColumns } = getTableColumns(recommendationDismissalsTable);
-const { workspaceId: _interestWorkspace, ...recommendationInterestColumns } = getTableColumns(recommendationInterestProfilesTable);
-const { workspaceId: _recommendationWorkspace, ...userRecommendationColumns } = getTableColumns(userRecommendationsTable);
+/**
+ * Tables that hold the user's data without a `user_id` column: they hang from a workspace or from another exported
+ * row. Checked against information_schema too, so a new workspace-scoped table cannot be left out of the export.
+ */
+export const ACCOUNT_EXPORT_WORKSPACE_TABLES = {
+  workspaces: "workspaces",
+  workspace_profiles: "workspaceProfiles",
+  workspace_profile_signals: "workspaceProfileSignals",
+  email_delivery_notifications: "emailDeliveries",
+} as const;
 
+/**
+ * Exports both models in any cutover mode: after the flag is turned back, the workspace tables still hold personal
+ * data, and before the cutover they are simply empty. Every artifact carries its `workspaceId` (null in legacy rows).
+ * It is a plain read and never waits for or refuses because of the cutover window.
+ */
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
+  const memberOf = db
+    .select({ id: workspaceMembersTable.workspaceId })
+    .from(workspaceMembersTable)
+    .where(eq(workspaceMembersTable.userId, userId));
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations, workspaces, workspaceProfiles, workspaceProfileSignals, workspacePreferences, deliveryLinks] =
     await Promise.all([
       db
         .select({
@@ -104,6 +128,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           nextActionDeadline: savedTendersTable.nextActionDeadline,
           checklist: savedTendersTable.checklist,
           history: savedTendersTable.history,
+          workspaceId: savedTendersTable.workspaceId,
         })
         .from(savedTendersTable)
         .where(eq(savedTendersTable.userId, userId)),
@@ -118,6 +143,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           deletedAt: savedSearchesTable.deletedAt,
           lastCheckedAt: savedSearchesTable.lastCheckedAt,
           newMatchesCount: savedSearchesTable.newMatchesCount,
+          workspaceId: savedSearchesTable.workspaceId,
         })
         .from(savedSearchesTable)
         .where(eq(savedSearchesTable.userId, userId)),
@@ -139,6 +165,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           matchCount: notificationsTable.matchCount,
           tenderIds: notificationsTable.tenderIds,
           profileMatches: notificationsTable.profileMatches,
+          workspaceId: notificationsTable.workspaceId,
         })
         .from(notificationsTable)
         .where(eq(notificationsTable.userId, userId)),
@@ -176,6 +203,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           createdAt: emailDeliveriesTable.createdAt,
           updatedAt: emailDeliveriesTable.updatedAt,
           sentAt: emailDeliveriesTable.sentAt,
+          workspaceId: emailDeliveriesTable.workspaceId,
         })
         .from(emailDeliveriesTable)
         .where(eq(emailDeliveriesTable.userId, userId)),
@@ -216,6 +244,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           createdAt: aiJobsTable.createdAt,
           startedAt: aiJobsTable.startedAt,
           finishedAt: aiJobsTable.finishedAt,
+          workspaceId: aiJobsTable.workspaceId,
         })
         .from(aiJobsTable)
         .where(eq(aiJobsTable.userId, userId)),
@@ -229,12 +258,51 @@ export async function exportAccountData(userId: string, now = new Date()) {
         reasons: companyTenderFitsTable.reasons,
         model: companyTenderFitsTable.responseModel,
         checkedAt: companyTenderFitsTable.checkedAt,
+        workspaceId: companyTenderFitsTable.workspaceId,
       }).from(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId)),
       db.select().from(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId)),
-      db.select(recommendationEventColumns).from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId)),
-      db.select(recommendationDismissalColumns).from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId)),
-      db.select(recommendationInterestColumns).from(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId)).limit(1),
-      db.select(userRecommendationColumns).from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId)),
+      db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId)),
+      db.select().from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId)),
+      db.select().from(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId)).limit(1),
+      db.select().from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId)),
+      db
+        .select({
+          id: workspacesTable.id,
+          type: workspacesTable.type,
+          name: workspacesTable.name,
+          isDefault: workspacesTable.isDefault,
+          limitSlot: workspacesTable.limitSlot,
+          onboardingStatus: workspacesTable.onboardingStatus,
+          showInternationalOpportunities: workspacesTable.showInternationalOpportunities,
+          archivedAt: workspacesTable.archivedAt,
+          createdAt: workspacesTable.createdAt,
+          updatedAt: workspacesTable.updatedAt,
+          role: workspaceMembersTable.role,
+          memberSince: workspaceMembersTable.createdAt,
+          lastSelectedAt: workspaceMembersTable.lastSelectedAt,
+        })
+        .from(workspaceMembersTable)
+        .innerJoin(workspacesTable, eq(workspacesTable.id, workspaceMembersTable.workspaceId))
+        .where(eq(workspaceMembersTable.userId, userId))
+        .orderBy(asc(workspacesTable.limitSlot)),
+      db.select().from(workspaceProfilesTable).where(inArray(workspaceProfilesTable.workspaceId, memberOf)),
+      db.select().from(workspaceProfileSignalsTable).where(inArray(workspaceProfileSignalsTable.workspaceId, memberOf)),
+      db
+        .select({
+          activeWorkspaceId: userWorkspacePreferencesTable.activeWorkspaceId,
+          updatedAt: userWorkspacePreferencesTable.updatedAt,
+        })
+        .from(userWorkspacePreferencesTable)
+        .where(eq(userWorkspacePreferencesTable.userId, userId))
+        .limit(1),
+      db
+        .select({
+          deliveryId: emailDeliveryNotificationsTable.deliveryId,
+          notificationId: emailDeliveryNotificationsTable.notificationId,
+        })
+        .from(emailDeliveryNotificationsTable)
+        .innerJoin(emailDeliveriesTable, eq(emailDeliveriesTable.id, emailDeliveryNotificationsTable.deliveryId))
+        .where(eq(emailDeliveriesTable.userId, userId)),
     ]);
 
   const user = users[0];
@@ -247,7 +315,12 @@ export async function exportAccountData(userId: string, now = new Date()) {
     savedTenders: savedTenders.map(saved => ({ ...saved, participationSource: 'user' as const })),
     savedSearches,
     notifications,
-    emailDeliveries,
+    emailDeliveries: emailDeliveries.map((delivery) => ({
+      ...delivery,
+      notificationIds: deliveryLinks
+        .filter(({ deliveryId }) => deliveryId === delivery.id)
+        .map(({ notificationId }) => notificationId),
+    })),
     aiQuestions,
     aiDailyUsage,
     aiDailyTenders,
@@ -261,6 +334,10 @@ export async function exportAccountData(userId: string, now = new Date()) {
     recommendations,
     subscription: subscriptions[0] ?? null,
     couponRedemptions,
+    workspaces,
+    workspaceProfiles,
+    workspaceProfileSignals,
+    workspacePreference: workspacePreferences[0] ?? null,
   };
 }
 
@@ -271,8 +348,10 @@ type DeleteAccountDependencies = {
 
 const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
   cancelAsaasSubscription: deleteSubscription,
+  // Through the gate, like every write in the workspace scope: the deletion cannot cross a cutover. The statements
+  // below reach both models in any mode, so nothing personal outlives the account after the flag is turned back.
   deleteLocalAccount: async (userId) => {
-    await db.transaction(async (tx) => {
+    await withCutoverGate({ kind: "http" }, async (tx) => {
       const [user] = await tx
         .select({
           googleSub: usersTable.googleSub,
@@ -340,6 +419,12 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx
         .delete(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId));
+      // Phase 1 workspaces have a single owner: they go with the account, and their memberships, profiles and
+      // signals go with them by cascade.
+      await tx
+        .delete(userWorkspacePreferencesTable)
+        .where(eq(userWorkspacePreferencesTable.userId, userId));
+      await tx.delete(workspacesTable).where(eq(workspacesTable.ownerUserId, userId));
       const deleted = await tx
         .delete(usersTable)
         .where(eq(usersTable.id, userId))
@@ -359,6 +444,9 @@ export async function deleteAccount(
   const deleteLocalAccount =
     dependencies.deleteLocalAccount ??
     defaultDeleteAccountDependencies.deleteLocalAccount;
+  // Refuse before touching the provider: during the cutover window the local deletion would answer 503, and the
+  // paid subscription must not be cancelled for an account that stays.
+  if ((await readCutoverState(pool)).writesPaused) throw new MaintenanceInProgressError();
   const [subscription] = await db
     .select({
       status: subscriptionsTable.status,
