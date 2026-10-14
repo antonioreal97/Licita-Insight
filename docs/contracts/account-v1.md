@@ -404,7 +404,7 @@ teste vigente. Em produção a variável é sempre ignorada, mesmo se definida c
 Cupons são armazenados por digest SHA-256, aceitam duração de 7 ou 30 dias, podem ter janela de validade e limite de resgates. O resgate grava uma linha por conta e calcula
 `accessUntil` a partir do maior entre agora, o período pago/trial vigente e outro cupom ativo; portanto estende acesso sem alterar a assinatura no Asaas. `GET /me/billing` expõe `couponAccessUntil` e usa `source: 'coupon'` quando o cupom é a fonte vigente (assinatura paga continua tendo prioridade).
 
-Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até `nextDueDate` da assinatura;
+Webhook (idempotente): `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` ativam até o vencimento da próxima cobrança existente (ou `nextDueDate` da assinatura, se ela ainda não existe);
 `PAYMENT_OVERDUE` marca `past_due`; `PAYMENT_REFUNDED` cancela e encerra o período. Cobrança paga ou
 vencida com `dueDate` anterior ao fim do período já pago não altera a linha — assim reenvio e entrega fora
 de ordem não recalculam o período, não reativam uma assinatura vencida e não derrubam um cancelamento
