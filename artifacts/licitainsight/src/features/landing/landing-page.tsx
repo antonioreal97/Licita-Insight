@@ -40,9 +40,8 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-function PardalFlight() {
+function PardalFlight({ reducedMotion }: { reducedMotion: boolean }) {
   const wide = useMediaQuery(PARDAL_FLIGHT_MEDIA);
-  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   // Reduced motion keeps only the perched gutter bird, which needs a wide screen.
   if (reducedMotion && !wide) return null;
   return (
@@ -55,8 +54,8 @@ function PardalFlight() {
 // Owner decision: 7-day trial. The API (`/billing/plan`) wins when it answers; 7 only while it loads or if it fails.
 const useTrialDays = () => usePublicPlan().data?.trialDays ?? 7;
 
-function SessionPlaceholder() {
-  return <span role="status" aria-label="Carregando conta" className="inline-block h-9 w-28 animate-pulse rounded-lg bg-muted" />;
+function SessionPlaceholder({ inverse = false }: { inverse?: boolean }) {
+  return <span role="status" aria-label="Carregando conta" className={cn('inline-block h-9 w-28 animate-pulse rounded-lg', inverse ? 'bg-texto-inverso/20' : 'bg-muted')} />;
 }
 
 function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
@@ -94,9 +93,9 @@ function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
 }
 
 /** Account entry point: sign in (and start the trial) or, when signed in, back to the overview. */
-function AccountCta({ testId, className, label }: { testId: string; className: string; label: string }) {
+function AccountCta({ testId, className, label, inversePlaceholder = false }: { testId: string; className: string; label: string; inversePlaceholder?: boolean }) {
   const { status } = useSession();
-  if (status === 'loading') return <SessionPlaceholder />;
+  if (status === 'loading') return <SessionPlaceholder inverse={inversePlaceholder} />;
   const signedIn = status === 'authenticated';
   return (
     <Link href={signedIn ? '/dashboard' : '/login'} data-testid={testId} className={className}>
@@ -138,8 +137,7 @@ function KindChip({ kind, className }: { kind: Kind; className?: string }) {
  * The hero picture: the pardal perched on an edital, three kinds of opportunity around it and the alert it sends.
  * Decorative: the headline already says all of it.
  */
-function HeroArt() {
-  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
+function HeroArt({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <div aria-hidden className="relative mx-auto w-full max-w-xl lg:mx-0">
       <div className="relative overflow-hidden rounded-2xl bg-superficie-inversa px-4 pb-6 pt-10 sm:px-8">
@@ -164,7 +162,7 @@ function HeroArt() {
   );
 }
 
-function Hero() {
+function Hero({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <section
       aria-labelledby="hero-titulo"
@@ -187,7 +185,7 @@ function Hero() {
         </div>
         <p className="mt-5 type-meta text-muted-foreground">Pesquisar é livre, sem cadastro. Os alertas vêm com a conta.</p>
       </div>
-      <HeroArt />
+      <HeroArt reducedMotion={reducedMotion} />
     </section>
   );
 }
@@ -295,7 +293,7 @@ function FindsSection() {
           {finds.map(({ id, kind, source, text, href, cta, tilt }) => {
             const Icon = kind.icon;
             return (
-              <li key={id} className={cn('motion-safe:transition-transform motion-safe:duration-base', tilt, 'lg:hover:translate-y-0 lg:hover:rotate-0')}>
+              <li key={id} className={cn('motion-safe:transition-transform motion-safe:duration-base', tilt, 'lg:hover:translate-y-0 lg:hover:rotate-0 lg:focus-within:translate-y-0 lg:focus-within:rotate-0')}>
                 <Link
                   href={href}
                   data-testid={`link-landing-find-${id}`}
@@ -333,7 +331,7 @@ const planIncludes = [
 /** Single plan. The price comes only from `/billing/plan`: none configured (`null`) or a failed request shows no price. */
 function PlanSection() {
   const plan = usePublicPlan();
-  const trialDays = plan.data?.trialDays ?? 7;
+  const trialDays = useTrialDays();
   const price = plan.data?.monthlyBrl ?? null;
   const signedIn = useSession().status === 'authenticated';
   return (
@@ -431,8 +429,7 @@ function FaqSection() {
   );
 }
 
-function FinalCta() {
-  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
+function FinalCta({ reducedMotion }: { reducedMotion: boolean }) {
   return (
     <section aria-labelledby="cta-titulo" className="px-5 pb-20 sm:px-8 sm:pb-28">
       {/* On the inverse block the focus ring takes the inverse ink, or it would vanish into the background. */}
@@ -452,6 +449,7 @@ function FinalCta() {
               testId="link-final-start"
               className="inline-flex h-13 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-texto-inverso underline-offset-4 hover:underline"
               label="Entrar ou criar conta"
+              inversePlaceholder
             />
           </div>
         </div>
@@ -463,9 +461,10 @@ function FinalCta() {
 
 // Marketing page. Hero sizes sit above the product type scale on purpose; every color is a design system token.
 export default function LandingPage() {
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   return (
     <div className="relative min-h-[100dvh] overflow-x-clip bg-background text-foreground">
-      <PardalFlight />
+      <PardalFlight reducedMotion={reducedMotion} />
       <header className="sticky top-0 z-sticky border-b border-border-subtle bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
@@ -493,12 +492,12 @@ export default function LandingPage() {
       </header>
 
       <main id="conteudo" tabIndex={-1} className="outline-none">
-        <Hero />
+        <Hero reducedMotion={reducedMotion} />
         <HowItWorksSection />
         <FindsSection />
         <PlanSection />
         <FaqSection />
-        <FinalCta />
+        <FinalCta reducedMotion={reducedMotion} />
       </main>
 
       <footer className="border-t border-border bg-surface px-5 py-12 sm:px-8">
