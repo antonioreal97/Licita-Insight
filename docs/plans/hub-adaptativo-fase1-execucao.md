@@ -113,7 +113,7 @@ B ──► C1 ──► C2 ─────────────► H
 ### G — W3 e W4 definitivos e ferramenta de corte
 
 **Depende de:** B–F.
-**Arquivos:** `ops/workspaces/` (novo, separado do ensaio) com `cutover.sh` e o SQL de W3 lote, W3 delta, reconciliação de perfis, invariantes, cópia reversa e W4; extensão de `ops/rehearsal/workspaces/` para medir a aplicação.
+**Arquivos:** [`ops/workspaces/`](../../ops/workspaces/) com `cutover.sh` e SQL de W3 lote, W3 delta, reconciliação, invariantes, cópia reversa e W4; [ensaio](../../ops/rehearsal/workspaces/README.md) e [procedimento do dono](../migrations/workspace-w3-w4-production.md).
 **Conteúdo:** comandos `status`, `pause`, `cut`, `resume`, `abort`, `rollback` do contrato, em `psql` + `bash` (decisão 8); cronômetro com ponto de não retorno; gatilhos de aborto aprovados; delta que reconcilia perfis editados ou apagados, cursor de alerta e preferência internacional (decisão 7; o rascunho atual usa `ON CONFLICT DO NOTHING`); W4 como passo separado, com segunda janela própria (decisões 1 e 10); o ensaio no servidor só é refeito com este delta definitivo; extensão do ensaio com uma instância da aplicação nova sobre a cópia, com e-mail, IA, coletas e Asaas desligados, para medir propagação, `503` e desvirada.
 **Testes:** Postgres temporário, no padrão de `test-rehearsal.sh` — ciclo completo virada → desvirada → nova virada, recusa da desvirada com W4 ou com Espaço não padrão, aborto em cada etapa. Ensaio — tudo o que a seção “Ensaio com volume real” do roadmap lista, mais as medições de propagação do contrato.
 **Pronto quando:** dois ensaios no servidor com relatório sanitizado e valores finais da janela propostos ao dono.
