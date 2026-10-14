@@ -336,7 +336,7 @@ Rollback por categoria:
 ## Gates de aprovação
 
 1. **Contrato:** dono aprova a Fase 0 consolidada, o contrato owner-only e as pendências registradas.
-2. **Asaas:** checkout, retorno, webhooks autenticados/idempotentes, estados de assinatura e reconciliação são validados ponta a ponta antes de ativar a Fase 1; isso não autoriza mudar gates atuais.
+2. **Asaas:** checkout, retorno, webhooks autenticados/idempotentes, estados de assinatura e reconciliação são validados ponta a ponta antes de ativar a Fase 1; isso não autoriza mudar gates atuais. Antes de ligar a chave de produção do Asaas, os ids de eventos já processados passam a ser guardados (migração própria), para que um pagamento reentregue depois de um estorno não reative a assinatura.
 3. **Migração:** revisão de SQL, estimativa de lock, backup/restore e dry run com volume real.
 4. **Corte:** os parâmetros iniciais e os gatilhos de aborto estão aprovados; a troca é por flag em runtime, com deploy preparatório; depois do ensaio no servidor, refeito com o delta definitivo, o dono confirma os valores finais da janela e a lista de rotinas pausadas. W4 tem janela própria, aprovada depois de 7 dias de observação sem incidente e com zero linhas do escopo com `workspace_id` nulo criadas depois da virada; só depois dela respondem as rotas novas, a criação de Espaços e as jornadas.
 5. **Integridade, isolamento e reversibilidade:** as três evidências ficam verdes antes de `NOT NULL`, cutover ou liberação de mutações.

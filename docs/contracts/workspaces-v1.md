@@ -38,12 +38,15 @@ Na Fase 1, somente `procurement`, `funding` e `culture` podem ser criados, e ain
 
 ## Limites e downgrade
 
-| Situação da conta         | Espaços graváveis | Comportamento dos excedentes                                              |
-| ------------------------- | ----------------: | ------------------------------------------------------------------------- |
-| gratuita, sem teste ativo |                 1 | somente leitura                                                           |
-| teste ativo               |             até 5 | criação bloqueada acima do teto                                           |
-| assinatura ativa          |             até 5 | criação bloqueada acima do teto                                           |
-| assinatura/teste expirado |                 1 | todos, exceto o Espaço não arquivado de menor slot, ficam somente leitura |
+| Situação da conta          | Espaços graváveis | Comportamento dos excedentes                                              |
+| -------------------------- | ----------------: | ------------------------------------------------------------------------- |
+| gratuita, sem teste ativo  |                 1 | somente leitura                                                           |
+| teste ativo                |             até 5 | criação bloqueada acima do teto                                           |
+| assinatura ativa           |             até 5 | criação bloqueada acima do teto                                           |
+| cupom ou acesso beta ativo |             até 5 | criação bloqueada acima do teto                                           |
+| todo acesso expirado       |                 1 | todos, exceto o Espaço não arquivado de menor slot, ficam somente leitura |
+
+Decisão do dono de 13/10/2026: o teto de 5 vale para qualquer acesso ativo da conta — assinatura, teste, cupom ou acesso beta —, ou seja, a mesma regra do gate `402` atual (`entitled`). Sem nenhum acesso ativo, o teto é 1.
 
 O slot é estável e único por proprietário entre Espaços não excluídos. Arquivar não renumera slots; ao restaurar, o acesso é recalculado com o Espaço novamente na ordenação. O servidor não reordena slots silenciosamente.
 

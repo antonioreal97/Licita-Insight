@@ -125,6 +125,8 @@ Regras:
 3. **Mudança de modo durante o ciclo.** Se `mode` mudou entre o início do ciclo e a gravação, o ciclo descarta o resultado, registra `warn` e termina. Com a drenagem correta isso não acontece; é a rede de proteção.
 4. **Job enfileirado antes da virada.** Jobs `fit` com `workspace_id` nulo são atribuídos pelo delta da janela (o rascunho W3 já faz isso). No modo `workspaces`, o worker lê o Espaço da coluna, revalida membership e perfil; job `fit` sem Espaço nesse modo falha com erro explícito (`fit job without workspace_id after cutover`) e vai para `dead`, nunca é ignorado.
 5. **Debounce em memória.** O `pendingRebuilds` de recomendações dispara depois da virada como um ciclo novo; ao executar, passa pela regra 1 e lê o modo vigente.
+   **Exceção aprovada pelo dono em 13/10/2026 — coleta de editais.** A coleta grava o catálogo, que está fora do escopo, e só toma a porta por edital, quando o edital alterado tem alguém monitorando. Durante a pausa, esse passo recusa (`CutoverPausedError`): a transação daquele edital é desfeita e a coleta em andamento falha ali, em vez de concluir como diz a regra 2. Ela é retomável e a coleta seguinte encontra a mesma mudança, então nenhuma notificação se perde; a troca encurta a drenagem. A coleta de edital sem monitoramento não toma bloqueio nem lê a flag.
+
 6. **Drenagem observável.** O fim da drenagem é provado por consulta: nenhuma linha `running` em `job_run_audit` para as chaves do escopo e nenhum `ai_jobs` `fit` com `status = 'running'`. Passou de 3 min, aborta.
 
 ## Como o dono vira, desvira e confere
