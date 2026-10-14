@@ -521,6 +521,39 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "402":
           $ref: "#/components/responses/SubscriptionRequired"
+  /v1/me/tender-highlights:
+    get:
+      operationId: getTenderHighlights
+      tags: [ai]
+      summary: Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+      description: >-
+        Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or
+        calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: tenderIds
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: Highlights by tender id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderHighlightsResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
   /v1/search/suggestions:
     get:
       operationId: getSearchSuggestions
@@ -2990,6 +3023,43 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/TenderFit"
       required: [profileVersion, results]
+    TenderRequirementHighlight:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              me_epp_exclusive,
+              me_epp_quota,
+              site_visit,
+              bid_guarantee,
+              samples,
+              technical_certificate,
+              technical_qualification,
+              minimum_capital,
+              contract_guarantee,
+            ]
+        label: { type: string }
+      required: [code, label]
+    TenderHighlights:
+      type: object
+      properties:
+        requirements:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/TenderRequirementHighlight"
+      required: [requirements]
+    TenderHighlightsResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TenderHighlights"
+      required: [results]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]

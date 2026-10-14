@@ -727,6 +727,28 @@ export type TenderFit = {
 /** `GET /api/v1/me/fit?tenderIds=…` (session + access, ≤ 100 ids). No profile → `profileVersion: null`, empty results. */
 export type TenderFitsResponse = { profileVersion: number | null; results: Record<string, TenderFit> };
 
+export type TenderRequirementHighlightCode =
+  | 'me_epp_exclusive'
+  | 'me_epp_quota'
+  | 'site_visit'
+  | 'bid_guarantee'
+  | 'samples'
+  | 'technical_certificate'
+  | 'technical_qualification'
+  | 'minimum_capital'
+  | 'contract_guarantee';
+
+/** One key requirement read from the tender's already-ready sheet; `label` is the sentence to show. */
+export type TenderRequirementHighlight = { code: TenderRequirementHighlightCode; label: string };
+
+export type TenderHighlights = { requirements: TenderRequirementHighlight[] };
+
+/**
+ * `GET /api/v1/me/tender-highlights?tenderIds=…` (session + access, ≤ 100 ids). Read only: tenders without a ready
+ * sheet or without a highlighted requirement are absent from `results`.
+ */
+export type TenderHighlightsResponse = { results: Record<string, TenderHighlights> };
+
 export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';

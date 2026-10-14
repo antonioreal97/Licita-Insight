@@ -15,6 +15,7 @@ import { useSavedTendersList } from '@/features/saved-tenders/hooks/use-saved-te
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { ProfileInviteCard } from '@/features/company-profile/components/profile-invite-card';
 import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
+import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlights';
 import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
@@ -229,6 +230,7 @@ export default function DashboardPage() {
   // deadlineFrom=today keeps "open" tenders whose deadline already passed (status lags the source) out of the top.
   const priority = useTenderSearch({ pageSize: 4, sort: 'deadline_asc', status: ['open'], deadlineFrom: today, facets: false });
   const fits = useTenderFits(priority.data?.data.map((tender) => tender.id) ?? []);
+  const highlights = useTenderHighlights(priority.data?.data.map((tender) => tender.id) ?? []);
   const candidates = priority.data?.data ?? [];
   const matches = matchingCandidates(candidates, fits.data?.results ?? {});
   const shown = personal && matches.length > 0 ? matches : candidates;
@@ -298,7 +300,7 @@ export default function DashboardPage() {
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {shown.map((tender) => (
-                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact fit={fits.data?.results[tender.id]} />
+                <TenderRow key={tender.id} tender={tender} saved={isSaved(tender.id)} onSave={() => toggle(tender.id)} compact fit={fits.data?.results[tender.id]} highlights={highlights.data?.results[tender.id]} />
               ))}
             </div>
           )}

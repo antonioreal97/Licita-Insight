@@ -34,6 +34,8 @@ export const queryKeys = {
     askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
     /** The sheet is public tender data, but only served with access: it lives under `me` so sign-out drops it. */
     tenderSheet: (tenderId: string) => ['me', 'tender-sheet', tenderId] as const,
+    /** Requirement highlights of a result page, from already-ready sheets (same `me` scoping as the sheet). */
+    tenderHighlights: (tenderIds: string[]) => ['me', 'tender-highlights', [...new Set(tenderIds)].sort()] as const,
     companyProfile: ['me', 'company-profile'] as const,
     profileCategories: ['me', 'profile-categories'] as const,
     profileMunicipalities: (query: string) => ['me', 'profile-municipalities', query] as const,

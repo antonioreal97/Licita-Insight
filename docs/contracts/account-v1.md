@@ -282,6 +282,20 @@ type NotificationPreferences = {
   ("1 atualização" para uma busca com 42 linhas antigas), não linhas. Antes do vínculo, o digest trava
   (`FOR SHARE`) e relê as notificações de busca salva: um ciclo em andamento termina antes e entra
   neste e-mail; um ciclo seguinte espera, vê o vínculo e abre a continuação.
+- **Destaques no e-mail (resumo diário):** o card de busca salva cita até 3 editais do snapshot
+  (`tenderIds`, na ordem de chegada; considera os 10 primeiros de cada notificação agrupada) que tenham algo
+  a dizer, cada um com título, órgão, link `/tenders/{id}` e até 3 linhas em linguagem simples: aderência
+  (`Alta aderência ao seu perfil: combina com “…”`, só `high`/`medium` da versão atual do perfil, com o
+  primeiro motivo `offering_match` ou `service_region`), exigências da ficha (as mesmas de
+  `GET /me/tender-highlights`, juntas por " · ") e plataforma (`Disputa em X`, com
+  `: você ainda não é cadastrado nesta plataforma` quando o perfil declara plataformas e não declara esta).
+  A plataforma sozinha só aparece quando traz o aviso de cadastro. Cada edital de `profile_new_matches` recebe as
+  mesmas linhas. Sem nenhum dado, o card fica como antes (só contagem e link). Assunto, resumo do topo, a regra de
+  uma notificação por busca salva por dia e o agrupamento por busca não mudam.
+- **Custo de IA dos destaques: zero.** O e-mail só lê `tender_ai_sheets` (`ready`), `company_tender_fits`
+  (`ready`), `company_profiles` e `tenders`; não gera ficha nem aderência, não enfileira job e não chama
+  modelo. Edital sem ficha pronta aparece sem exigências. A pré-geração de fichas para editais de alta
+  aderência é só proposta: [`docs/plans/alertas-inteligentes-pregeracao.md`](../plans/alertas-inteligentes-pregeracao.md).
 - **Buscas salvas não geram e-mail imediato**, mesmo com `immediateCritical`: o aviso imediato
   continua restrito às mudanças críticas abaixo, e a notificação do dia vai só no digest. Por isso
   as atualizações ao longo do dia não disparam e-mail por ciclo nem reenviam o que já saiu.

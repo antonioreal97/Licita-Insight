@@ -10,6 +10,7 @@ import type {
   ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
+  TenderHighlightsResponse,
   TenderSheet,
 } from '../../types';
 import { getJson, sendJson } from './http-client';
@@ -31,4 +32,5 @@ export const httpAiAdapter: AiAdapter = {
   suggestProfileFiltersFromDescription: (description, signal) =>
     sendJson<ProfileDescriptionSuggestions>('POST', '/v1/profile/keywords/from-description', { description }, signal),
   getFits: (tenderIds, signal) => getJson<TenderFitsResponse>('/v1/me/fit', { tenderIds }, signal),
+  getTenderHighlights: (tenderIds, signal) => getJson<TenderHighlightsResponse>('/v1/me/tender-highlights', { tenderIds }, signal),
 };

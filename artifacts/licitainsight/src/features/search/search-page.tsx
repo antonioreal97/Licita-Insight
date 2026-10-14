@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { useCompanyProfile, useTenderFits } from '@/features/company-profile/hooks/use-company-profile';
+import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlights';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { sortLabels } from '@/lib/tender-labels';
 import { countActiveFilters, DEFAULT_PAGE_SIZE } from '@/services/search-service';
@@ -52,6 +53,7 @@ export default function SearchPage() {
 
   const response = search.data;
   const fits = useTenderFits(response?.data.map((tender) => tender.id) ?? []);
+  const highlights = useTenderHighlights(response?.data.map((tender) => tender.id) ?? []);
   const facets = response?.facets;
   const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
@@ -402,6 +404,7 @@ export default function SearchPage() {
                         onSave={() => toggle(tender.id)}
                         relevanceVaries={scoresVary}
                         fit={fits.data?.results[tender.id]}
+                        highlights={highlights.data?.results[tender.id]}
                       />
                     ))}
                   </div>

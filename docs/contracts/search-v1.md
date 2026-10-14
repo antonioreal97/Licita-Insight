@@ -514,6 +514,15 @@ execução interrompida é simplesmente repetida. `ESTIMATED_VALUE_REVIEW_BATCH_
 `pnpm --filter @workspace/api-server run review:estimated-values` executa o mesmo percurso sem pausa.
 Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/review-estimated-values.mjs`. Usa o mesmo lock `tender_estimated_value_review` do job agendado.
 
+## Aditivo — destaques do card
+
+O payload da busca não muda: a resposta tem cache HTTP público e os destaques resumem a ficha, que é recurso
+pago. O card do edital (busca, editais salvos e prioridades da visão geral) mostra até duas linhas curtas a
+partir de dados já carregados em lote pela página — o principal motivo da aderência (`GET /me/fit`) e as
+exigências-chave da ficha pronta (`GET /me/tender-highlights`, ver `ai-v1.md`). A plataforma de disputa e o
+aviso “Você ainda não é cadastrado nesta plataforma” continuam no selo de plataforma do card. Sem dado, o card
+fica como antes. Nenhuma das duas leituras gera ficha.
+
 ## Performance esperada
 
 | Rota                           | p95      |

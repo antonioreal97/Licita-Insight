@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { GetTenderHighlightsResponse } from "@workspace/api-zod";
 import { askTender, getAskStatus, hasAiAccess } from "../ai/ask-tender-service";
 import {
   asyncHandler,
@@ -16,9 +17,32 @@ import {
   putCompanyProfile,
 } from "../ai/company-fit-service";
 import { getTenderSheet } from "../ai/tender-sheet-service";
+import { loadRequirementHighlights } from "../ai/tender-highlights";
 import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
 
 const router: IRouter = Router();
+
+/** `tenderIds` query (repeated): 1 to 100 distinct ids. */
+const parseTenderIds = (raw: unknown): string[] => {
+  const tenderIds = (
+    Array.isArray(raw) ? raw : raw === undefined ? [] : [raw]
+  )
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const uniqueIds = [...new Set(tenderIds)];
+  if (
+    uniqueIds.length < 1 ||
+    uniqueIds.length > 100 ||
+    uniqueIds.some((id) => id.length > 200)
+  ) {
+    throw new InvalidParameterError(
+      "tenderIds must contain from 1 to 100 ids",
+      [{ field: "tenderIds", issue: "invalid_length" }],
+    );
+  }
+  return uniqueIds;
+};
 
 router.get(
   "/v1/me/company-profile",
@@ -55,25 +79,29 @@ router.get(
   "/v1/me/fit",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const raw = req.query.tenderIds;
-    const tenderIds = (
-      Array.isArray(raw) ? raw : raw === undefined ? [] : [raw]
-    )
-      .filter((value): value is string => typeof value === "string")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const uniqueIds = [...new Set(tenderIds)];
-    if (
-      uniqueIds.length < 1 ||
-      uniqueIds.length > 100 ||
-      uniqueIds.some((id) => id.length > 200)
-    ) {
-      throw new InvalidParameterError(
-        "tenderIds must contain from 1 to 100 ids",
-        [{ field: "tenderIds", issue: "invalid_length" }],
-      );
-    }
+    const uniqueIds = parseTenderIds(req.query.tenderIds);
     res.json(await getTenderFits(authContext(res).user.id, uniqueIds));
+  }),
+);
+
+/**
+ * Requirement highlights for result cards, read from already-ready tender sheets only: listing never generates a
+ * sheet or calls a model. Same gate as the sheet itself (subscription), since they summarize it.
+ */
+router.get(
+  "/v1/me/tender-highlights",
+  requireAuth,
+  requireSubscription,
+  asyncHandler(async (req, res) => {
+    const uniqueIds = parseTenderIds(req.query.tenderIds);
+    const highlights = await loadRequirementHighlights(uniqueIds);
+    res.json(
+      GetTenderHighlightsResponse.parse({
+        results: Object.fromEntries(
+          [...highlights].map(([tenderId, requirements]) => [tenderId, { requirements }]),
+        ),
+      }),
+    );
   }),
 );
 

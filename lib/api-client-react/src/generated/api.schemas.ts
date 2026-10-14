@@ -1235,6 +1235,40 @@ export interface TenderFitsResponse {
   results: TenderFitsResponseResults;
 }
 
+export type TenderRequirementHighlightCode = typeof TenderRequirementHighlightCode[keyof typeof TenderRequirementHighlightCode];
+
+
+export const TenderRequirementHighlightCode = {
+  me_epp_exclusive: 'me_epp_exclusive',
+  me_epp_quota: 'me_epp_quota',
+  site_visit: 'site_visit',
+  bid_guarantee: 'bid_guarantee',
+  samples: 'samples',
+  technical_certificate: 'technical_certificate',
+  technical_qualification: 'technical_qualification',
+  minimum_capital: 'minimum_capital',
+  contract_guarantee: 'contract_guarantee',
+} as const;
+
+export interface TenderRequirementHighlight {
+  code: TenderRequirementHighlightCode;
+  label: string;
+}
+
+export interface TenderHighlights {
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  requirements: TenderRequirementHighlight[];
+}
+
+export type TenderHighlightsResponseResults = {[key: string]: TenderHighlights};
+
+export interface TenderHighlightsResponse {
+  results: TenderHighlightsResponseResults;
+}
+
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -2672,6 +2706,16 @@ q: string;
 };
 
 export type GetTenderFitsParams = {
+/**
+ * @minItems 1
+ * @maxItems 100
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+tenderIds: string[];
+};
+
+export type GetTenderHighlightsParams = {
 /**
  * @minItems 1
  * @maxItems 100
