@@ -282,6 +282,8 @@ type NotificationPreferences = {
 
 ## 6. Perfil da empresa e filtros inteligentes
 
+O perfil da empresa exige sessão **e acesso ativo** (gate `402` de `/v1/me`), porque alimenta alertas e aderência, que são recursos pagos — decisão do dono de 13/10/2026.
+
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
 ```ts
@@ -347,7 +349,7 @@ As rotas desta seção exigem sessão e usam o limite leve geral de leitura aute
 
 O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 
-O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
+O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente no host. Na imagem de produção, use `docker exec licita-macbook-app-1 node artifacts/api-server/dist/refresh-profile-keywords.mjs`; ele toma o mesmo lock. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
 
 ## Assinatura (Asaas)
 
@@ -364,7 +366,7 @@ da origem é `subscription > coupon > trial > dev > beta` (em produção `dev` n
 type BillingResponse = {
   status: "none" | "pending" | "active" | "past_due" | "canceled";
   entitled: boolean;
-  source: 'subscription' | 'coupon' | 'trial' | 'beta' | 'dev' | null;
+  source: "subscription" | "coupon" | "trial" | "beta" | "dev" | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   couponAccessUntil: string | null;
@@ -389,15 +391,15 @@ Em desenvolvimento, `BILLING_DEV_ENTITLED=true` libera o gate para qualquer usu�
 somente quando `NODE_ENV !== 'production'`. `source: 'dev'` só aparece quando não há assinatura nem
 teste vigente. Em produção a variável é sempre ignorada, mesmo se definida como `true`.
 
-| Método | Caminho | Auth | Resposta |
-|---|---|---|---|
-| GET | `/api/v1/me/billing` | sessão | `BillingResponse` |
-| GET | `/api/v1/billing/plan` | pública | `{ monthlyBrl: number | null, trialDays: 7, currency: 'BRL' }` |
-| POST | `/api/v1/me/billing/checkout` | sessão + CSRF | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). Permitido durante o teste; 409 somente se já houver assinatura elegível. |
-| POST | `/api/v1/me/billing/cancel` | sessão + CSRF | `BillingResponse` — cancela no Asaas; o período já pago continua. |
-| POST | `/api/v1/me/billing/coupon` | sessão + CSRF | `{ accessUntil, durationDays, alreadyRedeemed }` — resgata um código de 7 ou 30 dias; repetir o mesmo código é idempotente. |
-| POST | `/api/v1/billing/coupons` | header `x-coupon-admin-token` | Emite um cupom; o código em texto puro aparece apenas nesta resposta. Requer `COUPON_ADMIN_TOKEN`. |
-| POST | `/api/v1/billing/asaas/webhook` | header `asaas-access-token` | `{ received: true }`. Sem cookie e sem CSRF. |
+| Método | Caminho                         | Auth                          | Resposta                                                                                                                               |
+| ------ | ------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/me/billing`            | sessão                        | `BillingResponse`                                                                                                                      |
+| GET    | `/api/v1/billing/plan`          | pública                       | `{ monthlyBrl: number                                                                                                                  | null, trialDays: 7, currency: 'BRL' }` |
+| POST   | `/api/v1/me/billing/checkout`   | sessão + CSRF                 | `{ url }` — link recorrente do Asaas (Pix, boleto ou cartão). Permitido durante o teste; 409 somente se já houver assinatura elegível. |
+| POST   | `/api/v1/me/billing/cancel`     | sessão + CSRF                 | `BillingResponse` — cancela no Asaas; o período já pago continua.                                                                      |
+| POST   | `/api/v1/me/billing/coupon`     | sessão + CSRF                 | `{ accessUntil, durationDays, alreadyRedeemed }` — resgata um código de 7 ou 30 dias; repetir o mesmo código é idempotente.            |
+| POST   | `/api/v1/billing/coupons`       | header `x-coupon-admin-token` | Emite um cupom; o código em texto puro aparece apenas nesta resposta. Requer `COUPON_ADMIN_TOKEN`.                                     |
+| POST   | `/api/v1/billing/asaas/webhook` | header `asaas-access-token`   | `{ received: true }`. Sem cookie e sem CSRF.                                                                                           |
 
 Cupons são armazenados por digest SHA-256, aceitam duração de 7 ou 30 dias, podem ter janela de validade e limite de resgates. O resgate grava uma linha por conta e calcula
 `accessUntil` a partir do maior entre agora, o período pago/trial vigente e outro cupom ativo; portanto estende acesso sem alterar a assinatura no Asaas. `GET /me/billing` expõe `couponAccessUntil` e usa `source: 'coupon'` quando o cupom é a fonte vigente (assinatura paga continua tendo prioridade).

@@ -113,7 +113,7 @@ export async function collectFunding(now = new Date()): Promise<{
   }
 }
 
-const isCli = process.argv[1]?.includes("collect-funding");
+const isCli = process.argv[1]?.endsWith("collect-funding.ts");
 if (isCli) {
   const dryRun = process.env.FUNDING_DRY_RUN === "true";
   (dryRun ? collectFundingOnce() : collectFunding())

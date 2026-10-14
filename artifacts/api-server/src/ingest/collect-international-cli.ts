@@ -10,7 +10,7 @@ import { fetchPtaxQuotes } from "./ptax-client";
 
 const dryRun = process.env.INTERNATIONAL_DRY_RUN === "true";
 
-const runDry = async () => {
+export const runInternationalDry = async () => {
   const sources = await collectInternationalOnce();
   const drafts = sources.flatMap((source) => source.drafts);
   const ptax = await fetchPtaxQuotes(internationalCurrencies(drafts), {
@@ -36,17 +36,19 @@ const runStored = async () => {
   }
 };
 
-(dryRun ? runDry() : runStored())
-  .then((result) => {
-    logger.info(
-      { result, dryRun },
-      "International opportunities collection finished",
-    );
-  })
-  .catch((error) => {
-    logger.error(
-      { err: error },
-      "International opportunities collection failed",
-    );
-    process.exitCode = 1;
-  });
+if (process.argv[1]?.endsWith("collect-international-cli.ts")) {
+  (dryRun ? runInternationalDry() : runStored())
+    .then((result) => {
+      logger.info(
+        { result, dryRun },
+        "International opportunities collection finished",
+      );
+    })
+    .catch((error) => {
+      logger.error(
+        { err: error },
+        "International opportunities collection failed",
+      );
+      process.exitCode = 1;
+    });
+}
