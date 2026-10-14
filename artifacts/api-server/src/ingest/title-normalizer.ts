@@ -156,7 +156,7 @@ const cutTail = (value: string): { value: string; cut: boolean } => {
 };
 
 const upperLetterRatio = (value: string): number => {
-  const letters = value.match(/\p{L}/gu) ?? [];
+  const letters: string[] = value.match(/\p{L}/gu) ?? [];
   if (letters.length === 0) return 0;
   const uppercase = letters.filter(
     (letter) => letter === letter.toLocaleUpperCase("pt-BR") && letter !== letter.toLocaleLowerCase("pt-BR"),
