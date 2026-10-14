@@ -12,8 +12,7 @@ import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityFilters } from './components/opportunity-filters';
 import { statePatch, stateOptions } from './lib/opportunity-filters';
-import { scopePatch } from './lib/international';
-import { InternationalFilters, InternationalRow, OfficialNoticeBanner, ScopeTabs } from './components/international';
+import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
 import {
   INTERNATIONAL_KINDS,
   INTERNATIONAL_SOURCES,
@@ -165,7 +164,6 @@ function OpportunitySearch() {
 
   return (
     <>
-      {!international && <ScopeTabs scope={scope} onChange={(next) => update(scopePatch(next))} />}
       {international && <OfficialNoticeBanner className="mb-4" />}
       <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <label className="min-w-0 flex-1">
@@ -293,7 +291,7 @@ function OpportunitySearch() {
         unavailable ? (
           <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
             <h2 className="type-section">Chamadas temporariamente indisponíveis</h2>
-            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de chamadas culturais não respondeu. Tente de novo em instantes.</p>
+            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de editais nacionais não respondeu. Tente de novo em instantes.</p>
           </div>
         ) : (
           <ErrorState error={search.error} onRetry={() => search.refetch()} />

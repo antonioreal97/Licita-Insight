@@ -1,4 +1,6 @@
 import type {
+  AccountUsageProfile,
+  AccountUsageProfilePatch,
   BillingCheckoutResponse,
   BillingResponse,
   CouponRedemptionResponse,
@@ -34,6 +36,8 @@ import type {
  */
 export interface AccountAdapter {
   getSession(signal?: AbortSignal): Promise<SessionResponse>;
+  getUsageProfile(signal?: AbortSignal): Promise<AccountUsageProfile>;
+  updateUsageProfile(body: AccountUsageProfilePatch): Promise<AccountUsageProfile>;
   /** Full-page URL that starts the Google OAuth flow; the API redirects back to `returnTo`. */
   googleStartUrl(returnTo: string): string;
   logout(): Promise<void>;

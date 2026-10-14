@@ -335,6 +335,10 @@ export type ApiErrorDetail = { field: string; issue: string; existingId?: string
 // Account API v1 — source of truth: docs/contracts/account-v1.md.
 
 export type User = { id: string; email: string; name: string | null; avatarUrl: string | null; createdAt: string };
+export type UsagePurpose = 'procurement' | 'culture' | 'funding' | 'research' | 'study';
+export type ApplicantType = 'individual' | 'mei' | 'company' | 'nonprofit';
+export type AccountUsageProfile = { usagePurposes: UsagePurpose[]; applicantTypes: ApplicantType[]; usageInviteDismissed: boolean };
+export type AccountUsageProfilePatch = Partial<AccountUsageProfile>;
 
 export type SessionResponse = { user: User };
 
@@ -513,7 +517,7 @@ export type RecommendationReason = {
   text: string;
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };
-export type RecommendationsResponse = { data: Recommendation[]; pagination: Pagination };
+export type RecommendationsResponse = { data: Recommendation[]; opportunities?: Array<{ opportunity: OpportunitySummary; score: number; reasons: string[] }>; pagination: Pagination };
 export type RecommendationEvent =
   { type: 'search'; query: string } | { type: 'tender_view'; tenderId: string } | { type: 'click'; tenderId?: string } | { type: 'interest'; tenderId: string };
 

@@ -6,8 +6,20 @@ const {
   normalizeSignalTerms,
   scoreOpportunityForProfile,
   scoreRecommendation,
+  scoreDeclaredOpportunity,
   temporalWeight,
 } = await import("./recommendation-service");
+
+test("finalidades recomendam fontes correspondentes e proponente só reordena", () => {
+  const call = { kind: "culture" as const, source: "mapas" as const, areas: ["audiovisual"], audience: null, opportunityType: null, title: "Edital de cinema", summary: null };
+  assert.equal(scoreDeclaredOpportunity(call, [], ["individual"]), null);
+  const unknown = scoreDeclaredOpportunity(call, ["culture"], ["individual"]);
+  const matched = scoreDeclaredOpportunity({ ...call, audience: "Pessoa física" }, ["culture"], ["individual"]);
+  assert.ok(unknown && matched);
+  assert.ok(matched.score > unknown.score);
+  assert.equal(scoreDeclaredOpportunity(call, ["study"], []), null);
+  assert.ok(scoreDeclaredOpportunity({ ...call, kind: "funding", source: "cnpq" }, ["research"], []));
+});
 
 test("normaliza termos de busca e remove palavras genéricas", () => {
   assert.deepEqual(

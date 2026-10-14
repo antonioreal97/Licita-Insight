@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm";
 import {
   companyProfilesTable,
+  culturalOpportunitiesTable,
   db,
   recommendationDismissalsTable,
   recommendationEventsTable,
@@ -884,6 +885,14 @@ export async function listRecommendations(
   page: number,
   pageSize: number,
 ) {
+  const [usage] = await db.select({
+    purposes: usersTable.usagePurposes,
+    applicants: usersTable.applicantTypes,
+    international: usersTable.showInternationalOpportunities,
+  }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const purposes = usage?.purposes ?? [];
+  const hasDeclaredPurpose = purposes.length > 0;
+  const tenderLimit = hasDeclaredPurpose && !purposes.includes("procurement") ? Math.min(pageSize, 3) : pageSize;
   let [{ total: storedTotal }] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(userRecommendationsTable)
@@ -918,7 +927,7 @@ export async function listRecommendations(
       )
       .where(valid)
       .orderBy(asc(userRecommendationsTable.rank))
-      .limit(pageSize)
+      .limit(tenderLimit)
       .offset((page - 1) * pageSize),
     db
       .select({ total: sql<number>`count(*)::int` })
@@ -957,6 +966,28 @@ export async function listRecommendations(
     };
   });
   const count = Number(total);
+  if (hasDeclaredPurpose) {
+    const relevant = purposes.filter((purpose) => purpose === "culture" || purpose === "funding" || purpose === "research");
+    const candidates = relevant.length ? await db.select().from(culturalOpportunitiesTable)
+      .where(and(eq(culturalOpportunitiesTable.status, "open"),
+        or(isNull(culturalOpportunitiesTable.registrationTo), gt(culturalOpportunitiesTable.registrationTo, now)),
+        usage?.international ? undefined : eq(culturalOpportunitiesTable.scope, "national")))
+      .orderBy(desc(culturalOpportunitiesTable.updatedAt)).limit(500) : [];
+    const ranked = candidates.flatMap((candidate) => {
+      const scored = scoreDeclaredOpportunity(candidate, relevant, usage?.applicants ?? []);
+      return scored ? [{ id: candidate.id, ...scored }] : [];
+    }).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, Math.min(pageSize, 10));
+    const { findOpportunity } = await import("../repositories/postgres-opportunity-repository");
+    const opportunities = (await Promise.all(ranked.map(async (item) => {
+      const opportunity = await findOpportunity(item.id, userId);
+      return opportunity ? { opportunity, score: item.score, reasons: item.reasons } : null;
+    }))).filter((item): item is NonNullable<typeof item> => item !== null);
+    return { data, opportunities, pagination: {
+      page, pageSize, total: purposes.includes("procurement") ? count : Math.min(count, 3),
+      totalPages: purposes.includes("procurement") ? (count === 0 ? 0 : Math.ceil(count / pageSize)) : (count > 0 ? 1 : 0),
+      totalIsEstimate: false,
+    } };
+  }
   return {
     data,
     pagination: {
@@ -967,6 +998,37 @@ export async function listRecommendations(
       totalIsEstimate: false,
     },
   };
+}
+
+/** Declared interests rank public calls; unknown applicant eligibility never excludes a call. */
+export function scoreDeclaredOpportunity(
+  opportunity: Pick<typeof culturalOpportunitiesTable.$inferSelect, "kind" | "source" | "areas" | "audience" | "opportunityType" | "title" | "summary">,
+  purposes: string[],
+  applicantTypes: string[],
+): { score: number; reasons: string[] } | null {
+  const text = normalizeText(`${opportunity.title} ${opportunity.summary ?? ""} ${opportunity.audience ?? ""} ${opportunity.opportunityType ?? ""} ${opportunity.areas.join(" ")}`);
+  const reasons: string[] = [];
+  let score = 0;
+  if (purposes.includes("culture") && (opportunity.kind === "culture" || ["mapas", "funarte", "minc", "salic"].includes(opportunity.source))) {
+    score += 55; reasons.push("Chamada ligada à cultura");
+  }
+  if (purposes.includes("funding") && (opportunity.kind === "funding" || /fomento|financiamento|bolsa|apoio/.test(text))) {
+    score += 55; reasons.push("Oportunidade de fomento");
+  }
+  if (purposes.includes("research") && (["cnpq", "capes", "finep"].includes(opportunity.source) || /pesquisa|cientific|inovacao|universidade/.test(text))) {
+    score += 55; reasons.push("Oportunidade ligada à pesquisa");
+  }
+  if (!score) return null;
+  const applicantWords: Record<string, RegExp> = {
+    individual: /pessoa fisica|proponente individual|artista|pesquisador/,
+    mei: /\bmei\b|microempreendedor/,
+    company: /empresa|pessoa juridica|startup|negocio/,
+    nonprofit: /sem fins lucrativos|ong|associacao|organizacao social/,
+  };
+  if (applicantTypes.some((type) => applicantWords[type]?.test(text))) {
+    score += 12; reasons.push("Público relacionado ao seu tipo de proponente");
+  }
+  return { score, reasons };
 }
 
 export async function dismissRecommendation(

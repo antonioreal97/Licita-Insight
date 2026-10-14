@@ -62,7 +62,7 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
     items: [
       { href: '/dashboard', label: 'Visão geral', icon: LayoutDashboard, testId: 'link-nav-visão-geral' },
       { href: '/search', label: 'Explorar editais', icon: Search, testId: 'link-nav-explorar-editais' },
-      { href: '/oportunidades', label: 'Chamadas culturais', icon: Clapperboard, testId: 'link-nav-chamadas-culturais' },
+      { href: '/oportunidades', label: 'Editais nacionais', icon: Clapperboard, testId: 'link-nav-chamadas-culturais' },
       { href: INTERNATIONAL_HREF, label: 'Internacionais', icon: Globe, testId: 'link-nav-internacionais' },
       { href: '/transparencia', label: 'Transparência', icon: Landmark, testId: 'link-nav-transparencia' },
       { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark, testId: 'link-nav-buscas-salvas' },
