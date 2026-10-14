@@ -32,7 +32,7 @@ function Stat({ label, value, detail }: { label: string; value: string; detail?:
   return (
     <div className="min-w-0 rounded-lg border border-border-subtle bg-surface-sunken p-3 sm:p-4">
       <dt className="type-label text-muted-foreground">{label}</dt>
-      <dd className="mt-1 break-words type-data text-lg font-semibold text-foreground">{value}</dd>
+      <dd className="mt-1 whitespace-nowrap type-data text-base font-semibold text-foreground sm:text-lg">{value}</dd>
       {detail && <dd className="mt-1 type-meta text-muted-foreground">{detail}</dd>}
     </div>
   );
@@ -89,7 +89,7 @@ export function AwardHistoryView({ history, meta, lockedAction }: { history: Awa
         {plural(purchases.total, 'compra parecida', 'compras parecidas')} com esta.
       </p>
 
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 2xl:grid-cols-4">
         <Stat label="Compras parecidas" value={formatNumber(purchases.total)} detail={`${formatNumber(purchases.last12Months)} nos últimos 12 meses`} />
         <Stat label="Fornecedores que venceram" value={formatNumber(winners.distinct)} detail={plural(purchases.withResults, 'compra com resultado publicado', 'compras com resultado publicado')} />
         <Stat
@@ -214,7 +214,7 @@ export function TenderAwardHistory({ tenderId }: { tenderId: string }) {
         <div role="status" className="mt-4 space-y-3">
           <span className="sr-only">Buscando o histórico deste órgão…</span>
           <div aria-hidden className="h-4 w-3/4 animate-pulse rounded-lg bg-muted" />
-          <div aria-hidden className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div aria-hidden className="grid grid-cols-2 gap-3 2xl:grid-cols-4">
             {[0, 1, 2, 3].map((index) => <div key={index} className="h-20 animate-pulse rounded-lg bg-muted" />)}
           </div>
         </div>
