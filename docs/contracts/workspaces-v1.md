@@ -262,7 +262,6 @@ As rotas atuais mantêm caminhos, payloads, respostas e gates. Após o backfill,
 - `/api/v1/me/saved-searches*`;
 - `/api/v1/me/notifications*`;
 - `/api/v1/recommendations*` e seus eventos;
-- busca com `includeMonitored`;
 - exportação e exclusão de conta.
 
 Não há escrita dupla: rota nova e adaptador v1 gravam apenas no modelo novo depois do corte. Nenhuma rota v1 foi alterada nesta consolidação; migração, virada e ativação dependem de autorização explícita.

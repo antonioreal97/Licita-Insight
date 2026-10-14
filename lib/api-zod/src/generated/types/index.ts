@@ -100,7 +100,6 @@ export * from './healthStatus';
 export * from './highlight';
 export * from './highlightField';
 export * from './importSavedTendersRequest';
-export * from './includeMonitoredParameter';
 export * from './internalErrorResponse';
 export * from './internationalOpportunity';
 export * from './internationalOpportunityDeadline';

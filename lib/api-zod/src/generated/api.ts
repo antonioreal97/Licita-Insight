@@ -27,7 +27,6 @@ export const ReadinessCheckResponse = zod.object({
 /**
  * @summary Search tenders
  */
-export const searchTendersQueryIncludeMonitoredDefault = false;
 export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
@@ -53,7 +52,6 @@ export const SearchTendersQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
   "mode": zod.enum(['keyword', 'semantic', 'hybrid']).optional(),
   "status": zod.array(zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled'])).optional(),
-  "includeMonitored": zod.coerce.boolean().default(searchTendersQueryIncludeMonitoredDefault).describe('With a status filter and a signed-in user, also returns the tenders that user monitors, whatever their status (e.g. an open-only search still lists a monitored tender that closed). Ignored without a session. Such responses are private (never publicly cached).'),
   "modality": zod.array(zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other'])).optional(),
   "state": zod.array(zod.coerce.string().regex(searchTendersQueryStateItemRegExp)).optional(),
   "city": zod.array(zod.coerce.string().min(1)).optional(),
