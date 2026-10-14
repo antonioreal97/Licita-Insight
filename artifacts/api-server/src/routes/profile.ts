@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { asyncHandler, authContext, requireAuth } from "../auth/http";
+import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 import {
   listProfileCategories,
@@ -35,6 +36,7 @@ router.get(
 router.get(
   "/v1/me/company-profile/region-preview",
   requireAuth,
+  requireSubscription,
   asyncHandler(async (_req, res) => {
     const profile = await getCompanyProfile(authContext(res).user.id);
     res.json({
