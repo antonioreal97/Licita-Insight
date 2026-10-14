@@ -29,6 +29,7 @@ import type {
   AskTenderRequest,
   AskTenderResult,
   AuthSessionResponse,
+  AwardHistoryResponse,
   BillingCheckoutResponse,
   BillingPlanResponse,
   BillingResponse,
@@ -682,6 +683,84 @@ export function useGetTenderTransparencyResults<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTenderTransparencyResultsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderAwardHistoryUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/award-history`
+}
+
+/**
+ * Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons, foreign and unidentified suppliers are only counted as groups.
+ * @summary Get the award history of similar purchases by the same organization
+ */
+export const getTenderAwardHistory = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<AwardHistoryResponse> => {
+
+  return customFetch<AwardHistoryResponse>(getGetTenderAwardHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderAwardHistoryQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/award-history`
+    ] as const;
+    }
+
+
+export const getGetTenderAwardHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getTenderAwardHistory>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderAwardHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderAwardHistory>>> = ({ signal }) => getTenderAwardHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderAwardHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderAwardHistory>>>
+export type GetTenderAwardHistoryQueryError = ErrorType<NotFoundResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Get the award history of similar purchases by the same organization
+ */
+
+export function useGetTenderAwardHistory<TData = Awaited<ReturnType<typeof getTenderAwardHistory>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderAwardHistoryQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -1931,6 +1931,151 @@ export interface TransparencyTenderResultsResponse {
   meta: TransparencyMeta;
 }
 
+export type AwardHistoryWinnerKind = typeof AwardHistoryWinnerKind[keyof typeof AwardHistoryWinnerKind];
+
+
+export const AwardHistoryWinnerKind = {
+  company: 'company',
+  individual: 'individual',
+  foreign: 'foreign',
+  unidentified: 'unidentified',
+} as const;
+
+/**
+ * `name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.
+ */
+export interface AwardHistoryWinner {
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  cnpj: string | null;
+  kind: AwardHistoryWinnerKind;
+  /** @minimum 1 */
+  wins: number;
+}
+
+/**
+ * @nullable
+ */
+export type AwardHistoryRecentPurchaseValueSource = typeof AwardHistoryRecentPurchaseValueSource[keyof typeof AwardHistoryRecentPurchaseValueSource] | null;
+
+
+export const AwardHistoryRecentPurchaseValueSource = {
+  results: 'results',
+  contracts: 'contracts',
+} as const;
+
+export interface AwardHistoryRecentPurchase {
+  purchasePncpControlNumber: string;
+  /** @nullable */
+  tenderId: string | null;
+  /** @nullable */
+  date: string | null;
+  /** @nullable */
+  object: string | null;
+  /** @nullable */
+  value: number | null;
+  /** @nullable */
+  valueSource: AwardHistoryRecentPurchaseValueSource;
+  winners: AwardHistoryWinner[];
+  /** @nullable */
+  officialUrl: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type AwardHistoryRange = {
+  min: number;
+  median: number;
+  max: number;
+  count: number;
+} | null;
+
+/**
+ * @nullable
+ */
+export type AwardHistorySpread = {
+  p25: number;
+  median: number;
+  p75: number;
+  count: number;
+} | null;
+
+export type AwardHistoryScope = typeof AwardHistoryScope[keyof typeof AwardHistoryScope];
+
+
+export const AwardHistoryScope = {
+  unit: 'unit',
+  organization: 'organization',
+} as const;
+
+export type AwardHistoryCriteriaCategoriesItem = {
+  slug: string;
+  label: string;
+};
+
+export type AwardHistoryCriteria = {
+  keywords: string[];
+  categories: AwardHistoryCriteriaCategoriesItem[];
+  rule: string;
+};
+
+export type AwardHistoryPurchases = {
+  total: number;
+  last12Months: number;
+  withResults: number;
+};
+
+export type AwardHistoryWinners = {
+  distinct: number;
+  top: AwardHistoryWinner[];
+};
+
+export type AwardHistoryPrices = {
+  purchaseValue: AwardHistoryRange | null;
+  discountPercent: AwardHistorySpread | null;
+};
+
+export interface AwardHistory {
+  tenderId: string;
+  scope: AwardHistoryScope;
+  organizationName: string;
+  /** @nullable */
+  purchasingUnit: string | null;
+  windowMonths: number;
+  since: string;
+  criteria: AwardHistoryCriteria;
+  purchases: AwardHistoryPurchases;
+  winners: AwardHistoryWinners;
+  prices: AwardHistoryPrices;
+  recent: AwardHistoryRecentPurchase[];
+}
+
+export type AwardHistoryResponseMetaAccessWinnerNames = typeof AwardHistoryResponseMetaAccessWinnerNames[keyof typeof AwardHistoryResponseMetaAccessWinnerNames];
+
+
+export const AwardHistoryResponseMetaAccessWinnerNames = {
+  entitled: 'entitled',
+  public: 'public',
+} as const;
+
+export type AwardHistoryResponseMetaAccess = {
+  winnerNames: AwardHistoryResponseMetaAccessWinnerNames;
+  unlocked: boolean;
+};
+
+export type AwardHistoryResponseMeta = {
+  coverage: string;
+  valueSemantics: string;
+  access: AwardHistoryResponseMetaAccess;
+};
+
+export interface AwardHistoryResponse {
+  data: AwardHistory;
+  meta: AwardHistoryResponseMeta;
+}
+
 export type ParticipationChecklistPatchKey = typeof ParticipationChecklistPatchKey[keyof typeof ParticipationChecklistPatchKey];
 
 
