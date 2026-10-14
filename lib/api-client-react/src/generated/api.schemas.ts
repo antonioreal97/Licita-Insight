@@ -19,6 +19,41 @@ export interface User {
   createdAt: string;
 }
 
+export type UsagePurpose = typeof UsagePurpose[keyof typeof UsagePurpose];
+
+
+export const UsagePurpose = {
+  procurement: 'procurement',
+  culture: 'culture',
+  funding: 'funding',
+  research: 'research',
+  study: 'study',
+} as const;
+
+export type ApplicantType = typeof ApplicantType[keyof typeof ApplicantType];
+
+
+export const ApplicantType = {
+  individual: 'individual',
+  mei: 'mei',
+  company: 'company',
+  nonprofit: 'nonprofit',
+} as const;
+
+export interface AccountUsageProfile {
+  usagePurposes: UsagePurpose[];
+  applicantTypes: ApplicantType[];
+  usageInviteDismissed: boolean;
+}
+
+export interface AccountUsageProfilePatch {
+  /** @maxItems 5 */
+  usagePurposes?: UsagePurpose[];
+  /** @maxItems 4 */
+  applicantTypes?: ApplicantType[];
+  usageInviteDismissed?: boolean;
+}
+
 export interface AuthSessionResponse {
   user: User;
 }
@@ -285,6 +320,9 @@ export interface AccountExportUser {
   emailDigest: EmailDigestPreference;
   emailImmediateCritical: boolean;
   profileAlerts: boolean;
+  usagePurposes: UsagePurpose[];
+  applicantTypes: ApplicantType[];
+  usageInviteDismissed: boolean;
   recommendationPersonalizationEnabled: boolean;
   showInternationalOpportunities: boolean;
   /** @nullable */
@@ -1424,6 +1462,267 @@ export interface Recommendation {
   generatedAt: string;
 }
 
+export type OpportunityStatus = typeof OpportunityStatus[keyof typeof OpportunityStatus];
+
+
+export const OpportunityStatus = {
+  open: 'open',
+  upcoming: 'upcoming',
+  closed: 'closed',
+  undated: 'undated',
+} as const;
+
+export type OpportunityProgram = typeof OpportunityProgram[keyof typeof OpportunityProgram];
+
+
+export const OpportunityProgram = {
+  audiovisual: 'audiovisual',
+  lpg: 'lpg',
+  fac: 'fac',
+  fsa: 'fsa',
+} as const;
+
+export type OpportunityKind = typeof OpportunityKind[keyof typeof OpportunityKind];
+
+
+export const OpportunityKind = {
+  culture: 'culture',
+  funding: 'funding',
+  innovation: 'innovation',
+  partnership: 'partnership',
+  procurement: 'procurement',
+} as const;
+
+export type OpportunitySource = typeof OpportunitySource[keyof typeof OpportunitySource];
+
+
+export const OpportunitySource = {
+  mapas: 'mapas',
+  finep: 'finep',
+  cnpq: 'cnpq',
+  capes: 'capes',
+  transferegov: 'transferegov',
+  funarte: 'funarte',
+  minc: 'minc',
+  salic: 'salic',
+  worldbank: 'worldbank',
+  eu_ft: 'eu_ft',
+} as const;
+
+export interface OpportunityDocument {
+  title: string;
+  url: string;
+  /** @nullable */
+  mediaType: string | null;
+}
+
+export interface OpportunityInstallation {
+  id: string;
+  name: string;
+  uf: string;
+}
+
+export interface OpportunityProfileMatch {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  score: number;
+  reasons: string[];
+}
+
+/**
+ * Reach of the call, not its nature. An international call still has a `kind`.
+ */
+export type OpportunityScope = typeof OpportunityScope[keyof typeof OpportunityScope];
+
+
+export const OpportunityScope = {
+  national: 'national',
+  international: 'international',
+} as const;
+
+export type InternationalRegion = typeof InternationalRegion[keyof typeof InternationalRegion];
+
+
+export const InternationalRegion = {
+  'america-latina': 'america-latina',
+  africa: 'africa',
+  europa: 'europa',
+  asia: 'asia',
+  'oriente-medio': 'oriente-medio',
+  global: 'global',
+} as const;
+
+/**
+ * @nullable
+ */
+export type InternationalOpportunityTranslationSource = typeof InternationalOpportunityTranslationSource[keyof typeof InternationalOpportunityTranslationSource] | null;
+
+
+export const InternationalOpportunityTranslationSource = {
+  source: 'source',
+  model: 'model',
+} as const;
+
+/**
+ * With `date` only the day is known; an hour in `original` was not converted.
+ * @nullable
+ */
+export type InternationalOpportunityDeadlinePrecision = typeof InternationalOpportunityDeadlinePrecision[keyof typeof InternationalOpportunityDeadlinePrecision] | null;
+
+
+export const InternationalOpportunityDeadlinePrecision = {
+  datetime: 'datetime',
+  date: 'date',
+} as const;
+
+export interface InternationalOpportunityDeadline {
+  /**
+     * Same instant as `registrationTo`.
+     * @nullable
+     */
+  at: string | null;
+  /**
+     * With `date` only the day is known; an hour in `original` was not converted.
+     * @nullable
+     */
+  precision: InternationalOpportunityDeadlinePrecision;
+  /**
+     * IANA zone of the wall clock the source published.
+     * @nullable
+     */
+  timeZone: string | null;
+  /**
+     * The deadline as the source wrote it, in its own wall clock.
+     * @nullable
+     */
+  original: string | null;
+}
+
+export type BrazilEligibility = typeof BrazilEligibility[keyof typeof BrazilEligibility];
+
+
+export const BrazilEligibility = {
+  yes: 'yes',
+  conditional: 'conditional',
+  no: 'no',
+  unknown: 'unknown',
+} as const;
+
+export interface OpportunityEligibilityAnswer {
+  status: BrazilEligibility;
+  label: string;
+  /**
+     * Readable sentence of the rule that decided. Indicative; the official notice prevails.
+     * @nullable
+     */
+  reason: string | null;
+  /**
+     * Slug of the rule. Present on `brazilEligibility` only.
+     * @nullable
+     */
+  rule?: string | null;
+}
+
+export interface InternationalOpportunityDetail {
+  label: string;
+  value: string;
+}
+
+export interface InternationalOpportunity {
+  /** @nullable */
+  agency: string | null;
+  /**
+     * ISO 3166-1 alpha-2 of the country where the call is executed.
+     * @nullable
+     */
+  country: string | null;
+  /** @nullable */
+  countryName: string | null;
+  region: InternationalRegion | null;
+  /** @nullable */
+  regionName: string | null;
+  brazilProject: boolean;
+  /** @nullable */
+  language: string | null;
+  /** @nullable */
+  languageName: string | null;
+  /** @nullable */
+  titleOriginal: string | null;
+  /** @nullable */
+  titlePt: string | null;
+  /** @nullable */
+  translationSource: InternationalOpportunityTranslationSource;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  amountOriginal: number | null;
+  /**
+     * ISO 4217 code of `amountOriginal`.
+     * @nullable
+     */
+  currency: string | null;
+  /**
+     * `amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.
+     * @minimum 0
+     * @nullable
+     */
+  amountBrlApprox: number | null;
+  /** @nullable */
+  fxRate: number | null;
+  /** @nullable */
+  fxDate: string | null;
+  deadline: InternationalOpportunityDeadline;
+  brazilEligibility: OpportunityEligibilityAnswer | null;
+  brazilFunding: OpportunityEligibilityAnswer | null;
+  /** @nullable */
+  eligibilityCheckedAt: string | null;
+  details: InternationalOpportunityDetail[];
+}
+
+export interface OpportunitySummary {
+  id: string;
+  title: string;
+  /** @nullable */
+  summary: string | null;
+  organizationName: string;
+  status: OpportunityStatus;
+  program: OpportunityProgram | null;
+  kind: OpportunityKind;
+  source: OpportunitySource;
+  sourceName: string;
+  /** @nullable */
+  audience: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  amount: number | null;
+  documents: OpportunityDocument[];
+  /** @nullable */
+  registrationFrom: string | null;
+  /** @nullable */
+  registrationTo: string | null;
+  /** @nullable */
+  state: string | null;
+  installation: OpportunityInstallation;
+  /** @nullable */
+  sourceUrl: string | null;
+  updatedAt: string;
+  profileMatch: OpportunityProfileMatch | null;
+  scope: OpportunityScope;
+  /** Set on international calls only. */
+  international: InternationalOpportunity | null;
+}
+
+export interface OpportunityRecommendation {
+  opportunity: OpportunitySummary;
+  score: number;
+  reasons: string[];
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;
@@ -1434,6 +1733,8 @@ export interface Pagination {
 
 export interface RecommendationsResponse {
   data: Recommendation[];
+  /** Declared-purpose matches; absent when no purposes were answered */
+  opportunities?: OpportunityRecommendation[];
   pagination: Pagination;
 }
 
@@ -1840,64 +2141,6 @@ export interface MarkNotificationsReadRequest {
   all?: boolean;
 }
 
-export type OpportunityStatus = typeof OpportunityStatus[keyof typeof OpportunityStatus];
-
-
-export const OpportunityStatus = {
-  open: 'open',
-  upcoming: 'upcoming',
-  closed: 'closed',
-  undated: 'undated',
-} as const;
-
-export type OpportunityProgram = typeof OpportunityProgram[keyof typeof OpportunityProgram];
-
-
-export const OpportunityProgram = {
-  audiovisual: 'audiovisual',
-  lpg: 'lpg',
-  fac: 'fac',
-  fsa: 'fsa',
-} as const;
-
-export type OpportunityKind = typeof OpportunityKind[keyof typeof OpportunityKind];
-
-
-export const OpportunityKind = {
-  culture: 'culture',
-  funding: 'funding',
-  innovation: 'innovation',
-  partnership: 'partnership',
-  procurement: 'procurement',
-} as const;
-
-export type OpportunitySource = typeof OpportunitySource[keyof typeof OpportunitySource];
-
-
-export const OpportunitySource = {
-  mapas: 'mapas',
-  finep: 'finep',
-  cnpq: 'cnpq',
-  capes: 'capes',
-  transferegov: 'transferegov',
-  funarte: 'funarte',
-  minc: 'minc',
-  salic: 'salic',
-  worldbank: 'worldbank',
-  eu_ft: 'eu_ft',
-} as const;
-
-/**
- * Reach of the call, not its nature. An international call still has a `kind`.
- */
-export type OpportunityScope = typeof OpportunityScope[keyof typeof OpportunityScope];
-
-
-export const OpportunityScope = {
-  national: 'national',
-  international: 'international',
-} as const;
-
 export type OpportunityScopeFilter = typeof OpportunityScopeFilter[keyof typeof OpportunityScopeFilter];
 
 
@@ -1906,203 +2149,6 @@ export const OpportunityScopeFilter = {
   international: 'international',
   all: 'all',
 } as const;
-
-export type InternationalRegion = typeof InternationalRegion[keyof typeof InternationalRegion];
-
-
-export const InternationalRegion = {
-  'america-latina': 'america-latina',
-  africa: 'africa',
-  europa: 'europa',
-  asia: 'asia',
-  'oriente-medio': 'oriente-medio',
-  global: 'global',
-} as const;
-
-export type BrazilEligibility = typeof BrazilEligibility[keyof typeof BrazilEligibility];
-
-
-export const BrazilEligibility = {
-  yes: 'yes',
-  conditional: 'conditional',
-  no: 'no',
-  unknown: 'unknown',
-} as const;
-
-export interface OpportunityEligibilityAnswer {
-  status: BrazilEligibility;
-  label: string;
-  /**
-     * Readable sentence of the rule that decided. Indicative; the official notice prevails.
-     * @nullable
-     */
-  reason: string | null;
-  /**
-     * Slug of the rule. Present on `brazilEligibility` only.
-     * @nullable
-     */
-  rule?: string | null;
-}
-
-export interface InternationalOpportunityDetail {
-  label: string;
-  value: string;
-}
-
-/**
- * With `date` only the day is known; an hour in `original` was not converted.
- * @nullable
- */
-export type InternationalOpportunityDeadlinePrecision = typeof InternationalOpportunityDeadlinePrecision[keyof typeof InternationalOpportunityDeadlinePrecision] | null;
-
-
-export const InternationalOpportunityDeadlinePrecision = {
-  datetime: 'datetime',
-  date: 'date',
-} as const;
-
-export interface InternationalOpportunityDeadline {
-  /**
-     * Same instant as `registrationTo`.
-     * @nullable
-     */
-  at: string | null;
-  /**
-     * With `date` only the day is known; an hour in `original` was not converted.
-     * @nullable
-     */
-  precision: InternationalOpportunityDeadlinePrecision;
-  /**
-     * IANA zone of the wall clock the source published.
-     * @nullable
-     */
-  timeZone: string | null;
-  /**
-     * The deadline as the source wrote it, in its own wall clock.
-     * @nullable
-     */
-  original: string | null;
-}
-
-/**
- * @nullable
- */
-export type InternationalOpportunityTranslationSource = typeof InternationalOpportunityTranslationSource[keyof typeof InternationalOpportunityTranslationSource] | null;
-
-
-export const InternationalOpportunityTranslationSource = {
-  source: 'source',
-  model: 'model',
-} as const;
-
-export interface InternationalOpportunity {
-  /** @nullable */
-  agency: string | null;
-  /**
-     * ISO 3166-1 alpha-2 of the country where the call is executed.
-     * @nullable
-     */
-  country: string | null;
-  /** @nullable */
-  countryName: string | null;
-  region: InternationalRegion | null;
-  /** @nullable */
-  regionName: string | null;
-  brazilProject: boolean;
-  /** @nullable */
-  language: string | null;
-  /** @nullable */
-  languageName: string | null;
-  /** @nullable */
-  titleOriginal: string | null;
-  /** @nullable */
-  titlePt: string | null;
-  /** @nullable */
-  translationSource: InternationalOpportunityTranslationSource;
-  /**
-     * @minimum 0
-     * @nullable
-     */
-  amountOriginal: number | null;
-  /**
-     * ISO 4217 code of `amountOriginal`.
-     * @nullable
-     */
-  currency: string | null;
-  /**
-     * `amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.
-     * @minimum 0
-     * @nullable
-     */
-  amountBrlApprox: number | null;
-  /** @nullable */
-  fxRate: number | null;
-  /** @nullable */
-  fxDate: string | null;
-  deadline: InternationalOpportunityDeadline;
-  brazilEligibility: OpportunityEligibilityAnswer | null;
-  brazilFunding: OpportunityEligibilityAnswer | null;
-  /** @nullable */
-  eligibilityCheckedAt: string | null;
-  details: InternationalOpportunityDetail[];
-}
-
-export interface OpportunityDocument {
-  title: string;
-  url: string;
-  /** @nullable */
-  mediaType: string | null;
-}
-
-export interface OpportunityProfileMatch {
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  score: number;
-  reasons: string[];
-}
-
-export interface OpportunityInstallation {
-  id: string;
-  name: string;
-  uf: string;
-}
-
-export interface OpportunitySummary {
-  id: string;
-  title: string;
-  /** @nullable */
-  summary: string | null;
-  organizationName: string;
-  status: OpportunityStatus;
-  program: OpportunityProgram | null;
-  kind: OpportunityKind;
-  source: OpportunitySource;
-  sourceName: string;
-  /** @nullable */
-  audience: string | null;
-  /**
-     * @minimum 0
-     * @nullable
-     */
-  amount: number | null;
-  documents: OpportunityDocument[];
-  /** @nullable */
-  registrationFrom: string | null;
-  /** @nullable */
-  registrationTo: string | null;
-  /** @nullable */
-  state: string | null;
-  installation: OpportunityInstallation;
-  /** @nullable */
-  sourceUrl: string | null;
-  updatedAt: string;
-  profileMatch: OpportunityProfileMatch | null;
-  scope: OpportunityScope;
-  /** Set on international calls only. */
-  international: InternationalOpportunity | null;
-}
 
 export interface FacetBucket {
   value: string;

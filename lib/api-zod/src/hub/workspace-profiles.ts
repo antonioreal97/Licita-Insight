@@ -11,6 +11,16 @@ export const WorkspaceTypeSchema = z.enum([
 ]);
 export type WorkspaceType = z.infer<typeof WorkspaceTypeSchema>;
 
+/** Declarative account signals, later copied into newly created Spaces. */
+export const ApplicantTypeSchema = z.enum(["individual", "mei", "company", "nonprofit"]);
+export type ApplicantType = z.infer<typeof ApplicantTypeSchema>;
+const uniqueAnswers = <T extends string>(values: T[]) => new Set(values).size === values.length;
+export const AccountUsageProfileInputSchema = z.object({
+  usagePurposes: z.array(WorkspaceTypeSchema).max(5).refine(uniqueAnswers, "duplicate purpose").optional(),
+  applicantTypes: z.array(ApplicantTypeSchema).max(4).refine(uniqueAnswers, "duplicate applicant type").optional(),
+  usageInviteDismissed: z.boolean().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, "at least one field is required");
+
 const normalizedText = (minimum = 2, maximum = 120) =>
   z.string().trim().min(minimum).max(maximum);
 const termList = (maximum = 20) => z.array(normalizedText()).max(maximum);

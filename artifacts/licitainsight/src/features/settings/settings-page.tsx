@@ -18,6 +18,7 @@ import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
 import { CompanyProfileSection } from '@/features/company-profile/components/company-profile-section';
 import { AccountDataSection } from './components/account-data-section';
+import { UsageProfileSection } from './components/usage-profile-section';
 import { NotificationPreferencesSection } from './components/notification-preferences-section';
 import { useNotificationPreferences } from './hooks/use-notification-preferences';
 import { RecommendationPreferencesSection } from '@/features/recommendations/components/recommendation-preferences-section';
@@ -113,6 +114,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
             )}
+            <UsageProfileSection />
           </section>
           <CompanyProfileSection />
           <NotificationPreferencesSection />
