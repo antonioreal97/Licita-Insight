@@ -276,7 +276,7 @@ FROM (
   SELECT
     workspace_id,
     kind,
-    lower(regexp_replace(btrim(normalize(raw_value, NFKC)), '\\s+', ' ', 'g')) AS normalized_value,
+    lower(btrim(regexp_replace(normalize(raw_value, NFKC), '\s+', ' ', 'g'))) AS normalized_value,
     weight,
     source_field,
     profile_version

@@ -32,7 +32,7 @@ INSERT INTO users(id,email,name,show_international_opportunities) VALUES
 INSERT INTO company_profiles(user_id,description,offerings,exclusions,selected_categories,selected_keywords,
  excluded_keywords,registered_platforms,coverage_scope,coverage_states,coverage_regions,coverage_municipalities,
  coverage_mode,accepts_remote,value_min,value_max,size,version,last_alert_at)
-VALUES ('u1','Synthetic profile description.','["test"]','[]','[]','[]','[]','[]','states','["SP"]','[]','[]',
+VALUES ('u1','Synthetic profile description.','["test","  Limpeza   Predial  "]','[]','[]','[]','[]','[]','states','["SP"]','[]','[]',
  'prioritize',false,null,null,'other',2,'2026-10-01T00:00:00Z');
 INSERT INTO tenders (id,pncp_control_number,title,organization_id,organization_name,modality,
  modality_label,status,estimated_value_status,source_id,source_name,search_text,title_norm,
@@ -43,6 +43,8 @@ INSERT INTO saved_tenders(user_id,tender_id) VALUES ('u1','t1');
 SQL
 assert_reject env CUTOVER_CONFIRM_DB=wrong "$TOOL" status
 "$TOOL" batch >/dev/null
+# Signals follow the app normalization: NFKC, trim, collapsed whitespace, lower case.
+assert_count 1 "select count(*) from workspace_profile_signals where kind='keyword' and value='limpeza predial'"
 psql_test -q <<'SQL'
 CREATE TABLE expected_workspaces AS SELECT * FROM workspaces;
 CREATE TABLE expected_profiles AS SELECT * FROM workspace_profiles;
