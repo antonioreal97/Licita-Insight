@@ -4,6 +4,7 @@ import { isApiError, type ChecklistKey, type QualificationItem, type Qualificati
 import { Button } from '@/components/common/action-button';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { GlossaryText } from '@/features/help/components/glossary-text';
 import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
 import { ChecklistControl, ChecklistSummary } from '@/features/participation/components/prep-checklist';
 import { ProvenanceLabel } from '@/features/participation/components/provenance-label';
@@ -24,7 +25,9 @@ function QualificationRow({ type, items, sourceNumbers, prep }: { type: Qualific
   const single = items.length === 1;
   return (
     <div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-4" data-testid="qualification-item" data-type={type}>
-      <dt className="type-ui font-medium text-foreground">{QUALIFICATION_LABELS[type]}</dt>
+      <dt className="type-ui font-medium text-foreground">
+        <GlossaryText>{QUALIFICATION_LABELS[type]}</GlossaryText>
+      </dt>
       <dd className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="type-meta text-muted-foreground">{single ? 'Exigido' : `Exigido em ${items.length} trechos`}</span>
@@ -105,7 +108,9 @@ function FieldRow({ field, sourceNumber, prep }: { field: SheetField; sourceNumb
       data-testid={`sheet-field-${field.id}`}
       data-status={field.status}
     >
-      <dt className="type-ui font-medium text-foreground">{copy.label}</dt>
+      <dt className="type-ui font-medium text-foreground">
+        <GlossaryText>{copy.label}</GlossaryText>
+      </dt>
       <dd className="min-w-0">
         {field.status === 'not_found' || !field.evidence ? (
           // Absence is not an answer: never render this as "não exige".
@@ -163,7 +168,9 @@ function RegistrationRequirementAlert({ requirement }: { requirement: Registrati
     >
       <TriangleAlert size={15} aria-hidden="true" className="mt-0.5 shrink-0" />
       <div className="min-w-0">
-        <p className="font-semibold">Credenciamento prévio exigido</p>
+        <p className="font-semibold">
+          <GlossaryText>Credenciamento prévio exigido</GlossaryText>
+        </p>
         <p className="mt-0.5" data-testid="text-registration-requirement">
           {registrationRequirementText(requirement)}
         </p>

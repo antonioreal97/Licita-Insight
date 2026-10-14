@@ -299,6 +299,54 @@ export type TransparencyTenderResultsResponse = {
   meta: TransparencyMeta;
 };
 
+// Award history: similar purchases by the same organization (`GET /v1/tenders/{id}/award-history`).
+export type AwardHistoryWinner = {
+  /** Only companies, and only when `meta.access.unlocked`. Natural persons (CPF) are never named. */
+  name: string | null;
+  cnpj: string | null;
+  kind: 'company' | 'individual' | 'foreign' | 'unidentified';
+  wins: number;
+};
+
+export type AwardHistoryRecentPurchase = {
+  purchasePncpControlNumber: string;
+  tenderId: string | null;
+  date: string | null;
+  object: string | null;
+  value: number | null;
+  valueSource: 'results' | 'contracts' | null;
+  winners: AwardHistoryWinner[];
+  officialUrl: string | null;
+};
+
+export type AwardHistory = {
+  tenderId: string;
+  scope: 'unit' | 'organization';
+  organizationName: string;
+  purchasingUnit: string | null;
+  windowMonths: number;
+  since: string;
+  criteria: { keywords: string[]; categories: { slug: string; label: string }[]; rule: string };
+  purchases: { total: number; last12Months: number; withResults: number };
+  winners: { distinct: number; top: AwardHistoryWinner[] };
+  prices: {
+    purchaseValue: { min: number; median: number; max: number; count: number } | null;
+    discountPercent: { p25: number; median: number; p75: number; count: number } | null;
+  };
+  recent: AwardHistoryRecentPurchase[];
+};
+
+export type AwardHistoryMeta = {
+  coverage: string;
+  valueSemantics: string;
+  access: { winnerNames: 'entitled' | 'public'; unlocked: boolean };
+};
+
+export type AwardHistoryResponse = {
+  data: AwardHistory;
+  meta: AwardHistoryMeta;
+};
+
 export type ApiErrorCode =
   | 'INVALID_PARAMETER'
   | 'NOT_FOUND'

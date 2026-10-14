@@ -12,6 +12,7 @@ import { RequireAuth } from '@/features/auth/components/require-auth';
 import { RequireSubscription } from '@/features/billing/components/require-subscription';
 import DashboardPage from '@/features/dashboard/dashboard-page';
 import DesignSystemPage from '@/features/design-system/design-system-page';
+import HelpPage, { HELP_TITLE } from '@/features/help/help-page';
 import LandingPage from '@/features/landing/landing-page';
 import MonitoringPage from '@/features/monitoring/monitoring-page';
 import SavedSearchesPage from '@/features/saved-searches/saved-searches-page';
@@ -64,6 +65,7 @@ const routeTitles: Record<string, string> = {
   '/search': 'Explorar editais · Pardal Digital',
   '/oportunidades': 'Editais nacionais · Pardal Digital',
   '/transparencia': 'Transparência · Pardal Digital',
+  '/ajuda': HELP_TITLE,
   '/saved-searches': 'Buscas salvas · Pardal Digital',
   '/saved-tenders': 'Editais salvos · Pardal Digital',
   '/monitoring': 'Monitoramento · Pardal Digital',
@@ -131,6 +133,13 @@ function Router() {
           {() => (
             <AppShell>
               <TransparencyPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/ajuda">
+          {() => (
+            <AppShell>
+              <HelpPage />
             </AppShell>
           )}
         </Route>

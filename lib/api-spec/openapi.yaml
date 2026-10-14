@@ -226,6 +226,31 @@ paths:
                 }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/SearchUnavailable" }
+  /v1/tenders/{id}/award-history:
+    get:
+      operationId: getTenderAwardHistory
+      tags: [transparency]
+      summary: Get the award history of similar purchases by the same organization
+      description: >
+        Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization
+        (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this
+        tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons,
+        foreign and unidentified suppliers are only counted as groups.
+      parameters:
+        - {
+            name: id,
+            in: path,
+            required: true,
+            schema: { type: string, minLength: 1 },
+          }
+      responses:
+        "200":
+          description: Aggregated history; zero counts when nothing similar is in the collected coverage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AwardHistoryResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/ask-status:
     get:
       operationId: getTenderAskStatus
@@ -3588,6 +3613,112 @@ components:
             items: { $ref: "#/components/schemas/TransparencyResult" },
           }
         meta: { $ref: "#/components/schemas/TransparencyMeta" }
+      required: [data, meta]
+    AwardHistoryWinner:
+      type: object
+      description: >
+        `name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual`
+        (CPF), `foreign` and `unidentified` are groups and never carry a name or document.
+      properties:
+        name: { type: [string, "null"] }
+        cnpj: { type: [string, "null"] }
+        kind: { type: string, enum: [company, individual, foreign, unidentified] }
+        wins: { type: integer, minimum: 1 }
+      required: [name, cnpj, kind, wins]
+    AwardHistoryRecentPurchase:
+      type: object
+      properties:
+        purchasePncpControlNumber: { type: string }
+        tenderId: { type: [string, "null"] }
+        date: { type: [string, "null"], format: date }
+        object: { type: [string, "null"] }
+        value: { type: [number, "null"] }
+        valueSource: { type: [string, "null"], enum: [results, contracts, null] }
+        winners:
+          { type: array, items: { $ref: "#/components/schemas/AwardHistoryWinner" } }
+        officialUrl: { type: [string, "null"] }
+      required: [purchasePncpControlNumber, tenderId, date, object, value, valueSource, winners, officialUrl]
+    AwardHistoryRange:
+      type: [object, "null"]
+      properties:
+        min: { type: number }
+        median: { type: number }
+        max: { type: number }
+        count: { type: integer }
+      required: [min, median, max, count]
+    AwardHistorySpread:
+      type: [object, "null"]
+      properties:
+        p25: { type: number }
+        median: { type: number }
+        p75: { type: number }
+        count: { type: integer }
+      required: [p25, median, p75, count]
+    AwardHistory:
+      type: object
+      properties:
+        tenderId: { type: string }
+        scope: { type: string, enum: [unit, organization] }
+        organizationName: { type: string }
+        purchasingUnit: { type: [string, "null"] }
+        windowMonths: { type: integer }
+        since: { type: string, format: date }
+        criteria:
+          type: object
+          properties:
+            keywords: { type: array, items: { type: string } }
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  slug: { type: string }
+                  label: { type: string }
+                required: [slug, label]
+            rule: { type: string }
+          required: [keywords, categories, rule]
+        purchases:
+          type: object
+          properties:
+            total: { type: integer }
+            last12Months: { type: integer }
+            withResults: { type: integer }
+          required: [total, last12Months, withResults]
+        winners:
+          type: object
+          properties:
+            distinct: { type: integer }
+            top:
+              { type: array, items: { $ref: "#/components/schemas/AwardHistoryWinner" } }
+          required: [distinct, top]
+        prices:
+          type: object
+          properties:
+            purchaseValue: { $ref: "#/components/schemas/AwardHistoryRange" }
+            discountPercent: { $ref: "#/components/schemas/AwardHistorySpread" }
+          required: [purchaseValue, discountPercent]
+        recent:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/AwardHistoryRecentPurchase" },
+          }
+      required: [tenderId, scope, organizationName, purchasingUnit, windowMonths, since, criteria, purchases, winners, prices, recent]
+    AwardHistoryResponse:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/AwardHistory" }
+        meta:
+          type: object
+          properties:
+            coverage: { type: string }
+            valueSemantics: { type: string }
+            access:
+              type: object
+              properties:
+                winnerNames: { type: string, enum: [entitled, public] }
+                unlocked: { type: boolean }
+              required: [winnerNames, unlocked]
+          required: [coverage, valueSemantics, access]
       required: [data, meta]
     Pagination:
       type: object
