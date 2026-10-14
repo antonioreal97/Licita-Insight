@@ -1,7 +1,7 @@
 # API de Espaços v1 — rascunho
 
 Data de atualização: 13 out. 2026
-Status: contrato consolidado; nenhuma rota, tabela ou migração implementada. O código da Fase 1 foi autorizado em 13/10/2026, desligado e sem migração em produção
+Status: contrato consolidado; C2 monta as rotas desligadas por padrão. O código da Fase 1 foi autorizado em 13/10/2026, desligado e sem migração em produção
 Plano de referência: [hub adaptativo](../plans/hub-adaptativo-2026-10-12.md)
 
 Todas as rotas usam a sessão atual no cookie HttpOnly `licita_session`. Nenhuma aceita token de sessão ou perfil em `localStorage`. Escritas mantêm a proteção CSRF atual (`X-Requested-With`) e são `Cache-Control: no-store`.
@@ -57,6 +57,8 @@ Criar Espaço acima do limite retorna HTTP `402` com `error.code = WORKSPACE_LIM
 ## Rotas de Espaços e onboarding
 
 Disponibilidade (decisão de 13/10/2026): as rotas desta seção e das seguintes, inclusive a criação de Espaços e as jornadas, só respondem depois de W4 aplicada em produção, com a flag de corte em `workspaces` e a jornada habilitada. Antes disso respondem `422 FEATURE_DISABLED` sem gravar nada. W4 roda numa segunda janela, depois de 7 dias de observação da virada; ver o [contrato da flag de corte](./workspace-cutover-v1.md#regra-para-w4).
+
+C2 detecta W4 pelo catálogo do PostgreSQL: exige as quatro PKs de W4 (`saved_tenders_workspace_tender_pk`, `recommendation_dismissals_workspace_tender_pk`, `recommendation_interest_profiles_workspace_pk`, `user_recommendations_workspace_tender_pk`) e `workspace_id NOT NULL` nas nove tabelas contextuais definidas em `w4_enforce.sql`. Resultado positivo fica em cache no processo; negativo é consultado novamente, inclusive após W4 aplicada sem mudança de modo. Ler `legacy` invalida o cache positivo para uma nova virada. A guarda é checada antes de qualquer leitura subordinada e, em mutações, o modo é confirmado de novo dentro da porta de escrita.
 
 ### `GET /api/v1/me/workspaces`
 
@@ -159,6 +161,8 @@ A preferência referencia o Espaço com `ON DELETE SET NULL`, para que a exclus�
 
 Todas aplicam `requireWorkspaceMember(id)`. A forma detalhada será fechada na fase responsável; estes são os envelopes mínimos. Leituras continuam disponíveis em Espaços somente leitura; toda mutação exige `accessMode = write` além do gate vigente.
 
+Na C2, as três rotas de `saved-opportunities` ficam montadas e respondem sempre `422 FEATURE_DISABLED` para um Espaço próprio, inclusive depois do gate geral. O armazenamento de oportunidades salvas ainda não existe em W1/W2; esta unidade não cria tabela nem migração. Com um id inexistente ou alheio e o gate geral aberto, a verificação de associação precede esse `422` e devolve o mesmo `404 WORKSPACE_NOT_FOUND` das demais rotas. A ativação funcional dessas três rotas depende de uma unidade posterior de armazenamento.
+
 | Rota                                             | Métodos e resposta mínima                                         | Gate adicional                                         |
 | ------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------ |
 | `/api/v1/me/workspaces/{id}/saved-opportunities` | `GET` paginado; `PUT /{opportunityId}`; `DELETE /{opportunityId}` | assinatura ativa para mutações e uso do recurso        |
@@ -183,6 +187,8 @@ Decisão de 13/10/2026, alinhada ao que a busca v1 já faz com parâmetros pesso
 O `401` sem sessão evita mostrar resultado genérico como se fosse personalizado quando a sessão expirou. Com sessão, nunca `404` nem `401`: qualquer variação entre “não existe” e “não é seu” permitiria enumerar Espaços. `meta.workspace = null` permite ao frontend detectar um id obsoleto e chamar a resolução do Espaço ativo.
 
 A validação usa a mesma consulta de `requireWorkspaceMember` (id + associação em uma única leitura). Toda resposta de busca que receba `workspaceId` é `Cache-Control: no-store`, personalizada ou não.
+
+Enquanto qualquer das três condições de disponibilidade das rotas novas faltar, a busca com `workspaceId` válido e sessão mantém o catálogo universal, `meta.workspace = null` e `no-store`, sem consultar associação ou perfil. A exceção é a ausência de sessão (`401`); sintaxe inválida com sessão continua `400`. Um contexto indisponível ignora também os filtros pessoais `myRegion` e `notification` da mesma requisição; os filtros públicos, como `q`, continuam aplicados. Quando o Espaço está disponível e pertence ao usuário, `meta.workspace` identifica o contexto e, se não há `q`, as palavras-chave selecionadas no perfil de compras orientam a busca. `myRegion` com `workspaceId` próprio usa a cobertura desse Espaço, nunca a do perfil v1.
 
 ## `requireWorkspaceMember`
 

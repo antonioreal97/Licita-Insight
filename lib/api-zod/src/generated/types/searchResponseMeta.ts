@@ -8,6 +8,7 @@
 import type { NotificationSearchContext } from './notificationSearchContext';
 import type { SearchMode } from './searchMode';
 import type { SearchResponseMetaSearchModeFallbackReason } from './searchResponseMetaSearchModeFallbackReason';
+import type { SearchWorkspaceContext } from './searchWorkspaceContext';
 
 export type SearchResponseMeta = {
   /** @nullable */
@@ -20,4 +21,6 @@ export type SearchResponseMeta = {
   indexUpdatedAt: Date | null;
   /** Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification. */
   notification?: NotificationSearchContext | null;
+  /** Present only when workspaceId was supplied. Null for a missing, foreign or inaccessible workspace and whenever the workspace journey is disabled. */
+  workspace?: SearchWorkspaceContext | null;
 };

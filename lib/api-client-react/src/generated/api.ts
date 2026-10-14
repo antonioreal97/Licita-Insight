@@ -38,10 +38,12 @@ import type {
   CouponResponse,
   CreateCouponRequest,
   CreateSavedSearchRequest,
+  CreateWorkspaceRequest,
   DeleteAccountRequest,
   DevLoginRequest,
   EmailUnsubscribeRequest,
   EmailUnsubscribeResponse,
+  FeatureDisabledResponse,
   ForbiddenResponse,
   GetCompanyRegionPreview200,
   GetSearchSuggestionsParams,
@@ -54,6 +56,9 @@ import type {
   ListProfileMunicipalitiesParams,
   ListRecommendationsParams,
   ListSavedTendersParams,
+  ListWorkspaceNotificationsParams,
+  ListWorkspaceRecommendationsParams,
+  ListWorkspacesParams,
   MarkNotificationsReadRequest,
   NotFoundResponse,
   NotificationPage,
@@ -87,6 +92,7 @@ import type {
   SearchTendersParams,
   SearchTransparencyContractsParams,
   SearchUnavailableResponse,
+  SelectActiveWorkspaceRequest,
   StartGoogleAuthParams,
   SubscriptionRequiredResponse,
   SuggestProfileKeywordsParams,
@@ -102,7 +108,14 @@ import type {
   UnreadNotificationCount,
   UpdateNotificationPreferencesRequest,
   UpdateRecommendationPreferencesRequest,
-  UpdateSavedSearchRequest
+  UpdateSavedSearchRequest,
+  UpdateWorkspaceRequest,
+  WorkspaceDashboard,
+  WorkspaceDetail,
+  WorkspaceList,
+  WorkspaceProfileResult,
+  WorkspaceProfileStepRequest,
+  WorkspaceSummary
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -366,6 +379,1444 @@ export function useSearchTenders<TData = Awaited<ReturnType<typeof searchTenders
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchTendersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListWorkspacesUrl = (params?: ListWorkspacesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/workspaces?${stringifiedParams}` : `/api/v1/me/workspaces`
+}
+
+/**
+ * Disabled by default; requires cutover mode workspaces, W4 applied and an enabled journey.
+ * @summary List owner workspaces and resolve the active workspace without writing
+ */
+export const listWorkspaces = async (params?: ListWorkspacesParams, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceList> => {
+
+  return customFetch<WorkspaceList>(getListWorkspacesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspacesQueryKey = (params?: ListWorkspacesParams,) => {
+    return [
+    `/api/v1/me/workspaces`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWorkspacesQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaces>>, TError = ErrorType<UnauthenticatedResponse | FeatureDisabledResponse>>(params?: ListWorkspacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspacesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaces>>> = ({ signal }) => listWorkspaces(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspacesQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaces>>>
+export type ListWorkspacesQueryError = ErrorType<UnauthenticatedResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary List owner workspaces and resolve the active workspace without writing
+ */
+
+export function useListWorkspaces<TData = Awaited<ReturnType<typeof listWorkspaces>>, TError = ErrorType<UnauthenticatedResponse | FeatureDisabledResponse>>(
+ params?: ListWorkspacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspacesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkspaceUrl = () => {
+
+
+
+
+  return `/api/v1/me/workspaces`
+}
+
+/**
+ * Disabled by default; requires cutover mode workspaces, W4 applied and the requested journey enabled.
+ * @summary Create a workspace with owner membership and a serialized slot
+ */
+export const createWorkspace = async (createWorkspaceRequest: CreateWorkspaceRequest, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceSummary> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkspaceSummary>(getCreateWorkspaceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createWorkspaceRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkspaceMutationKey = () => ['createWorkspace'] as const;
+
+export const getCreateWorkspaceMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspace>>, TError,CreateWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkspace>>, TError,CreateWorkspaceMutationVariables, TContext> => {
+
+const mutationKey = getCreateWorkspaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkspace>>, CreateWorkspaceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWorkspace(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkspaceMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkspace>>>
+    export type CreateWorkspaceMutationBody = BodyType<CreateWorkspaceRequest>
+    export type CreateWorkspaceMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | FeatureDisabledResponse>
+    export type CreateWorkspaceMutationVariables = {data: BodyType<CreateWorkspaceRequest>}
+
+    /**
+ * @summary Create a workspace with owner membership and a serialized slot
+ */
+export const useCreateWorkspace = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspace>>, TError,CreateWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkspace>>,
+        TError,
+        CreateWorkspaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateWorkspaceMutationOptions(options));
+    }
+
+export const getGetWorkspaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Get one workspace and its onboarding profile
+ */
+export const getWorkspace = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceDetail> => {
+
+  return customFetch<WorkspaceDetail>(getGetWorkspaceUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceQueryKey = (id: string,) => {
+    return [
+    `/api/v1/me/workspaces/${id}`
+    ] as const;
+    }
+
+
+export const getGetWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspace>>> = ({ signal }) => getWorkspace(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspace>>>
+export type GetWorkspaceQueryError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary Get one workspace and its onboarding profile
+ */
+
+export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkspaceQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateWorkspaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Rename or archive a writable workspace
+ */
+export const updateWorkspace = async (id: string,
+    updateWorkspaceRequest: UpdateWorkspaceRequest, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceSummary> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkspaceSummary>(getUpdateWorkspaceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateWorkspaceRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateWorkspaceMutationKey = () => ['updateWorkspace'] as const;
+
+export const getUpdateWorkspaceMutationOptions = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,UpdateWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,UpdateWorkspaceMutationVariables, TContext> => {
+
+const mutationKey = getUpdateWorkspaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkspace>>, UpdateWorkspaceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWorkspace(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWorkspaceMutationResult = NonNullable<Awaited<ReturnType<typeof updateWorkspace>>>
+    export type UpdateWorkspaceMutationBody = BodyType<UpdateWorkspaceRequest>
+    export type UpdateWorkspaceMutationError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>
+    export type UpdateWorkspaceMutationVariables = {id: string;data: BodyType<UpdateWorkspaceRequest>}
+
+    /**
+ * @summary Rename or archive a writable workspace
+ */
+export const useUpdateWorkspace = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,UpdateWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWorkspace>>,
+        TError,
+        UpdateWorkspaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateWorkspaceMutationOptions(options));
+    }
+
+export const getSaveWorkspaceProfileStepUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/profile`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Save one onboarding step with optimistic revision control
+ */
+export const saveWorkspaceProfileStep = async (id: string,
+    workspaceProfileStepRequest: WorkspaceProfileStepRequest, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceProfileResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkspaceProfileResult>(getSaveWorkspaceProfileStepUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workspaceProfileStepRequest)
+  }
+);}
+
+
+
+
+
+export const getSaveWorkspaceProfileStepMutationKey = () => ['saveWorkspaceProfileStep'] as const;
+
+export const getSaveWorkspaceProfileStepMutationOptions = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | ConflictResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceProfileStep>>, TError,SaveWorkspaceProfileStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceProfileStep>>, TError,SaveWorkspaceProfileStepMutationVariables, TContext> => {
+
+const mutationKey = getSaveWorkspaceProfileStepMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveWorkspaceProfileStep>>, SaveWorkspaceProfileStepMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  saveWorkspaceProfileStep(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveWorkspaceProfileStepMutationResult = NonNullable<Awaited<ReturnType<typeof saveWorkspaceProfileStep>>>
+    export type SaveWorkspaceProfileStepMutationBody = BodyType<WorkspaceProfileStepRequest>
+    export type SaveWorkspaceProfileStepMutationError = ErrorType<InvalidParameterResponse | NotFoundResponse | ConflictResponse | FeatureDisabledResponse>
+    export type SaveWorkspaceProfileStepMutationVariables = {id: string;data: BodyType<WorkspaceProfileStepRequest>}
+
+    /**
+ * @summary Save one onboarding step with optimistic revision control
+ */
+export const useSaveWorkspaceProfileStep = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | ConflictResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceProfileStep>>, TError,SaveWorkspaceProfileStepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveWorkspaceProfileStep>>,
+        TError,
+        SaveWorkspaceProfileStepMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveWorkspaceProfileStepMutationOptions(options));
+    }
+
+export const getSelectActiveWorkspaceUrl = () => {
+
+
+
+
+  return `/api/v1/me/active-workspace`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Select an owned, unarchived workspace
+ */
+export const selectActiveWorkspace = async (selectActiveWorkspaceRequest: SelectActiveWorkspaceRequest, options?: Parameters<typeof customFetch>[1]): Promise<SelectActiveWorkspaceRequest> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SelectActiveWorkspaceRequest>(getSelectActiveWorkspaceUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(selectActiveWorkspaceRequest)
+  }
+);}
+
+
+
+
+
+export const getSelectActiveWorkspaceMutationKey = () => ['selectActiveWorkspace'] as const;
+
+export const getSelectActiveWorkspaceMutationOptions = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectActiveWorkspace>>, TError,SelectActiveWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof selectActiveWorkspace>>, TError,SelectActiveWorkspaceMutationVariables, TContext> => {
+
+const mutationKey = getSelectActiveWorkspaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof selectActiveWorkspace>>, SelectActiveWorkspaceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  selectActiveWorkspace(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SelectActiveWorkspaceMutationResult = NonNullable<Awaited<ReturnType<typeof selectActiveWorkspace>>>
+    export type SelectActiveWorkspaceMutationBody = BodyType<SelectActiveWorkspaceRequest>
+    export type SelectActiveWorkspaceMutationError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>
+    export type SelectActiveWorkspaceMutationVariables = {data: BodyType<SelectActiveWorkspaceRequest>}
+
+    /**
+ * @summary Select an owned, unarchived workspace
+ */
+export const useSelectActiveWorkspace = <TError = ErrorType<InvalidParameterResponse | NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectActiveWorkspace>>, TError,SelectActiveWorkspaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof selectActiveWorkspace>>,
+        TError,
+        SelectActiveWorkspaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSelectActiveWorkspaceMutationOptions(options));
+    }
+
+export const getListWorkspaceSavedSearchesUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-searches`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List saved searches scoped to a workspace
+ */
+export const listWorkspaceSavedSearches = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearchList> => {
+
+  return customFetch<SavedSearchList>(getListWorkspaceSavedSearchesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceSavedSearchesQueryKey = (id: string,) => {
+    return [
+    `/api/v1/me/workspaces/${id}/saved-searches`
+    ] as const;
+    }
+
+
+export const getListWorkspaceSavedSearchesQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceSavedSearches>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceSavedSearchesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceSavedSearches>>> = ({ signal }) => listWorkspaceSavedSearches(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedSearches>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceSavedSearchesQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceSavedSearches>>>
+export type ListWorkspaceSavedSearchesQueryError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary List saved searches scoped to a workspace
+ */
+
+export function useListWorkspaceSavedSearches<TData = Awaited<ReturnType<typeof listWorkspaceSavedSearches>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedSearches>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceSavedSearchesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkspaceSavedSearchUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-searches`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Save a search in one workspace
+ */
+export const createWorkspaceSavedSearch = async (id: string,
+    createSavedSearchRequest: CreateSavedSearchRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedSearch>(getCreateWorkspaceSavedSearchUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createSavedSearchRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkspaceSavedSearchMutationKey = () => ['createWorkspaceSavedSearch'] as const;
+
+export const getCreateWorkspaceSavedSearchMutationOptions = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceSavedSearch>>, TError,CreateWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceSavedSearch>>, TError,CreateWorkspaceSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getCreateWorkspaceSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkspaceSavedSearch>>, CreateWorkspaceSavedSearchMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createWorkspaceSavedSearch(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkspaceSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkspaceSavedSearch>>>
+    export type CreateWorkspaceSavedSearchMutationBody = BodyType<CreateSavedSearchRequest>
+    export type CreateWorkspaceSavedSearchMutationError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+    export type CreateWorkspaceSavedSearchMutationVariables = {id: string;data: BodyType<CreateSavedSearchRequest>}
+
+    /**
+ * @summary Save a search in one workspace
+ */
+export const useCreateWorkspaceSavedSearch = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceSavedSearch>>, TError,CreateWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkspaceSavedSearch>>,
+        TError,
+        CreateWorkspaceSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateWorkspaceSavedSearchMutationOptions(options));
+    }
+
+export const getListWorkspaceSavedOpportunitiesUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-opportunities`
+}
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary List saved opportunities in one workspace
+ */
+export const listWorkspaceSavedOpportunities = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getListWorkspaceSavedOpportunitiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceSavedOpportunitiesQueryKey = (id: string,) => {
+    return [
+    `/api/v1/me/workspaces/${id}/saved-opportunities`
+    ] as const;
+    }
+
+
+export const getListWorkspaceSavedOpportunitiesQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>, TError = ErrorType<FeatureDisabledResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceSavedOpportunitiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>> = ({ signal }) => listWorkspaceSavedOpportunities(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceSavedOpportunitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>>
+export type ListWorkspaceSavedOpportunitiesQueryError = ErrorType<FeatureDisabledResponse>
+
+
+/**
+ * @summary List saved opportunities in one workspace
+ */
+
+export function useListWorkspaceSavedOpportunities<TData = Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>, TError = ErrorType<FeatureDisabledResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSavedOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceSavedOpportunitiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveWorkspaceOpportunityUrl = (id: string,
+    opportunityId: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-opportunities/${opportunityId}`
+}
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary Save one opportunity in a workspace
+ */
+export const saveWorkspaceOpportunity = async (id: string,
+    opportunityId: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getSaveWorkspaceOpportunityUrl(id,opportunityId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getSaveWorkspaceOpportunityMutationKey = () => ['saveWorkspaceOpportunity'] as const;
+
+export const getSaveWorkspaceOpportunityMutationOptions = <TError = ErrorType<FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceOpportunity>>, TError,SaveWorkspaceOpportunityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceOpportunity>>, TError,SaveWorkspaceOpportunityMutationVariables, TContext> => {
+
+const mutationKey = getSaveWorkspaceOpportunityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveWorkspaceOpportunity>>, SaveWorkspaceOpportunityMutationVariables> = (props) => {
+          const {id,opportunityId} = props ?? {};
+
+          return  saveWorkspaceOpportunity(id,opportunityId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveWorkspaceOpportunityMutationResult = NonNullable<Awaited<ReturnType<typeof saveWorkspaceOpportunity>>>
+
+    export type SaveWorkspaceOpportunityMutationError = ErrorType<FeatureDisabledResponse>
+    export type SaveWorkspaceOpportunityMutationVariables = {id: string;opportunityId: string}
+
+    /**
+ * @summary Save one opportunity in a workspace
+ */
+export const useSaveWorkspaceOpportunity = <TError = ErrorType<FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWorkspaceOpportunity>>, TError,SaveWorkspaceOpportunityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveWorkspaceOpportunity>>,
+        TError,
+        SaveWorkspaceOpportunityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveWorkspaceOpportunityMutationOptions(options));
+    }
+
+export const getDeleteWorkspaceSavedOpportunityUrl = (id: string,
+    opportunityId: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-opportunities/${opportunityId}`
+}
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary Remove a saved opportunity from a workspace
+ */
+export const deleteWorkspaceSavedOpportunity = async (id: string,
+    opportunityId: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getDeleteWorkspaceSavedOpportunityUrl(id,opportunityId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteWorkspaceSavedOpportunityMutationKey = () => ['deleteWorkspaceSavedOpportunity'] as const;
+
+export const getDeleteWorkspaceSavedOpportunityMutationOptions = <TError = ErrorType<FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>, TError,DeleteWorkspaceSavedOpportunityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>, TError,DeleteWorkspaceSavedOpportunityMutationVariables, TContext> => {
+
+const mutationKey = getDeleteWorkspaceSavedOpportunityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>, DeleteWorkspaceSavedOpportunityMutationVariables> = (props) => {
+          const {id,opportunityId} = props ?? {};
+
+          return  deleteWorkspaceSavedOpportunity(id,opportunityId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkspaceSavedOpportunityMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>>
+
+    export type DeleteWorkspaceSavedOpportunityMutationError = ErrorType<FeatureDisabledResponse>
+    export type DeleteWorkspaceSavedOpportunityMutationVariables = {id: string;opportunityId: string}
+
+    /**
+ * @summary Remove a saved opportunity from a workspace
+ */
+export const useDeleteWorkspaceSavedOpportunity = <TError = ErrorType<FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>, TError,DeleteWorkspaceSavedOpportunityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkspaceSavedOpportunity>>,
+        TError,
+        DeleteWorkspaceSavedOpportunityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteWorkspaceSavedOpportunityMutationOptions(options));
+    }
+
+export const getUpdateWorkspaceSavedSearchUrl = (id: string,
+    searchId: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-searches/${searchId}`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Update a saved search within its workspace
+ */
+export const updateWorkspaceSavedSearch = async (id: string,
+    searchId: string,
+    updateSavedSearchRequest: UpdateSavedSearchRequest, options?: Parameters<typeof customFetch>[1]): Promise<SavedSearch> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SavedSearch>(getUpdateWorkspaceSavedSearchUrl(id,searchId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateSavedSearchRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateWorkspaceSavedSearchMutationKey = () => ['updateWorkspaceSavedSearch'] as const;
+
+export const getUpdateWorkspaceSavedSearchMutationOptions = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>, TError,UpdateWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>, TError,UpdateWorkspaceSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getUpdateWorkspaceSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>, UpdateWorkspaceSavedSearchMutationVariables> = (props) => {
+          const {id,searchId,data} = props ?? {};
+
+          return  updateWorkspaceSavedSearch(id,searchId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWorkspaceSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>>
+    export type UpdateWorkspaceSavedSearchMutationBody = BodyType<UpdateSavedSearchRequest>
+    export type UpdateWorkspaceSavedSearchMutationError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+    export type UpdateWorkspaceSavedSearchMutationVariables = {id: string;searchId: string;data: BodyType<UpdateSavedSearchRequest>}
+
+    /**
+ * @summary Update a saved search within its workspace
+ */
+export const useUpdateWorkspaceSavedSearch = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>, TError,UpdateWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWorkspaceSavedSearch>>,
+        TError,
+        UpdateWorkspaceSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateWorkspaceSavedSearchMutationOptions(options));
+    }
+
+export const getDeleteWorkspaceSavedSearchUrl = (id: string,
+    searchId: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/saved-searches/${searchId}`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Delete a saved search within its workspace
+ */
+export const deleteWorkspaceSavedSearch = async (id: string,
+    searchId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteWorkspaceSavedSearchUrl(id,searchId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteWorkspaceSavedSearchMutationKey = () => ['deleteWorkspaceSavedSearch'] as const;
+
+export const getDeleteWorkspaceSavedSearchMutationOptions = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>, TError,DeleteWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>, TError,DeleteWorkspaceSavedSearchMutationVariables, TContext> => {
+
+const mutationKey = getDeleteWorkspaceSavedSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>, DeleteWorkspaceSavedSearchMutationVariables> = (props) => {
+          const {id,searchId} = props ?? {};
+
+          return  deleteWorkspaceSavedSearch(id,searchId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkspaceSavedSearchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>>
+
+    export type DeleteWorkspaceSavedSearchMutationError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+    export type DeleteWorkspaceSavedSearchMutationVariables = {id: string;searchId: string}
+
+    /**
+ * @summary Delete a saved search within its workspace
+ */
+export const useDeleteWorkspaceSavedSearch = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>, TError,DeleteWorkspaceSavedSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkspaceSavedSearch>>,
+        TError,
+        DeleteWorkspaceSavedSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteWorkspaceSavedSearchMutationOptions(options));
+    }
+
+export const getListWorkspaceNotificationsUrl = (id: string,
+    params?: ListWorkspaceNotificationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/workspaces/${id}/notifications?${stringifiedParams}` : `/api/v1/me/workspaces/${id}/notifications`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List notifications scoped to one workspace
+ */
+export const listWorkspaceNotifications = async (id: string,
+    params?: ListWorkspaceNotificationsParams, options?: Parameters<typeof customFetch>[1]): Promise<NotificationPage> => {
+
+  return customFetch<NotificationPage>(getListWorkspaceNotificationsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceNotificationsQueryKey = (id: string,
+    params?: ListWorkspaceNotificationsParams,) => {
+    return [
+    `/api/v1/me/workspaces/${id}/notifications`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWorkspaceNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceNotifications>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(id: string,
+    params?: ListWorkspaceNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceNotificationsQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceNotifications>>> = ({ signal }) => listWorkspaceNotifications(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceNotifications>>>
+export type ListWorkspaceNotificationsQueryError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary List notifications scoped to one workspace
+ */
+
+export function useListWorkspaceNotifications<TData = Awaited<ReturnType<typeof listWorkspaceNotifications>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(
+ id: string,
+    params?: ListWorkspaceNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceNotificationsQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMarkWorkspaceNotificationsReadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/notifications/read`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Mark only this workspace's notifications as read
+ */
+export const markWorkspaceNotificationsRead = async (id: string,
+    markNotificationsReadRequest: MarkNotificationsReadRequest, options?: Parameters<typeof customFetch>[1]): Promise<UnreadNotificationCount> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UnreadNotificationCount>(getMarkWorkspaceNotificationsReadUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(markNotificationsReadRequest)
+  }
+);}
+
+
+
+
+
+export const getMarkWorkspaceNotificationsReadMutationKey = () => ['markWorkspaceNotificationsRead'] as const;
+
+export const getMarkWorkspaceNotificationsReadMutationOptions = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>, TError,MarkWorkspaceNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>, TError,MarkWorkspaceNotificationsReadMutationVariables, TContext> => {
+
+const mutationKey = getMarkWorkspaceNotificationsReadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>, MarkWorkspaceNotificationsReadMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  markWorkspaceNotificationsRead(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkWorkspaceNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>>
+    export type MarkWorkspaceNotificationsReadMutationBody = BodyType<MarkNotificationsReadRequest>
+    export type MarkWorkspaceNotificationsReadMutationError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+    export type MarkWorkspaceNotificationsReadMutationVariables = {id: string;data: BodyType<MarkNotificationsReadRequest>}
+
+    /**
+ * @summary Mark only this workspace's notifications as read
+ */
+export const useMarkWorkspaceNotificationsRead = <TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>, TError,MarkWorkspaceNotificationsReadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markWorkspaceNotificationsRead>>,
+        TError,
+        MarkWorkspaceNotificationsReadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarkWorkspaceNotificationsReadMutationOptions(options));
+    }
+
+export const getListWorkspaceRecommendationsUrl = (id: string,
+    params?: ListWorkspaceRecommendationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/workspaces/${id}/recommendations?${stringifiedParams}` : `/api/v1/me/workspaces/${id}/recommendations`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List materialized recommendations scoped to one workspace
+ */
+export const listWorkspaceRecommendations = async (id: string,
+    params?: ListWorkspaceRecommendationsParams, options?: Parameters<typeof customFetch>[1]): Promise<RecommendationsResponse> => {
+
+  return customFetch<RecommendationsResponse>(getListWorkspaceRecommendationsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceRecommendationsQueryKey = (id: string,
+    params?: ListWorkspaceRecommendationsParams,) => {
+    return [
+    `/api/v1/me/workspaces/${id}/recommendations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWorkspaceRecommendationsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceRecommendations>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(id: string,
+    params?: ListWorkspaceRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceRecommendationsQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceRecommendations>>> = ({ signal }) => listWorkspaceRecommendations(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceRecommendations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceRecommendationsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceRecommendations>>>
+export type ListWorkspaceRecommendationsQueryError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary List materialized recommendations scoped to one workspace
+ */
+
+export function useListWorkspaceRecommendations<TData = Awaited<ReturnType<typeof listWorkspaceRecommendations>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(
+ id: string,
+    params?: ListWorkspaceRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceRecommendationsQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWorkspaceDashboardUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/me/workspaces/${id}/dashboard`
+}
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Get typed workspace widgets and counts
+ */
+export const getWorkspaceDashboard = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceDashboard> => {
+
+  return customFetch<WorkspaceDashboard>(getGetWorkspaceDashboardUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceDashboardQueryKey = (id: string,) => {
+    return [
+    `/api/v1/me/workspaces/${id}/dashboard`
+    ] as const;
+    }
+
+
+export const getGetWorkspaceDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceDashboard>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceDashboardQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceDashboard>>> = ({ signal }) => getWorkspaceDashboard(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkspaceDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceDashboard>>>
+export type GetWorkspaceDashboardQueryError = ErrorType<NotFoundResponse | FeatureDisabledResponse>
+
+
+/**
+ * @summary Get typed workspace widgets and counts
+ */
+
+export function useGetWorkspaceDashboard<TData = Awaited<ReturnType<typeof getWorkspaceDashboard>>, TError = ErrorType<NotFoundResponse | FeatureDisabledResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkspaceDashboardQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -19,6 +19,12 @@ import { pgErrorCode } from "../lib/pg-error";
 import { authContext } from "../auth/http";
 import { getCompanyProfile } from "../ai/company-fit-service";
 import { notificationSearchScope } from "../account/notification-service";
+import { db, workspaceProfilesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { FeatureDisabledError, InvalidParameterError, WorkspaceNotFoundError } from "../lib/api-error";
+import { assertWorkspaceRouteEnabled } from "../workspaces/workspace-route-gate";
+import { isWorkspaceId, requireWorkspaceMember } from "../workspaces/workspace-service";
+import { ProcurementProfileSchema } from "@workspace/api-zod/hub";
 
 const router: IRouter = Router();
 
@@ -48,13 +54,45 @@ const exposeSearchError = (error: unknown): unknown => {
 
 router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
   try {
+    const hasWorkspaceId = Object.prototype.hasOwnProperty.call(req.query, "workspaceId");
+    let workspace: { id: string; type: string; accessMode: string; archivedAt: Date | null } | null = null;
+    if (hasWorkspaceId) {
+      res.locals.publicCachePolicy = "no-store";
+      res.locals.disableConditionalCache = true;
+      if (!res.locals.auth) throw new UnauthenticatedError();
+      if (typeof req.query.workspaceId !== "string" || !isWorkspaceId(req.query.workspaceId)) {
+        throw new InvalidParameterError("workspaceId is invalid", [{ field: "workspaceId", issue: "invalid_value" }]);
+      }
+      try {
+        await assertWorkspaceRouteEnabled();
+        const own = await requireWorkspaceMember(db, authContext(res).user.id, req.query.workspaceId);
+        await assertWorkspaceRouteEnabled(own.type);
+        workspace = { id: own.workspaceId, type: own.type, accessMode: own.accessMode, archivedAt: own.archivedAt };
+      } catch (error) {
+        if (!(error instanceof FeatureDisabledError || error instanceof WorkspaceNotFoundError)) throw error;
+      }
+    }
     const criteria = parseSearchQuery(req.query);
+    if (hasWorkspaceId && !workspace) {
+      // A missing or disabled context is a genuinely universal search: never
+      // apply personal notification or legacy company-profile filters.
+      criteria.notificationId = undefined;
+      criteria.myRegion = false;
+    }
+    let procurementProfile: ReturnType<typeof ProcurementProfileSchema.parse> | null = null;
+    if (workspace?.type === "procurement") {
+      const [profile] = await db.select({ answers: workspaceProfilesTable.answers }).from(workspaceProfilesTable).where(eq(workspaceProfilesTable.workspaceId, workspace.id)).limit(1);
+      procurementProfile = ProcurementProfileSchema.parse({ schemaVersion: 1, type: "procurement", answers: profile?.answers ?? {} });
+      const keywords = procurementProfile.answers.selectedKeywords;
+      if (!criteria.query && keywords?.length) criteria.query = keywords.slice(0, 3).join(" ");
+    }
     let notification = null;
     if (criteria.notificationId) {
       if (!res.locals.auth) throw new UnauthenticatedError();
       const scope = await notificationSearchScope(
         authContext(res).user.id,
         criteria.notificationId,
+        workspace?.id,
       );
       criteria.tenderIds = scope?.tenderIds ?? [];
       notification = scope?.context ?? null;
@@ -62,9 +100,9 @@ router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
     }
     if (criteria.myRegion) {
       if (!res.locals.auth) throw new UnauthenticatedError();
-      criteria.serviceRegion = (
-        await getCompanyProfile(authContext(res).user.id)
-      )?.coverage;
+      criteria.serviceRegion = hasWorkspaceId
+        ? procurementProfile?.answers.coverage
+        : (await getCompanyProfile(authContext(res).user.id))?.coverage;
       res.locals.publicCachePolicy = "no-store";
     }
     const backend = await getSearchBackend();
@@ -75,6 +113,7 @@ router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
         meta: {
           ...result.meta,
           ...(criteria.notificationId ? { notification } : {}),
+          ...(hasWorkspaceId ? { workspace, tookMs: workspace ? result.meta.tookMs : 0 } : {}),
         },
       }),
     );

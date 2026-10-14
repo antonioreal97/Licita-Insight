@@ -334,7 +334,7 @@ export const publicHttpCache: RequestHandler = (req, res, next) => {
       );
       const etag = `W/"${createHash("sha1").update(etagPayload(body)).digest("base64url")}"`;
       res.setHeader("ETag", etag);
-      if (req.header("if-none-match") === etag) {
+      if (!res.locals.disableConditionalCache && req.header("if-none-match") === etag) {
         res.status(304).end();
         return res;
       }

@@ -20,7 +20,8 @@ export type ApiErrorCode =
   | "WORKSPACE_LIMIT_REACHED"
   | "WORKSPACE_READ_ONLY"
   | "WORKSPACE_ARCHIVED"
-  | "PROFILE_VERSION_CONFLICT";
+  | "PROFILE_VERSION_CONFLICT"
+  | "FEATURE_DISABLED";
 
 export interface ApiErrorDetail {
   field: string;
@@ -121,6 +122,12 @@ export class WorkspaceReadOnlyError extends ApiError {
 export class WorkspaceArchivedError extends ApiError {
   constructor() {
     super(409, "WORKSPACE_ARCHIVED", "This workspace is archived");
+  }
+}
+
+export class FeatureDisabledError extends ApiError {
+  constructor() {
+    super(422, "FEATURE_DISABLED", "This workspace journey is not enabled");
   }
 }
 

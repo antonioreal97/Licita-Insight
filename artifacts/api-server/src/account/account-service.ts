@@ -574,7 +574,7 @@ export const markSavedSearchSeen = async (
     return toSavedSearch(row);
   }, database);
 
-const toNotification = (
+export const toNotification = (
   row: typeof notificationsTable.$inferSelect,
   newTenderIds: ReadonlySet<string>,
 ): Notification => ({
