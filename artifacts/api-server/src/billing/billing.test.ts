@@ -11,7 +11,7 @@ import {
   googleTrialSubjectHash,
   trialEndsAtFrom,
 } from "./trial-access";
-import { webhookPatch } from "./asaas-webhook";
+import { paidPeriodNextDueDate, webhookPatch } from "./asaas-webhook";
 
 const now = new Date("2026-10-01T12:00:00.000Z");
 
@@ -154,6 +154,30 @@ describe("trial identity", () => {
 });
 
 describe("Asaas webhook", () => {
+  it("ends a paid period at the next charge when later charges advanced the subscription date", () => {
+    const nextDueDate = paidPeriodNextDueDate(
+      "2026-11-13",
+      [
+        { dueDate: "2026-12-13" },
+        { dueDate: "2026-11-13" },
+        { dueDate: "2027-01-13" },
+      ],
+      "2027-02-13",
+    );
+    const patch = webhookPatch(
+      "PAYMENT_RECEIVED",
+      { subscription: "sub_1", dueDate: "2026-11-13" },
+      nextDueDate,
+      null,
+    );
+    assert.equal(nextDueDate, "2026-12-13");
+    assert.equal(patch?.currentPeriodEnd?.toISOString(), periodEndFromAsaasDate("2026-12-13").toISOString());
+  });
+
+  it("uses the subscription date when its next charge has not been generated", () => {
+    assert.equal(paidPeriodNextDueDate("2026-10-13", [{ dueDate: "2026-10-13" }], "2026-11-13"), "2026-11-13");
+  });
+
   it("activates until the next due date in São Paulo", () => {
     const patch = webhookPatch(
       "PAYMENT_RECEIVED",

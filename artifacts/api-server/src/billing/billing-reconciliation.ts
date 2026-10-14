@@ -12,7 +12,7 @@ import {
   type AsaasInvoice,
   type AsaasSubscription,
 } from "./asaas-client";
-import { webhookPatch, type WebhookPatch } from "./asaas-webhook";
+import { paidPeriodNextDueDate, webhookPatch, type WebhookPatch } from "./asaas-webhook";
 
 type SubscriptionRow = typeof subscriptionsTable.$inferSelect;
 
@@ -50,11 +50,6 @@ export function reconcilePatch(
   const latest = decided[0];
   let patch: WebhookPatch | null = null;
   if (latest) {
-    // The paid period ends when the next charge is due; `nextDueDate` already moves once that charge exists.
-    const nextCharge = remote.payments
-      .map((payment) => payment.dueDate)
-      .filter((due): due is string => Boolean(due && due > latest.dueDate!))
-      .sort()[0];
     patch = webhookPatch(
       EVENT_BY_PAYMENT_STATUS[latest.status!]!,
       {
@@ -62,7 +57,7 @@ export function reconcilePatch(
         subscription: remote.subscription.id,
         dueDate: latest.dueDate,
       },
-      nextCharge ?? remote.subscription.nextDueDate ?? null,
+      paidPeriodNextDueDate(latest.dueDate, remote.payments, remote.subscription.nextDueDate),
       row,
     );
   }
