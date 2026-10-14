@@ -23,6 +23,7 @@ import type { PublishedFromParameter } from './publishedFromParameter';
 import type { PublishedToParameter } from './publishedToParameter';
 import type { QueryParameter } from './queryParameter';
 import type { SearchModeParameter } from './searchModeParameter';
+import type { SearchWorkspaceIdParameter } from './searchWorkspaceIdParameter';
 import type { SortParameter } from './sortParameter';
 import type { SourceFilterParameter } from './sourceFilterParameter';
 import type { StateFilterParameter } from './stateFilterParameter';
@@ -78,6 +79,11 @@ notification?: NotificationFilterParameter;
  * Apply the signed-in company's saved service region.
  */
 myRegion?: MyRegionParameter;
+/**
+ * Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: SearchWorkspaceIdParameter;
 /**
  * @minimum 0
  */

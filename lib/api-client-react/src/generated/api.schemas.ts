@@ -5,6 +5,188 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+export type WorkspaceSummaryType = typeof WorkspaceSummaryType[keyof typeof WorkspaceSummaryType];
+
+
+export const WorkspaceSummaryType = {
+  procurement: 'procurement',
+  funding: 'funding',
+  study: 'study',
+  research: 'research',
+  culture: 'culture',
+} as const;
+
+export type WorkspaceSummaryRole = typeof WorkspaceSummaryRole[keyof typeof WorkspaceSummaryRole];
+
+
+export const WorkspaceSummaryRole = {
+  owner: 'owner',
+} as const;
+
+export type WorkspaceSummaryAccessMode = typeof WorkspaceSummaryAccessMode[keyof typeof WorkspaceSummaryAccessMode];
+
+
+export const WorkspaceSummaryAccessMode = {
+  write: 'write',
+  read_only: 'read_only',
+} as const;
+
+export type WorkspaceSummaryOnboardingStatus = typeof WorkspaceSummaryOnboardingStatus[keyof typeof WorkspaceSummaryOnboardingStatus];
+
+
+export const WorkspaceSummaryOnboardingStatus = {
+  not_started: 'not_started',
+  in_progress: 'in_progress',
+  complete: 'complete',
+} as const;
+
+export interface WorkspaceSummary {
+  id: string;
+  type: WorkspaceSummaryType;
+  name: string;
+  role: WorkspaceSummaryRole;
+  accessMode: WorkspaceSummaryAccessMode;
+  onboardingStatus: WorkspaceSummaryOnboardingStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  profileCompleteness: number;
+  /** @nullable */
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkspaceListLimits = {
+  /** @minimum 0 */
+  used: number;
+  /** @minimum 1 */
+  maximum: number;
+};
+
+export interface WorkspaceList {
+  workspaces: WorkspaceSummary[];
+  /** @nullable */
+  activeWorkspaceId: string | null;
+  limits: WorkspaceListLimits;
+}
+
+export type CreateWorkspaceRequestType = typeof CreateWorkspaceRequestType[keyof typeof CreateWorkspaceRequestType];
+
+
+export const CreateWorkspaceRequestType = {
+  procurement: 'procurement',
+  funding: 'funding',
+  culture: 'culture',
+  study: 'study',
+} as const;
+
+export interface CreateWorkspaceRequest {
+  type: CreateWorkspaceRequestType;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+}
+
+export interface UpdateWorkspaceRequest {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name?: string;
+  archived?: boolean;
+}
+
+export type WorkspaceProfileType = typeof WorkspaceProfileType[keyof typeof WorkspaceProfileType];
+
+
+export const WorkspaceProfileType = {
+  procurement: 'procurement',
+  funding: 'funding',
+  study: 'study',
+  research: 'research',
+  culture: 'culture',
+} as const;
+
+export type WorkspaceProfileAnswers = { [key: string]: unknown };
+
+export type WorkspaceProfileCompleteness = {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  percent: number;
+  complete: boolean;
+  missing: string[];
+  /** @nullable */
+  nextStep: string | null;
+};
+
+export interface WorkspaceProfile {
+  schemaVersion: 1;
+  type: WorkspaceProfileType;
+  answers: WorkspaceProfileAnswers;
+  completeness?: WorkspaceProfileCompleteness;
+  /** @minimum 0 */
+  profileVersion?: number;
+  /** @minimum 0 */
+  revision?: number;
+}
+
+export interface WorkspaceDetail {
+  workspace: WorkspaceSummary;
+  profile: WorkspaceProfile;
+}
+
+export type WorkspaceProfileStepRequestAnswers = { [key: string]: unknown };
+
+export interface WorkspaceProfileStepRequest {
+  schemaVersion: 1;
+  step: string;
+  /** @minimum 0 */
+  baseRevision: number;
+  answers: WorkspaceProfileStepRequestAnswers;
+}
+
+export type WorkspaceProfileResultCompleteness = { [key: string]: unknown };
+
+export interface WorkspaceProfileResult {
+  profile: WorkspaceProfile;
+  completeness: WorkspaceProfileResultCompleteness;
+  /** @minimum 1 */
+  profileVersion: number;
+  /** @minimum 1 */
+  revision: number;
+}
+
+export interface SelectActiveWorkspaceRequest {
+  /** @pattern ^ws_[0-9a-f]{32}$ */
+  workspaceId: string;
+}
+
+export type WorkspaceDashboardWidgetsItemType = typeof WorkspaceDashboardWidgetsItemType[keyof typeof WorkspaceDashboardWidgetsItemType];
+
+
+export const WorkspaceDashboardWidgetsItemType = {
+  saved_tenders: 'saved_tenders',
+  saved_searches: 'saved_searches',
+  unread_notifications: 'unread_notifications',
+  recommendations: 'recommendations',
+} as const;
+
+export type WorkspaceDashboardWidgetsItem = {
+  type: WorkspaceDashboardWidgetsItemType;
+  /** @minimum 0 */
+  count: number;
+};
+
+export interface WorkspaceDashboard {
+  widgets: WorkspaceDashboardWidgetsItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -2299,6 +2481,31 @@ export const SearchResponseMetaSearchModeFallbackReason = {
   query_too_short: 'query_too_short',
 } as const;
 
+export type SearchWorkspaceContextType = typeof SearchWorkspaceContextType[keyof typeof SearchWorkspaceContextType];
+
+
+export const SearchWorkspaceContextType = {
+  procurement: 'procurement',
+  funding: 'funding',
+  culture: 'culture',
+} as const;
+
+export type SearchWorkspaceContextAccessMode = typeof SearchWorkspaceContextAccessMode[keyof typeof SearchWorkspaceContextAccessMode];
+
+
+export const SearchWorkspaceContextAccessMode = {
+  write: 'write',
+  read_only: 'read_only',
+} as const;
+
+export interface SearchWorkspaceContext {
+  id: string;
+  type: SearchWorkspaceContextType;
+  accessMode: SearchWorkspaceContextAccessMode;
+  /** @nullable */
+  archivedAt: string | null;
+}
+
 export type SearchResponseMeta = {
   /** @nullable */
   query: string | null;
@@ -2310,6 +2517,8 @@ export type SearchResponseMeta = {
   indexUpdatedAt: string | null;
   /** Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification. */
   notification?: NotificationSearchContext | null;
+  /** Present only when workspaceId was supplied. Null for a missing, foreign or inaccessible workspace and whenever the workspace journey is disabled. */
+  workspace?: SearchWorkspaceContext | null;
 };
 
 export interface SearchResponse {
@@ -2383,6 +2592,11 @@ export interface ErrorResponse {
 }
 
 /**
+ * Workspace cutover, W4 constraints or the journey is not enabled
+ */
+export type FeatureDisabledResponse = ErrorResponse;
+
+/**
  * Invalid request parameter
  */
 export type InvalidParameterResponse = ErrorResponse;
@@ -2441,6 +2655,11 @@ export type AiQuotaExceededResponse = ErrorResponse;
  * Tender question service unavailable or not configured
  */
 export type AiUnavailableResponse = ErrorResponse;
+
+/**
+ * Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.
+ */
+export type SearchWorkspaceIdParameter = string;
 
 export type QueryParameter = string;
 
@@ -2574,6 +2793,11 @@ notification?: NotificationFilterParameter;
  */
 myRegion?: MyRegionParameter;
 /**
+ * Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: SearchWorkspaceIdParameter;
+/**
  * @minimum 0
  */
 valueMin?: ValueMinParameter;
@@ -2608,6 +2832,35 @@ page?: PageParameter;
  */
 pageSize?: PageSizeParameter;
 facets?: FacetsParameter;
+};
+
+export type ListWorkspacesParams = {
+archived?: boolean;
+};
+
+export type ListWorkspaceNotificationsParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+pageSize?: number;
+unreadOnly?: boolean;
+};
+
+export type ListWorkspaceRecommendationsParams = {
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+pageSize?: number;
 };
 
 export type SearchTransparencyContractsParams = {

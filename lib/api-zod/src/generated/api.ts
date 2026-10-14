@@ -38,6 +38,7 @@ export const searchTendersQueryNewOnlyDefault = false;
 export const searchTendersQueryNotificationMax = 200;
 
 export const searchTendersQueryMyRegionDefault = false;
+export const searchTendersQueryWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
 export const searchTendersQueryValueMinMin = 0;
 
 export const searchTendersQueryValueMaxMin = 0;
@@ -64,6 +65,7 @@ export const SearchTendersQueryParams = zod.object({
   "newOnly": zod.coerce.boolean().default(searchTendersQueryNewOnlyDefault).describe('Only tenders first inserted in Pardal within `NEW_TENDER_WINDOW_HOURS` (24 hours by default).'),
   "notification": zod.coerce.string().min(1).max(searchTendersQueryNotificationMax).optional().describe('Restricts results to the tender ids captured by this notification. Requires a session; notifications not owned by the signed-in user are returned as an empty snapshot.'),
   "myRegion": zod.coerce.boolean().default(searchTendersQueryMyRegionDefault).describe('Apply the signed-in company\'s saved service region.'),
+  "workspaceId": zod.coerce.string().regex(searchTendersQueryWorkspaceIdRegExp).optional().describe('Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.'),
   "valueMin": zod.coerce.number().min(searchTendersQueryValueMinMin).optional(),
   "valueMax": zod.coerce.number().min(searchTendersQueryValueMaxMin).optional(),
   "publishedFrom": zod.date().optional().describe('Inclusive lower publication date in America/Sao_Paulo.'),
@@ -266,8 +268,650 @@ export const SearchTendersResponse = zod.object({
   "storedTenderCount": zod.number().int().min(searchTendersResponseMetaNotificationOneStoredTenderCountMin).max(searchTendersResponseMetaNotificationOneStoredTenderCountMax),
   "savedSearchName": zod.string().nullable(),
   "savedSearchQuery": zod.string().nullable()
-}),zod.null()]).optional().describe('Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification.')
+}),zod.null()]).optional().describe('Snapshot metadata for the requested notification; null when the id does not exist, belongs to another user, or is not a supported match notification.'),
+  "workspace": zod.union([zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['procurement', 'funding', 'culture']),
+  "accessMode": zod.enum(['write', 'read_only']),
+  "archivedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Present only when workspaceId was supplied. Null for a missing, foreign or inaccessible workspace and whenever the workspace journey is disabled.')
 })
+})
+
+
+/**
+ * Disabled by default; requires cutover mode workspaces, W4 applied and an enabled journey.
+ * @summary List owner workspaces and resolve the active workspace without writing
+ */
+export const listWorkspacesQueryArchivedDefault = false;
+
+export const ListWorkspacesQueryParams = zod.object({
+  "archived": zod.coerce.boolean().default(listWorkspacesQueryArchivedDefault)
+})
+
+export const listWorkspacesResponseWorkspacesItemProfileCompletenessMin = 0;
+export const listWorkspacesResponseWorkspacesItemProfileCompletenessMax = 100;
+
+export const listWorkspacesResponseLimitsUsedMin = 0;
+
+
+
+
+export const ListWorkspacesResponse = zod.object({
+  "workspaces": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "name": zod.string(),
+  "role": zod.enum(['owner']),
+  "accessMode": zod.enum(['write', 'read_only']),
+  "onboardingStatus": zod.enum(['not_started', 'in_progress', 'complete']),
+  "profileCompleteness": zod.number().int().min(listWorkspacesResponseWorkspacesItemProfileCompletenessMin).max(listWorkspacesResponseWorkspacesItemProfileCompletenessMax),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "activeWorkspaceId": zod.string().nullable(),
+  "limits": zod.object({
+  "used": zod.number().int().min(listWorkspacesResponseLimitsUsedMin),
+  "maximum": zod.number().int().min(1)
+})
+})
+
+
+/**
+ * Disabled by default; requires cutover mode workspaces, W4 applied and the requested journey enabled.
+ * @summary Create a workspace with owner membership and a serialized slot
+ */
+export const createWorkspaceBodyNameMax = 120;
+
+
+
+export const CreateWorkspaceBody = zod.object({
+  "type": zod.enum(['procurement', 'funding', 'culture', 'study']),
+  "name": zod.string().min(1).max(createWorkspaceBodyNameMax)
+})
+
+export const createWorkspaceResponseProfileCompletenessMin = 0;
+export const createWorkspaceResponseProfileCompletenessMax = 100;
+
+
+
+export const CreateWorkspaceResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "name": zod.string(),
+  "role": zod.enum(['owner']),
+  "accessMode": zod.enum(['write', 'read_only']),
+  "onboardingStatus": zod.enum(['not_started', 'in_progress', 'complete']),
+  "profileCompleteness": zod.number().int().min(createWorkspaceResponseProfileCompletenessMin).max(createWorkspaceResponseProfileCompletenessMax),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Get one workspace and its onboarding profile
+ */
+export const getWorkspacePathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const GetWorkspaceParams = zod.object({
+  "id": zod.coerce.string().regex(getWorkspacePathIdRegExp)
+})
+
+export const getWorkspaceResponseWorkspaceProfileCompletenessMin = 0;
+export const getWorkspaceResponseWorkspaceProfileCompletenessMax = 100;
+
+export const getWorkspaceResponseProfileCompletenessPercentMin = 0;
+export const getWorkspaceResponseProfileCompletenessPercentMax = 100;
+
+export const getWorkspaceResponseProfileProfileVersionMin = 0;
+
+export const getWorkspaceResponseProfileRevisionMin = 0;
+
+
+
+export const GetWorkspaceResponse = zod.object({
+  "workspace": zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "name": zod.string(),
+  "role": zod.enum(['owner']),
+  "accessMode": zod.enum(['write', 'read_only']),
+  "onboardingStatus": zod.enum(['not_started', 'in_progress', 'complete']),
+  "profileCompleteness": zod.number().int().min(getWorkspaceResponseWorkspaceProfileCompletenessMin).max(getWorkspaceResponseWorkspaceProfileCompletenessMax),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "profile": zod.object({
+  "schemaVersion": zod.literal(1),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "answers": zod.record(zod.string(), zod.unknown()),
+  "completeness": zod.object({
+  "percent": zod.number().int().min(getWorkspaceResponseProfileCompletenessPercentMin).max(getWorkspaceResponseProfileCompletenessPercentMax),
+  "complete": zod.boolean(),
+  "missing": zod.array(zod.string()),
+  "nextStep": zod.string().nullable()
+}).optional(),
+  "profileVersion": zod.number().int().min(getWorkspaceResponseProfileProfileVersionMin).optional(),
+  "revision": zod.number().int().min(getWorkspaceResponseProfileRevisionMin).optional()
+})
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Rename or archive a writable workspace
+ */
+export const updateWorkspacePathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const UpdateWorkspaceParams = zod.object({
+  "id": zod.coerce.string().regex(updateWorkspacePathIdRegExp)
+})
+
+export const updateWorkspaceBodyNameMax = 120;
+
+
+
+export const UpdateWorkspaceBody = zod.object({
+  "name": zod.string().min(1).max(updateWorkspaceBodyNameMax).optional(),
+  "archived": zod.boolean().optional()
+})
+
+export const updateWorkspaceResponseProfileCompletenessMin = 0;
+export const updateWorkspaceResponseProfileCompletenessMax = 100;
+
+
+
+export const UpdateWorkspaceResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "name": zod.string(),
+  "role": zod.enum(['owner']),
+  "accessMode": zod.enum(['write', 'read_only']),
+  "onboardingStatus": zod.enum(['not_started', 'in_progress', 'complete']),
+  "profileCompleteness": zod.number().int().min(updateWorkspaceResponseProfileCompletenessMin).max(updateWorkspaceResponseProfileCompletenessMax),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Save one onboarding step with optimistic revision control
+ */
+export const saveWorkspaceProfileStepPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const SaveWorkspaceProfileStepParams = zod.object({
+  "id": zod.coerce.string().regex(saveWorkspaceProfileStepPathIdRegExp)
+})
+
+export const saveWorkspaceProfileStepBodyBaseRevisionMin = 0;
+
+
+
+export const SaveWorkspaceProfileStepBody = zod.object({
+  "schemaVersion": zod.literal(1),
+  "step": zod.string(),
+  "baseRevision": zod.number().int().min(saveWorkspaceProfileStepBodyBaseRevisionMin),
+  "answers": zod.record(zod.string(), zod.unknown())
+})
+
+export const saveWorkspaceProfileStepResponseProfileCompletenessPercentMin = 0;
+export const saveWorkspaceProfileStepResponseProfileCompletenessPercentMax = 100;
+
+export const saveWorkspaceProfileStepResponseProfileProfileVersionMin = 0;
+
+export const saveWorkspaceProfileStepResponseProfileRevisionMin = 0;
+
+
+
+
+
+export const SaveWorkspaceProfileStepResponse = zod.object({
+  "profile": zod.object({
+  "schemaVersion": zod.literal(1),
+  "type": zod.enum(['procurement', 'funding', 'study', 'research', 'culture']),
+  "answers": zod.record(zod.string(), zod.unknown()),
+  "completeness": zod.object({
+  "percent": zod.number().int().min(saveWorkspaceProfileStepResponseProfileCompletenessPercentMin).max(saveWorkspaceProfileStepResponseProfileCompletenessPercentMax),
+  "complete": zod.boolean(),
+  "missing": zod.array(zod.string()),
+  "nextStep": zod.string().nullable()
+}).optional(),
+  "profileVersion": zod.number().int().min(saveWorkspaceProfileStepResponseProfileProfileVersionMin).optional(),
+  "revision": zod.number().int().min(saveWorkspaceProfileStepResponseProfileRevisionMin).optional()
+}),
+  "completeness": zod.record(zod.string(), zod.unknown()),
+  "profileVersion": zod.number().int().min(1),
+  "revision": zod.number().int().min(1)
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Select an owned, unarchived workspace
+ */
+export const selectActiveWorkspaceBodyWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const SelectActiveWorkspaceBody = zod.object({
+  "workspaceId": zod.string().regex(selectActiveWorkspaceBodyWorkspaceIdRegExp)
+})
+
+export const selectActiveWorkspaceResponseWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const SelectActiveWorkspaceResponse = zod.object({
+  "workspaceId": zod.string().regex(selectActiveWorkspaceResponseWorkspaceIdRegExp)
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List saved searches scoped to a workspace
+ */
+export const listWorkspaceSavedSearchesPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const ListWorkspaceSavedSearchesParams = zod.object({
+  "id": zod.coerce.string().regex(listWorkspaceSavedSearchesPathIdRegExp)
+})
+
+export const listWorkspaceSavedSearchesResponseDataItemNewMatchesCountMin = 0;
+
+
+
+export const ListWorkspaceSavedSearchesResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(listWorkspaceSavedSearchesResponseDataItemNewMatchesCountMin)
+}))
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Save a search in one workspace
+ */
+export const createWorkspaceSavedSearchPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const CreateWorkspaceSavedSearchParams = zod.object({
+  "id": zod.coerce.string().regex(createWorkspaceSavedSearchPathIdRegExp)
+})
+
+export const createWorkspaceSavedSearchBodyNameMax = 80;
+
+export const createWorkspaceSavedSearchBodyQueryMax = 2000;
+
+
+
+export const CreateWorkspaceSavedSearchBody = zod.object({
+  "name": zod.string().min(1).max(createWorkspaceSavedSearchBodyNameMax),
+  "query": zod.string().max(createWorkspaceSavedSearchBodyQueryMax),
+  "alertsEnabled": zod.boolean()
+})
+
+export const createWorkspaceSavedSearchResponseNewMatchesCountMin = 0;
+
+
+
+export const CreateWorkspaceSavedSearchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(createWorkspaceSavedSearchResponseNewMatchesCountMin)
+})
+
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary List saved opportunities in one workspace
+ */
+export const listWorkspaceSavedOpportunitiesPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const ListWorkspaceSavedOpportunitiesParams = zod.object({
+  "id": zod.coerce.string().regex(listWorkspaceSavedOpportunitiesPathIdRegExp)
+})
+
+export const ListWorkspaceSavedOpportunitiesResponse = zod.void()
+
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary Save one opportunity in a workspace
+ */
+export const saveWorkspaceOpportunityPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+
+export const SaveWorkspaceOpportunityParams = zod.object({
+  "id": zod.coerce.string().regex(saveWorkspaceOpportunityPathIdRegExp),
+  "opportunityId": zod.coerce.string().min(1)
+})
+
+export const SaveWorkspaceOpportunityResponse = zod.void()
+
+
+/**
+ * Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+ * @summary Remove a saved opportunity from a workspace
+ */
+export const deleteWorkspaceSavedOpportunityPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+
+export const DeleteWorkspaceSavedOpportunityParams = zod.object({
+  "id": zod.coerce.string().regex(deleteWorkspaceSavedOpportunityPathIdRegExp),
+  "opportunityId": zod.coerce.string().min(1)
+})
+
+export const DeleteWorkspaceSavedOpportunityResponse = zod.void()
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Update a saved search within its workspace
+ */
+export const updateWorkspaceSavedSearchPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const UpdateWorkspaceSavedSearchParams = zod.object({
+  "id": zod.coerce.string().regex(updateWorkspaceSavedSearchPathIdRegExp),
+  "searchId": zod.coerce.string()
+})
+
+export const updateWorkspaceSavedSearchBodyNameMax = 80;
+
+export const updateWorkspaceSavedSearchBodyQueryMax = 2000;
+
+
+
+export const UpdateWorkspaceSavedSearchBody = zod.object({
+  "name": zod.string().min(1).max(updateWorkspaceSavedSearchBodyNameMax).optional(),
+  "query": zod.string().max(updateWorkspaceSavedSearchBodyQueryMax).optional(),
+  "alertsEnabled": zod.boolean().optional()
+})
+
+export const updateWorkspaceSavedSearchResponseNewMatchesCountMin = 0;
+
+
+
+export const UpdateWorkspaceSavedSearchResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string(),
+  "alertsEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "newMatchesCount": zod.number().int().min(updateWorkspaceSavedSearchResponseNewMatchesCountMin)
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Delete a saved search within its workspace
+ */
+export const deleteWorkspaceSavedSearchPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const DeleteWorkspaceSavedSearchParams = zod.object({
+  "id": zod.coerce.string().regex(deleteWorkspaceSavedSearchPathIdRegExp),
+  "searchId": zod.coerce.string()
+})
+
+export const DeleteWorkspaceSavedSearchResponse = zod.void()
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List notifications scoped to one workspace
+ */
+export const listWorkspaceNotificationsPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const ListWorkspaceNotificationsParams = zod.object({
+  "id": zod.coerce.string().regex(listWorkspaceNotificationsPathIdRegExp)
+})
+
+export const listWorkspaceNotificationsQueryPageDefault = 1;
+
+export const listWorkspaceNotificationsQueryPageSizeDefault = 20;
+export const listWorkspaceNotificationsQueryPageSizeMax = 50;
+
+export const listWorkspaceNotificationsQueryUnreadOnlyDefault = false;
+
+export const ListWorkspaceNotificationsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listWorkspaceNotificationsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listWorkspaceNotificationsQueryPageSizeMax).default(listWorkspaceNotificationsQueryPageSizeDefault),
+  "unreadOnly": zod.coerce.boolean().default(listWorkspaceNotificationsQueryUnreadOnlyDefault)
+})
+
+export const listWorkspaceNotificationsResponseDataItemNewMatchCountMin = 0;
+
+export const listWorkspaceNotificationsResponseDataItemTenderIdsMax = 20;
+
+export const listWorkspaceNotificationsResponseDataItemProfileMatchesMax = 5;
+
+export const listWorkspaceNotificationsResponseUnreadCountMin = 0;
+
+
+
+export const ListWorkspaceNotificationsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'profile_new_matches', 'trial_ending']),
+  "createdAt": zod.coerce.date(),
+  "readAt": zod.coerce.date().nullable(),
+  "tender": zod.union([zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "tenderNumberShort": zod.string().nullable(),
+  "isNew": zod.boolean().describe('Whether the linked tender is still inside the configured new-tender window.')
+}),zod.null()]),
+  "change": zod.union([zod.object({
+  "field": zod.string(),
+  "from": zod.union([zod.string(),zod.number()]).nullable(),
+  "to": zod.union([zod.string(),zod.number()]).nullable()
+}),zod.null()]),
+  "savedSearch": zod.union([zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "query": zod.string()
+}),zod.null()]),
+  "matchCount": zod.number().int().nullable(),
+  "newMatchCount": zod.number().int().min(listWorkspaceNotificationsResponseDataItemNewMatchCountMin).nullable().describe('Number of linked notification results still inside the configured new-tender window.'),
+  "tenderIds": zod.array(zod.string()).max(listWorkspaceNotificationsResponseDataItemTenderIdsMax),
+  "profileMatches": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "organizationName": zod.string(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "level": zod.enum(['high'])
+})).max(listWorkspaceNotificationsResponseDataItemProfileMatchesMax)
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+}),
+  "unreadCount": zod.number().int().min(listWorkspaceNotificationsResponseUnreadCountMin)
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Mark only this workspace's notifications as read
+ */
+export const markWorkspaceNotificationsReadPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const MarkWorkspaceNotificationsReadParams = zod.object({
+  "id": zod.coerce.string().regex(markWorkspaceNotificationsReadPathIdRegExp)
+})
+
+
+export const markWorkspaceNotificationsReadBodyIdsMax = 100;
+
+
+
+export const MarkWorkspaceNotificationsReadBody = zod.object({
+  "ids": zod.array(zod.string().min(1)).max(markWorkspaceNotificationsReadBodyIdsMax).optional(),
+  "all": zod.boolean().optional()
+})
+
+export const markWorkspaceNotificationsReadResponseUnreadCountMin = 0;
+
+
+
+export const MarkWorkspaceNotificationsReadResponse = zod.object({
+  "unreadCount": zod.number().int().min(markWorkspaceNotificationsReadResponseUnreadCountMin)
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary List materialized recommendations scoped to one workspace
+ */
+export const listWorkspaceRecommendationsPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const ListWorkspaceRecommendationsParams = zod.object({
+  "id": zod.coerce.string().regex(listWorkspaceRecommendationsPathIdRegExp)
+})
+
+export const listWorkspaceRecommendationsQueryPageDefault = 1;
+
+export const listWorkspaceRecommendationsQueryPageSizeDefault = 10;
+export const listWorkspaceRecommendationsQueryPageSizeMax = 50;
+
+
+
+export const ListWorkspaceRecommendationsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).default(listWorkspaceRecommendationsQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(listWorkspaceRecommendationsQueryPageSizeMax).default(listWorkspaceRecommendationsQueryPageSizeDefault)
+})
+
+export const listWorkspaceRecommendationsResponseDataItemTenderRelevanceScoreMin = 0;
+export const listWorkspaceRecommendationsResponseDataItemTenderRelevanceScoreMax = 1;
+
+export const listWorkspaceRecommendationsResponseDataItemReasonsMax = 3;
+
+
+
+export const ListWorkspaceRecommendationsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "tender": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "displayTitle": zod.string(),
+  "displayTitleSource": zod.union([zod.literal('rules'),zod.literal('model'),zod.literal(null)]).nullable(),
+  "objectSummary": zod.string().nullable(),
+  "organization": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}),
+  "purchasingUnit": zod.string().nullable(),
+  "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
+  "modalityLabel": zod.string(),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "tenderNumber": zod.string().nullable(),
+  "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
+  "estimatedValue": zod.number().nullable(),
+  "estimatedValueStatus": zod.enum(['disclosed', 'confidential', 'not_published']).optional(),
+  "estimatedValueFlag": zod.union([zod.enum(['absolute_ceiling', 'dispensa_legal_limit', 'modality_outlier']).describe('Why the estimated value published by the source looks wrong. `absolute_ceiling`: above R$ 100 billion. `dispensa_legal_limit`: a "dispensa" by value (Lei 14.133/2021, art. 75, I or II) more than a thousand times above its legal limit. `modality_outlier`: more than a thousand times the 99th percentile of the modality.'),zod.null()]).optional().describe('Set when the official `estimatedValue` is implausible; null otherwise. The value is still returned as published, but it is left out of sums, value facets and value filters, and sorted last by value.'),
+  "publishedAt": zod.coerce.date().nullable(),
+  "openingAt": zod.coerce.date().nullable(),
+  "proposalDeadline": zod.coerce.date().nullable(),
+  "location": zod.object({
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "cityIbgeCode": zod.string().nullable()
+}),
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().url().nullable()
+}),
+  "platform": zod.union([zod.object({
+  "slug": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['platform', 'source_system', 'other', 'unknown']),
+  "url": zod.string().url().nullable()
+}).describe('Where the dispute happens, normalized from the PNCP publishing system. `platform` = known bidding room; `source_system` = management software that published the tender (not the room); `other` = any other publisher; `unknown` = the PNCP did not say.'),zod.null()]).describe('Null until the tender is ingested or backfilled with the platform column.'),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "relevance": zod.object({
+  "score": zod.number().min(listWorkspaceRecommendationsResponseDataItemTenderRelevanceScoreMin).max(listWorkspaceRecommendationsResponseDataItemTenderRelevanceScoreMax).nullable(),
+  "highlights": zod.array(zod.object({
+  "field": zod.enum(['title', 'objectSummary', 'items']),
+  "fragments": zod.array(zod.string())
+}))
+}),
+  "updatedAt": zod.coerce.date(),
+  "firstSeenAt": zod.coerce.date().describe('Time when this tender was first inserted into Pardal. PNCP publication date is unrelated.'),
+  "isNew": zod.boolean().describe('Calculated with the server clock and `NEW_TENDER_WINDOW_HOURS`.')
+}),
+  "score": zod.number(),
+  "reasons": zod.array(zod.object({
+  "kind": zod.enum(['profile', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value', 'platform']),
+  "text": zod.string()
+})).min(1).max(listWorkspaceRecommendationsResponseDataItemReasonsMax),
+  "generatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int(),
+  "totalIsEstimate": zod.boolean()
+})
+})
+
+
+/**
+ * Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+ * @summary Get typed workspace widgets and counts
+ */
+export const getWorkspaceDashboardPathIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const GetWorkspaceDashboardParams = zod.object({
+  "id": zod.coerce.string().regex(getWorkspaceDashboardPathIdRegExp)
+})
+
+export const getWorkspaceDashboardResponseWidgetsItemCountMin = 0;
+
+
+
+export const GetWorkspaceDashboardResponse = zod.object({
+  "widgets": zod.array(zod.object({
+  "type": zod.enum(['saved_tenders', 'saved_searches', 'unread_notifications', 'recommendations']),
+  "count": zod.number().int().min(getWorkspaceDashboardResponseWidgetsItemCountMin)
+}))
 })
 
 

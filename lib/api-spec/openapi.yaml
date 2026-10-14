@@ -21,6 +21,8 @@ tags:
     description: Official PNCP contract and item result history
   - name: recommendations
     description: Personalized, explainable in-app tender recommendations
+  - name: workspaces
+    description: Adaptive workspace operations; disabled by default until cutover, W4 and journey activation
 paths:
   /healthz:
     get:
@@ -78,6 +80,7 @@ paths:
         - $ref: "#/components/parameters/NewOnly"
         - $ref: "#/components/parameters/NotificationFilter"
         - $ref: "#/components/parameters/MyRegion"
+        - $ref: "#/components/parameters/SearchWorkspaceId"
         - $ref: "#/components/parameters/ValueMin"
         - $ref: "#/components/parameters/ValueMax"
         - $ref: "#/components/parameters/PublishedFrom"
@@ -105,6 +108,233 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/SearchUnavailable"
+  /v1/me/workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List owner workspaces and resolve the active workspace without writing
+      description: Disabled by default; requires cutover mode workspaces, W4 applied and an enabled journey.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200": { description: Owner workspaces, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceList" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      summary: Create a workspace with owner membership and a serialized slot
+      description: Disabled by default; requires cutover mode workspaces, W4 applied and the requested journey enabled.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateWorkspaceRequest" } } } }
+      responses:
+        "201": { description: Created workspace, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceSummary" } } } }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}:
+    get:
+      operationId: getWorkspace
+      tags: [workspaces]
+      summary: Get one workspace and its onboarding profile
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      responses:
+        "200": { description: Workspace and profile, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+    patch:
+      operationId: updateWorkspace
+      tags: [workspaces]
+      summary: Rename or archive a writable workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateWorkspaceRequest" } } } }
+      responses:
+        "200": { description: Updated workspace, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceSummary" } } } }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/profile:
+    put:
+      operationId: saveWorkspaceProfileStep
+      tags: [workspaces]
+      summary: Save one onboarding step with optimistic revision control
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceProfileStepRequest" } } } }
+      responses:
+        "200": { description: Merged profile with new revision, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceProfileResult" } } } }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/active-workspace:
+    put:
+      operationId: selectActiveWorkspace
+      tags: [workspaces]
+      summary: Select an owned, unarchived workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SelectActiveWorkspaceRequest" } } } }
+      responses:
+        "200": { description: Selected workspace, content: { application/json: { schema: { $ref: "#/components/schemas/SelectActiveWorkspaceRequest" } } } }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/saved-searches:
+    get:
+      operationId: listWorkspaceSavedSearches
+      tags: [workspaces]
+      summary: List saved searches scoped to a workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      responses:
+        "200": { description: Scoped searches, content: { application/json: { schema: { $ref: "#/components/schemas/SavedSearchList" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+    post:
+      operationId: createWorkspaceSavedSearch
+      tags: [workspaces]
+      summary: Save a search in one workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreateSavedSearchRequest" } } } }
+      responses:
+        "201": { description: Saved search, content: { application/json: { schema: { $ref: "#/components/schemas/SavedSearch" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/saved-opportunities:
+    get:
+      operationId: listWorkspaceSavedOpportunities
+      tags: [workspaces]
+      summary: List saved opportunities in one workspace
+      description: Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      responses:
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/saved-opportunities/{opportunityId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - name: opportunityId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    put:
+      operationId: saveWorkspaceOpportunity
+      tags: [workspaces]
+      summary: Save one opportunity in a workspace
+      description: Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+    delete:
+      operationId: deleteWorkspaceSavedOpportunity
+      tags: [workspaces]
+      summary: Remove a saved opportunity from a workspace
+      description: Mounted but always returns 422 FEATURE_DISABLED in C2; storage is deferred and no table or migration is included.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/saved-searches/{searchId}:
+    parameters:
+      - { $ref: "#/components/parameters/WorkspaceId" }
+      - name: searchId
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      operationId: updateWorkspaceSavedSearch
+      tags: [workspaces]
+      summary: Update a saved search within its workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UpdateSavedSearchRequest" } } } }
+      responses:
+        "200": { description: Updated search, content: { application/json: { schema: { $ref: "#/components/schemas/SavedSearch" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+    delete:
+      operationId: deleteWorkspaceSavedSearch
+      tags: [workspaces]
+      summary: Delete a saved search within its workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/notifications:
+    get:
+      operationId: listWorkspaceNotifications
+      tags: [workspaces]
+      summary: List notifications scoped to one workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/Page" }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200": { description: Scoped notifications, content: { application/json: { schema: { $ref: "#/components/schemas/NotificationPage" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/notifications/read:
+    patch:
+      operationId: markWorkspaceNotificationsRead
+      tags: [workspaces]
+      summary: Mark only this workspace's notifications as read
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MarkNotificationsReadRequest" } } } }
+      responses:
+        "200": { description: Unread count, content: { application/json: { schema: { $ref: "#/components/schemas/UnreadNotificationCount" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/recommendations:
+    get:
+      operationId: listWorkspaceRecommendations
+      tags: [workspaces]
+      summary: List materialized recommendations scoped to one workspace
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/WorkspaceId" }
+        - { $ref: "#/components/parameters/Page" }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200": { description: Recommendations, content: { application/json: { schema: { $ref: "#/components/schemas/RecommendationsResponse" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/me/workspaces/{id}/dashboard:
+    get:
+      operationId: getWorkspaceDashboard
+      tags: [workspaces]
+      summary: Get typed workspace widgets and counts
+      description: Disabled by default until cutover mode workspaces, W4 and the journey are enabled.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/WorkspaceId" }]
+      responses:
+        "200": { description: Workspace widgets, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceDashboard" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/FeatureDisabled" }
   /v1/public/tenders/by-state:
     get:
       operationId: getOpenTendersByState
@@ -1515,6 +1745,19 @@ components:
       in: cookie
       name: licita_session
   parameters:
+    SearchWorkspaceId:
+      name: workspaceId
+      in: query
+      description: >-
+        Optional workspace context. Without a session returns 401; malformed ids return 400.
+        Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled,
+        produce the same universal response with meta.workspace null and Cache-Control no-store.
+      schema: { type: string, pattern: '^ws_[0-9a-f]{32}$' }
+    WorkspaceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^ws_[0-9a-f]{32}$' }
     Query:
       name: q
       in: query
@@ -1707,6 +1950,11 @@ components:
         type: boolean
         default: false
   responses:
+    FeatureDisabled:
+      description: Workspace cutover, W4 constraints or the journey is not enabled
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
     InvalidParameter:
       description: Invalid request parameter
       content:
@@ -1784,6 +2032,104 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    WorkspaceSummary:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [procurement, funding, study, research, culture] }
+        name: { type: string }
+        role: { type: string, enum: [owner] }
+        accessMode: { type: string, enum: [write, read_only] }
+        onboardingStatus: { type: string, enum: [not_started, in_progress, complete] }
+        profileCompleteness: { type: integer, minimum: 0, maximum: 100 }
+        archivedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, type, name, role, accessMode, onboardingStatus, profileCompleteness, archivedAt, createdAt, updatedAt]
+    WorkspaceList:
+      type: object
+      properties:
+        workspaces: { type: array, items: { $ref: "#/components/schemas/WorkspaceSummary" } }
+        activeWorkspaceId: { type: [string, "null"] }
+        limits:
+          type: object
+          properties:
+            used: { type: integer, minimum: 0 }
+            maximum: { type: integer, minimum: 1 }
+          required: [used, maximum]
+      required: [workspaces, activeWorkspaceId, limits]
+    CreateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        type: { type: string, enum: [procurement, funding, culture, study] }
+        name: { type: string, minLength: 1, maxLength: 120 }
+      required: [type, name]
+    UpdateWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        archived: { type: boolean }
+    WorkspaceProfile:
+      type: object
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        type: { type: string, enum: [procurement, funding, study, research, culture] }
+        answers: { type: object, additionalProperties: true }
+        completeness:
+          type: object
+          properties:
+            percent: { type: integer, minimum: 0, maximum: 100 }
+            complete: { type: boolean }
+            missing: { type: array, items: { type: string } }
+            nextStep: { type: [string, "null"] }
+          required: [percent, complete, missing, nextStep]
+        profileVersion: { type: integer, minimum: 0 }
+        revision: { type: integer, minimum: 0 }
+      required: [schemaVersion, type, answers]
+    WorkspaceDetail:
+      type: object
+      properties:
+        workspace: { $ref: "#/components/schemas/WorkspaceSummary" }
+        profile: { $ref: "#/components/schemas/WorkspaceProfile" }
+      required: [workspace, profile]
+    WorkspaceProfileStepRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        step: { type: string }
+        baseRevision: { type: integer, minimum: 0 }
+        answers: { type: object, additionalProperties: true }
+      required: [schemaVersion, step, baseRevision, answers]
+    WorkspaceProfileResult:
+      type: object
+      properties:
+        profile: { $ref: "#/components/schemas/WorkspaceProfile" }
+        completeness: { type: object, additionalProperties: true }
+        profileVersion: { type: integer, minimum: 1 }
+        revision: { type: integer, minimum: 1 }
+      required: [profile, completeness, profileVersion, revision]
+    SelectActiveWorkspaceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        workspaceId: { type: string, pattern: '^ws_[0-9a-f]{32}$' }
+      required: [workspaceId]
+    WorkspaceDashboard:
+      type: object
+      properties:
+        widgets:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, enum: [saved_tenders, saved_searches, unread_notifications, recommendations] }
+              count: { type: integer, minimum: 0 }
+            required: [type, count]
+      required: [widgets]
     HealthStatus:
       type: object
       properties:
@@ -4405,6 +4751,13 @@ components:
               anyOf:
                 - $ref: "#/components/schemas/NotificationSearchContext"
                 - type: "null"
+            workspace:
+              description: >-
+                Present only when workspaceId was supplied. Null for a missing, foreign or inaccessible
+                workspace and whenever the workspace journey is disabled.
+              anyOf:
+                - $ref: "#/components/schemas/SearchWorkspaceContext"
+                - type: "null"
           required:
             [
               query,
@@ -4414,6 +4767,14 @@ components:
               indexUpdatedAt,
             ]
       required: [data, pagination, facets, meta]
+    SearchWorkspaceContext:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [procurement, funding, culture] }
+        accessMode: { type: string, enum: [write, read_only] }
+        archivedAt: { type: [string, "null"], format: date-time }
+      required: [id, type, accessMode, archivedAt]
     Suggestion:
       type: object
       properties:

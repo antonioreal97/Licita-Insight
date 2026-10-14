@@ -78,8 +78,11 @@ export const notificationScope = async (
 export const notificationSearchScope = async (
   userId: string,
   notificationId: string,
+  workspaceId?: string,
 ): Promise<NotificationSearchScope | null> => {
-  const scope = await notificationScope(db, userId, (await readCutoverState(pool)).mode);
+  const scope = workspaceId
+    ? and(eq(notificationsTable.userId, userId), eq(notificationsTable.workspaceId, workspaceId))!
+    : await notificationScope(db, userId, (await readCutoverState(pool)).mode);
   const [row] = await db
     .select({
       id: notificationsTable.id,

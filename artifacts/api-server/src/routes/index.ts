@@ -12,6 +12,8 @@ import publicRouter from "./public";
 import recommendationsRouter from "./recommendations";
 import searchRouter from "./search";
 import transparencyRouter from "./transparency";
+import workspacesRouter from "./workspaces";
+import workspaceArtifactsRouter from "./workspace-artifacts";
 
 const router: IRouter = Router();
 
@@ -20,6 +22,8 @@ router.use(featureFlagsRouter);
 router.use(authRouter);
 router.use(billingRouter);
 router.use(aiRouter);
+router.use(workspacesRouter);
+router.use(workspaceArtifactsRouter);
 router.use(accountRouter);
 router.use(searchRouter);
 router.use(publicRouter);
