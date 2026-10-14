@@ -40,6 +40,7 @@ import {
   sortDeadlines,
   type EmailDeadlineSnapshot,
 } from "./digest-deadlines";
+import { loadEmailTenderHighlights } from "../ai/tender-highlights";
 import {
   renderNotificationEmail,
   type EmailNotificationSnapshot,
@@ -101,6 +102,7 @@ const notificationSelection = {
   savedSearchName: notificationsTable.savedSearchName,
   savedSearchQuery: notificationsTable.savedSearchQuery,
   matchCount: notificationsTable.matchCount,
+  tenderIds: notificationsTable.tenderIds,
   profileMatches: notificationsTable.profileMatches,
   userId: usersTable.id,
   email: usersTable.email,
@@ -329,6 +331,22 @@ const immediateKey = (userId: string, notificationIds: string[]): string => {
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** Candidates per saved search: the card shows the first SAVED_SEARCH_HIGHLIGHT_LIMIT of them that have highlights. */
+const SAVED_SEARCH_HIGHLIGHT_CANDIDATES = 10;
+
+/**
+ * Tenders an e-mail cites and may explain: the first ids of each saved-search snapshot and the profile matches.
+ * Highlights only read stored sheets and fits (loadEmailTenderHighlights): an e-mail never generates either.
+ */
+const citedTenderIds = (notifications: readonly Candidate[]): string[] =>
+  notifications.flatMap((notification) =>
+    notification.type === "saved_search_new_matches"
+      ? (notification.tenderIds ?? []).slice(0, SAVED_SEARCH_HIGHLIGHT_CANDIDATES)
+      : notification.type === "profile_new_matches"
+        ? (notification.profileMatches ?? []).slice(0, 5).map(({ id }) => id)
+        : [],
+  );
+
 /**
  * The saved-search job keeps adding to the day's notification until it is linked to an e-mail (see
  * recordSavedSearchMatches). The candidates were read before this transaction, so the saved-search ones are
@@ -338,13 +356,14 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 const lockSavedSearchSnapshots = async (
   tx: Transaction,
   candidates: Candidate[],
-): Promise<Map<string, Pick<Candidate, "createdAt" | "matchCount" | "savedSearchName" | "savedSearchQuery">>> => {
+): Promise<Map<string, Pick<Candidate, "createdAt" | "matchCount" | "tenderIds" | "savedSearchName" | "savedSearchQuery">>> => {
   if (candidates.length === 0) return new Map();
   const rows = await tx
     .select({
       id: notificationsTable.id,
       createdAt: notificationsTable.createdAt,
       matchCount: notificationsTable.matchCount,
+      tenderIds: notificationsTable.tenderIds,
       savedSearchName: notificationsTable.savedSearchName,
       savedSearchQuery: notificationsTable.savedSearchQuery,
     })
@@ -415,6 +434,11 @@ const queueDelivery = async (
       mode,
       notifications,
       deadlines,
+      highlights: await loadEmailTenderHighlights(
+        recipient.userId,
+        citedTenderIds(notifications),
+        tx,
+      ),
       now,
       origin: publicAppOrigin(),
       unsubscribeToken: createUnsubscribeToken(recipient.unsubscribeId),
