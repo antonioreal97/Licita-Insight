@@ -486,7 +486,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       kick();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    // Live data (facts, tender preview) changes section heights after the first paint.
+    // Late content (plan price, session, fonts) changes section heights after the first paint.
     const layoutObserver = new ResizeObserver(kick);
     if (main) layoutObserver.observe(main);
     window.addEventListener('resize', onResize);
