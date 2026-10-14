@@ -282,7 +282,7 @@ type NotificationPreferences = {
 
 ## 6. Perfil da empresa e filtros inteligentes
 
-O perfil da empresa exige sessão **e acesso ativo** (gate `402` de `/v1/me`), porque alimenta alertas e aderência, que são recursos pagos — decisão do dono de 13/10/2026.
+O perfil da empresa (`GET|PUT|DELETE /api/v1/me/company-profile`) exige apenas sessão, com CSRF no `PUT` e no `DELETE`. A prévia da região exige acesso ativo (`402 SUBSCRIPTION_REQUIRED` sem acesso); alertas e aderência continuam pagos. A exportação LGPD permanece acessível com apenas sessão. Decisão do dono de 13/10/2026: o perfil da empresa continua disponível sem acesso ativo.
 
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 

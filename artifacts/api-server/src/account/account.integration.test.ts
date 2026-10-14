@@ -606,6 +606,72 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.equal(exportWithoutSubscription.status, 200);
   });
 
+  await t.test("lets unsubscribed users manage recommendation privacy and company profiles while paid routes stay gated", async () => {
+    const cookie = await login("recommendation-consent-withdrawal@example.test", false);
+    const session = await request("/v1/auth/session", {}, cookie);
+    const userId = ((await session.json()) as { user: { id: string } }).user.id;
+    await db.update(usersTable)
+      .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+      .where(eq(usersTable.id, userId));
+    const profile = {
+      description: "Empresa que fornece equipamentos de informática.",
+      offerings: ["computadores"],
+      exclusions: [],
+      coverage: { scope: "national" },
+      valueRange: { min: null, max: null },
+      size: "other",
+    };
+
+    assert.equal((await request("/v1/me/saved-tenders/ids", {}, cookie)).status, 402);
+    const emptyProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(emptyProfile.status, 200);
+    assert.deepEqual(await emptyProfile.json(), { profile: null });
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "PUT", body: JSON.stringify(profile),
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "PUT", headers: csrf, body: JSON.stringify(profile),
+    }, cookie)).status, 200);
+    const savedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(savedProfile.status, 200);
+    assert.equal(((await savedProfile.json()) as { profile: { description: string } }).profile.description, profile.description);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "DELETE",
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/company-profile", {
+      method: "DELETE", headers: csrf,
+    }, cookie)).status, 204);
+    const deletedProfile = await request("/v1/me/company-profile", {}, cookie);
+    assert.equal(deletedProfile.status, 200);
+    assert.deepEqual(await deletedProfile.json(), { profile: null });
+    assert.equal((await request("/v1/me/company-profile/region-preview", {}, cookie)).status, 402);
+    assert.equal((await request("/v1/me/recommendation-preferences", {}, cookie)).status, 200);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", body: JSON.stringify({ personalizationEnabled: true }),
+    }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: true }),
+    }, cookie)).status, 200);
+
+    const event = () => request("/v1/recommendations/events", {
+      method: "POST", headers: csrf, body: JSON.stringify({ type: "search", query: "consentimento" }),
+    }, cookie);
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, true);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 1);
+    assert.equal((await request("/v1/me/recommendation-history", { method: "DELETE" }, cookie)).status, 403);
+    assert.equal((await request("/v1/me/recommendation-history", { method: "DELETE", headers: csrf }, cookie)).status, 204);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, true);
+    assert.equal((await request("/v1/me/recommendation-preferences", {
+      method: "PUT", headers: csrf, body: JSON.stringify({ personalizationEnabled: false }),
+    }, cookie)).status, 200);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+    assert.equal(((await (await event()).json()) as { recorded: boolean }).recorded, false);
+    assert.equal((await db.select().from(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId))).length, 0);
+    assert.equal((await request("/v1/me/saved-searches", {}, cookie)).status, 402);
+  });
+
   await t.test("expires and revokes sessions", async () => {
     const active = await request("/v1/auth/session", {}, userACookie);
     assert.equal(active.status, 200);
