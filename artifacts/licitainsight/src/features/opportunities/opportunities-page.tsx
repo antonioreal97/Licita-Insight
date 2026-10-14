@@ -12,8 +12,7 @@ import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityFilters } from './components/opportunity-filters';
 import { statePatch, stateOptions } from './lib/opportunity-filters';
-import { scopePatch } from './lib/international';
-import { InternationalFilters, InternationalRow, OfficialNoticeBanner, ScopeTabs } from './components/international';
+import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
 import {
   INTERNATIONAL_KINDS,
   INTERNATIONAL_SOURCES,
@@ -165,7 +164,6 @@ function OpportunitySearch() {
 
   return (
     <>
-      {!international && <ScopeTabs scope={scope} onChange={(next) => update(scopePatch(next))} />}
       {international && <OfficialNoticeBanner className="mb-4" />}
       <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <label className="min-w-0 flex-1">
