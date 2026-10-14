@@ -282,6 +282,8 @@ type NotificationPreferences = {
 
 ## 6. Perfil da empresa e filtros inteligentes
 
+O perfil da empresa (`GET|PUT|DELETE /api/v1/me/company-profile`) e a prévia da região exigem sessão e acesso ativo (`402 SUBSCRIPTION_REQUIRED` sem acesso). A exportação LGPD permanece acessível com apenas sessão.
+
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
 ```ts
