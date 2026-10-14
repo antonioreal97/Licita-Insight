@@ -4,9 +4,17 @@ Migração aditiva em `users`: dois arrays de valores estáveis e a dispensa do 
 
 ## Produção (aplicação manual pelo dono)
 
-1. Fazer backup verificável do banco antes de qualquer mudança, por exemplo `pg_dump --format=custom --file=backup-antes-0042.dump "$DATABASE_URL"` e conferir o arquivo.
-2. Na janela de implantação, com `DATABASE_URL` apontando para produção, executar manualmente `pnpm --filter @workspace/db run migrate`. O migrador aplica `0042_account_usage_profile.sql` e registra o hash no journal Drizzle na mesma transação.
-3. Conferir as três colunas e duas restrições em `users`, e validar que contas existentes têm arrays vazios e `usage_invite_dismissed = false`.
-4. Só então subir a API nova. Se for necessário reverter a aplicação, restaurar o backup; a reversão por `DROP COLUMN` perde respostas já salvas.
+Produção **nunca** roda `migrate`: o histórico do Drizzle no banco de produção diverge do repositório (a base veio de um dump), então cada migração é aplicada à mão, uma por vez, em transação única, depois do merge e **antes** do deploy.
+
+1. Com o PR mergeado na `main`, rodar no Mac do dono o script de apoio, que faz o backup `pg_dump -Fc` em `~/backups/licita/` no servidor e aplica só este arquivo com `psql -v ON_ERROR_STOP=1 -1`:
+
+   ```zsh
+   zsh ~/orca/workspaces/Licita-Insight/aplicar-migracao.sh 0042_account_usage_profile
+   ```
+
+   A saída termina em `0042 ok`.
+2. Conferir as três colunas e as duas restrições em `users`; contas existentes ficam com arrays vazios e `usage_invite_dismissed = false`.
+3. Só então publicar a branch do servidor para subir a API nova (a API nova falha nas rotas de perfil de uso sem as colunas).
+4. Reverter: restaurar o backup; um `DROP COLUMN` perde as respostas já salvas.
 
 Em ambiente de teste, `pnpm --filter @workspace/db run verify:migrations` compara o resultado de `migrate` com o schema Drizzle aplicado por `push-force`.
