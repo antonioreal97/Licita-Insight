@@ -12,6 +12,8 @@ export const queryKeys = {
     contracts: (params: TransparencyContractSearchParams) => ['transparency', 'contracts', params] as const,
     tenderContracts: (tenderId: string) => ['transparency', 'tenders', tenderId, 'contracts'] as const,
     tenderResults: (tenderId: string) => ['transparency', 'tenders', tenderId, 'results'] as const,
+    /** Per viewer: winner names depend on the viewer's access. */
+    tenderAwardHistory: (tenderId: string, viewer: string) => ['transparency', 'tenders', tenderId, 'award-history', viewer] as const,
   },
   opportunities: {
     all: ['opportunities'] as const,
