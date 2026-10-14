@@ -98,7 +98,7 @@ Leituras do escopo leem `mode` com uma consulta simples, sem bloqueio, no iníci
 
 ### Escopo da porta
 
-Passam pela porta todas as gravações em: `users` quando cria conta ou altera `show_international_opportunities`; `company_profiles`; `company_tender_fits`; `saved_tenders`; `saved_searches`; `notifications`; `email_deliveries`; `email_delivery_notifications`; `recommendation_events`; `recommendation_dismissals`; `recommendation_interest_profiles`; `user_recommendations`; `ai_jobs` do tipo `fit`; e as tabelas novas da W1. Exclusão de conta e exportação também passam, porque precisam ver um único modelo.
+Passam pela porta todas as gravações em: `users` quando cria conta ou altera `show_international_opportunities`; `company_profiles`; `company_tender_fits`; `saved_tenders`; `saved_searches`; `notifications`; `email_deliveries`; `email_delivery_notifications`; `recommendation_events`; `recommendation_dismissals`; `recommendation_interest_profiles`; `user_recommendations`; `ai_jobs` do tipo `fit`; e as tabelas novas da W1. A exclusão de conta também passa pela porta e remove os dois modelos na mesma transação. A exportação é uma leitura deliberadamente fora da porta: consulta os dois modelos em qualquer modo, inclusive durante a pausa, para que a desvirada nunca esconda dados do titular.
 
 Criação de conta passa pela porta em qualquer modo: no modo `workspaces`, cria Espaço padrão, membership `owner` e preferência ativa na mesma transação; no modo `legacy`, cria só o usuário, e o delta seguinte o atribui.
 
