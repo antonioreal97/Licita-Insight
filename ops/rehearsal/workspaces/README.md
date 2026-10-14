@@ -14,7 +14,7 @@ O dono restaura um backup verificado num banco descartável com sufixo `_rehears
 4. opcionalmente uma **segunda janela** `pause` → W4 → `resume` na cópia; a exceção ao relógio de 7 dias só funciona com nome terminado em `_rehearsal`;
 5. relatório `timings.tsv` e `invariants.tsv` com nomes de etapas, contagens e tempos. Arquivos de sonda, cookie e logs SQL são temporários e apagados. Nenhum e-mail, termo, nome, id de conta ou texto de perfil entra no relatório.
 
-A sonda falha se a busca pública superar 1% de erro ou 2× o p95 medido antes da pausa, se a leitura v1 não responder depois da troca, ou se não houver uma mutação bem sucedida depois da retomada. `cutover.sh` aplica ainda o limite de 3 minutos de drenagem, 5 segundos de lock por tabela, delta de 3× a taxa esperada e ponto de não retorno T+10 min. A sonda registra `503 MAINTENANCE_IN_PROGRESS`, p95 público e o intervalo até a primeira mutação no modelo novo. O intervalo da sonda tem precisão de um segundo; a duração do SQL é medida em milissegundos.
+A sonda falha se a busca pública superar 1% de erro ou 2× o p95 medido antes da pausa, se a leitura v1 não responder depois da troca, ou se não houver uma mutação bem sucedida depois da retomada. `cutover.sh` aplica ainda o limite de 3 minutos de drenagem, 5 segundos de lock por tabela, delta de 3× a taxa esperada e ponto de não retorno T+10 min. A sonda registra `503 MAINTENANCE_IN_PROGRESS` no total e por minuto, p95 público, p95 das mutações antes e depois da pausa, e o intervalo até a primeira mutação no modelo novo. O intervalo da sonda tem precisão de um segundo; a duração do SQL é medida em milissegundos.
 
 ## Servidor com Docker Compose: comandos do dono
 

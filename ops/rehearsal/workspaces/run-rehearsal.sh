@@ -122,6 +122,21 @@ awk -F '\t' -v since="$PAUSE_START" -v until="$CUT_TS" '
   $1>=since && $1<=until && $2=="mutation" && $3=="503" {n++}
   END {print "maintenance_503_count\t" n+0}
 ' "$TMP/probes.tsv" >> "$REPORT/timings.tsv"
+awk -F '\t' -v since="$PAUSE_START" -v until="$CUT_TS" '
+  $1>=since && $1<=until && $2=="mutation" && $3=="503" {bucket=int($1/60); count[bucket]++}
+  END {for (bucket in count) if (count[bucket]>max) max=count[bucket]; print "maintenance_503_per_minute_max\t" max+0}
+' "$TMP/probes.tsv" >> "$REPORT/timings.tsv"
+mutation_p95() {
+  local begin="$1" end="$2" count
+  awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="mutation" && $3=="200" {print $4}' "$TMP/probes.tsv" | sort -n > "$TMP/mutation-latencies"
+  count="$(wc -l < "$TMP/mutation-latencies" | tr -d ' ')"
+  ((count >= 3)) || { printf 'Too few successful mutations to measure p95.\n' >&2; return 1; }
+  awk -v n="$count" 'BEGIN {r=int(n*0.95+0.999)} NR==r {print; exit}' "$TMP/mutation-latencies"
+}
+BASELINE_MUTATION_P95="$(mutation_p95 "$BASELINE_START" "$BASELINE_END")"
+WORKSPACE_MUTATION_P95="$(mutation_p95 "$FIRST_RESUME_TS" "$FIRST_OBSERVE_END")"
+printf 'mutation_p95_baseline_seconds\t%s\nmutation_p95_after_resume_seconds\t%s\n' \
+  "$BASELINE_MUTATION_P95" "$WORKSPACE_MUTATION_P95" >> "$REPORT/timings.tsv"
 FIRST_WORKSPACE_MUTATION_TS="$(awk -F '\t' -v since="$FIRST_RESUME_TS" '$1>=since && $2=="mutation" && $3=="200" {print $1; exit}' "$TMP/probes.tsv")"
 if [[ -n "$FIRST_WORKSPACE_MUTATION_TS" ]]; then
   printf 'first_workspace_mutation_after_cut_seconds\t%s\n' "$((FIRST_WORKSPACE_MUTATION_TS-FIRST_CUT_COMMIT_TS))" >> "$REPORT/timings.tsv"
