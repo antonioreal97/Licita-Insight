@@ -54,7 +54,7 @@ export function PardalClip({
         muted
         playsInline
         preload="none"
-        poster={reducedMotion ? `${file}.png` : undefined}
+        poster={`${file}.png`}
         className={cn('h-auto w-full', visibility)}
       >
         <source src={`${file}.mov`} type='video/quicktime; codecs="hvc1"' />

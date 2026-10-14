@@ -499,7 +499,6 @@ estimated_value > 0 group by modality`. Nenhum limite pode ficar abaixo de R$ 10
 | `sort=value_desc` / `value_asc`                  | vai para o fim, depois dos editais sem valor                            |
 | `valueMin` / `valueMax`                          | não casa com nenhuma faixa, como um valor ausente                       |
 | `facets.valueRange` (mín., máx., histograma)     | fica fora                                                               |
-| `GET /api/v1/public/tenders/by-state`            | conta em `openTenders`, não soma em `estimatedValueTotal`               |
 | Recomendações                                    | não alarga a faixa inferida dos salvos; não pontua a favor nem contra   |
 | Aderência ao perfil (`out_of_value_range`)       | não elimina o edital                                                    |
 
