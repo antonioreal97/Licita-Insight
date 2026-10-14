@@ -9,6 +9,11 @@ import {
   sortDeadlines,
   type EmailDeadlineSnapshot,
 } from "./digest-deadlines";
+import type { EmailTenderHighlight } from "../ai/tender-highlights-policy";
+
+
+/** Tenders cited per saved-search card: the first ones of the snapshot that have highlights. */
+export const SAVED_SEARCH_HIGHLIGHT_LIMIT = 3;
 
 export type EmailNotificationSnapshot = {
   id: string;
@@ -23,6 +28,8 @@ export type EmailNotificationSnapshot = {
   savedSearchName: string | null;
   savedSearchQuery: string | null;
   matchCount: number | null;
+  /** Saved-search snapshot ids, in arrival order; only used to pick the tenders whose highlights are shown. */
+  tenderIds?: string[];
   profileMatches?: ProfileMatchNotificationRecord[];
   /** Digest card of several `saved_search_new_matches` of the same saved search (see groupSavedSearchNotifications). */
   groupedCount?: number;
@@ -51,6 +58,9 @@ export const groupSavedSearchNotifications = <T extends EmailNotificationSnapsho
     grouped[index] = {
       ...latest,
       matchCount: (card.matchCount ?? 0) + (notification.matchCount ?? 0),
+      ...(card.tenderIds || notification.tenderIds
+        ? { tenderIds: [...new Set([...(card.tenderIds ?? []), ...(notification.tenderIds ?? [])])] }
+        : {}),
       groupedCount: (card.groupedCount ?? 1) + 1,
     };
   }
@@ -159,16 +169,43 @@ const groupedSearchLink = (
     ? `${origin}${savedSearchHref(notification.savedSearchQuery)}`
     : null;
 
+type Highlights = ReadonlyMap<string, EmailTenderHighlight>;
+
+/** The saved search's cited tenders: the first ones of the snapshot that have something to say. */
+const savedSearchHighlights = (
+  notification: EmailNotificationSnapshot,
+  highlights: Highlights,
+): EmailTenderHighlight[] =>
+  (notification.tenderIds ?? [])
+    .map((tenderId) => highlights.get(tenderId))
+    .filter((highlight): highlight is EmailTenderHighlight => Boolean(highlight?.lines.length))
+    .slice(0, SAVED_SEARCH_HIGHLIGHT_LIMIT);
+
+const highlightLinesText = (lines: readonly string[]): string[] =>
+  lines.map((line) => `  • ${line}`);
+
 const itemText = (
   notification: EmailNotificationSnapshot,
   origin: string,
+  highlights: Highlights,
 ): string => {
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
     const searchLink = groupedSearchLink(notification, origin);
+    const cited = savedSearchHighlights(notification, highlights);
     return [
       `Busca salva: ${notification.savedSearchName ?? "Busca salva"}`,
       quantity(matchCount, "novo resultado", "novos resultados"),
+      ...(cited.length > 0
+        ? [
+            "Destaques:",
+            ...cited.flatMap((tender) => [
+              `- ${truncate(tender.title, 120)}`,
+              ...highlightLinesText(tender.lines),
+              `  ${tenderLink(tender.tenderId, origin)}`,
+            ]),
+          ]
+        : []),
       searchLink
         ? `Últimos resultados: ${notificationLink(notification, origin)}`
         : notificationLink(notification, origin),
@@ -179,13 +216,14 @@ const itemText = (
     const matches = notification.profileMatches ?? [];
     const matchCount = notification.matchCount ?? matches.length;
     const first = matches[0];
+    const lines = first ? (highlights.get(first.id)?.lines ?? []) : [];
     return [
       quantity(
         matchCount,
         "novo edital com alta aderência",
         "novos editais com alta aderência",
       ),
-      ...(first ? [`Destaque: ${truncate(first.title)}`] : []),
+      ...(first ? [`Destaque: ${truncate(first.title)}`, ...highlightLinesText(lines)] : []),
       notificationLink(notification, origin),
     ].join("\n");
   }
@@ -305,18 +343,46 @@ const tenderTags: Record<string, { label: string; tone: Tone }> = {
   tender_value_changed: { label: "Valor alterado", tone: "default" },
 };
 
+/** Highlight lines under a cited tender: plain sentences, one per line, readable without the app. */
+const highlightLinesHtml = (lines: readonly string[]): string =>
+  lines.length === 0
+    ? ""
+    : `<br><span style="display:inline-block;margin-top:4px;font-size:14px;line-height:21px;color:${colors.ink}">${lines.map((line) => `&#8226;&nbsp;${escapeHtml(line)}`).join("<br>")}</span>`;
+
+const citedTenderRow = (
+  tender: { id: string; title: string; organizationName: string },
+  lines: readonly string[],
+  origin: string,
+): string =>
+  `<tr><td style="padding:12px 0 0;font-family:${textFont}"><a href="${escapeHtml(tenderLink(tender.id, origin))}" style="color:${colors.ink};font-size:15px;line-height:21px;font-weight:700;text-decoration:none">${escapeHtml(truncate(tender.title))}</a><br><span style="font-size:14px;line-height:20px;color:${colors.ink}">${escapeHtml(tender.organizationName)}</span>${highlightLinesHtml(lines)}</td></tr>`;
+
+const citedTendersTable = (rows: string): string =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px">${rows}</table>`;
+
 const itemHtml = (
   notification: EmailNotificationSnapshot,
   origin: string,
+  highlights: Highlights,
 ): string => {
   const link = notificationLink(notification, origin);
   if (notification.type === "saved_search_new_matches") {
     const matchCount = notification.matchCount ?? 0;
     const searchLink = groupedSearchLink(notification, origin);
+    const cited = savedSearchHighlights(notification, highlights);
     return itemBlock({
       tag: "Busca salva",
       title: escapeHtml(notification.savedSearchName ?? "Busca salva"),
-      body: metaHtml(quantity(matchCount, "novo resultado", "novos resultados")),
+      body: `${metaHtml(quantity(matchCount, "novo resultado", "novos resultados"))}${
+        cited.length > 0
+          ? `${emphasisHtml(cited.length === 1 ? "Destaque" : "Destaques")}${citedTendersTable(
+              cited
+                .map((tender) =>
+                  citedTenderRow({ id: tender.tenderId, title: tender.title, organizationName: tender.organizationName }, tender.lines, origin),
+                )
+                .join(""),
+            )}`
+          : ""
+      }`,
       cta: searchLink
         ? `${linkHtml(link, "Ver os últimos resultados")} &nbsp;·&nbsp; ${linkHtml(searchLink, "Abrir a busca salva")}`
         : linkHtml(link, "Ver resultados"),
@@ -326,18 +392,15 @@ const itemHtml = (
   if (notification.type === "profile_new_matches") {
     const matches = notification.profileMatches ?? [];
     const matchCount = notification.matchCount ?? matches.length;
-    const highlights = matches
+    const rows = matches
       .slice(0, 5)
-      .map(
-        (match) =>
-          `<tr><td style="padding:12px 0 0;font-family:${textFont}"><a href="${escapeHtml(`${origin}/tenders/${encodeURIComponent(match.id)}`)}" style="color:${colors.ink};font-size:15px;line-height:21px;font-weight:700;text-decoration:none">${escapeHtml(truncate(match.title))}</a><br><span style="font-size:14px;line-height:20px;color:${colors.ink}">${escapeHtml(match.organizationName)}</span></td></tr>`,
-      )
+      .map((match) => citedTenderRow(match, highlights.get(match.id)?.lines ?? [], origin))
       .join("");
     return itemBlock({
       tag: "Aderência ao perfil",
       title: matchCount === 1 ? "Novo edital com alta aderência" : "Novos editais com alta aderência",
-      body: highlights
-        ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px">${highlights}</table>`
+      body: rows
+        ? citedTendersTable(rows)
         : metaHtml(quantity(matchCount, "novo edital", "novos editais")),
       cta: `<a href="${escapeHtml(link)}" style="color:${colors.ink};font-weight:700;text-decoration:underline">Ver oportunidades</a>`,
       count: { value: matchCount, label: matchCount === 1 ? "edital" : "editais" },
@@ -458,8 +521,11 @@ export const renderNotificationEmail = (input: {
   unsubscribeToken: string;
   /** Digest only: saved-tender deadlines ("Seus prazos"), rendered before the notifications. */
   deadlines?: readonly EmailDeadlineSnapshot[];
+  /** Highlights of the cited tenders, by tender id (see ai/tender-highlights.ts); absent tenders render as before. */
+  highlights?: ReadonlyMap<string, EmailTenderHighlight>;
   now?: Date;
 }) => {
+  const highlights = input.highlights ?? new Map<string, EmailTenderHighlight>();
   const now = input.now ?? new Date();
   const notifications = groupSavedSearchNotifications(input.notifications);
   const unsubscribeApiUrl = `${input.origin}/api/v1/email/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
@@ -484,10 +550,10 @@ export const renderNotificationEmail = (input: {
         : "Você recebe este resumo porque ele está ligado nas suas preferências do Pardal Digital."
       : "Você recebe este aviso porque monitora este edital e os avisos imediatos estão ligados.";
   const itemsText = notifications
-    .map((notification) => itemText(notification, input.origin))
+    .map((notification) => itemText(notification, input.origin, highlights))
     .join("\n\n");
   const itemsHtml = notifications
-    .map((notification) => itemHtml(notification, input.origin))
+    .map((notification) => itemHtml(notification, input.origin, highlights))
     .join("");
   const updates = quantity(notifications.length, "atualização", "atualizações");
   const subject =

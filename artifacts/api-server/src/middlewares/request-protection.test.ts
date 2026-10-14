@@ -482,6 +482,8 @@ test("each route maps to its rate limit profile and the first match wins", () =>
     ["POST", "/api/v1/tenders/t1/ask", true, "ai"],
     ["GET", "/api/v1/tenders/t1/sheet", true, "ai"],
     ["GET", "/api/v1/me/fit", true, "ai"],
+    // Highlights only read stored sheets: no AI window.
+    ["GET", "/api/v1/me/tender-highlights", true, "public"],
     ["POST", "/api/v1/me/billing/checkout", true, "billing"],
     ["POST", "/api/v1/me/billing/cancel", true, "billing"],
     ["GET", "/api/v1/me/export", true, "privacy"],

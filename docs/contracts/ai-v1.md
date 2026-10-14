@@ -172,6 +172,45 @@ A ficha, incluindo `qualificationChecklist`, é cache público global por `(tend
 
 O resumo opcional tem versão própria (`SHEET_SUMMARY_PROMPT_VERSION = 2`) e usa somente campos `found` e itens do `qualificationChecklist`, em 2 a 4 frases; as citações numéricas apontam para esses itens na ordem em que aparecem na resposta. A versão `2` substitui o esquema de resposta anterior para que fichas com resumo ausente possam ser tentadas novamente. Ausência só pode ser descrita como “não encontrado nos documentos lidos”, nunca como inexistência ou dispensa. Uma ficha nova pode gerar o resumo no próprio job `sheet`; uma ficha pronta com modelo ou versão diferente é devolvida imediatamente com `summary: null`, enquanto um job deduplicado `sheet_summary` chama somente a OpenAI e atualiza a mesma linha. Sem chave não há job; falha ou disjuntor aberto deixam o estado atual com resumo nulo, sem 5xx nem repetição do Jev. Tokens e custo aparecem no ledger como `sheet_summary`, sem entrar em `ai_sheet_daily_usage`, que mede apenas o teto e o custo do Jev para gerar fichas.
 
+## Destaques do card (aditivo)
+
+### `GET /api/v1/me/tender-highlights?tenderIds=id1&tenderIds=id2`
+
+Sessão + acesso (mesmo gate da ficha: `401` sem sessão, `402 SUBSCRIPTION_REQUIRED` sem assinatura/teste), 1–100 IDs
+(`400 INVALID_PARAMETER` fora disso). Resposta:
+
+```ts
+type TenderHighlightsResponse = {
+  results: Record<string, { requirements: TenderRequirementHighlight[] }>; // 1 a 3 itens por edital
+};
+type TenderRequirementHighlight = {
+  code:
+    | "me_epp_exclusive" // ficha: me_epp = exclusive
+    | "me_epp_quota" // ficha: me_epp = quota
+    | "site_visit" // ficha: site_visit = mandatory
+    | "bid_guarantee" // ficha: bid_guarantee = required
+    | "samples" // ficha: samples = required
+    | "technical_certificate" // checklist qualificacao_tecnica ou campo technical_qualification citando atestado
+    | "technical_qualification" // idem, sem atestado no trecho (registro em conselho, licença…)
+    | "minimum_capital" // checklist qualificacao_economica ou campo financial_qualification citando capital/patrimônio mínimo
+    | "contract_guarantee"; // ficha: contract_guarantee = required
+  label: string; // frase pronta em PT-BR, ex.: "Cota reservada para ME/EPP"
+};
+```
+
+- **Somente leitura.** Usa a ficha `ready` mais recente de cada edital (qualquer versão de índice, modelo ou
+  prompt). Nunca cria ficha, não enfileira job, não indexa documento e não chama Jev nem OpenAI; também não
+  consome a cota de consulta (`reserveTenderConsultation`) nem o teto diário de fichas. Por isso fica no bucket
+  `public` de rate limit, não no `ai`.
+- Edital sem ficha pronta, ou sem nenhuma exigência destacada, fica **fora** de `results` — o card continua
+  como antes. Respostas `not_defined`, `benefits_only`, `optional`, `not_required` e campos `not_found` nunca
+  viram destaque. Balanço e índices de liquidez sozinhos não viram destaque (quase todo edital pede).
+- Ordem e corte: os códigos acima na ordem listada (quem pode participar → o que precisa ser feito ou pago
+  antes da sessão → documentos), no máximo 3 por edital.
+- A busca (`GET /tenders/search`) **não** carrega os destaques: ela tem cache HTTP público e a ficha é recurso
+  pago. O frontend busca os destaques da página em lote, como a aderência (`/me/fit`), e os mostra no card junto
+  com o principal motivo da aderência já carregada.
+
 ## Privacidade e retenção
 
 Somente pergunta e trechos do edital são enviados ao Jev. Quando o resumo está habilitado, a OpenAI recebe a pergunta e no máximo os três trechos já selecionados; nenhum id, e-mail ou nome de usuário é enviado, e a chamada usa `store: false`. Perguntas ficam no export LGPD, são excluídas com a conta e expiram após 90 dias. O cache compartilhado guarda o hash da pergunta e o conteúdo público do edital, sem id de usuário nem texto da pergunta; por isso, apagar uma conta não apaga respostas úteis a outras contas. Respostas em cache não consomem nova cota.

@@ -20,6 +20,7 @@ import { useUpdateParticipation } from '@/features/participation/hooks/use-parti
 import { STAGE_LABELS, STAGE_ORDER } from '@/features/participation/lib/stages';
 import { SearchPagination } from '@/features/search/components/search-pagination';
 import { TenderRow } from '@/features/tenders/components/tender-row';
+import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlights';
 import { formatCurrencyPrecise, formatDateTime } from '@/lib/format';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
@@ -199,6 +200,8 @@ export default function SavedTendersPage() {
   const total = list.data?.pagination.total ?? 0;
   // Removed rows disappear at once (optimistic ids); the list refetches when the change settles.
   const rows = (list.data?.data ?? []).filter((item) => status !== 'ready' || isSaved(item.tender.id));
+  // Keyed by the page as loaded, so removing a row does not refetch the highlights.
+  const highlights = useTenderHighlights((list.data?.data ?? []).map((item) => item.tender.id));
 
   // Removing the last row of the last page leaves an empty page: step back.
   const totalPages = list.data?.pagination.totalPages ?? 1;
@@ -314,7 +317,7 @@ export default function SavedTendersPage() {
                 tabIndex={-1}
                 className="scroll-mt-24 border-b border-border last:border-0 target:bg-primary-subtle/30 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&>article]:border-0"
               >
-                <TenderRow tender={item.tender} saved onSave={() => remove(item.tender.id)} />
+                <TenderRow tender={item.tender} saved onSave={() => remove(item.tender.id)} highlights={highlights.data?.results[item.tender.id]} />
                 <ParticipationBar item={item} monitored={isMonitored(item.tender.id)} onMonitor={() => toggleMonitor(item.tender.id)} />
               </div>
             ))}
