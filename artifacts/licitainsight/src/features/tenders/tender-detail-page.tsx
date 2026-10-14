@@ -48,6 +48,7 @@ import { PlatformBadge } from './components/platform-badge';
 import { StatusBadge } from './components/status-badge';
 import { ValueDisplay } from './components/value-display';
 import { useTender } from './hooks/use-tender';
+import { TenderAwardHistory } from '@/features/transparency/tender-award-history';
 import { TenderTransparency } from '@/features/transparency/tender-transparency';
 import { isFuture } from './lib/deadline';
 import { formatPlace, isMostlyUppercase, shortTenderNumber, sumItems } from './lib/tender-display';
@@ -343,6 +344,7 @@ export default function TenderDetailPage() {
         <div className="min-w-0 space-y-6">
           <TimelinePanel events={tender.timeline} />
           <ItemsPanel tender={tender} />
+          {tender.source.id === 'pncp' && <TenderAwardHistory tenderId={tender.id} />}
           {tender.source.id === 'pncp' && <TenderTransparency tenderId={tender.id} />}
           <DecisionPanel tender={tender} />
           <NextStepsPanel tender={tender} monitored={monitored} />

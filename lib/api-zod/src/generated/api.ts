@@ -567,6 +567,92 @@ export const GetTenderTransparencyResultsResponse = zod.object({
 
 
 /**
+ * Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons, foreign and unidentified suppliers are only counted as groups.
+ * @summary Get the award history of similar purchases by the same organization
+ */
+
+
+
+export const GetTenderAwardHistoryParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+
+
+
+
+export const GetTenderAwardHistoryResponse = zod.object({
+  "data": zod.object({
+  "tenderId": zod.string(),
+  "scope": zod.enum(['unit', 'organization']),
+  "organizationName": zod.string(),
+  "purchasingUnit": zod.string().nullable(),
+  "windowMonths": zod.number().int(),
+  "since": zod.coerce.date(),
+  "criteria": zod.object({
+  "keywords": zod.array(zod.string()),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "rule": zod.string()
+}),
+  "purchases": zod.object({
+  "total": zod.number().int(),
+  "last12Months": zod.number().int(),
+  "withResults": zod.number().int()
+}),
+  "winners": zod.object({
+  "distinct": zod.number().int(),
+  "top": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "cnpj": zod.string().nullable(),
+  "kind": zod.enum(['company', 'individual', 'foreign', 'unidentified']),
+  "wins": zod.number().int().min(1)
+}).describe('`name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.\n'))
+}),
+  "prices": zod.object({
+  "purchaseValue": zod.object({
+  "min": zod.number(),
+  "median": zod.number(),
+  "max": zod.number(),
+  "count": zod.number().int()
+}).nullable(),
+  "discountPercent": zod.object({
+  "p25": zod.number(),
+  "median": zod.number(),
+  "p75": zod.number(),
+  "count": zod.number().int()
+}).nullable()
+}),
+  "recent": zod.array(zod.object({
+  "purchasePncpControlNumber": zod.string(),
+  "tenderId": zod.string().nullable(),
+  "date": zod.coerce.date().nullable(),
+  "object": zod.string().nullable(),
+  "value": zod.number().nullable(),
+  "valueSource": zod.union([zod.literal('results'),zod.literal('contracts'),zod.literal(null)]).nullable(),
+  "winners": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "cnpj": zod.string().nullable(),
+  "kind": zod.enum(['company', 'individual', 'foreign', 'unidentified']),
+  "wins": zod.number().int().min(1)
+}).describe('`name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.\n')),
+  "officialUrl": zod.string().nullable()
+}))
+}),
+  "meta": zod.object({
+  "coverage": zod.string(),
+  "valueSemantics": zod.string(),
+  "access": zod.object({
+  "winnerNames": zod.enum(['entitled', 'public']),
+  "unlocked": zod.boolean()
+})
+})
+})
+
+
+/**
  * @summary Get or start the document index used for tender questions
  */
 

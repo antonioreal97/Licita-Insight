@@ -1,4 +1,5 @@
 import {
+  type AwardHistoryResponse,
   type TransparencyContractSearchParams,
   type TransparencyContractSort,
   type TransparencyContractsResponse,
@@ -83,4 +84,6 @@ export const transparencyService = {
     getJson<TransparencyTenderContractsResponse>(`/v1/tenders/${encodeURIComponent(tenderId)}/transparency/contracts`, {}, signal),
   getTenderResults: (tenderId: string, signal?: AbortSignal) =>
     getJson<TransparencyTenderResultsResponse>(`/v1/tenders/${encodeURIComponent(tenderId)}/transparency/results`, {}, signal),
+  getTenderAwardHistory: (tenderId: string, signal?: AbortSignal) =>
+    getJson<AwardHistoryResponse>(`/v1/tenders/${encodeURIComponent(tenderId)}/award-history`, {}, signal),
 };
