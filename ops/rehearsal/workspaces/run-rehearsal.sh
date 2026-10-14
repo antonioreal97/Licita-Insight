@@ -44,7 +44,7 @@ public_metrics() {
   awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="public" {n++; if ($3!="200") bad++; print $4}' "$TMP/probes.tsv" | sort -n > "$TMP/public-latencies"
   local count bad ratio
   count="$(wc -l < "$TMP/public-latencies" | tr -d ' ')"
-  ((count >= 5)) || { printf 'Too few public reads in probe interval.\n' >&2; return 1; }
+  ((count >= 15)) || { printf 'Too few public reads in probe interval.\n' >&2; return 1; }
   bad="$(awk -F '\t' -v from="$begin" -v to="$end" '$1>=from && $1<to && $2=="public" && $3!="200" {n++} END {print n+0}' "$TMP/probes.tsv")"
   PUBLIC_ERROR_PERCENT="$(awk -v b="$bad" -v n="$count" 'BEGIN {printf "%.3f", 100*b/n}')"
   PUBLIC_P95="$(awk -v n="$count" 'BEGIN {r=int(n*0.95+0.999)} NR==r {print; exit}' "$TMP/public-latencies")"
@@ -56,13 +56,13 @@ sleep 10
 kill -0 "$PROBE_PID"
 BASELINE_START="$(date +%s)"
 record_time batch "$TOOL" batch
-sleep 10
+sleep 60
 BASELINE_END="$(date +%s)"
 public_metrics "$BASELINE_START" "$BASELINE_END"
 BASELINE_P95="$PUBLIC_P95"
 record_time pause "$TOOL" pause --actor rehearsal --reason 'synthetic measurement'
 PAUSE_START="$(date +%s)"
-sleep 10
+sleep 30
 PAUSE_END="$(date +%s)"
 public_metrics "$PAUSE_START" "$PAUSE_END"
 ERROR_PERCENT="$PUBLIC_ERROR_PERCENT"
