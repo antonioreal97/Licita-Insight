@@ -36,6 +36,7 @@ import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatD
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { DecisionPanel } from '@/features/participation/components/decision-panel';
+import { GlossaryScope, GlossaryText } from '@/features/help/components/glossary-text';
 import { NextStepsPanel } from '@/features/participation/components/next-steps-panel';
 import { ParticipationPanel } from '@/features/participation/components/participation-panel';
 import { AskTenderPanel } from './components/ask-tender-panel';
@@ -194,7 +195,8 @@ export default function TenderDetailPage() {
   const description = tender.description && (long || comparable(tender.description) !== comparable(tender.title)) ? tender.description : null;
 
   return (
-    <>
+    // One glossary scope per page: each term opens its definition only where it first appears.
+    <GlossaryScope>
       <nav aria-label="Trilha" className="mb-5 flex min-w-0 items-center gap-2 type-meta text-muted-foreground">
         <Link href="/search" className="shrink-0 transition-colors duration-fast ease-standard hover:text-primary">
           Explorar editais
@@ -360,7 +362,9 @@ export default function TenderDetailPage() {
                 <span className="break-words text-sm">{tender.purchasingUnit ?? '—'}</span>
               </MetaItem>
               <MetaItem variant="stacked" icon={Gavel} label="Modalidade">
-                <span className="text-sm">{modality}</span>
+                <span className="text-sm">
+                  <GlossaryText>{modality}</GlossaryText>
+                </span>
                 {tender.modalityLabel !== modality && <span className="block type-meta text-muted-foreground">Na fonte: {tender.modalityLabel}</span>}
               </MetaItem>
             </dl>
@@ -428,7 +432,7 @@ export default function TenderDetailPage() {
           </Button>
         )}
       </div>
-    </>
+    </GlossaryScope>
   );
 }
 
@@ -661,7 +665,9 @@ function TimelinePanel({ events }: { events: TimelineEvent[] }) {
                       <span className="rounded-lg bg-primary-subtle px-1.5 py-0.5 text-xs font-semibold text-primary-subtle-foreground">Previsto</span>
                     )}
                   </div>
-                  <p className="mt-1 break-words type-body">{event.description}</p>
+                  <p className="mt-1 break-words type-body">
+                    <GlossaryText>{event.description}</GlossaryText>
+                  </p>
                 </div>
               </li>
             );
