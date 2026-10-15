@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { List, Loader2, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Table2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { List, Loader2, SlidersHorizontal, Table2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
+import { FilterSidebar, filterWorkspaceClass } from '@/components/filters/filter-sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
@@ -51,7 +52,6 @@ export default function SearchPage() {
   const lastRecordedSearch = useRef<string | null>(null);
   const recommendationPreferences = useRecommendationPreferences();
   const companyProfile = useCompanyProfile();
-  const desktopFiltersRef = useRef<HTMLDivElement>(null);
 
   const response = search.data;
   const fits = useTenderFits(response?.data.map((tender) => tender.id) ?? []);
@@ -60,9 +60,8 @@ export default function SearchPage() {
   const scoresVary = response ? relevanceVaries(response.data) : false;
   const pagination = response?.pagination;
   const notificationContext = response?.meta.notification;
-  const completeSearchHref = notificationContext?.savedSearchQuery != null
-    ? savedQueryHref(notificationContext.savedSearchQuery, { withoutNewOnly: true })
-    : null;
+  const completeSearchHref =
+    notificationContext?.savedSearchQuery != null ? savedQueryHref(notificationContext.savedSearchQuery, { withoutNewOnly: true }) : null;
   const page = params.page ?? 1;
   // A shared link can point past the last page (the total shrank): jump to the last page instead of an empty page.
   // Judged on the response's own page so the skeleton stays up while the corrected page loads (no empty-state flash).
@@ -88,41 +87,6 @@ export default function SearchPage() {
     lastRecordedSearch.current = query;
     void accountService.recordRecommendationSearch(query).catch(() => undefined);
   }, [page, params.q, recommendationPreferences.data?.personalizationEnabled, search.isSuccess]);
-
-  useLayoutEffect(() => {
-    let frame = 0;
-
-    const fitFiltersToViewport = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        // Let sticky positioning settle for one paint before measuring its final viewport offset.
-        frame = requestAnimationFrame(() => {
-          const panel = desktopFiltersRef.current;
-          if (!panel) return;
-
-          // While the rail is below its sticky position, its real top edge determines how much of the
-          // viewport is available. Once stuck, getBoundingClientRect() already reports the sticky top.
-          const availableHeight = Math.max(240, window.innerHeight - panel.getBoundingClientRect().top - 16);
-          if (desktopFiltersCollapsed) {
-            panel.style.height = `${availableHeight}px`;
-            panel.style.maxHeight = '';
-          } else {
-            panel.style.height = '';
-            panel.style.maxHeight = `${availableHeight}px`;
-          }
-        });
-      });
-    };
-
-    fitFiltersToViewport();
-    window.addEventListener('scroll', fitFiltersToViewport, { passive: true });
-    window.addEventListener('resize', fitFiltersToViewport);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', fitFiltersToViewport);
-      window.removeEventListener('resize', fitFiltersToViewport);
-    };
-  }, [desktopFiltersCollapsed, params.q, response?.meta.searchMode, response?.meta.searchModeFallbackReason]);
 
   const submitQuery = (q: string) => {
     if (q) {
@@ -194,65 +158,18 @@ export default function SearchPage() {
 
       {/* Container query: the facet sidebar appears when the content column (not the viewport) is wide enough. */}
       <div className="@container/page">
-        <div
-          className={`grid gap-6 transition-[grid-template-columns] duration-slow ease-emphasized ${
-            desktopFiltersCollapsed ? '@min-[52rem]/page:grid-cols-[40px_minmax(0,1fr)]' : '@min-[52rem]/page:grid-cols-[264px_minmax(0,1fr)]'
-          }`}
-        >
-          <aside
-            aria-label={desktopFiltersCollapsed ? 'Filtros' : undefined}
-            aria-labelledby={desktopFiltersCollapsed ? undefined : 'facets-title'}
-            className="hidden @min-[52rem]/page:block"
+        <div className={filterWorkspaceClass(desktopFiltersCollapsed)}>
+          <FilterSidebar
+            collapsed={desktopFiltersCollapsed}
+            onCollapsedChange={setDesktopFiltersCollapsed}
+            activeCount={activeFilters}
+            onClear={clearFilters}
+            panelId="desktop-facets"
+            titleId="facets-title"
+            layoutKey={JSON.stringify([params.q, response?.meta.searchMode, response?.meta.searchModeFallbackReason])}
           >
-            {/* A flat rail, not a card. Offsets follow the header token. */}
-            <div
-              ref={desktopFiltersRef}
-              className={`sticky top-[calc(var(--spacing-header-mobile)+1rem)] border-r border-border-subtle pb-2 lg:top-[calc(var(--spacing-header)+1rem)] ${
-                desktopFiltersCollapsed
-                  ? 'pr-1'
-                  : 'overflow-y-auto overscroll-contain pr-4 [scrollbar-color:var(--border-strong)_transparent] [scrollbar-width:thin]'
-              }`}
-            >
-              <div
-                className={`sticky top-0 z-raised flex items-center border-b border-border-subtle bg-background pb-3 ${
-                  desktopFiltersCollapsed ? 'justify-center' : 'justify-between'
-                }`}
-              >
-                {!desktopFiltersCollapsed && (
-                  <h2 id="facets-title" className="type-section">
-                    Filtros
-                  </h2>
-                )}
-                <div className="flex items-center gap-1">
-                  {!desktopFiltersCollapsed && activeFilters > 0 && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      data-testid="button-sidebar-clear"
-                      className="rounded-lg px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
-                    >
-                      Limpar ({activeFilters})
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    aria-controls="desktop-facets"
-                    aria-expanded={!desktopFiltersCollapsed}
-                    aria-label={desktopFiltersCollapsed ? 'Expandir filtros' : 'Recolher filtros'}
-                    title={desktopFiltersCollapsed ? 'Expandir filtros' : 'Recolher filtros'}
-                    data-testid="button-collapse-filters"
-                    onClick={() => setDesktopFiltersCollapsed((collapsed) => !collapsed)}
-                    className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast hover:bg-muted hover:text-foreground focus-visible:focus-ring"
-                  >
-                    {desktopFiltersCollapsed ? <PanelLeftOpen size={17} aria-hidden /> : <PanelLeftClose size={17} aria-hidden />}
-                  </button>
-                </div>
-              </div>
-              <div id="desktop-facets" hidden={desktopFiltersCollapsed}>
-                <FacetPanel params={params} facets={facets} onChange={update} loading={search.isPending} />
-              </div>
-            </div>
-          </aside>
+            <FacetPanel params={params} facets={facets} onChange={update} loading={search.isPending} />
+          </FilterSidebar>
 
           <section ref={resultsRef} aria-labelledby="results-title" className="@container/results min-w-0 scroll-mt-24">
             <h2 id="results-title" className="sr-only">
@@ -344,13 +261,7 @@ export default function SearchPage() {
             </div>
 
             <div className="mb-3 empty:hidden">
-              <ActiveFilters
-                params={params}
-                notification={notificationContext}
-                onRemove={update}
-                onClearAll={clearFilters}
-                canClear={activeFilters > 0}
-              />
+              <ActiveFilters params={params} notification={notificationContext} onRemove={update} onClearAll={clearFilters} canClear={activeFilters > 0} />
             </div>
 
             {notificationContext && notificationContext.matchCount > notificationContext.storedTenderCount && (
