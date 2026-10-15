@@ -22,6 +22,7 @@ import {
 } from '../lib/international';
 import type { FilterOption } from '../lib/opportunity-filters';
 import { OpportunityStatusBadge } from './opportunity-status';
+import { ApplicationBadge } from './application-panel';
 
 const tones: Record<BrazilEligibility, string> = {
   yes: 'bg-status-open text-status-open-foreground',
@@ -216,6 +217,7 @@ export function InternationalRow({ opportunity }: { opportunity: OpportunitySumm
             <span className="type-label text-muted-foreground">Aviso em {international.languageName.toLowerCase()}</span>
           )}
           {opportunity.profileMatch && <span className="type-label font-semibold text-primary">Combina com seu perfil</span>}
+          <ApplicationBadge application={opportunity.application} />
         </div>
         <Link href={`/oportunidades/${encodeURIComponent(opportunity.id)}`} data-testid={`opportunity-${opportunity.id}`}>
           <h2 className="type-section text-foreground hover:text-primary">{opportunity.title}</h2>

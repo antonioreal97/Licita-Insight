@@ -936,6 +936,33 @@ export type OpportunitySummary = {
   scope: OpportunityScope;
   /** Set on international calls only. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. Absent from older API versions. */
+  application?: OpportunityApplication | null;
+  /** Last reading of the call page and documents; `null` while never read. */
+  applicationCheckedAt?: string | null;
+  /** Registration period read from the notice, only when the source publishes no dates. */
+  noticeDates?: OpportunityNoticeDates | null;
+};
+
+/** `source_page`: the call page at the source (or the page is the platform). `document`: one of its documents. */
+export type OpportunityNoticeOrigin = 'source_page' | 'document';
+
+export type OpportunityApplication = {
+  url: string;
+  /** Slug of a known platform; `null` for a link accepted by the words around it in the notice. */
+  platform: string | null;
+  label: string | null;
+  /** Definite article of `label`: "na Plataforma Sucupira", "no Salic". */
+  article: 'a' | 'o' | null;
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
+};
+
+export type OpportunityNoticeDates = {
+  registrationFrom: string | null;
+  registrationTo: string | null;
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
 };
 
 export type OpportunityCityBucket = FacetBucket & { state: string | null };

@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'wouter';
-import { ExternalLink } from 'lucide-react';
 import { isApiError } from '@/api';
 import { ErrorState } from '@/components/common/query-states';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { buttonClass } from '@/components/common/action-button';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import {
   IndividualListingBadge,
@@ -16,6 +14,8 @@ import {
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 import { BrazilProjectBadge, EligibilityBadge, FundingBadge, OfficialNoticeBanner } from './components/international';
 import { amountTexts, deadlineTexts, originalTitle, placeLabel } from './lib/international';
+import { ApplicationPanel } from './components/application-panel';
+import { NOTICE_DATE_NOTE, closesAtStatedHour, registrationDates } from './lib/application';
 
 function DetailSkeleton() {
   return (
@@ -73,6 +73,12 @@ function OpportunityDetail() {
   const original = international ? originalTitle(opportunity.title, international) : null;
   const deadline = international ? deadlineTexts(international.deadline) : null;
   const amount = international ? amountTexts(international, false) : null;
+  const dates = registrationDates(opportunity);
+  const noticeNote = dates.fromNotice ? (
+    <dd data-testid="note-notice-dates" className="mt-1 type-meta text-muted-foreground">
+      {NOTICE_DATE_NOTE}
+    </dd>
+  ) : null;
 
   return (
     <article data-testid="opportunity-detail">
@@ -98,15 +104,7 @@ function OpportunityDetail() {
         </span>
         {international?.brazilProject && <BrazilProjectBadge />}
       </div>
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <h1 className="max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
-        {opportunity.sourceUrl && (
-          <a href={opportunity.sourceUrl} target="_blank" rel="noreferrer" data-testid="link-opportunity-source" className={buttonClass()}>
-            Ver na fonte
-            <ExternalLink size={16} aria-hidden />
-          </a>
-        )}
-      </div>
+      <h1 className="mt-3 max-w-3xl type-titulo-3 text-foreground">{opportunity.title}</h1>
       {original && (
         <p data-testid="text-opportunity-original-title" className="mt-2 max-w-3xl type-meta text-muted-foreground">
           <span className="font-semibold">Título original{international?.languageName ? ` (${international.languageName.toLowerCase()})` : ''}:</span>{' '}
@@ -115,6 +113,7 @@ function OpportunityDetail() {
         </p>
       )}
       <p className="mt-3 type-body text-muted-foreground">{opportunity.organizationName}</p>
+      <ApplicationPanel opportunity={opportunity} className="mt-6" />
       {international && (
         <section
           aria-labelledby="opportunity-eligibility"
@@ -161,7 +160,8 @@ function OpportunityDetail() {
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <dt className="type-label text-muted-foreground">{international ? 'Publicação ou abertura' : 'Abertura'}</dt>
-            <dd className="mt-1 type-ui">{formatDate(opportunity.registrationFrom)}</dd>
+            <dd className="mt-1 type-ui">{formatDate(dates.from)}</dd>
+            {dates.from && noticeNote}
           </div>
           {deadline ? (
             <div data-testid="opportunity-deadline">
@@ -174,8 +174,13 @@ function OpportunityDetail() {
             <div>
               <dt className="type-label text-muted-foreground">Encerramento</dt>
               <dd className="mt-1 type-ui">
-                {opportunity.continuousFlow && !opportunity.registrationTo ? 'Fluxo contínuo, sem data de encerramento' : formatDate(opportunity.registrationTo)}
+                {opportunity.continuousFlow && !dates.to
+                  ? 'Fluxo contínuo, sem data de encerramento'
+                  : dates.fromNotice && closesAtStatedHour(dates.to)
+                    ? formatDateTime(dates.to)
+                    : formatDate(dates.to)}
               </dd>
+              {dates.to && noticeNote}
             </div>
           )}
           {amount && (
