@@ -24,6 +24,7 @@ export function setCookieConsent(value: CookieConsent): void {
   try {
     localStorage.setItem(COOKIE_CONSENT_KEY, value);
     if (value === 'refused') {
+      sessionStorage.removeItem('pardal-triage-v1');
       for (const key of OPTIONAL_KEYS) localStorage.removeItem(key);
     }
   } catch (error) {

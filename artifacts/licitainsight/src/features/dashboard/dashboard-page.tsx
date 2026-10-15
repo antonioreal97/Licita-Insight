@@ -19,6 +19,7 @@ import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlig
 import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
+import { TriageEntry } from '@/features/recommendations/triage/triage-entry';
 import { useSaveUsageProfile, useUsageProfile } from '@/features/settings/hooks/use-usage-profile';
 import type { AccountUsageProfile } from '@/api';
 
@@ -267,6 +268,7 @@ export default function DashboardPage() {
       {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-8">
+        {personal && <TriageEntry />}
         {personal && <RecommendationsSection />}
         {personal && <PersonalDeadlines />}
         {personal && profile.isPending ? <RowsSkeleton rows={2} />

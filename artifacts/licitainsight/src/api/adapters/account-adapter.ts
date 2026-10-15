@@ -9,6 +9,7 @@ import type {
   ImportSavedTendersResponse,
   MarkNotificationsReadBody,
   NotificationPreferences,
+  RecommendationDismissReason,
   RecommendationEvent,
   RecommendationPreferences,
   RecommendationsResponse,
@@ -85,7 +86,7 @@ export interface AccountAdapter {
   }): Promise<RecommendationPreferences>;
   deleteRecommendationHistory(): Promise<void>;
   listRecommendations(params: { page?: number; pageSize?: number }, signal?: AbortSignal): Promise<RecommendationsResponse>;
-  dismissRecommendation(tenderId: string): Promise<void>;
+  dismissRecommendation(tenderId: string, reason?: RecommendationDismissReason): Promise<void>;
   recordRecommendationEvent(event: RecommendationEvent): Promise<{ recorded: boolean }>;
   /** Public, no session: the signed token from the e-mail link. */
   unsubscribe(token: string, scope: UnsubscribeScope): Promise<UnsubscribeResponse>;

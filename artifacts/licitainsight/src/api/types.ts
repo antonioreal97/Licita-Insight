@@ -1018,3 +1018,5 @@ export type OpportunitySearchResponse = {
     internationalInProfile: boolean;
   };
 };
+
+export type RecommendationDismissReason = 'not_offering' | 'region' | 'value' | 'deadline';
