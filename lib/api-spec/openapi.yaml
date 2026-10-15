@@ -104,6 +104,33 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/SearchUnavailable"
+  /v1/public/tenders/by-state:
+    get:
+      operationId: getOpenTendersByState
+      tags: [search]
+      summary: Count open tenders and sum their estimated values by state
+      description: >-
+        Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes
+        and served from memory in between.
+      security: []
+      responses:
+        "200":
+          description: Open tenders by state
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300, stale-while-revalidate=600
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenTendersByStateResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
   /v1/tenders/{id}:
     get:
       operationId: getTenderById
@@ -1977,6 +2004,53 @@ components:
         durationDays: { type: integer, enum: [7, 30] }
         alreadyRedeemed: { type: boolean }
       required: [accessUntil, durationDays, alreadyRedeemed]
+    OpenTendersByState:
+      type: object
+      properties:
+        state:
+          type: string
+          pattern: "^[A-Z]{2}$"
+          description: State code (UF)
+        openTenders:
+          type: integer
+          minimum: 0
+        estimatedValueTotal:
+          type: [number, "null"]
+          minimum: 0
+          description: >-
+            Sum of the estimated values that were published, leaving out the ones flagged as implausible
+            (`estimatedValueFlag`); null when no open tender in the state has a value to add
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among the open tenders of the state; null when it has none
+      required: [state, openTenders, estimatedValueTotal, updatedAt]
+    OpenTendersByStateMeta:
+      type: object
+      properties:
+        totalOpenTenders: { type: integer, minimum: 0 }
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the aggregate was computed
+        indexUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among all counted tenders
+        cacheTtlSeconds: { type: integer, minimum: 0 }
+      required: [totalOpenTenders, generatedAt, indexUpdatedAt, cacheTtlSeconds]
+    OpenTendersByStateResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          minItems: 27
+          maxItems: 27
+          items:
+            $ref: "#/components/schemas/OpenTendersByState"
+        meta:
+          $ref: "#/components/schemas/OpenTendersByStateMeta"
+      required: [data, meta]
     BillingPlanResponse:
       type: object
       properties:
@@ -4209,6 +4283,39 @@ components:
           eligibilityCheckedAt,
           details,
         ]
+    OpportunityNoticeOrigin:
+      type: string
+      enum: [source_page, document]
+      description: "`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents."
+    OpportunityApplication:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        platform:
+          type: [string, "null"]
+          description: Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.
+        label:
+          type: [string, "null"]
+          description: Platform name to show ("Plataforma Sucupira").
+        article:
+          type: [string, "null"]
+          enum: [a, o, null]
+          description: Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle:
+          type: [string, "null"]
+          description: Title of the document that indicates the link, when `origin` is `document`.
+      required: [url, platform, label, article, origin, documentTitle]
+    OpportunityNoticeDates:
+      type: object
+      properties:
+        registrationFrom: { type: [string, "null"], format: date-time }
+        registrationTo: { type: [string, "null"], format: date-time }
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle: { type: [string, "null"] }
+      required: [registrationFrom, registrationTo, origin, documentTitle]
     OpportunityDocument:
       type: object
       properties:
@@ -4272,6 +4379,20 @@ components:
           description: Set on international calls only.
           anyOf:
             - $ref: "#/components/schemas/InternationalOpportunity"
+            - type: "null"
+        application:
+          description: Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityApplication"
+            - type: "null"
+        applicationCheckedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Last reading of the call page and documents. `null` while the call was never read.
+        noticeDates:
+          description: Registration period read from the notice. Set only when the source publishes no dates of its own.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityNoticeDates"
             - type: "null"
       required:
         [

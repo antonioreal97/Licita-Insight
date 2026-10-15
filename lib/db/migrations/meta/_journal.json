@@ -302,6 +302,13 @@
       "when": 1791892800000,
       "tag": "0042_account_usage_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0043_opportunity_application",
+      "breakpoints": true
     }
   ]
 }

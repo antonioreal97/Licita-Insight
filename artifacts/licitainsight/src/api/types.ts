@@ -408,6 +408,21 @@ export type BillingResponse = {
   source?: BillingSource | null;
 };
 
+/** One state in public `GET /api/v1/public/tenders/by-state` — contract: docs/contracts/public-tenders-by-state-v1.md. */
+export type OpenTendersByState = {
+  state: string;
+  openTenders: number;
+  /** Sum of the published estimated values, without the ones flagged as implausible; `null` when the state has none to add. */
+  estimatedValueTotal: number | null;
+  updatedAt: string | null;
+};
+
+/** Always the 27 states. The server recomputes it at most once every 15 minutes. */
+export type OpenTendersByStateResponse = {
+  data: OpenTendersByState[];
+  meta: { totalOpenTenders: number; generatedAt: string; indexUpdatedAt: string | null; cacheTtlSeconds: number };
+};
+
 /** Public `GET /api/v1/billing/plan` (no session): the single plan and the trial length. */
 export type PublicPlan = { monthlyBrl: number | null; trialDays: number; currency: 'BRL' };
 
@@ -936,6 +951,33 @@ export type OpportunitySummary = {
   scope: OpportunityScope;
   /** Set on international calls only. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. Absent from older API versions. */
+  application?: OpportunityApplication | null;
+  /** Last reading of the call page and documents; `null` while never read. */
+  applicationCheckedAt?: string | null;
+  /** Registration period read from the notice, only when the source publishes no dates. */
+  noticeDates?: OpportunityNoticeDates | null;
+};
+
+/** `source_page`: the call page at the source (or the page is the platform). `document`: one of its documents. */
+export type OpportunityNoticeOrigin = 'source_page' | 'document';
+
+export type OpportunityApplication = {
+  url: string;
+  /** Slug of a known platform; `null` for a link accepted by the words around it in the notice. */
+  platform: string | null;
+  label: string | null;
+  /** Definite article of `label`: "na Plataforma Sucupira", "no Salic". */
+  article: 'a' | 'o' | null;
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
+};
+
+export type OpportunityNoticeDates = {
+  registrationFrom: string | null;
+  registrationTo: string | null;
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
 };
 
 export type OpportunityCityBucket = FacetBucket & { state: string | null };

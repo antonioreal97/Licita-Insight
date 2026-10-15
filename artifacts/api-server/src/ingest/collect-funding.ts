@@ -8,6 +8,10 @@ import {
   upsertFundingOpportunities,
 } from "./upsert-opportunities";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
+import {
+  readApplicationsSafely,
+  type ApplicationReader,
+} from "./application-enrichment";
 
 const INGEST_SOURCE = "funding-opportunities";
 export const FUNDING_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -42,7 +46,10 @@ export async function abandonStaleFundingRuns(
   return rows.length;
 }
 
-export async function collectFunding(now = new Date()): Promise<{
+export async function collectFunding(
+  now = new Date(),
+  readApplications: ApplicationReader = readApplicationsSafely,
+): Promise<{
   runId: string;
   status: "complete" | "failed";
   sources: FundingSourceResult[];
@@ -77,6 +84,11 @@ export async function collectFunding(now = new Date()): Promise<{
         .set({ heartbeatAt: new Date(), upserted, details: { sources } })
         .where(eq(ingestRunsTable.id, runId));
     }
+    // Where to apply: read after the calls are stored, never failing the run.
+    const applications = await readApplications(
+      ["capes", "cnpq", "finep"],
+      now,
+    );
     const ok = sources.some((source) => source.outcome === "ok");
     const status = ok ? "complete" : "failed";
     const errors = sources
@@ -91,7 +103,7 @@ export async function collectFunding(now = new Date()): Promise<{
         refreshed,
         refreshErrors: errors.length,
         error: errors.length ? errors.join("\n") : null,
-        details: { sources },
+        details: { sources, applications },
         heartbeatAt: new Date(),
         finishedAt: new Date(),
       })
