@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 test(
-  "combines exact facets for an unfiltered keyword search",
+  "computes exact disjunctive facets with and without a keyword or selected groups",
   { skip: !process.env.PNCP_TEST_DATABASE_URL },
   async (t) => {
     const schema = `search_facets_test_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -223,5 +223,89 @@ test(
       2,
     );
     assert.equal(result.facets?.newCount, 2);
+
+    const buckets = (facet: { value: string; count: number }[] | undefined) =>
+      facet?.map(({ value, count }) => [value, count]);
+
+    const keywordWithSelection = await new PostgresTenderRepository().search({
+      query: "medicamentos",
+      mode: "keyword",
+      status: ["open"],
+      modality: [],
+      state: ["SP"],
+      city: [],
+      organizationId: [],
+      sourceId: [],
+      category: [],
+      platform: [],
+      newOnly: false,
+      sort: "relevance",
+      page: 1,
+      pageSize: 20,
+      facets: true,
+    });
+    assert.equal(keywordWithSelection.pagination.total, 1);
+    assert.deepEqual(buckets(keywordWithSelection.facets?.status), [
+      ["closed", 1],
+      ["open", 1],
+    ]);
+    assert.deepEqual(buckets(keywordWithSelection.facets?.state), [
+      ["RJ", 1],
+      ["SP", 1],
+    ]);
+    assert.deepEqual(buckets(keywordWithSelection.facets?.modality), [
+      ["dispensa", 1],
+    ]);
+    assert.deepEqual(keywordWithSelection.facets?.groupTotals, {
+      status: 2,
+      modality: 1,
+      state: 2,
+      source: 1,
+      category: 1,
+      organization: 1,
+      platform: 1,
+    });
+
+    const categoryWithoutKeyword = await new PostgresTenderRepository().search({
+      query: null,
+      mode: "keyword",
+      status: ["open"],
+      modality: [],
+      state: [],
+      city: [],
+      organizationId: [],
+      sourceId: [],
+      category: ["cat-b"],
+      platform: [],
+      newOnly: false,
+      sort: "relevance",
+      page: 1,
+      pageSize: 20,
+      facets: true,
+    });
+    assert.deepEqual(
+      categoryWithoutKeyword.data.map(({ id }) => id),
+      ["match-b"],
+    );
+    assert.deepEqual(buckets(categoryWithoutKeyword.facets?.status), [
+      ["closed", 1],
+      ["open", 1],
+    ]);
+    assert.deepEqual(buckets(categoryWithoutKeyword.facets?.category), [
+      ["cat-a", 3],
+      ["cat-b", 1],
+    ]);
+    assert.deepEqual(buckets(categoryWithoutKeyword.facets?.state), [
+      ["RJ", 1],
+    ]);
+    assert.deepEqual(categoryWithoutKeyword.facets?.groupTotals, {
+      status: 2,
+      modality: 1,
+      state: 1,
+      source: 1,
+      category: 3,
+      organization: 1,
+      platform: 1,
+    });
   },
 );
