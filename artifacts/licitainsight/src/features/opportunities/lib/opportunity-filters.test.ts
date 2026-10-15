@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { OpportunityFilters } from '../components/opportunity-filters';
+import { INTERNATIONAL_SOURCES, opportunitySourceAttributions } from '../components/opportunity-status';
 import { opportunityAppliedMessage, opportunityApplyLabel } from '../components/opportunity-filter-sheet';
 import { deadlinePresetPatch } from '@/features/search/lib/filter-presets';
 import { opportunityParamsFromUrl, opportunityParamsToUrl } from '@/services/opportunity-service';
@@ -253,6 +254,18 @@ test('URL internacional antiga mantém parâmetros e produz chips legíveis e re
       ['language:en', 'EN'],
     ],
   );
+});
+
+test('BID entra no filtro de fonte das internacionais, com selo e atribuição CC BY', () => {
+  const params = opportunityParamsFromUrl('scope=international&source=idb');
+  assert.deepEqual(params.source, ['idb']);
+  assert.deepEqual(
+    opportunityFilterChips(params).map((chip) => [chip.id, chip.label]),
+    [['source:idb', 'BID']],
+  );
+  assert.ok(INTERNATIONAL_SOURCES.includes('idb'));
+  assert.equal(opportunitySourceAttributions.idb, 'Fonte: BID (Banco Interamericano de Desenvolvimento), CC BY 4.0');
+  assert.equal(opportunitySourceAttributions.worldbank, undefined);
 });
 
 test('folha móvel usa oportunidades no CTA e no anúncio ao leitor de tela', () => {

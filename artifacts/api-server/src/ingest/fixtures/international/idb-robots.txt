@@ -1,0 +1,79 @@
+# IDB Open Data (data.iadb.org)
+#
+# Everything here is open to read: dataset pages, resource pages, file downloads,
+# the data catalog and the API. The data is free to reuse under CC BY,
+# and every dataset has a DOI you can cite.
+#
+# How to use the API:
+#   Find datasets:        https://data.iadb.org/api/3/action/package_search?q=remittances&fq=type:dataset
+#   Get one dataset:      https://data.iadb.org/api/3/action/package_show?id=latin-macro-watch-dataset
+#   Query a table:        https://data.iadb.org/api/3/action/datastore_search?resource_id=<id>&limit=100
+#   Full catalog (DCAT):  https://data.iadb.org/catalog.ttl  (also .rdf and .jsonld)
+#   API documentation:    https://docs.ckan.org/en/2.11/api/
+#
+# Good to know:
+# - Search results include datasets, indicators and data portals.
+#   Add fq=type:dataset to get datasets only.
+# - Table queries only work on files marked datastore_active: true in the dataset record.
+#
+# Questions or bulk access: opendata@iadb.org
+
+User-agent: *
+
+Allow: /*catalog.ttl
+Allow: /*catalog.rdf
+Allow: /*catalog.jsonld
+Allow: /*catalog.xml
+Allow: /*catalog.n3
+Allow: /*catalog.*?profiles=
+Allow: /*dataset/*.*?profiles=
+
+# The API is open. This line keeps the search and filter rules below from
+# catching API calls by mistake.
+Allow: /*api/*action/
+
+# Resource pages and their downloads are open. Extra pages under a resource
+# (previews like /view/...) repeat the same content, so crawlers can skip them.
+Disallow: /*dataset/*/resource/*/
+Allow: /*dataset/*/resource/*/download/
+
+# Search and filter pages (every filter link starts with /dataset/?)
+Disallow: /*dataset/?*
+
+# Filter, sort and page-number variations of other pages
+Disallow: /*?view_id=*
+Disallow: /*&view_id=*
+Disallow: /*?tags=*
+Disallow: /*&tags=*
+Disallow: /*?q=
+Disallow: /*&q=
+Disallow: /*?page=
+Disallow: /*&page=
+Disallow: /*?language=
+Disallow: /*&language=
+Disallow: /*?dataset_owned_to=
+Disallow: /*&dataset_owned_to=
+Disallow: /*?spatial_coverage_label=
+Disallow: /*&spatial_coverage_label=
+Disallow: /*?res_format=
+Disallow: /*&res_format=
+Disallow: /*?_res_format_limit=
+Disallow: /*&_res_format_limit=
+Disallow: /*?vocab_
+Disallow: /*&vocab_
+Disallow: /*?_vocab_
+Disallow: /*&_vocab_
+Disallow: /*?profiles=
+Disallow: /*&profiles=
+Disallow: /*?is_resource=True
+Disallow: /*&is_resource=True
+Disallow: /*?id=
+Disallow: /*&id=
+Disallow: /*?eloutlink=
+Disallow: /*&eloutlink=
+Disallow: /*?gathStatIcon=
+Disallow: /*&gathStatIcon=
+Disallow: /*?sort=
+Disallow: /*&sort=
+
+Sitemap: https://data.iadb.org/sitemap.xml

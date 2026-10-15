@@ -4218,6 +4218,7 @@ components:
           salic,
           worldbank,
           eu_ft,
+          idb,
         ]
     OpportunityScope:
       type: string

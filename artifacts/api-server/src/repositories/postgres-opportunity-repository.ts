@@ -72,6 +72,7 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   salic: "Lei Rouanet (Salic)",
   worldbank: "Banco Mundial",
   eu_ft: "União Europeia (Funding & Tenders)",
+  idb: "BID",
 };
 
 export const brazilEligibilityLabels: Record<BrazilEligibility, string> = {

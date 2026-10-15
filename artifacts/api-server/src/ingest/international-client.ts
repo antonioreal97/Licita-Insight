@@ -12,9 +12,20 @@ import type {
   InternationalSource,
 } from "./international-draft";
 import {
+  IDB_MAX_PAGES,
+  IDB_PAGE_SIZE,
+  IDB_ROBOTS_URL,
+  IDB_USER_AGENT,
+  idbPackageUrl,
+  idbPageUrl,
+  idbResourceId,
+  parseIdbPage,
+} from "./idb-parsers";
+import {
   defaultInternationalFetch,
   defaultWait,
   InternationalBlockedByRobotsError,
+  InternationalHttpError,
   InternationalRateLimitError,
   internationalRobotsGate,
   pacedInternational,
@@ -32,6 +43,7 @@ import {
 export const INTERNATIONAL_SOURCES = [
   "worldbank",
   "eu_ft",
+  "idb",
 ] as const satisfies readonly InternationalSource[];
 
 export type InternationalSourceResult = {
@@ -71,6 +83,8 @@ const readPages = async (
     rows: number;
     skipped: number;
     drafts: InternationalOpportunityDraft[];
+    /** The source is sorted by deadline and this page already reached the past ones. */
+    done?: boolean;
   }>,
   pageSize: number,
   maxPages: number,
@@ -96,7 +110,11 @@ const readPages = async (
     skipped += page.skipped;
     for (const draft of page.drafts)
       if (!drafts.has(draft.externalId)) drafts.set(draft.externalId, draft);
-    if (page.rows < pageSize || (index + 1) * pageSize >= page.total)
+    if (
+      page.done ||
+      page.rows < pageSize ||
+      (index + 1) * pageSize >= page.total
+    )
       return {
         drafts: [...drafts.values()],
         listed,
@@ -168,10 +186,53 @@ const collectEuFt = async (context: SourceContext): Promise<Listing> => {
   };
 };
 
+export const IDB_RETRIES = 2;
+export const IDB_BACKOFF_MS = 5_000;
+
+/** A 5xx answer, a timeout or a dropped connection is tried again after 5 s and 10 s; anything else fails at once. */
+const idbRequestJson = async (
+  fetcher: InternationalFetch,
+  url: string,
+  wait: Wait,
+): Promise<unknown> => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await requestJson(fetcher, { url }, { wait });
+    } catch (error) {
+      const transient =
+        (error instanceof InternationalHttpError && error.status >= 500) ||
+        (error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "TypeError"));
+      if (!transient || attempt === IDB_RETRIES) throw error;
+      await wait(IDB_BACKOFF_MS * 2 ** attempt);
+    }
+  }
+};
+
+const collectIdb = async (context: SourceContext): Promise<Listing> => {
+  const fetcher: InternationalFetch = (request) =>
+    context.fetcher({ ...request, userAgent: IDB_USER_AGENT });
+  const allowed = internationalRobotsGate(fetcher, IDB_ROBOTS_URL);
+  const read = async (url: string): Promise<unknown> => {
+    await allowed(url);
+    return await idbRequestJson(fetcher, url, context.wait);
+  };
+  const resourceId = idbResourceId(await read(idbPackageUrl()));
+  return await readPages(
+    async (index) =>
+      parseIdbPage(
+        await read(idbPageUrl(resourceId, index * IDB_PAGE_SIZE)),
+        context.now,
+      ),
+    IDB_PAGE_SIZE,
+    Math.min(context.maxPages, IDB_MAX_PAGES),
+  );
+};
+
 const collectors: Record<
   InternationalSource,
   (context: SourceContext) => Promise<Listing>
-> = { worldbank: collectWorldBank, eu_ft: collectEuFt };
+> = { worldbank: collectWorldBank, eu_ft: collectEuFt, idb: collectIdb };
 
 /** `INTERNATIONAL_SOURCES=worldbank` reads a single source. Unknown names are an error, not a silent skip. */
 export const internationalSourcesFromEnv = (
