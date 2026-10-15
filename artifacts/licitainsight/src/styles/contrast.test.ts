@@ -141,6 +141,13 @@ for (const theme of ['creme', 'petroleo'] as const) {
   }
 }
 
+for (const theme of ['creme', 'petroleo'] as const) {
+  test(`${theme}: estados de Espaço somente leitura e downgrade mantêm contraste AA`, () => {
+    assert.ok(ratio('warning-subtle-foreground', ['warning-subtle'], theme) >= TEXT);
+    assert.ok(ratio('muted-foreground', ['background', 'muted'], theme) >= TEXT);
+  });
+}
+
 // The choropleth scale encodes volume by lightness alone, so it must keep one direction from the page to the
 // strongest step. Without that, the top band could look like the empty one in grayscale or to colorblind readers.
 for (const theme of ['creme', 'petroleo'] as const) {

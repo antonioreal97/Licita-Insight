@@ -3,13 +3,15 @@ import type { CompanyProfileInput, CompanyProfileResponse, TenderFitsResponse } 
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { aiService, PROFILE_LIMITS } from '@/services/ai-service';
-import { queryKeys } from '@/services/query-keys';
+import { queryKeys, scopedMeQueryKeys } from '@/services/query-keys';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
 /** The signed-in user's company profile (`profile: null` until saved). No access needed to read or edit it. */
 export function useCompanyProfile() {
   const { status } = useSession();
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
-    queryKey: queryKeys.me.companyProfile,
+    queryKey: scopedMeQueryKeys(workspaceId).companyProfile,
     queryFn: ({ signal }) => aiService.getCompanyProfile(signal),
     enabled: status === 'authenticated',
     staleTime: 60_000,
@@ -35,8 +37,9 @@ export function useProfileMunicipalities(query: string) {
 }
 
 export function useCompanyRegionPreview(enabled: boolean) {
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
-    queryKey: queryKeys.me.companyRegionPreview,
+    queryKey: scopedMeQueryKeys(workspaceId).companyRegionPreview,
     queryFn: ({ signal }) => aiService.getCompanyRegionPreview(signal),
     enabled,
     staleTime: 60_000,
@@ -79,12 +82,14 @@ export function useProfileDescriptionSuggestions(description: string) {
 /** Full PUT. A new `version` makes every stored fit stale, so the fits are dropped and refetched. */
 export function useSaveCompanyProfile() {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
+  const keys = scopedMeQueryKeys(workspaceId);
   return useMutation({
     mutationFn: (profile: CompanyProfileInput) => aiService.saveCompanyProfile(profile),
     onSuccess: (response) => {
-      queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, response);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.me.companyRegionPreview });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.me.fit.all });
+      queryClient.setQueryData<CompanyProfileResponse>(keys.companyProfile, response);
+      void queryClient.invalidateQueries({ queryKey: keys.companyRegionPreview });
+      void queryClient.invalidateQueries({ queryKey: keys.fit.all });
     },
     onError: (error) => console.error('[perfil] Falha ao salvar o perfil da empresa.', error),
   });
@@ -92,12 +97,14 @@ export function useSaveCompanyProfile() {
 
 export function useDeleteCompanyProfile() {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
+  const keys = scopedMeQueryKeys(workspaceId);
   return useMutation({
     mutationFn: () => aiService.deleteCompanyProfile(),
     onSuccess: () => {
-      queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, { profile: null });
-      queryClient.removeQueries({ queryKey: queryKeys.me.companyRegionPreview });
-      queryClient.removeQueries({ queryKey: queryKeys.me.fit.all });
+      queryClient.setQueryData<CompanyProfileResponse>(keys.companyProfile, { profile: null });
+      queryClient.removeQueries({ queryKey: keys.companyRegionPreview });
+      queryClient.removeQueries({ queryKey: keys.fit.all });
     },
     onError: (error) => console.error('[perfil] Falha ao apagar o perfil da empresa.', error),
   });
@@ -114,9 +121,10 @@ const pollDelay = (attempt: number) => Math.min(2_000 * 2 ** attempt, 10_000);
 export function useTenderFits(tenderIds: string[]) {
   const billing = useBilling();
   const profile = useCompanyProfile();
+  const workspaceId = useActiveWorkspaceId();
   const enabled = tenderIds.length > 0 && billing.data?.entitled === true && Boolean(profile.data?.profile);
   return useQuery({
-    queryKey: queryKeys.me.fit.batch(tenderIds),
+    queryKey: scopedMeQueryKeys(workspaceId).fit.batch(tenderIds),
     queryFn: ({ signal }) => aiService.getFits(tenderIds, signal),
     enabled,
     staleTime: 5 * 60_000,

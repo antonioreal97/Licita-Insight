@@ -3,7 +3,8 @@ import type { SavedTender, SavedTendersParams } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService, MAX_SAVED_TENDERS_PAGE_SIZE } from '@/services/account-service';
-import { queryKeys } from '@/services/query-keys';
+import { scopedMeQueryKeys } from '@/services/query-keys';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
 /**
  * Server-paginated saved tenders (`savedAt desc`, or nearest deadline with `sort: 'deadline'`). `monitored: true` / `stage`
@@ -12,9 +13,10 @@ import { queryKeys } from '@/services/query-keys';
 export function useSavedTendersList({ page, pageSize, monitored, stage, sort, upcoming }: SavedTendersParams) {
   const { status } = useSession();
   const billing = useBilling();
+  const workspaceId = useActiveWorkspaceId();
   const params: SavedTendersParams = { page, pageSize, monitored, stage, sort, upcoming };
   return useQuery({
-    queryKey: queryKeys.me.savedTenders.list(params),
+    queryKey: scopedMeQueryKeys(workspaceId).savedTenders.list(params),
     queryFn: ({ signal }) => accountService.listSavedTenders(params, signal),
     enabled: status === 'authenticated' && billing.data?.entitled === true,
     placeholderData: keepPreviousData,

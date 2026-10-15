@@ -10,11 +10,12 @@ import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tender
 import { TenderRow } from '@/features/tenders/components/tender-row';
 import { toast } from '@/hooks/use-toast';
 import { accountService } from '@/services/account-service';
-import { queryKeys } from '@/services/query-keys';
+import { scopedMeQueryKeys } from '@/services/query-keys';
 import { Sparkles } from 'lucide-react';
 import { useDismissRecommendation, useRecommendations } from '../hooks/use-recommendations';
 import { RecommendationActions, RECOMMENDATION_INTEREST_TOAST } from './recommendation-actions';
 import { ApplicationBadge } from '@/features/opportunities/components/application-panel';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
 export function RecommendationsSection() {
   const recommendations = useRecommendations();
@@ -22,6 +23,7 @@ export function RecommendationsSection() {
   const dismiss = useDismissRecommendation();
   const { isSaved, save, changingId } = useSavedTenders();
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const [, navigate] = useLocation();
 
   const markInterest = (tenderId: string) => {
@@ -29,7 +31,7 @@ export function RecommendationsSection() {
       void accountService
         .recordRecommendationInterest(tenderId)
         .catch((error) => console.error('[recommendations] Edital salvo, mas não foi possível registrar a métrica de interesse.', error));
-      queryClient.setQueriesData<RecommendationsResponse>({ queryKey: queryKeys.me.recommendations }, (current) => {
+      queryClient.setQueriesData<RecommendationsResponse>({ queryKey: scopedMeQueryKeys(workspaceId).recommendations }, (current) => {
         if (!current || !current.data.some(({ tender }) => tender.id === tenderId)) return current;
         const data = current.data.filter(({ tender }) => tender.id !== tenderId);
         const total = Math.max(0, current.pagination.total - 1);

@@ -63,5 +63,53 @@ export const queryKeys = {
       list: (params: NotificationsParams) => ['me', 'notifications', 'list', params] as const,
       unreadCount: ['me', 'notifications', 'unread-count'] as const,
     },
+    /** Every active-Workspace cache starts here, so switching can invalidate it atomically. */
+    workspaceScopes: ['me', 'workspace'] as const,
+    workspaces: ['me', 'workspaces'] as const,
   },
 };
+
+/**
+ * Keeps the legacy arrays byte-for-byte stable while journeys are off. When an active Workspace exists, every
+ * contextual cache lives under one Workspace prefix, preventing data from surviving a switch into another context.
+ */
+export function scopedMeQueryKeys(workspaceId?: string) {
+  if (!workspaceId) {
+    return {
+      companyProfile: queryKeys.me.companyProfile,
+      companyRegionPreview: queryKeys.me.companyRegionPreview,
+      fit: queryKeys.me.fit,
+      savedTenders: queryKeys.me.savedTenders,
+      savedSearches: queryKeys.me.savedSearches,
+      notifications: queryKeys.me.notifications,
+      recommendations: queryKeys.me.recommendations,
+      tenderHighlights: queryKeys.me.tenderHighlights,
+    };
+  }
+  const root = [...queryKeys.me.workspaceScopes, workspaceId] as const;
+  const savedTenders = [...root, 'saved-tenders'] as const;
+  const notifications = [...root, 'notifications'] as const;
+  const fit = [...root, 'fit'] as const;
+  return {
+    companyProfile: [...root, 'company-profile'] as const,
+    companyRegionPreview: [...root, 'company-region-preview'] as const,
+    fit: {
+      all: fit,
+      batch: (tenderIds: string[]) => [...fit, [...new Set(tenderIds)].sort()] as const,
+    },
+    savedTenders: {
+      all: savedTenders,
+      ids: [...savedTenders, 'ids'] as const,
+      list: (params: SavedTendersParams) => [...savedTenders, 'list', params] as const,
+      detail: (tenderId: string) => [...savedTenders, 'detail', tenderId] as const,
+    },
+    savedSearches: [...root, 'saved-searches'] as const,
+    notifications: {
+      all: notifications,
+      list: (params: NotificationsParams) => [...notifications, 'list', params] as const,
+      unreadCount: [...notifications, 'unread-count'] as const,
+    },
+    recommendations: [...root, 'recommendations'] as const,
+    tenderHighlights: (tenderIds: string[]) => [...root, 'tender-highlights', [...new Set(tenderIds)].sort()] as const,
+  };
+}

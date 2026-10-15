@@ -20,6 +20,7 @@ type WorkspaceSummary = {
   id: string;
   type: WorkspaceType;
   name: string;
+  slot: number;
   role: WorkspaceRole;
   accessMode: WorkspaceAccessMode;
   onboardingStatus: OnboardingStatus;
@@ -30,7 +31,7 @@ type WorkspaceSummary = {
 };
 ```
 
-IDs são opacos. O servidor calcula papel, completude, status e `accessMode`; o cliente não os grava diretamente. `accessMode` é derivado do entitlement atual e do slot estável do Espaço, não persistido como fonte de verdade.
+IDs são opacos. O servidor calcula papel, completude, status, `slot` e `accessMode`; o cliente não os grava diretamente. `slot` é exposto somente para a UI explicar o downgrade e nunca é aceito em mutações. `accessMode` é derivado do entitlement atual e do slot estável do Espaço, não persistido como fonte de verdade.
 
 `onboardingStatus` tem somente estes três estados (decisão de 13/10/2026). `not_started` e `in_progress` distinguem quem ainda não respondeu nada de quem começou; `complete` significa **mínimo aprovado concluído** — palavras-chave e região —, que é o que libera a primeira busca útil. A riqueza do perfil além do mínimo é dado derivado (`completeness.nextStep` e a contagem de etapas opcionais pendentes), nunca um quarto estado.
 
