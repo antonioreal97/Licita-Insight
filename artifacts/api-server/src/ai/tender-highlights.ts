@@ -3,10 +3,16 @@ import {
   db,
   companyProfilesTable,
   companyTenderFitsTable,
+  pool,
   tenderAiSheetsTable,
   tendersTable,
+  workspaceProfilesTable,
+  type WorkspaceCutoverMode,
 } from "@workspace/db";
 import { fitLevel } from "./company-fit-policy";
+import { readCutoverState } from "../workspaces/cutover-state";
+import { workspaceProfileToCompanyProfile } from "../workspaces/workspace-profile-service";
+import { requireDefaultWorkspace } from "../workspaces/workspace-service";
 import {
   requirementHighlights,
   tenderHighlightLines,
@@ -22,6 +28,10 @@ import {
  */
 
 type Executor = Pick<typeof db, "select" | "selectDistinctOn">;
+
+export type TenderHighlightScope =
+  | { mode: "legacy"; workspaceId?: null }
+  | { mode: "workspaces"; workspaceId: string };
 
 const MAX_TENDERS = 100;
 
@@ -75,10 +85,16 @@ export async function loadEmailTenderHighlights(
   userId: string,
   tenderIds: readonly string[],
   executor: Executor = db,
+  scope?: TenderHighlightScope,
 ): Promise<Map<string, EmailTenderHighlight>> {
   const ids = uniqueIds(tenderIds);
   if (ids.length === 0) return new Map();
-  const [tenders, sheets, [profile]] = await Promise.all([
+  const mode: WorkspaceCutoverMode = scope?.mode ?? (await readCutoverState(pool)).mode;
+  const workspaceId =
+    mode === "workspaces"
+      ? (scope?.workspaceId ?? (await requireDefaultWorkspace(executor, userId)).id)
+      : null;
+  const [tenders, sheets] = await Promise.all([
     executor
       .select({
         id: tendersTable.id,
@@ -91,15 +107,31 @@ export async function loadEmailTenderHighlights(
       .from(tendersTable)
       .where(inArray(tendersTable.id, ids)),
     readySheets(ids, executor),
-    executor
+  ]);
+  let profile: { version: number; registeredPlatforms: string[] } | undefined;
+  if (mode === "legacy") {
+    [profile] = await executor
       .select({
         version: companyProfilesTable.version,
         registeredPlatforms: companyProfilesTable.registeredPlatforms,
       })
       .from(companyProfilesTable)
       .where(eq(companyProfilesTable.userId, userId))
-      .limit(1),
-  ]);
+      .limit(1);
+  } else {
+    const [storedProfile] = await executor
+      .select()
+      .from(workspaceProfilesTable)
+      .where(eq(workspaceProfilesTable.workspaceId, workspaceId!))
+      .limit(1);
+    if (storedProfile) {
+      const converted = workspaceProfileToCompanyProfile(userId, storedProfile);
+      profile = {
+        version: converted.version,
+        registeredPlatforms: converted.registeredPlatforms,
+      };
+    }
+  }
   const fits = new Map<string, StoredFit>();
   if (profile) {
     const rows = await executor
@@ -112,7 +144,9 @@ export async function loadEmailTenderHighlights(
       .from(companyTenderFitsTable)
       .where(
         and(
-          eq(companyTenderFitsTable.userId, userId),
+          mode === "legacy"
+            ? eq(companyTenderFitsTable.userId, userId)
+            : eq(companyTenderFitsTable.workspaceId, workspaceId!),
           eq(companyTenderFitsTable.profileVersion, profile.version),
           eq(companyTenderFitsTable.status, "ready"),
           inArray(companyTenderFitsTable.tenderId, ids),

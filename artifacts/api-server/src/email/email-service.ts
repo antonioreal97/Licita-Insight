@@ -411,7 +411,7 @@ const lockSavedSearchSnapshots = async (
     .from(notificationsTable)
     .where(inArray(notificationsTable.id, candidates.map(({ id }) => id)))
     .orderBy(asc(notificationsTable.id))
-    .for("share");
+    .for("update");
   return new Map(rows.map(({ id, ...snapshot }) => [id, snapshot]));
 };
 
@@ -484,6 +484,9 @@ const queueDelivery = async (
         recipient.userId,
         citedTenderIds(notifications),
         tx,
+        cycle.mode === "legacy"
+          ? { mode: "legacy" }
+          : { mode: "workspaces", workspaceId: group.workspaceId! },
       ),
       now,
       origin: publicAppOrigin(),

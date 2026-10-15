@@ -7,5 +7,7 @@ ROOT="${CUTOVER_REPO_ROOT:?set CUTOVER_REPO_ROOT to the checkout path}"
 docker inspect "$CONTAINER" >/dev/null 2>&1
 docker run --rm -i --network "container:$CONTAINER" \
   -v "$ROOT:$ROOT:ro" -w "$ROOT" \
-  -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGAPPNAME \
+  -e PGHOST="${CUTOVER_POSTGRES_HOST:-$PGHOST}" \
+  -e PGPORT="${CUTOVER_POSTGRES_INTERNAL_PORT:-$PGPORT}" \
+  -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGAPPNAME \
   postgres:16 psql "$@"

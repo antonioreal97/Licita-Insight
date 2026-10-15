@@ -138,7 +138,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     await admin.end();
   });
 
-  await t.test("upgrade from 0041 applies 0042 account usage before W1 and W2", async () => {
+  await t.test("upgrade from 0041 applies 0042 and 0043 from main before W1 and W2", async () => {
     await runMigrations(upgraded, 41);
     await insertLegacyRows(upgraded);
     const before = await rowCounts(upgraded);
@@ -154,6 +154,14 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     const usageColumns = await upgraded.query("select column_name from information_schema.columns where table_name = 'users' and column_name in ('usage_purposes', 'applicant_types')");
     assert.equal(usageColumns.rows.length, 2);
     await runMigrations(upgraded, 43);
+    const opportunityColumns = await upgraded.query(
+      `select column_name from information_schema.columns
+       where table_name = 'cultural_opportunities'
+         and (column_name like 'application_%' or column_name like 'notice_%')`,
+    );
+    assert.equal(opportunityColumns.rows.length, 11);
+    await assert.rejects(verifyWorkspaceSchema(upgraded), /table workspaces\b/);
+    await runMigrations(upgraded, 44);
     await assert.rejects(verifyWorkspaceSchema(upgraded), (error: Error) => {
       assert.doesNotMatch(error.message, /table /);
       for (const table of scopedTables) assert.match(error.message, new RegExp(`column ${table}\\.workspace_id`));
@@ -201,7 +209,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
   });
 
   await t.test("the concurrent production variant builds the same schema as the versioned 0045", async () => {
-    await runMigrations(concurrent, 43);
+    await runMigrations(concurrent, 44);
     const statements = readFileSync(
       path.join(migrationsFolder, "manual/0045_workspace_scope_expand_concurrently.sql"),
       "utf8",

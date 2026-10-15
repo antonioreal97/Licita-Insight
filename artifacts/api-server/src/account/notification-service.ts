@@ -343,6 +343,10 @@ const recordSavedSearchMatches = async (
   },
 ): Promise<boolean> => {
   const { savedSearch, matchCount, tenderIds, completedAt, mode } = input;
+  const workspaceId = savedSearch.workspaceId;
+  if (mode === "workspaces" && workspaceId === null) {
+    throw new Error(`Saved search ${savedSearch.id} has no workspace in workspaces mode`);
+  }
   const dayKey = savedSearchDayKey(savedSearch.id, completedAt);
   const dayRows = await tx
     .select({
@@ -355,7 +359,7 @@ const recordSavedSearchMatches = async (
       and(
         eq(notificationsTable.userId, savedSearch.userId),
         ...(mode === "workspaces"
-          ? [eq(notificationsTable.workspaceId, savedSearch.workspaceId)]
+          ? [eq(notificationsTable.workspaceId, workspaceId!)]
           : []),
         or(
           eq(notificationsTable.dedupeKey, dayKey),
@@ -377,7 +381,7 @@ const recordSavedSearchMatches = async (
               ? [
                   eq(
                     emailDeliveryNotificationsTable.workspaceId,
-                    savedSearch.workspaceId,
+                    workspaceId!,
                   ),
                 ]
               : []),
@@ -407,7 +411,7 @@ const recordSavedSearchMatches = async (
     .values({
       id: randomUUID(),
       userId: savedSearch.userId,
-      ...(mode === "workspaces" ? { workspaceId: savedSearch.workspaceId } : {}),
+      ...(mode === "workspaces" ? { workspaceId: workspaceId! } : {}),
       type: "saved_search_new_matches",
       dedupeKey: current ? `${dayKey}:${dayRows.length + 1}` : dayKey,
       createdAt: completedAt,

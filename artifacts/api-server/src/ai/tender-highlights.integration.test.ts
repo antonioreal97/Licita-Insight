@@ -60,6 +60,12 @@ test("Tender highlights read stored data only, in cards and e-mails", { skip: !p
     "tender_ai_sheets",
     "company_profiles",
     "company_tender_fits",
+    "workspaces",
+    "workspace_members",
+    "user_workspace_preferences",
+    "workspace_profiles",
+    "workspace_profile_signals",
+    "workspace_cutover_events",
   ]) {
     await pool.query(`CREATE TABLE "${schema}"."${table}" (LIKE public."${table}" INCLUDING ALL)`);
   }
