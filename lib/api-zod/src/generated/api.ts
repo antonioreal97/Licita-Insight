@@ -1336,6 +1336,34 @@ export const SuggestProfileFiltersFromDescriptionResponse = zod.object({
 
 
 /**
+ * Each term matches as a whole expression (words together and in order, Portuguese stemming), or the tender carries one of the categories. Nothing is stored.
+ * @summary Count open tenders matching the profile terms and categories being edited
+ */
+export const previewProfileOpenTenderMatchesBodyTermsItemMax = 80;
+
+export const previewProfileOpenTenderMatchesBodyTermsMax = 40;
+
+export const previewProfileOpenTenderMatchesBodyCategoriesItemMax = 80;
+
+export const previewProfileOpenTenderMatchesBodyCategoriesMax = 20;
+
+
+
+export const PreviewProfileOpenTenderMatchesBody = zod.object({
+  "terms": zod.array(zod.string().min(1).max(previewProfileOpenTenderMatchesBodyTermsItemMax)).max(previewProfileOpenTenderMatchesBodyTermsMax).optional(),
+  "categories": zod.array(zod.string().min(1).max(previewProfileOpenTenderMatchesBodyCategoriesItemMax)).max(previewProfileOpenTenderMatchesBodyCategoriesMax).optional()
+})
+
+export const previewProfileOpenTenderMatchesResponseEstimatedOpenTenderCountMin = 0;
+
+
+
+export const PreviewProfileOpenTenderMatchesResponse = zod.object({
+  "estimatedOpenTenderCount": zod.number().int().min(previewProfileOpenTenderMatchesResponseEstimatedOpenTenderCountMin)
+})
+
+
+/**
  * @summary Read or enqueue company-profile fit for up to 100 tenders
  */
 export const getTenderFitsQueryTenderIdsItemMax = 200;
