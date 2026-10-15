@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFoo
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { trackProfileSetup } from '@/features/analytics/google-analytics';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { ProfileMeter } from '@/features/guided-onboarding/profile-meter';
 import { toast } from '@/hooks/use-toast';
 import { formatDateTime } from '@/lib/format';
 import { UFS } from '@/lib/ufs';
@@ -299,7 +300,7 @@ function TermsField({
   );
 }
 
-function MunicipalityAutocomplete({
+export function MunicipalityAutocomplete({
   label,
   hint,
   selected,
@@ -539,6 +540,8 @@ export function CompanyProfileSection() {
         Usamos o perfil para indicar, na busca e no detalhe, quais editais combinam com a sua empresa. A descrição e os termos vão para o serviço de IA que faz
         a avaliação; nome e e-mail não.
       </p>
+
+      {profile.isSuccess && <div className="mt-5"><ProfileMeter profile={saved} /></div>}
 
       {billing.data && !billing.data.entitled && (
         <p

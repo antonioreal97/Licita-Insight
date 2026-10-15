@@ -130,6 +130,17 @@ Deriva de [activeContext](activeContext.md).
 - Verificado em navegador (sem API): Chrome escolhe WebM, WebKit escolhe HEVC, alfa correto nos dois, temas Creme e
   Petróleo, movimento reduzido. Falta: Safari real, conferência com dados da API e ao vivo após o deploy.
 
+## Em PR — começo guiado e medidor de perfil (`feat/guided-onboarding`, 15 out 2026)
+
+- Só frontend, em `src/features/guided-onboarding/`. Quatro passos (o que vende, região, faixa de valor, porte e
+  plataformas) com o contador honesto do `match-preview` em cada passo; salva pelo `PUT` do perfil só no fim.
+- Abre uma vez após o primeiro login com perfil vazio e reabre pelo cartão da Visão geral; a dispensa fica em
+  memória por conta e só vai para o `localStorage` (`licita-guided-onboarding-dismissed-v1`) com o aviso aceito.
+- Medidor "Perfil N%" na Visão geral e no topo do perfil: até 3 próximos itens, cada um com o que destrava.
+- O alerta da conclusão é busca salva por termos e faixa de valor: buscas salvas não aceitam `myRegion`, e a tela diz isso.
+- Teste de navegador: `scripts/test-guided-onboarding.mjs` (API interceptada, sem banco); capturas em
+  `docs/reviews/guided-onboarding/`.
+
 ## O que falta
 
 - Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).
