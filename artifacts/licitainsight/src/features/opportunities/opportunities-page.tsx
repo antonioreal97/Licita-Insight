@@ -10,8 +10,7 @@ import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
 import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
-import { OpportunityFilters } from './components/opportunity-filters';
-import { statePatch, stateOptions } from './lib/opportunity-filters';
+import { ActiveOpportunityFilters, OpportunityFiltersBar } from './components/opportunity-filter-sheet';
 import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
 import { ApplicationBadge } from './components/application-panel';
 import { NOTICE_DATE_NOTE, registrationDates } from './lib/application';
@@ -19,7 +18,6 @@ import {
   INTERNATIONAL_KINDS,
   INTERNATIONAL_SOURCES,
   IndividualListingBadge,
-  NATIONAL_KINDS,
   OpportunityStatusBadge,
   opportunityAreaLabels,
   opportunityKindLabels,
@@ -28,38 +26,7 @@ import {
   opportunityStatusLabels,
 } from './components/opportunity-status';
 
-const UFS = [
-  'AC',
-  'AL',
-  'AM',
-  'AP',
-  'BA',
-  'CE',
-  'DF',
-  'ES',
-  'GO',
-  'MA',
-  'MG',
-  'MS',
-  'MT',
-  'PA',
-  'PB',
-  'PE',
-  'PI',
-  'PR',
-  'RJ',
-  'RN',
-  'RO',
-  'RR',
-  'RS',
-  'SC',
-  'SE',
-  'SP',
-  'TO',
-];
-
 const STATUSES = Object.keys(opportunityStatusLabels) as OpportunityStatus[];
-const NATIONAL_SOURCES = (Object.keys(opportunitySourceLabels) as OpportunitySource[]).filter((source) => !INTERNATIONAL_SOURCES.includes(source));
 
 const selectClass =
   'h-10 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -159,14 +126,11 @@ function OpportunitySearch() {
   };
 
   const facets = response?.facets ?? null;
-  const setState = (value: string) => update(statePatch(value, facets, params));
   const setStatus = (value: string) => update({ status: value ? [value as OpportunityStatus] : undefined });
   const setKind = (value: string) => update({ kind: value ? [value as OpportunityKind] : undefined });
   const setSource = (value: string) => update({ source: value ? [value as OpportunitySource] : undefined });
   const scope: OpportunityScope = params.scope ?? 'national';
   const international = scope === 'international';
-  const kinds = international ? INTERNATIONAL_KINDS : NATIONAL_KINDS;
-  const sources = international ? INTERNATIONAL_SOURCES : NATIONAL_SOURCES;
 
   return (
     <>
@@ -183,78 +147,72 @@ function OpportunitySearch() {
             className="h-10 w-full rounded-lg border border-input bg-card px-3 type-ui text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
         </label>
-        <label>
-          <span className="sr-only">Tipo de oportunidade</span>
-          <select
-            data-testid="select-opportunity-kind"
-            className={selectClass}
-            value={params.kind?.[0] ?? ''}
-            onChange={(event) => setKind(event.target.value)}
-          >
-            <option value="">Todos os tipos</option>
-            {kinds.map((kind) => (
-              <option key={kind} value={kind}>
-                {opportunityKindLabels[kind]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Fonte</span>
-          <select
-            data-testid="select-opportunity-source"
-            className={selectClass}
-            value={params.source?.[0] ?? ''}
-            onChange={(event) => setSource(event.target.value)}
-          >
-            <option value="">Todas as fontes</option>
-            {sources.map((source) => (
-              <option key={source} value={source}>
-                {opportunitySourceLabels[source]}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!international && (
-          <label>
-            <span className="sr-only">Estado</span>
-            <select
-              data-testid="select-opportunity-state"
-              className={selectClass}
-              value={params.state?.[0] ?? ''}
-              onChange={(event) => setState(event.target.value)}
-            >
-              <option value="">Todos os estados</option>
-              {stateOptions(UFS, facets).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/* The national filters live in the question panel below; the international tab keeps its row of selects. */}
+        {international && (
+          <>
+            <label>
+              <span className="sr-only">Tipo de oportunidade</span>
+              <select
+                data-testid="select-opportunity-kind"
+                className={selectClass}
+                value={params.kind?.[0] ?? ''}
+                onChange={(event) => setKind(event.target.value)}
+              >
+                <option value="">Todos os tipos</option>
+                {INTERNATIONAL_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {opportunityKindLabels[kind]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">Fonte</span>
+              <select
+                data-testid="select-opportunity-source"
+                className={selectClass}
+                value={params.source?.[0] ?? ''}
+                onChange={(event) => setSource(event.target.value)}
+              >
+                <option value="">Todas as fontes</option>
+                {INTERNATIONAL_SOURCES.map((source) => (
+                  <option key={source} value={source}>
+                    {opportunitySourceLabels[source]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">Situação das inscrições</span>
+              <select
+                data-testid="select-opportunity-status"
+                className={selectClass}
+                value={params.status?.[0] ?? ''}
+                onChange={(event) => setStatus(event.target.value)}
+              >
+                <option value="">Qualquer prazo</option>
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {opportunityStatusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
         )}
-        <label>
-          <span className="sr-only">Situação das inscrições</span>
-          <select
-            data-testid="select-opportunity-status"
-            className={selectClass}
-            value={params.status?.[0] ?? ''}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="">Qualquer prazo</option>
-            {STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {opportunityStatusLabels[status]}
-              </option>
-            ))}
-          </select>
-        </label>
       </form>
 
       {international ? (
         <InternationalFilters params={params} facets={facets} onChange={update} />
       ) : (
-        <OpportunityFilters params={params} facets={facets} hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0} onChange={update} />
+        <OpportunityFiltersBar
+          params={params}
+          facets={facets}
+          hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0}
+          onChange={update}
+          total={search.isError ? undefined : pagination?.total}
+          fetching={search.isFetching}
+        />
       )}
 
       {international && response && !response.meta.internationalInProfile && (
@@ -290,6 +248,9 @@ function OpportunitySearch() {
           entram chamadas de municípios com instalação própria.
         </p>
       )}
+
+      {/* Also above an empty list, where removing one filter is the way out. */}
+      <ActiveOpportunityFilters params={params} onChange={update} />
 
       {search.isPending ? (
         <RowsSkeleton />

@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import type { TenderSearchParams, TenderSearchResponse } from '@/api';
-import { buildFilterChips } from '../lib/filter-chips';
+import { buildFilterChips, chipShowsGroup } from '../lib/filter-chips';
 
 type Props = {
   params: TenderSearchParams;
@@ -10,7 +10,10 @@ type Props = {
   canClear: boolean;
 };
 
-/** One removable chip per selected value/range. Labels come from the facet label cache (see facet-config). */
+/**
+ * One removable chip per selected value/range, labeled so it reads on its own ("SP", "Encerra em até 7 dias").
+ * Labels come from the facet label cache (see facet-config).
+ */
 export function ActiveFilters({ params, notification, onRemove, onClearAll, canClear }: Props) {
   const chips = buildFilterChips(params, { statusDefault: true, notification });
   if (chips.length === 0) return null;
@@ -23,9 +26,9 @@ export function ActiveFilters({ params, notification, onRemove, onClearAll, canC
           onClick={() => onRemove(chip.remove)}
           aria-label={`Remover filtro ${chip.group}: ${chip.label}`}
           data-testid={`chip-${chip.id}`}
-          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-pill border border-border bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
+          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-pill border border-border-subtle bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
         >
-          <span className="text-muted-foreground">{chip.group}:</span>
+          {chipShowsGroup(chip) && <span className="text-muted-foreground">{chip.group}:</span>}
           <span className="truncate font-medium">{chip.label}</span>
           <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors duration-fast ease-standard group-hover:text-foreground">
             <X size={12} aria-hidden />
