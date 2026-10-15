@@ -42,6 +42,7 @@ Evidência deve ser repetível sem acessar produção. Fixtures sanitizadas e re
 | CAPES                | Condicional          | contrato/estabilidade do HTML, licença e encerramento por remoção                        |
 | Salic                | Condicional          | é marcador de editais do MinC, não uma coleta autônoma da API Salic                      |
 | Banco Mundial        | Condicional          | amostra manual assinada e deduplicação entre fontes internacionais                       |
+| BID                  | Condicional          | emendas sem deduplicação, órgão executor ausente no dataset e amostra manual assinada    |
 | EU Funding & Tenders | **Em avaliação**     | validar DSL/datasource, licença de trechos, regras de elegibilidade, cobertura e amostra |
 
 ## Fichas
@@ -142,6 +143,18 @@ Evidência deve ser repetível sem acessar produção. Fixtures sanitizadas e re
 - Normalização: país, idioma, prazo com precisão/fuso, moeda e elegibilidade por regra são testados em `international-sources.test.ts`. **Atende com limites documentados para países multifuso.**
 - Privacidade/atribuição: `raw_payload` usa lista fechada sem contato/e-mail/endereço; resumo por regras e URL oficial. **Atende.**
 - Resiliência: robots, 1 s, 100/página, máximo, `Retry-After` em 429/503 uma vez, sem redirects. **Atende.**
+- Métricas/revisão: relatório por fonte/elegibilidade existe; SLI e amostra assinada: **a verificar**.
+
+### BID
+
+- Escopo: avisos de aquisição específicos e pedidos de manifestação de interesse de projetos financiados pelo BID; `idb-parsers.ts`, `international-client.ts`, `collect-international.ts`.
+- Acesso/oficialidade/licença: DataStore CKAN do portal oficial `data.iadb.org` (dataset de avisos de aquisição), CC BY 4.0. Uso autorizado pelo BID Open Data e `robots.txt` liberado em 15/10/2026; registro em [`docs/ops/autorizacoes-fontes.md`](./ops/autorizacoes-fontes.md). **Atende.**
+- Id/URL: `noticeid` do BID e `documenturl` oficial (só `https`); unique por instalação/id. **Atende.**
+- Paginação/encerramento: `datastore_search` filtrado por tipo, 100/página, ordenado por prazo decrescente, para quando a página só traz prazos vencidos; teto de 10 páginas; remoção só fecha após listagem completa. Testes cobrem parada, teto e idempotência. **Atende.**
+- Deduplicação: intra-fonte por `noticeid`. Emendas (ENMIENDA/AMENDMENT) têm id próprio e aparecem como itens separados, rotulados: **a verificar**. Entre fontes: **a verificar**.
+- Normalização: prazo é um dia sem hora, tratado como fim do dia no país do projeto; data de publicação, idioma por país, setor e país do projeto testados em `international-sources.test.ts`. O dataset não traz órgão executor nem valor: o órgão exibido é o BID e o valor fica nulo. **Atende com limites documentados.**
+- Privacidade/atribuição: `raw_payload` com lista fechada de campos, sem contato; resumo por regras, link para o aviso oficial e “Fonte: BID (Banco Interamericano de Desenvolvimento), CC BY 4.0” no item e no detalhe. O PDF do aviso não é baixado. **Atende.**
+- Resiliência: robots, 1 s entre requests, User-Agent `PardalDigital/1.0`, `Retry-After` em 429/503, duas novas tentativas com espera de 5 s e 10 s em 5xx/timeout/rede, sem redirects; a falha do BID não interrompe as outras fontes internacionais. **Atende.**
 - Métricas/revisão: relatório por fonte/elegibilidade existe; SLI e amostra assinada: **a verificar**.
 
 ### EU Funding & Tenders — em avaliação
