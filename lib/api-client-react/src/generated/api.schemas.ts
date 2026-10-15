@@ -176,6 +176,50 @@ export interface CouponRedemptionResponse {
   alreadyRedeemed: boolean;
 }
 
+export interface OpenTendersByState {
+  /**
+     * State code (UF)
+     * @pattern ^[A-Z]{2}$
+     */
+  state: string;
+  /** @minimum 0 */
+  openTenders: number;
+  /**
+     * Sum of the estimated values that were published, leaving out the ones flagged as implausible (`estimatedValueFlag`); null when no open tender in the state has a value to add
+     * @minimum 0
+     * @nullable
+     */
+  estimatedValueTotal: number | null;
+  /**
+     * Most recent fetch among the open tenders of the state; null when it has none
+     * @nullable
+     */
+  updatedAt: string | null;
+}
+
+export interface OpenTendersByStateMeta {
+  /** @minimum 0 */
+  totalOpenTenders: number;
+  /** When the aggregate was computed */
+  generatedAt: string;
+  /**
+     * Most recent fetch among all counted tenders
+     * @nullable
+     */
+  indexUpdatedAt: string | null;
+  /** @minimum 0 */
+  cacheTtlSeconds: number;
+}
+
+export interface OpenTendersByStateResponse {
+  /**
+     * @minItems 27
+     * @maxItems 27
+     */
+  data: OpenTendersByState[];
+  meta: OpenTendersByStateMeta;
+}
+
 export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
 
 

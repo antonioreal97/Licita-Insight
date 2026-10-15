@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { formatCurrencyPrecise } from '@/lib/format';
@@ -494,6 +495,7 @@ export default function LandingPage() {
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <Hero reducedMotion={reducedMotion} />
         <HowItWorksSection />
+        <OpportunityMapSection />
         <FindsSection />
         <PlanSection />
         <FaqSection />

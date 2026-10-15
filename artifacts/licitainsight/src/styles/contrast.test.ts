@@ -141,6 +141,24 @@ for (const theme of ['creme', 'petroleo'] as const) {
   }
 }
 
+// The choropleth scale encodes volume by lightness alone, so it must keep one direction from the page to the
+// strongest step. Without that, the top band could look like the empty one in grayscale or to colorblind readers.
+for (const theme of ['creme', 'petroleo'] as const) {
+  test(`${theme}: escala do mapa (--mapa-1 a --mapa-5) se afasta do fundo a cada degrau`, () => {
+    const page = luminance(paint(['fundo'], theme));
+    const distance = [1, 2, 3, 4, 5].map((step) => {
+      const fill = luminance(paint([`mapa-${step}`], theme));
+      const [hi, lo] = [fill, page].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    });
+    for (let i = 1; i < distance.length; i += 1) {
+      assert.ok(distance[i] > distance[i - 1] * 1.3, `degrau ${i + 1} pouco distinto do ${i}: ${distance.map((d) => d.toFixed(2)).join(' < ')}`);
+    }
+    assert.ok(distance[0] >= 1.3, `primeiro degrau some no fundo: ${distance[0].toFixed(2)}:1`);
+    assert.ok(distance[4] >= GRAPHIC, `degrau mais forte abaixo de ${GRAPHIC}:1 sobre o fundo`);
+  });
+}
+
 test('paleta do index.css igual a styles/tokens.json', () => {
   const tokens = JSON.parse(readFileSync(new URL('./tokens.json', import.meta.url), 'utf8')) as {
     color: { tokens: { name: string; value: string | Record<string, string> }[] };
