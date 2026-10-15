@@ -131,6 +131,15 @@ Deriva de [activeContext](activeContext.md).
 - Verificado em navegador (sem API): Chrome escolhe WebM, WebKit escolhe HEVC, alfa correto nos dois, temas Creme e
   Petróleo, movimento reduzido. Falta: Safari real, conferência com dados da API e ao vivo após o deploy.
 
+## Em PR — teaser em vídeo na landing (`feat/landing-teaser-section`, 15 out 2026)
+
+- Seção "Na prática" entre o topo e "Como funciona" (`pardal-teaser.tsx`): vídeo do dono, 12 s, mudo, em loop.
+  Arquivos em `public/motion/pardal-teaser*`: VP9 1080p (1,48 MB), H.264 1080p de reserva (1,67 MB), H.264 720p para
+  celular via `<source media>` (0,85 MB), capa AVIF (37 kB). Nada baixa antes de a seção chegar a meia tela da dobra;
+  toca só com metade visível, pausa fora da tela, botão Pausar/Reproduzir sempre visível; com movimento reduzido,
+  só a capa até o clique. Não é momento do pardal 3D (sem `data-pardal-momento`); voo e cortinas conferidos iguais.
+- Capturas e comparação dos momentos em `docs/reviews/teaser-landing/`. Falta: Safari real e conferir ao vivo.
+
 ## Em PR — começo guiado e medidor de perfil (`feat/guided-onboarding`, 15 out 2026)
 
 - Só frontend, em `src/features/guided-onboarding/`. Quatro passos (o que vende, região, faixa de valor, porte e
