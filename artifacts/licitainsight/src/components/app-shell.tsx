@@ -41,6 +41,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { signInWithGoogle, useSession, useSignOut } from '@/features/auth/hooks/use-session';
 import { AccessBadge, TrialEndingBanner } from '@/features/billing/components/trial-notice';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { OnboardingHost } from '@/features/guided-onboarding/onboarding-host';
 import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
 import { useOpportunityAccess } from '@/features/opportunities/hooks/use-opportunities';
 import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
@@ -295,7 +296,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </header>
           <TrialEndingBanner />
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
-            {children}
+            <OnboardingHost>{children}</OnboardingHost>
           </main>
           <footer className="mx-auto flex max-w-page flex-col gap-2 border-t border-border px-4 py-6 type-meta text-muted-foreground sm:px-8 lg:px-10">
             <span>© {new Date().getFullYear()} Pardal Digital</span>

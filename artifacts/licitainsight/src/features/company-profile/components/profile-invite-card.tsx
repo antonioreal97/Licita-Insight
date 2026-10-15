@@ -1,29 +1,32 @@
-import { Link } from 'wouter';
-import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/common/action-button';
 import { useSession } from '@/features/auth/hooks/use-session';
-import { useBilling } from '@/features/billing/hooks/use-billing';
+import { ProfileMeter } from '@/features/guided-onboarding/profile-meter';
+import { useStartGuidedOnboarding } from '@/features/guided-onboarding/onboarding-host';
+import { profileProgress } from '@/features/guided-onboarding/profile-progress';
 import { useCompanyProfile } from '../hooks/use-company-profile';
-import { PROFILE_HREF } from './fit-badge';
 
-/** Dashboard invitation, not a gate: shown only to accounts with access and no profile yet; gone once the profile exists. */
+/** Available to every signed-in account; editing the profile never requires a subscription. */
 export function ProfileInviteCard() {
   const session = useSession();
-  const billing = useBilling();
   const profile = useCompanyProfile();
-  if (session.status !== 'authenticated' || !billing.data?.entitled || !profile.isSuccess || profile.data.profile) return null;
+  const start = useStartGuidedOnboarding();
+  if (session.status !== 'authenticated' || !profile.isSuccess) return null;
+  const saved = profile.data.profile;
+  const complete = profileProgress(saved).percent === 100;
   return (
-    <div className="rounded-xl border border-primary/25 bg-card p-5" data-testid="card-dashboard-profile-invite">
-      <h2 className="type-section text-foreground">Veja o que combina com sua empresa</h2>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-        Conte o que vocês fornecem e onde atuam. A busca passa a marcar os editais com alta aderência e explica o motivo.
-      </p>
-      <Link
-        href={PROFILE_HREF}
-        data-testid="link-dashboard-profile-invite"
-        className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring"
-      >
-        Cadastrar perfil da empresa <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
-      </Link>
+    <div className="space-y-3" data-testid="card-dashboard-profile-invite">
+      {!complete && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5">
+          <div>
+            <h2 className="type-section">Seu próximo edital começa pelo perfil</h2>
+            <p className="mt-1 type-meta text-muted-foreground">Cerca de 3 minutos para aproximar a seleção do que você faz.</p>
+          </div>
+          <Button variant="outline" onClick={() => start()} data-testid="button-dashboard-guided-start">
+            {saved ? 'Completar perfil' : 'Começar em 3 minutos'}
+          </Button>
+        </div>
+      )}
+      <ProfileMeter profile={saved} onChoose={start} />
     </div>
   );
 }
