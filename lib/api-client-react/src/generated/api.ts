@@ -69,6 +69,8 @@ import type {
   ProfileDescriptionSuggestionRequest,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfileMatchPreview,
+  ProfileMatchPreviewRequest,
   ProfileMunicipalitiesResponse,
   ProfilePlatformsResponse,
   PutSavedTenderRequest,
@@ -1821,6 +1823,95 @@ export const useSuggestProfileFiltersFromDescription = <TError = ErrorType<Inval
         TContext
       > => {
       return useMutation(getSuggestProfileFiltersFromDescriptionMutationOptions(options));
+    }
+
+export const getPreviewProfileOpenTenderMatchesUrl = () => {
+
+
+
+
+  return `/api/v1/profile/match-preview`
+}
+
+/**
+ * Each term matches as a whole expression (words together and in order, Portuguese stemming), or the tender carries one of the categories. Nothing is stored.
+ * @summary Count open tenders matching the profile terms and categories being edited
+ */
+export const previewProfileOpenTenderMatches = async (profileMatchPreviewRequest: ProfileMatchPreviewRequest, options?: Parameters<typeof customFetch>[1]): Promise<ProfileMatchPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProfileMatchPreview>(getPreviewProfileOpenTenderMatchesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(profileMatchPreviewRequest)
+  }
+);}
+
+
+
+
+
+export const getPreviewProfileOpenTenderMatchesMutationKey = () => ['previewProfileOpenTenderMatches'] as const;
+
+export const getPreviewProfileOpenTenderMatchesMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>, TError,PreviewProfileOpenTenderMatchesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>, TError,PreviewProfileOpenTenderMatchesMutationVariables, TContext> => {
+
+const mutationKey = getPreviewProfileOpenTenderMatchesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>, PreviewProfileOpenTenderMatchesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewProfileOpenTenderMatches(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewProfileOpenTenderMatchesMutationResult = NonNullable<Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>>
+    export type PreviewProfileOpenTenderMatchesMutationBody = BodyType<ProfileMatchPreviewRequest>
+    export type PreviewProfileOpenTenderMatchesMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>
+    export type PreviewProfileOpenTenderMatchesMutationVariables = {data: BodyType<ProfileMatchPreviewRequest>}
+
+    /**
+ * @summary Count open tenders matching the profile terms and categories being edited
+ */
+export const usePreviewProfileOpenTenderMatches = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>, TError,PreviewProfileOpenTenderMatchesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewProfileOpenTenderMatches>>,
+        TError,
+        PreviewProfileOpenTenderMatchesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewProfileOpenTenderMatchesMutationOptions(options));
     }
 
 export const getGetTenderFitsUrl = (params: GetTenderFitsParams,) => {

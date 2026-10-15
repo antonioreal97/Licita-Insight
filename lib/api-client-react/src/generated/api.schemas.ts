@@ -1197,6 +1197,26 @@ export interface ProfileDescriptionSuggestions {
   estimatedOpenTenderCount: number;
 }
 
+export interface ProfileMatchPreviewRequest {
+  /**
+     * @maxItems 40
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  terms?: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  categories?: string[];
+}
+
+export interface ProfileMatchPreview {
+  /** @minimum 0 */
+  estimatedOpenTenderCount: number;
+}
+
 export interface FitEvidence {
   documentTitle: string;
   documentUrl: string;

@@ -1282,6 +1282,43 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
         ),
       );
       assert.equal(suggested.categories[0]?.slug, "eventos-cultura");
+
+      assert.equal(
+        (
+          await request("/v1/profile/match-preview", {
+            method: "POST",
+            body: JSON.stringify({ terms: ["iluminação cênica"] }),
+          })
+        ).status,
+        401,
+      );
+      const preview = await request(
+        "/v1/profile/match-preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            terms: ["iluminação cênica", "transmissão ao vivo"],
+            categories: ["eventos-cultura"],
+          }),
+        },
+        authenticatedCookie,
+      );
+      assert.equal(preview.status, 200);
+      const previewBody = (await preview.json()) as {
+        estimatedOpenTenderCount: number;
+      };
+      assert.equal(typeof previewBody.estimatedOpenTenderCount, "number");
+      assert.ok(previewBody.estimatedOpenTenderCount >= 0);
+      assert.equal(
+        (
+          await request(
+            "/v1/profile/match-preview",
+            { method: "POST", body: JSON.stringify({ terms: "limpeza" }) },
+            authenticatedCookie,
+          )
+        ).status,
+        400,
+      );
     },
   );
 
