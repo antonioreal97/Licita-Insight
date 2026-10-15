@@ -334,6 +334,33 @@ paths:
         "200": { description: Workspace widgets, content: { application/json: { schema: { $ref: "#/components/schemas/WorkspaceDashboard" } } } }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/FeatureDisabled" }
+  /v1/public/tenders/by-state:
+    get:
+      operationId: getOpenTendersByState
+      tags: [search]
+      summary: Count open tenders and sum their estimated values by state
+      description: >-
+        Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes
+        and served from memory in between.
+      security: []
+      responses:
+        "200":
+          description: Open tenders by state
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300, stale-while-revalidate=600
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenTendersByStateResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
   /v1/tenders/{id}:
     get:
       operationId: getTenderById
@@ -454,6 +481,31 @@ paths:
                 {
                   $ref: "#/components/schemas/TransparencyTenderResultsResponse",
                 }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/SearchUnavailable" }
+  /v1/tenders/{id}/award-history:
+    get:
+      operationId: getTenderAwardHistory
+      tags: [transparency]
+      summary: Get the award history of similar purchases by the same organization
+      description: >
+        Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization
+        (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this
+        tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons,
+        foreign and unidentified suppliers are only counted as groups.
+      parameters:
+        - {
+            name: id,
+            in: path,
+            required: true,
+            schema: { type: string, minLength: 1 },
+          }
+      responses:
+        "200":
+          description: Aggregated history; zero counts when nothing similar is in the collected coverage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AwardHistoryResponse" }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/SearchUnavailable" }
   /v1/tenders/{id}/ask-status:
@@ -745,6 +797,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TenderFitsResponse"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/SubscriptionRequired"
+  /v1/me/tender-highlights:
+    get:
+      operationId: getTenderHighlights
+      tags: [ai]
+      summary: Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+      description: >-
+        Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or
+        calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: tenderIds
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200":
+          description: Highlights by tender id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderHighlightsResponse"
         "400":
           $ref: "#/components/responses/InvalidParameter"
         "401":
@@ -2265,6 +2350,53 @@ components:
         durationDays: { type: integer, enum: [7, 30] }
         alreadyRedeemed: { type: boolean }
       required: [accessUntil, durationDays, alreadyRedeemed]
+    OpenTendersByState:
+      type: object
+      properties:
+        state:
+          type: string
+          pattern: "^[A-Z]{2}$"
+          description: State code (UF)
+        openTenders:
+          type: integer
+          minimum: 0
+        estimatedValueTotal:
+          type: [number, "null"]
+          minimum: 0
+          description: >-
+            Sum of the estimated values that were published, leaving out the ones flagged as implausible
+            (`estimatedValueFlag`); null when no open tender in the state has a value to add
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among the open tenders of the state; null when it has none
+      required: [state, openTenders, estimatedValueTotal, updatedAt]
+    OpenTendersByStateMeta:
+      type: object
+      properties:
+        totalOpenTenders: { type: integer, minimum: 0 }
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the aggregate was computed
+        indexUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among all counted tenders
+        cacheTtlSeconds: { type: integer, minimum: 0 }
+      required: [totalOpenTenders, generatedAt, indexUpdatedAt, cacheTtlSeconds]
+    OpenTendersByStateResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          minItems: 27
+          maxItems: 27
+          items:
+            $ref: "#/components/schemas/OpenTendersByState"
+        meta:
+          $ref: "#/components/schemas/OpenTendersByStateMeta"
+      required: [data, meta]
     BillingPlanResponse:
       type: object
       properties:
@@ -3336,6 +3468,43 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/TenderFit"
       required: [profileVersion, results]
+    TenderRequirementHighlight:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              me_epp_exclusive,
+              me_epp_quota,
+              site_visit,
+              bid_guarantee,
+              samples,
+              technical_certificate,
+              technical_qualification,
+              minimum_capital,
+              contract_guarantee,
+            ]
+        label: { type: string }
+      required: [code, label]
+    TenderHighlights:
+      type: object
+      properties:
+        requirements:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/TenderRequirementHighlight"
+      required: [requirements]
+    TenderHighlightsResponse:
+      type: object
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TenderHighlights"
+      required: [results]
     TenderStatus:
       type: string
       enum: [open, under_review, closed, suspended, cancelled]
@@ -3865,6 +4034,112 @@ components:
           }
         meta: { $ref: "#/components/schemas/TransparencyMeta" }
       required: [data, meta]
+    AwardHistoryWinner:
+      type: object
+      description: >
+        `name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual`
+        (CPF), `foreign` and `unidentified` are groups and never carry a name or document.
+      properties:
+        name: { type: [string, "null"] }
+        cnpj: { type: [string, "null"] }
+        kind: { type: string, enum: [company, individual, foreign, unidentified] }
+        wins: { type: integer, minimum: 1 }
+      required: [name, cnpj, kind, wins]
+    AwardHistoryRecentPurchase:
+      type: object
+      properties:
+        purchasePncpControlNumber: { type: string }
+        tenderId: { type: [string, "null"] }
+        date: { type: [string, "null"], format: date }
+        object: { type: [string, "null"] }
+        value: { type: [number, "null"] }
+        valueSource: { type: [string, "null"], enum: [results, contracts, null] }
+        winners:
+          { type: array, items: { $ref: "#/components/schemas/AwardHistoryWinner" } }
+        officialUrl: { type: [string, "null"] }
+      required: [purchasePncpControlNumber, tenderId, date, object, value, valueSource, winners, officialUrl]
+    AwardHistoryRange:
+      type: [object, "null"]
+      properties:
+        min: { type: number }
+        median: { type: number }
+        max: { type: number }
+        count: { type: integer }
+      required: [min, median, max, count]
+    AwardHistorySpread:
+      type: [object, "null"]
+      properties:
+        p25: { type: number }
+        median: { type: number }
+        p75: { type: number }
+        count: { type: integer }
+      required: [p25, median, p75, count]
+    AwardHistory:
+      type: object
+      properties:
+        tenderId: { type: string }
+        scope: { type: string, enum: [unit, organization] }
+        organizationName: { type: string }
+        purchasingUnit: { type: [string, "null"] }
+        windowMonths: { type: integer }
+        since: { type: string, format: date }
+        criteria:
+          type: object
+          properties:
+            keywords: { type: array, items: { type: string } }
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  slug: { type: string }
+                  label: { type: string }
+                required: [slug, label]
+            rule: { type: string }
+          required: [keywords, categories, rule]
+        purchases:
+          type: object
+          properties:
+            total: { type: integer }
+            last12Months: { type: integer }
+            withResults: { type: integer }
+          required: [total, last12Months, withResults]
+        winners:
+          type: object
+          properties:
+            distinct: { type: integer }
+            top:
+              { type: array, items: { $ref: "#/components/schemas/AwardHistoryWinner" } }
+          required: [distinct, top]
+        prices:
+          type: object
+          properties:
+            purchaseValue: { $ref: "#/components/schemas/AwardHistoryRange" }
+            discountPercent: { $ref: "#/components/schemas/AwardHistorySpread" }
+          required: [purchaseValue, discountPercent]
+        recent:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/AwardHistoryRecentPurchase" },
+          }
+      required: [tenderId, scope, organizationName, purchasingUnit, windowMonths, since, criteria, purchases, winners, prices, recent]
+    AwardHistoryResponse:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/AwardHistory" }
+        meta:
+          type: object
+          properties:
+            coverage: { type: string }
+            valueSemantics: { type: string }
+            access:
+              type: object
+              properties:
+                winnerNames: { type: string, enum: [entitled, public] }
+                unlocked: { type: boolean }
+              required: [winnerNames, unlocked]
+          required: [coverage, valueSemantics, access]
+      required: [data, meta]
     Pagination:
       type: object
       properties:
@@ -4354,6 +4629,39 @@ components:
           eligibilityCheckedAt,
           details,
         ]
+    OpportunityNoticeOrigin:
+      type: string
+      enum: [source_page, document]
+      description: "`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents."
+    OpportunityApplication:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        platform:
+          type: [string, "null"]
+          description: Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.
+        label:
+          type: [string, "null"]
+          description: Platform name to show ("Plataforma Sucupira").
+        article:
+          type: [string, "null"]
+          enum: [a, o, null]
+          description: Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle:
+          type: [string, "null"]
+          description: Title of the document that indicates the link, when `origin` is `document`.
+      required: [url, platform, label, article, origin, documentTitle]
+    OpportunityNoticeDates:
+      type: object
+      properties:
+        registrationFrom: { type: [string, "null"], format: date-time }
+        registrationTo: { type: [string, "null"], format: date-time }
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle: { type: [string, "null"] }
+      required: [registrationFrom, registrationTo, origin, documentTitle]
     OpportunityDocument:
       type: object
       properties:
@@ -4417,6 +4725,20 @@ components:
           description: Set on international calls only.
           anyOf:
             - $ref: "#/components/schemas/InternationalOpportunity"
+            - type: "null"
+        application:
+          description: Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityApplication"
+            - type: "null"
+        applicationCheckedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Last reading of the call page and documents. `null` while the call was never read.
+        noticeDates:
+          description: Registration period read from the notice. Set only when the source publishes no dates of its own.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityNoticeDates"
             - type: "null"
       required:
         [

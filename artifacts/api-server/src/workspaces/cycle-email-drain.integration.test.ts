@@ -51,6 +51,7 @@ test("e-mail jobs, retention and the drain query under the cutover flag", { skip
   const { retryEmailDeliveries, runDailyEmailDigest, runImmediateEmailAlerts } = await import("../email/email-service");
   const { createTrialEndingNotifications, evaluateSavedSearchNotifications } = await import("../account/notification-service");
   const { evaluateProfileAlertNotifications } = await import("../ai/company-fit-service");
+  const { loadEmailTenderHighlights } = await import("../ai/tender-highlights");
   const { runDailyRecommendations } = await import("../recommendations/recommendation-service");
   const { purgeRetainedPersonalData } = await import("../account/personal-data-retention");
   const { tryRunSingletonJob } = await import("../jobs/job-lock");
@@ -164,10 +165,10 @@ test("e-mail jobs, retention and the drain query under the cutover flag", { skip
     assert.equal(response.status, 200);
   };
   /** The existing fake transport: records what would be sent and answers as the provider would. */
-  const sent: Array<{ to: string; key: string }> = [];
+  const sent: Array<{ to: string; key: string; html: string; text: string }> = [];
   let duringSend: (() => Promise<void>) | undefined;
-  const sendEmail = async (message: { to: string }, key: string) => {
-    sent.push({ to: message.to, key });
+  const sendEmail = async (message: { to: string; html: string; text: string }, key: string) => {
+    sent.push({ to: message.to, key, html: message.html, text: message.text });
     const hook = duringSend;
     duringSend = undefined;
     await hook?.();
@@ -254,6 +255,126 @@ test("e-mail jobs, retention and the drain query under the cutover flag", { skip
       { mode: "digest", status: "sent", attempts: 1, workspace_id: deadlineOnly.workspaceId, dedupe_key: `email:digest:${deadlineOnly.userId}:${today()}`, links: 0, mismatched: 0 },
     ]);
     assert.equal(sentTo(both).length, 1);
+  });
+
+  await t.test("workspaces: saved-search matches consolidate by search and keep the workspace through the e-mail link", async () => {
+    const who = await account("e2-saved-search@example.test");
+    const searchId = randomUUID();
+    const now = new Date();
+    const firstAt = new Date(now.getTime() - 20 * 60_000);
+    const firstRun = new Date(now.getTime() - 15 * 60_000);
+    const secondAt = new Date(now.getTime() - 10 * 60_000);
+    const secondRun = new Date(now.getTime() - 5 * 60_000);
+    await owner.query(
+      `insert into saved_searches (id, user_id, workspace_id, name, query, alerts_enabled, last_checked_at)
+       values ($1, $2, $3, 'Computadores', 'q=computadores', true, $4)`,
+      [searchId, who.userId, who.workspaceId, new Date(now.getTime() - 30 * 60_000)],
+    );
+    await owner.query("update tenders set created_at = $1 where id = $2", [firstAt, tenderIdOf(1)]);
+    await owner.query("update tenders set created_at = $1 where id = $2", [new Date(now.getTime() + 60_000), tenderIdOf(2)]);
+    await evaluateSavedSearchNotifications(firstRun);
+    await owner.query("update tenders set created_at = $1 where id = $2", [secondAt, tenderIdOf(2)]);
+    await evaluateSavedSearchNotifications(secondRun);
+
+    const consolidated = await all(
+      `select id, workspace_id, saved_search_id, match_count, tender_ids
+       from notifications where user_id = $1 and saved_search_id = $2 order by created_at`,
+      [who.userId, searchId],
+    );
+    assert.deepEqual(consolidated, [
+      {
+        id: consolidated[0]?.id,
+        workspace_id: who.workspaceId,
+        saved_search_id: searchId,
+        match_count: 2,
+        tender_ids: [tenderIdOf(1), tenderIdOf(2)],
+      },
+    ]);
+
+    assert.deepEqual(await runDailyEmailDigest(now, sendEmail), { queued: 1, sent: 1, failed: 0, skipped: 0 });
+    assert.deepEqual(
+      await one(
+        `select d.workspace_id as delivery_workspace, l.workspace_id as link_workspace
+         from email_delivery_notifications l join email_deliveries d on d.id = l.delivery_id
+         where l.notification_id = $1`,
+        [consolidated[0].id],
+      ),
+      { delivery_workspace: who.workspaceId, link_workspace: who.workspaceId },
+    );
+
+    await owner.query("update tenders set created_at = $1 where id = $2", [new Date(now.getTime() - 60_000), tenderIdOf(1)]);
+    await evaluateSavedSearchNotifications(now);
+    const afterDelivery = await all(
+      `select workspace_id, saved_search_id, match_count
+       from notifications where user_id = $1 and saved_search_id = $2 order by created_at`,
+      [who.userId, searchId],
+    );
+    assert.deepEqual(afterDelivery, [
+      { workspace_id: who.workspaceId, saved_search_id: searchId, match_count: 2 },
+      { workspace_id: who.workspaceId, saved_search_id: searchId, match_count: 1 },
+    ]);
+  });
+
+  await t.test("workspaces: personalized tender highlights read the notification workspace profile and fits", async () => {
+    const who = await account("e2-highlights@example.test");
+    const profile = {
+      description: "Fornecemos equipamentos de informática e suporte técnico corporativo.",
+      offerings: ["computadores"],
+      exclusions: [],
+      selectedCategories: [],
+      selectedKeywords: [],
+      excludedKeywords: [],
+      registeredPlatforms: ["bll"],
+      coverage: { scope: "national", mode: "strict", acceptsRemote: false },
+      valueRange: { min: null, max: null },
+      size: "other",
+    };
+    assert.equal(
+      (await request("/v1/me/company-profile", { method: "PUT", headers: csrf, body: JSON.stringify(profile) }, who.cookie)).status,
+      200,
+    );
+    await owner.query(
+      "update tenders set platform='comprasgov', platform_label='Compras.gov.br' where id=$1",
+      [tenderIdOf(1)],
+    );
+    await owner.query(
+      `insert into company_tender_fits
+       (id, user_id, workspace_id, tender_id, profile_version, tender_fingerprint, requested_model, prompt_version,
+        status, level, score, reasons, checked_at)
+       values ($1, $2, $3, $4, 1, 'test', 'test-model', 1, 'ready', 'high', 0.9,
+        '[{"kind":"offering_match","terms":["computadores"]}]', now())`,
+      [randomUUID(), who.userId, who.workspaceId, tenderIdOf(1)],
+    );
+    const highlights = await loadEmailTenderHighlights(
+      who.userId,
+      [tenderIdOf(1)],
+      undefined,
+      { mode: "workspaces", workspaceId: who.workspaceId },
+    );
+    assert.deepEqual(highlights.get(tenderIdOf(1))?.lines, [
+      "Alta aderência ao seu perfil: combina com “computadores”",
+      "Disputa em Compras.gov.br: você ainda não é cadastrado nesta plataforma",
+    ]);
+
+    const notificationId = randomUUID();
+    await owner.query(
+      `insert into notifications
+       (id, user_id, workspace_id, type, dedupe_key, created_at, saved_search_id, saved_search_name,
+        saved_search_query, match_count, tender_ids)
+       values ($1, $2, $3, 'saved_search_new_matches', $4, now(), 'highlight-search', 'Computadores',
+        'q=computadores', 1, $5)`,
+      [
+        notificationId,
+        who.userId,
+        who.workspaceId,
+        `saved-search:highlight-search:${today()}`,
+        JSON.stringify([tenderIdOf(1)]),
+      ],
+    );
+    assert.deepEqual(await runDailyEmailDigest(new Date(), sendEmail), { queued: 1, sent: 1, failed: 0, skipped: 0 });
+    const [email] = sentTo(who);
+    assert.match(email!.html, /Alta aderência ao seu perfil: combina com “computadores”/);
+    assert.match(email!.text, /você ainda não é cadastrado nesta plataforma/);
   });
 
   await t.test("workspaces: the immediate alert of a monitored tender goes out once, with the workspace", async () => {

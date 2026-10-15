@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { ArrowDown, CalendarClock } from 'lucide-react';
 import type { TenderDetail } from '@/api';
 import { Button } from '@/components/common/action-button';
+import { GlossaryText } from '@/features/help/components/glossary-text';
 import { DeadlineIndicator } from '@/features/tenders/components/deadline-indicator';
 import { isFuture } from '@/features/tenders/lib/deadline';
 import { formatDateTime } from '@/lib/format';
@@ -36,12 +37,14 @@ export function NextStepsPanel({ tender, monitored }: { tender: TenderDetail; mo
         </h2>
       </div>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 type-body font-semibold text-foreground" data-testid="text-next-step">
-        {step.title}
+        <span>
+          <GlossaryText>{step.title}</GlossaryText>
+        </span>
         {step.withDeadline && <DeadlineIndicator deadline={tender.proposalDeadline} status={tender.status} variant="inline" />}
       </p>
       {step.details.map((detail) => (
         <p key={detail} className="mt-1 type-meta text-muted-foreground">
-          {detail}
+          <GlossaryText>{detail}</GlossaryText>
         </p>
       ))}
       {step.askSubmitted && participation && (

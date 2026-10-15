@@ -13,6 +13,8 @@ import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { OpportunityFilters } from './components/opportunity-filters';
 import { statePatch, stateOptions } from './lib/opportunity-filters';
 import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
+import { ApplicationBadge } from './components/application-panel';
+import { NOTICE_DATE_NOTE, registrationDates } from './lib/application';
 import {
   INTERNATIONAL_KINDS,
   INTERNATIONAL_SOURCES,
@@ -68,10 +70,13 @@ const AREAS_ON_ROW = 3;
 const placeOf = (opportunity: OpportunitySummary): string =>
   opportunity.city && opportunity.state ? `${opportunity.city} (${opportunity.state})` : (opportunity.state ?? 'Nacional');
 
-const registrationPeriod = (opportunity: OpportunitySummary): string =>
-  opportunity.continuousFlow && !opportunity.registrationTo
-    ? `Inscrições desde ${formatDate(opportunity.registrationFrom)} · fluxo contínuo`
-    : `Inscrições ${formatDate(opportunity.registrationFrom)} – ${formatDate(opportunity.registrationTo)}`;
+const registrationPeriod = (opportunity: OpportunitySummary): string => {
+  const dates = registrationDates(opportunity);
+  const note = dates.fromNotice ? ` (${NOTICE_DATE_NOTE})` : '';
+  return opportunity.continuousFlow && !dates.to
+    ? `Inscrições desde ${formatDate(dates.from)} · fluxo contínuo${note}`
+    : `Inscrições ${formatDate(dates.from)} – ${formatDate(dates.to)}${note}`;
+};
 
 function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
   const place = placeOf(opportunity);
@@ -90,6 +95,7 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
           <span className="type-label text-muted-foreground">{place}</span>
           {opportunity.profileMatch && <span className="type-label font-semibold text-primary">Combina com seu perfil</span>}
           {opportunity.individualListing && <IndividualListingBadge />}
+          <ApplicationBadge application={opportunity.application} />
         </div>
         {areas.length > 0 && (
           <ul aria-label="Áreas culturais" className="flex flex-wrap gap-1.5">

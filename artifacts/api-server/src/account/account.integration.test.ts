@@ -2305,4 +2305,224 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     assert.equal(sentDelivery?.attempts, 2);
     assert.equal(sentDelivery?.providerMessageId, "retry-success");
   });
+
+  await t.test("keeps one saved-search notification per saved search and Brasília day", async () => {
+    const cookie = await login("daily-saved-search@example.test");
+    const session = await request("/v1/auth/session", {}, cookie);
+    const userId = ((await session.json()) as { user: { id: string } }).user.id;
+    await db
+      .update(usersTable)
+      .set({ emailDigest: "daily", emailImmediateCritical: true })
+      .where(eq(usersTable.id, userId));
+    const created = await request(
+      "/v1/me/saved-searches",
+      {
+        method: "POST",
+        headers: csrf,
+        body: JSON.stringify({ name: "limpeza", query: "q=limpeza", alertsEnabled: true }),
+      },
+      cookie,
+    );
+    assert.equal(created.status, 201);
+    const savedSearchId = ((await created.json()) as { id: string }).id;
+    // 20/10/2026 07:00 in Brasília.
+    await db
+      .update(savedSearchesTable)
+      .set({ lastCheckedAt: new Date("2026-10-20T10:00:00.000Z") })
+      .where(eq(savedSearchesTable.id, savedSearchId));
+
+    const tenderIdFor = (sequence: number) => `00394460000141-1-${String(sequence).padStart(6, "0")}-2026`;
+    const addTenders = async (sequences: number[], createdAt: string) => {
+      await upsertPublications(
+        sequences.map((sequence) =>
+          publication(sequence, { objetoCompra: `Serviços de limpeza predial TEST DATA ${sequence}` }),
+        ),
+        new Date(createdAt),
+      );
+      await pool.query("UPDATE tenders SET created_at = $1 WHERE id = ANY($2)", [
+        new Date(createdAt),
+        sequences.map(tenderIdFor),
+      ]);
+    };
+    const notificationsOfSearch = () =>
+      db
+        .select()
+        .from(notificationsTable)
+        .where(eq(notificationsTable.savedSearchId, savedSearchId))
+        .orderBy(notificationsTable.createdAt);
+    const newMatchesCount = async () =>
+      (
+        await db
+          .select({ value: savedSearchesTable.newMatchesCount })
+          .from(savedSearchesTable)
+          .where(eq(savedSearchesTable.id, savedSearchId))
+      )[0]!.value;
+
+    await addTenders([9001, 9002], "2026-10-20T10:05:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-20T10:15:00.000Z"));
+    let rows = await notificationsOfSearch();
+    assert.equal(rows.length, 1);
+    const dailyId = rows[0]!.id;
+    assert.equal(rows[0]!.dedupeKey, `saved-search:${savedSearchId}:2026-10-20`);
+    assert.equal(rows[0]!.matchCount, 2);
+    assert.equal(
+      (
+        await request(
+          "/v1/me/notifications/read",
+          { method: "POST", headers: csrf, body: JSON.stringify({ ids: [dailyId] }) },
+          cookie,
+        )
+      ).status,
+      200,
+    );
+
+    // A later cycle of the same day adds to the day's notification and marks it unread again.
+    await addTenders([9003], "2026-10-20T10:20:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-20T10:30:00.000Z"));
+    // A cycle without new tenders changes nothing.
+    await runSavedSearchEvaluationJob(new Date("2026-10-20T10:45:00.000Z"));
+    rows = await notificationsOfSearch();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.id, dailyId);
+    assert.equal(rows[0]!.matchCount, 3);
+    assert.deepEqual(rows[0]!.tenderIds, [9001, 9002, 9003].map(tenderIdFor));
+    assert.equal(rows[0]!.readAt, null);
+    assert.equal(rows[0]!.createdAt.toISOString(), "2026-10-20T10:30:00.000Z");
+    assert.equal(await newMatchesCount(), 3);
+
+    // Past the cap, the first 20 ids in arrival order stay and the count keeps the total.
+    const batch = Array.from({ length: 19 }, (_, index) => 9004 + index);
+    await addTenders(batch, "2026-10-20T10:50:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-20T11:00:00.000Z"));
+    rows = await notificationsOfSearch();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.matchCount, 22);
+    assert.deepEqual(rows[0]!.tenderIds, [9001, 9002, 9003, ...batch].slice(0, 20).map(tenderIdFor));
+    assert.equal(await newMatchesCount(), 22);
+
+    // Concurrent cycles: the per-search advisory lock lets one count the new tender.
+    await addTenders([9023], "2026-10-20T11:05:00.000Z");
+    await Promise.all([
+      runSavedSearchEvaluationJob(new Date("2026-10-20T11:15:00.000Z")),
+      runSavedSearchEvaluationJob(new Date("2026-10-20T11:15:00.000Z")),
+    ]);
+    rows = await notificationsOfSearch();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.matchCount, 23);
+    assert.equal(await newMatchesCount(), 23);
+
+    // The bell feed shows the day once; the snapshot link keeps working past the cap.
+    const feed = await request("/v1/me/notifications?pageSize=50", {}, cookie);
+    assert.equal(feed.status, 200);
+    const feedBody = (await feed.json()) as { data: { id: string; type: string; matchCount: number | null; readAt: string | null }[] };
+    const feedItems = feedBody.data.filter(({ type }) => type === "saved_search_new_matches");
+    assert.deepEqual(
+      feedItems.map(({ id, matchCount, readAt }) => ({ id, matchCount, readAt })),
+      [{ id: dailyId, matchCount: 23, readAt: null }],
+    );
+    const snapshot = await request(`/v1/tenders/search?notification=${dailyId}&pageSize=100&facets=false`, {}, cookie);
+    assert.equal(snapshot.status, 200);
+    const snapshotBody = (await snapshot.json()) as {
+      pagination: { total: number };
+      meta: { notification: { matchCount: number; storedTenderCount: number } | null };
+    };
+    assert.equal(snapshotBody.pagination.total, 20);
+    assert.equal(snapshotBody.meta.notification?.matchCount, 23);
+    assert.equal(snapshotBody.meta.notification?.storedTenderCount, 20);
+
+    // Saved searches never go out as immediate alerts.
+    const immediateMessages: EmailMessage[] = [];
+    await runImmediateEmailAlerts(new Date("2026-10-20T11:40:00.000Z"), {
+      windowMinutes: 10,
+      sendEmail: async (message) => {
+        immediateMessages.push(message);
+        return { status: "sent", providerMessageId: `immediate-daily-${immediateMessages.length}` };
+      },
+    });
+    assert.equal(immediateMessages.filter(({ to }) => to === "daily-saved-search@example.test").length, 0);
+
+    const digestMessages: EmailMessage[] = [];
+    const digestSend = async (message: EmailMessage) => {
+      digestMessages.push(message);
+      return { status: "sent" as const, providerMessageId: `digest-daily-${digestMessages.length}` };
+    };
+    const ownDigests = () => digestMessages.filter(({ to }) => to === "daily-saved-search@example.test");
+    // A cycle that commits while the digest is linking the notification still reaches the e-mail: the digest
+    // waits for the cycle's row lock and reads the snapshot again.
+    const cycle = await pool.connect();
+    try {
+      await cycle.query("BEGIN");
+      await cycle.query("SELECT id FROM notifications WHERE id = $1 FOR UPDATE", [dailyId]);
+      await cycle.query("UPDATE notifications SET match_count = match_count + 100 WHERE id = $1", [dailyId]);
+      const digest = runDailyEmailDigest(new Date("2026-10-20T11:20:00.000Z"), digestSend);
+      for (let attempt = 0; ; attempt += 1) {
+        const { rows: waiting } = await pool.query("SELECT 1 FROM pg_locks WHERE NOT granted LIMIT 1");
+        if (waiting.length > 0) break;
+        assert.ok(attempt < 200, "the digest should wait for the cycle's row lock");
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      await cycle.query("COMMIT");
+      await digest;
+    } finally {
+      cycle.release();
+    }
+    assert.equal(ownDigests().length, 1);
+    assert.equal(ownDigests()[0]!.subject, "Pardal Digital: 1 atualização no seu resumo");
+    assert.match(ownDigests()[0]!.text, /123 novos resultados/);
+
+    // After the e-mail the day's notification is frozen: the rest of the day goes to a continuation.
+    await addTenders([9024], "2026-10-20T11:25:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-20T11:30:00.000Z"));
+    await addTenders([9025], "2026-10-21T02:50:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-21T02:55:00.000Z"));
+    rows = await notificationsOfSearch();
+    assert.deepEqual(
+      rows.map(({ dedupeKey, matchCount }) => ({ dedupeKey, matchCount })),
+      [
+        { dedupeKey: `saved-search:${savedSearchId}:2026-10-20`, matchCount: 123 },
+        { dedupeKey: `saved-search:${savedSearchId}:2026-10-20:2`, matchCount: 2 },
+      ],
+    );
+
+    // Midnight in Brasília opens the next day's notification.
+    await addTenders([9026, 9027], "2026-10-21T03:30:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-21T03:45:00.000Z"));
+    rows = await notificationsOfSearch();
+    assert.equal(rows.length, 3);
+    assert.equal(rows[2]!.dedupeKey, `saved-search:${savedSearchId}:2026-10-21`);
+    assert.equal(rows[2]!.matchCount, 2);
+    assert.equal(await newMatchesCount(), 27);
+
+    // Rows from before the daily notification (one per cycle) still exist; the digest groups them by saved search.
+    await db.insert(notificationsTable).values(
+      [140, 77, 1].map((matchCount, index) => ({
+        id: `daily-legacy-${index}`,
+        userId,
+        type: "saved_search_new_matches",
+        dedupeKey: `saved-search:${savedSearchId}:legacy-${index}`,
+        createdAt: new Date(`2026-10-21T0${4 + index}:00:00.000Z`),
+        savedSearchId,
+        savedSearchName: "limpeza",
+        savedSearchQuery: "q=limpeza",
+        matchCount,
+        tenderIds: [tenderIdFor(9001)],
+      })),
+    );
+    await runDailyEmailDigest(new Date("2026-10-21T10:00:00.000Z"), digestSend);
+    assert.equal(ownDigests().length, 2);
+    const grouped = ownDigests()[1]!;
+    assert.equal(grouped.subject, "Pardal Digital: 1 atualização no seu resumo");
+    assert.equal(grouped.text.match(/Busca salva: limpeza/g)?.length, 1);
+    assert.match(grouped.text, /222 novos resultados/);
+    assert.match(grouped.text, /notification=daily-legacy-2/);
+    assert.match(grouped.text, /Abrir a busca salva: http:\/\/localhost:24252\/search\?q=limpeza&status=all/);
+    const linked = await db
+      .select()
+      .from(emailDeliveryNotificationsTable)
+      .where(inArray(emailDeliveryNotificationsTable.notificationId, (await notificationsOfSearch()).map(({ id }) => id)));
+    assert.equal(linked.length, 6);
+
+    await db.update(usersTable).set({ emailDigest: "off", emailImmediateCritical: false }).where(eq(usersTable.id, userId));
+    await db.update(savedSearchesTable).set({ alertsEnabled: false }).where(eq(savedSearchesTable.id, savedSearchId));
+  });
 });

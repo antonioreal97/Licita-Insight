@@ -18,6 +18,7 @@ import {
   upsertOpportunities,
 } from "./upsert-opportunities";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
+import { readApplicationsSafely } from "./application-enrichment";
 
 export {
   coverageFromDetails,
@@ -111,6 +112,8 @@ async function execute(runId: string, now: Date): Promise<void> {
       },
     });
     coverage = summary.coverage;
+    // Mapas calls take applications on their own page: a database update, no request.
+    await readApplicationsSafely(["mapas"], now);
 
     const allFailed =
       summary.attempted > 0 && summary.failed === summary.attempted;

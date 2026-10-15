@@ -10,6 +10,7 @@ import type {
   ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
+  TenderHighlightsResponse,
   TenderSheet,
 } from '../types';
 
@@ -29,4 +30,5 @@ export interface AiAdapter {
   suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
   suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;
   getFits(tenderIds: string[], signal?: AbortSignal): Promise<TenderFitsResponse>;
+  getTenderHighlights(tenderIds: string[], signal?: AbortSignal): Promise<TenderHighlightsResponse>;
 }

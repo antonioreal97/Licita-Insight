@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { EmailDeadlineSnapshot } from "./digest-deadlines";
-import { renderNotificationEmail, savedSearchHref } from "./email-template";
+import {
+  groupSavedSearchNotifications,
+  renderNotificationEmail,
+  savedSearchHref,
+  type EmailNotificationSnapshot,
+} from "./email-template";
 
 describe("notification email template", () => {
   it("renders a deadline change without repeating the current deadline", () => {
@@ -125,6 +130,76 @@ describe("notification email template", () => {
       /https:\/\/licitai\.example\/search\?status=all&notification=saved-search-link/,
     );
     assert.doesNotMatch(rendered.text, /newOnly/);
+  });
+
+  it("groups the digest's saved-search notifications into one card per saved search", () => {
+    const row = (id: string, savedSearchId: string, hour: number, matchCount: number) => ({
+      id,
+      type: "saved_search_new_matches",
+      createdAt: new Date(`2026-10-13T${String(hour).padStart(2, "0")}:00:00Z`),
+      tenderId: null,
+      tenderTitle: null,
+      tenderOrganizationName: null,
+      tenderProposalDeadline: null,
+      change: null,
+      savedSearchId,
+      savedSearchName: savedSearchId === "limpeza" ? "limpeza" : "Software",
+      savedSearchQuery: savedSearchId === "limpeza" ? "q=limpeza" : "q=software",
+      matchCount,
+    });
+    const document = {
+      ...row("document", "", 9, 0),
+      type: "tender_document_added",
+      savedSearchId: null,
+      savedSearchName: null,
+      savedSearchQuery: null,
+      matchCount: null,
+      tenderId: "tender-1",
+      tenderTitle: "Edital monitorado",
+    };
+    // Old rows: one per 15-minute cycle, before the daily notification.
+    const notifications = [
+      row("limpeza-1", "limpeza", 10, 140),
+      row("software-1", "software", 11, 3),
+      document,
+      row("limpeza-2", "limpeza", 12, 77),
+      row("limpeza-3", "limpeza", 13, 1),
+      row("software-2", "software", 14, 2),
+    ];
+    assert.deepEqual(
+      groupSavedSearchNotifications(notifications).map(({ id, matchCount, groupedCount }) => ({
+        id,
+        matchCount,
+        groupedCount,
+      })),
+      [
+        { id: "limpeza-3", matchCount: 218, groupedCount: 3 },
+        { id: "software-2", matchCount: 5, groupedCount: 2 },
+        { id: "document", matchCount: null, groupedCount: undefined },
+      ],
+    );
+
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://licitai.example",
+      unsubscribeToken: "signed-token",
+      notifications,
+      deadlines: [],
+    });
+    assert.equal(rendered.subject, "Pardal Digital: 3 atualizações no seu resumo");
+    assert.equal(rendered.text.match(/Busca salva: limpeza/g)?.length, 1);
+    assert.match(rendered.text, /218 novos resultados/);
+    assert.match(
+      rendered.text,
+      /Últimos resultados: https:\/\/licitai\.example\/search\?status=all&notification=limpeza-3/,
+    );
+    assert.match(
+      rendered.text,
+      /Abrir a busca salva: https:\/\/licitai\.example\/search\?q=limpeza&status=all/,
+    );
+    assert.doesNotMatch(rendered.text, /notification=limpeza-1/);
+    assert.equal(rendered.html.match(/>Busca salva</g)?.length, 2);
+    assert.match(rendered.html, /Abrir a busca salva/);
   });
 
   it("shows only the new deadline when the previous value is unavailable", () => {
@@ -376,5 +451,103 @@ describe("daily digest deadlines section", () => {
       now,
     });
     assert.doesNotMatch(rendered.html, /Seus prazos/);
+  });
+});
+
+describe("notification email highlights", () => {
+  const origin = "https://licitai.example";
+  const savedSearch = {
+    id: "notification-highlights",
+    type: "saved_search_new_matches",
+    createdAt: new Date("2026-10-14T09:00:00Z"),
+    tenderId: null,
+    tenderTitle: null,
+    tenderOrganizationName: null,
+    tenderProposalDeadline: null,
+    change: null,
+    savedSearchId: "search-1",
+    savedSearchName: "Limpeza predial",
+    savedSearchQuery: "?q=limpeza",
+    matchCount: 6,
+    tenderIds: ["t-1", "t-2", "t-3", "t-4", "t-5"],
+  };
+  const highlight = (tenderId: string, lines: string[]) => ({
+    tenderId,
+    title: `Edital ${tenderId} <limpeza>`,
+    organizationName: "Prefeitura & Cia",
+    lines,
+  });
+  const render = (highlights?: Map<string, ReturnType<typeof highlight>>, notifications: EmailNotificationSnapshot[] = [savedSearch]) =>
+    renderNotificationEmail({
+      mode: "digest",
+      origin,
+      unsubscribeToken: "signed-token",
+      notifications,
+      highlights,
+      now: new Date("2026-10-14T10:00:00Z"),
+    });
+
+  it("keeps the saved-search card as it was without highlights", () => {
+    const without = render();
+    const empty = render(new Map([["t-1", highlight("t-1", [])]]));
+    assert.doesNotMatch(without.html, /Destaque/);
+    assert.doesNotMatch(without.text, /Destaques:/);
+    assert.equal(empty.html, without.html);
+    assert.equal(empty.text, without.text);
+  });
+
+  it("cites up to three tenders of the saved search with their highlights, in snapshot order", () => {
+    const rendered = render(
+      new Map([
+        ["t-5", highlight("t-5", ["Exige garantia de proposta"])],
+        ["t-2", highlight("t-2", ["Alta aderência ao seu perfil: combina com “limpeza”", "Cota reservada para ME/EPP"])],
+        ["t-3", highlight("t-3", ["Disputa em BLL Compras: você ainda não é cadastrado nesta plataforma"])],
+        ["t-4", highlight("t-4", ["Visita técnica obrigatória"])],
+      ]),
+    );
+    assert.match(rendered.html, /Destaques/);
+    assert.match(rendered.html, /Edital t-2 &lt;limpeza&gt;/);
+    assert.match(rendered.html, /Prefeitura &amp; Cia/);
+    assert.match(rendered.html, /&#8226;&nbsp;Alta aderência ao seu perfil: combina com “limpeza”<br>&#8226;&nbsp;Cota reservada para ME\/EPP/);
+    assert.match(rendered.html, new RegExp(`href="${origin}/tenders/t-2"`));
+    assert.doesNotMatch(rendered.html, /t-5/);
+    const order = ["t-2", "t-3", "t-4"].map((id) => rendered.text.indexOf(`Edital ${id}`));
+    assert.deepEqual([...order].sort((a, b) => a - b), order);
+    assert.ok(order.every((index) => index > 0));
+    assert.match(rendered.text, /Destaques:\n- Edital t-2 <limpeza>\n {2}• Alta aderência ao seu perfil: combina com “limpeza”\n {2}• Cota reservada para ME\/EPP\n {2}https:\/\/licitai\.example\/tenders\/t-2/);
+    // The card still links to the search results; the subject does not change.
+    assert.match(rendered.html, /notification=notification-highlights/);
+    assert.equal(rendered.subject, render().subject);
+  });
+
+  it("keeps one card per saved search and cites tenders from every grouped row", () => {
+    const rendered = render(new Map([["t-9", highlight("t-9", ["Exige amostra ou prova de conceito"])]]), [
+      { ...savedSearch, id: "older", tenderIds: ["t-9"], createdAt: new Date("2026-10-13T09:00:00Z") },
+      { ...savedSearch, id: "newer", tenderIds: ["t-1"] },
+    ]);
+    assert.equal(rendered.html.match(/>Busca salva</g)?.length, 1);
+    assert.match(rendered.html, /Exige amostra ou prova de conceito/);
+  });
+
+  it("explains each high-fit tender of a profile alert", () => {
+    const profile: EmailNotificationSnapshot = {
+      ...savedSearch,
+      id: "profile",
+      type: "profile_new_matches",
+      savedSearchId: null,
+      savedSearchName: null,
+      savedSearchQuery: null,
+      tenderIds: undefined,
+      matchCount: 2,
+      profileMatches: [
+        { id: "t-1", title: "Limpeza do hospital", organizationName: "Hospital", proposalDeadline: null, level: "high" },
+        { id: "t-2", title: "Limpeza da escola", organizationName: "Escola", proposalDeadline: null, level: "high" },
+      ],
+    };
+    const without = render(undefined, [profile]);
+    const rendered = render(new Map([["t-1", highlight("t-1", ["Exige atestado de capacidade técnica"])]]), [profile]);
+    assert.doesNotMatch(without.html, /&#8226;/);
+    assert.match(rendered.html, /Limpeza do hospital<\/a><br><span[^>]*>Hospital<\/span><br><span[^>]*>&#8226;&nbsp;Exige atestado de capacidade técnica/);
+    assert.match(rendered.text, /Destaque: Limpeza do hospital\n {2}• Exige atestado de capacidade técnica/);
   });
 });

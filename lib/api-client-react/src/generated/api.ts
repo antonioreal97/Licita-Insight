@@ -29,6 +29,7 @@ import type {
   AskTenderRequest,
   AskTenderResult,
   AuthSessionResponse,
+  AwardHistoryResponse,
   BillingCheckoutResponse,
   BillingPlanResponse,
   BillingResponse,
@@ -50,6 +51,7 @@ import type {
   GetCompanyRegionPreview200,
   GetSearchSuggestionsParams,
   GetTenderFitsParams,
+  GetTenderHighlightsParams,
   HealthStatus,
   ImportSavedTendersRequest,
   InternalErrorResponse,
@@ -65,6 +67,7 @@ import type {
   NotFoundResponse,
   NotificationPage,
   NotificationPreferences,
+  OpenTendersByStateResponse,
   OpportunitySearchResponse,
   OpportunitySummary,
   ProfileCategoriesResponse,
@@ -101,6 +104,7 @@ import type {
   TenderAskStatus,
   TenderDetail,
   TenderFitsResponse,
+  TenderHighlightsResponse,
   TenderSheet,
   TransparencyContractsResponse,
   TransparencyTenderContractsResponse,
@@ -1830,6 +1834,84 @@ export function useGetWorkspaceDashboard<TData = Awaited<ReturnType<typeof getWo
 
 
 
+export const getGetOpenTendersByStateUrl = () => {
+
+
+
+
+  return `/api/v1/public/tenders/by-state`
+}
+
+/**
+ * Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes and served from memory in between.
+ * @summary Count open tenders and sum their estimated values by state
+ */
+export const getOpenTendersByState = async ( options?: Parameters<typeof customFetch>[1]): Promise<OpenTendersByStateResponse> => {
+
+  return customFetch<OpenTendersByStateResponse>(getGetOpenTendersByStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpenTendersByStateQueryKey = () => {
+    return [
+    `/api/v1/public/tenders/by-state`
+    ] as const;
+    }
+
+
+export const getGetOpenTendersByStateQueryOptions = <TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpenTendersByStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpenTendersByState>>> = ({ signal }) => getOpenTendersByState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpenTendersByStateQueryResult = NonNullable<Awaited<ReturnType<typeof getOpenTendersByState>>>
+export type GetOpenTendersByStateQueryError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Count open tenders and sum their estimated values by state
+ */
+
+export function useGetOpenTendersByState<TData = Awaited<ReturnType<typeof getOpenTendersByState>>, TError = ErrorType<RateLimitedResponse | InternalErrorResponse | SearchUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpenTendersByState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpenTendersByStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetTenderByIdUrl = (id: string,) => {
 
 
@@ -2133,6 +2215,84 @@ export function useGetTenderTransparencyResults<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTenderTransparencyResultsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderAwardHistoryUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/award-history`
+}
+
+/**
+ * Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons, foreign and unidentified suppliers are only counted as groups.
+ * @summary Get the award history of similar purchases by the same organization
+ */
+export const getTenderAwardHistory = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<AwardHistoryResponse> => {
+
+  return customFetch<AwardHistoryResponse>(getGetTenderAwardHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderAwardHistoryQueryKey = (id: string,) => {
+    return [
+    `/api/v1/tenders/${id}/award-history`
+    ] as const;
+    }
+
+
+export const getGetTenderAwardHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getTenderAwardHistory>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderAwardHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderAwardHistory>>> = ({ signal }) => getTenderAwardHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderAwardHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderAwardHistory>>>
+export type GetTenderAwardHistoryQueryError = ErrorType<NotFoundResponse | SearchUnavailableResponse>
+
+
+/**
+ * @summary Get the award history of similar purchases by the same organization
+ */
+
+export function useGetTenderAwardHistory<TData = Awaited<ReturnType<typeof getTenderAwardHistory>>, TError = ErrorType<NotFoundResponse | SearchUnavailableResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderAwardHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderAwardHistoryQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3192,6 +3352,97 @@ export function useGetTenderFits<TData = Awaited<ReturnType<typeof getTenderFits
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTenderFitsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTenderHighlightsUrl = (params: GetTenderHighlightsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["tenderIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/me/tender-highlights?${stringifiedParams}` : `/api/v1/me/tender-highlights`
+}
+
+/**
+ * Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+export const getTenderHighlights = async (params: GetTenderHighlightsParams, options?: Parameters<typeof customFetch>[1]): Promise<TenderHighlightsResponse> => {
+
+  return customFetch<TenderHighlightsResponse>(getGetTenderHighlightsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTenderHighlightsQueryKey = (params?: GetTenderHighlightsParams,) => {
+    return [
+    `/api/v1/me/tender-highlights`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTenderHighlightsQueryOptions = <TData = Awaited<ReturnType<typeof getTenderHighlights>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(params: GetTenderHighlightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTenderHighlightsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTenderHighlights>>> = ({ signal }) => getTenderHighlights(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTenderHighlightsQueryResult = NonNullable<Awaited<ReturnType<typeof getTenderHighlights>>>
+export type GetTenderHighlightsQueryError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>
+
+
+/**
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+
+export function useGetTenderHighlights<TData = Awaited<ReturnType<typeof getTenderHighlights>>, TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse>>(
+ params: GetTenderHighlightsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTenderHighlights>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTenderHighlightsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

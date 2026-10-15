@@ -39,24 +39,40 @@ test(
         },
         { parseOpportunityQuery },
         { searchOpportunities, findOpportunity },
+        { readApplicationsSafely },
       ] = await Promise.all([
         import("./collect-culture-federal"),
         import("./federal-client"),
         import("./federal-fixtures"),
         import("../lib/opportunity-query"),
         import("../repositories/postgres-opportunity-repository"),
+        import("./application-enrichment"),
       ]);
 
+      // Where to apply is read from the same recorded pages, never from the network.
+      const applicationRequests: string[] = [];
       const run = (
         at: Date,
         sources: ReturnType<typeof federalFixtureSources>,
       ) =>
-        collectCultureFederal(at, (options) =>
-          collectFederalOnce({
-            ...options,
-            delayMs: 0,
-            fetcher: recordingFetcher(sources).fetcher,
-          }),
+        collectCultureFederal(
+          at,
+          (options) =>
+            collectFederalOnce({
+              ...options,
+              delayMs: 0,
+              fetcher: recordingFetcher(sources).fetcher,
+            }),
+          (readSources, now) => {
+            const recording = recordingFetcher(sources);
+            return readApplicationsSafely(readSources, now, {
+              delayMs: 0,
+              fetcher: async (url) => {
+                applicationRequests.push(url);
+                return recording.fetcher(url);
+              },
+            });
+          },
         );
       const rows = () =>
         db
@@ -98,11 +114,34 @@ test(
       assert.ok(finished!.pagesRead > 0);
       assert.ok(!JSON.stringify(finished?.details).includes('"drafts"'));
 
+      // Onde se inscrever: o Salic do Rouanet nas Favelas e a Prosas da Funarte, lidos nas páginas gravadas.
+      const salic = await findOpportunity(
+        (await rows()).find((row) => row.source === "salic")!.id,
+      );
+      assert.equal(salic?.application?.platform, "salic");
+      assert.equal(salic?.application?.origin, "source_page");
+      const funartePlatforms = (
+        await searchOpportunities(parseOpportunityQuery({ source: "funarte" }))
+      ).data.map((row) => row.application?.platform ?? null);
+      assert.ok(funartePlatforms.includes("prosas"));
+      const transferegov = (
+        await searchOpportunities(
+          parseOpportunityQuery({ source: "transferegov" }),
+        )
+      ).data;
+      assert.ok(
+        transferegov.every((row) => row.application?.label === "Transferegov"),
+      );
+      const readOnce = applicationRequests.length;
+      assert.ok(readOnce > 0);
+
       // A releitura do mesmo dia atualiza as mesmas linhas.
       const again = await run(firstDay, federalFixtureSources());
       assert.equal(again.upserted, 12);
       assert.equal(again.closed, 0);
       assert.equal((await rows()).length, 12);
+      // Nada mudou nas páginas nem nos documentos: nenhuma chamada é lida de novo.
+      assert.equal(applicationRequests.length, readOnce);
 
       const search = (query: Record<string, unknown>) =>
         searchOpportunities(

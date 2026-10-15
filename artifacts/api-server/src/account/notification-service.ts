@@ -3,6 +3,7 @@ import {
   and,
   asc,
   count,
+  desc,
   eq,
   gt,
   isNull,
@@ -13,6 +14,7 @@ import {
 } from "drizzle-orm";
 import {
   db,
+  emailDeliveryNotificationsTable,
   notificationsTable,
   pool,
   savedSearchesTable,
@@ -25,6 +27,7 @@ import {
 import type { NotificationChangeRecord } from "@workspace/db/schema";
 import { searchWhereFor } from "../repositories/postgres-tender-repository";
 import { logger } from "../lib/logger";
+import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { canonicalSearchQuery } from "./saved-search-query";
 import {
   tenderChanges,
@@ -315,6 +318,114 @@ export const createDocumentAddedNotifications = async (
   return inserted.length;
 };
 
+/** Tender ids kept in a saved-search snapshot (`notification=<id>` link); `matchCount` keeps the full total. */
+const SAVED_SEARCH_STORED_TENDER_LIMIT = 20;
+
+const savedSearchDayKey = (savedSearchId: string, at: Date): string =>
+  `saved-search:${savedSearchId}:${dateInSaoPaulo(at)}`;
+
+/**
+ * At most one `saved_search_new_matches` per saved search and Brasília day: later cycles of the same day add to
+ * it (sum `matchCount`, append ids up to the cap, keeping the first ones in arrival order, mark it unread again
+ * and move `createdAt` to this cycle). Once the day's notification went out in an e-mail it is frozen, so the
+ * rest of the day opens a continuation (`saved-search:<id>:<day>:2`, `:3`…) for the next digest: no match is
+ * left out of an e-mail and none is sent twice. Runs under the caller's per-search advisory lock; the row lock
+ * also orders this cycle with a digest linking the same notification (the digest locks it before linking).
+ */
+const recordSavedSearchMatches = async (
+  tx: Transaction,
+  input: {
+    savedSearch: typeof savedSearchesTable.$inferSelect;
+    matchCount: number;
+    tenderIds: string[];
+    completedAt: Date;
+    mode: WorkspaceCutoverMode;
+  },
+): Promise<boolean> => {
+  const { savedSearch, matchCount, tenderIds, completedAt, mode } = input;
+  const workspaceId = savedSearch.workspaceId;
+  if (mode === "workspaces" && workspaceId === null) {
+    throw new Error(`Saved search ${savedSearch.id} has no workspace in workspaces mode`);
+  }
+  const dayKey = savedSearchDayKey(savedSearch.id, completedAt);
+  const dayRows = await tx
+    .select({
+      id: notificationsTable.id,
+      matchCount: notificationsTable.matchCount,
+      tenderIds: notificationsTable.tenderIds,
+    })
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, savedSearch.userId),
+        ...(mode === "workspaces"
+          ? [eq(notificationsTable.workspaceId, workspaceId!)]
+          : []),
+        or(
+          eq(notificationsTable.dedupeKey, dayKey),
+          sql`starts_with(${notificationsTable.dedupeKey}, ${`${dayKey}:`})`,
+        ),
+      ),
+    )
+    .orderBy(desc(notificationsTable.createdAt), desc(notificationsTable.dedupeKey))
+    .for("update");
+  const current = dayRows[0];
+  const [delivered] = current
+    ? await tx
+        .select({ id: emailDeliveryNotificationsTable.notificationId })
+        .from(emailDeliveryNotificationsTable)
+        .where(
+          and(
+            eq(emailDeliveryNotificationsTable.notificationId, current.id),
+            ...(mode === "workspaces"
+              ? [
+                  eq(
+                    emailDeliveryNotificationsTable.workspaceId,
+                    workspaceId!,
+                  ),
+                ]
+              : []),
+          ),
+        )
+        .limit(1)
+    : [];
+  if (current && !delivered) {
+    await tx
+      .update(notificationsTable)
+      .set({
+        createdAt: completedAt,
+        readAt: null,
+        savedSearchName: savedSearch.name,
+        savedSearchQuery: savedSearch.query,
+        matchCount: (current.matchCount ?? current.tenderIds.length) + matchCount,
+        tenderIds: [...new Set([...current.tenderIds, ...tenderIds])].slice(
+          0,
+          SAVED_SEARCH_STORED_TENDER_LIMIT,
+        ),
+      })
+      .where(eq(notificationsTable.id, current.id));
+    return true;
+  }
+  const inserted = await tx
+    .insert(notificationsTable)
+    .values({
+      id: randomUUID(),
+      userId: savedSearch.userId,
+      ...(mode === "workspaces" ? { workspaceId: workspaceId! } : {}),
+      type: "saved_search_new_matches",
+      dedupeKey: current ? `${dayKey}:${dayRows.length + 1}` : dayKey,
+      createdAt: completedAt,
+      savedSearchId: savedSearch.id,
+      savedSearchName: savedSearch.name,
+      savedSearchQuery: savedSearch.query,
+      matchCount,
+      tenderIds: tenderIds.slice(0, SAVED_SEARCH_STORED_TENDER_LIMIT),
+    })
+    .onConflictDoNothing()
+    .returning({ id: notificationsTable.id });
+  return inserted.length > 0;
+};
+
 const evaluateSavedSearch = async (
   id: string,
   completedAt: Date,
@@ -347,35 +458,23 @@ const evaluateSavedSearch = async (
       .from(tendersTable)
       .where(filter)
       .orderBy(asc(tendersTable.createdAt), asc(tendersTable.id))
-      .limit(20);
+      .limit(SAVED_SEARCH_STORED_TENDER_LIMIT);
     const matchCount = Number(totalRow?.value ?? 0);
-    let created = false;
+    let recorded = false;
     if (matchCount > 0) {
-      const inserted = await tx
-        .insert(notificationsTable)
-        .values({
-          id: randomUUID(),
-          userId: savedSearch.userId,
-          // The alert belongs to the workspace of its saved search; the dedupe key keeps its legacy text until W4.
-          ...(cycle.mode === "workspaces" ? { workspaceId: savedSearch.workspaceId } : {}),
-          type: "saved_search_new_matches",
-          dedupeKey: `saved-search:${id}:${since.toISOString()}:${completedAt.toISOString()}`,
-          createdAt: completedAt,
-          savedSearchId: id,
-          savedSearchName: savedSearch.name,
-          savedSearchQuery: savedSearch.query,
-          matchCount,
-          tenderIds: matches.map(({ id: tenderId }) => tenderId),
-        })
-        .onConflictDoNothing()
-        .returning({ id: notificationsTable.id });
-      created = inserted.length > 0;
+      recorded = await recordSavedSearchMatches(tx, {
+        savedSearch,
+        matchCount,
+        tenderIds: matches.map(({ id: tenderId }) => tenderId),
+        completedAt,
+        mode: cycle.mode,
+      });
     }
     await tx
       .update(savedSearchesTable)
       .set({
         lastCheckedAt: completedAt,
-        ...(created
+        ...(recorded
           ? { newMatchesCount: sql`${savedSearchesTable.newMatchesCount} + ${matchCount}` }
           : {}),
       })

@@ -138,7 +138,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     await admin.end();
   });
 
-  await t.test("upgrade from 0041 applies 0042 account usage before W1 and W2", async () => {
+  await t.test("upgrade from 0041 applies 0042 and 0043 from main before W1 and W2", async () => {
     await runMigrations(upgraded, 41);
     await insertLegacyRows(upgraded);
     const before = await rowCounts(upgraded);
@@ -154,6 +154,14 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     const usageColumns = await upgraded.query("select column_name from information_schema.columns where table_name = 'users' and column_name in ('usage_purposes', 'applicant_types')");
     assert.equal(usageColumns.rows.length, 2);
     await runMigrations(upgraded, 43);
+    const opportunityColumns = await upgraded.query(
+      `select column_name from information_schema.columns
+       where table_name = 'cultural_opportunities'
+         and (column_name like 'application_%' or column_name like 'notice_%')`,
+    );
+    assert.equal(opportunityColumns.rows.length, 11);
+    await assert.rejects(verifyWorkspaceSchema(upgraded), /table workspaces\b/);
+    await runMigrations(upgraded, 44);
     await assert.rejects(verifyWorkspaceSchema(upgraded), (error: Error) => {
       assert.doesNotMatch(error.message, /table /);
       for (const table of scopedTables) assert.match(error.message, new RegExp(`column ${table}\\.workspace_id`));
@@ -170,7 +178,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
 
     // Production applies these files by hand; a second run must change nothing.
     const schemaBefore = await catalog(upgraded);
-    for (const file of ["0043_workspaces_foundation.sql", "0044_workspace_scope_expand.sql"]) {
+    for (const file of ["0044_workspaces_foundation.sql", "0045_workspace_scope_expand.sql"]) {
       await upgraded.query(readFileSync(path.join(migrationsFolder, file), "utf8"));
     }
     assert.deepEqual(await catalog(upgraded), schemaBefore);
@@ -200,10 +208,10 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     );
   });
 
-  await t.test("the concurrent production variant builds the same schema as the versioned 0044", async () => {
-    await runMigrations(concurrent, 43);
+  await t.test("the concurrent production variant builds the same schema as the versioned 0045", async () => {
+    await runMigrations(concurrent, 44);
     const statements = readFileSync(
-      path.join(migrationsFolder, "manual/0044_workspace_scope_expand_concurrently.sql"),
+      path.join(migrationsFolder, "manual/0045_workspace_scope_expand_concurrently.sql"),
       "utf8",
     ).split("--> statement-breakpoint");
     // One statement per query, outside any transaction block, as psql runs it without -1.
@@ -217,7 +225,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     assert.ok(manual.indexes.every((index) => index.valid === true));
     assert.ok(manual.constraints.every((constraint) => constraint.validated === true));
 
-    // Then the regular 0044 apply is a no-op on top of it.
+    // Then the regular 0045 apply is a no-op on top of it.
     await runMigrations(concurrent);
     assert.deepEqual(await catalog(concurrent), manual);
     assert.deepEqual(await verifyWorkspaceSchema(concurrent), { mode: "legacy", writesPaused: false });
