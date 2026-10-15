@@ -32,6 +32,8 @@ export type BrazilEligibility = "yes" | "conditional" | "no" | "unknown";
 export type OpportunityDeadlinePrecision = "datetime" | "date";
 /** `source` when the source already publishes the title in Portuguese; `model` for a local translation. */
 export type OpportunityTranslationSource = "source" | "model";
+/** Where an application link or registration period was read: the call page at the source or one of its documents. */
+export type OpportunityNoticeOrigin = "source_page" | "document";
 export type OpportunityDocument = {
   title: string;
   url: string;
@@ -80,7 +82,10 @@ export const culturalOpportunitiesTable = pgTable(
     /** Municipality, set only for municipal installations. */
     city: text("city"),
     continuousFlow: boolean("continuous_flow").notNull().default(false),
-    scope: text("scope").$type<OpportunityScope>().notNull().default("national"),
+    scope: text("scope")
+      .$type<OpportunityScope>()
+      .notNull()
+      .default("national"),
     /** Body that funds or runs the call ("Banco Mundial", "União Europeia"). International rows only. */
     agency: text("agency"),
     /** Where the call is executed: ISO 3166-1 alpha-2, the name in Portuguese and the region slug. */
@@ -92,9 +97,8 @@ export const culturalOpportunitiesTable = pgTable(
     /** `title` is what the hub shows: `titlePt` when there is one, else `titleOriginal`. */
     titleOriginal: text("title_original"),
     titlePt: text("title_pt"),
-    translationSource: text(
-      "translation_source",
-    ).$type<OpportunityTranslationSource>(),
+    translationSource:
+      text("translation_source").$type<OpportunityTranslationSource>(),
     /** Value as published. `amount` stays in reais and is only set when the source itself publishes reais. */
     amountOriginal: numeric("amount_original", { precision: 18, scale: 2 }),
     currency: text("currency"),
@@ -104,9 +108,8 @@ export const culturalOpportunitiesTable = pgTable(
     fxDate: date("fx_date"),
     /** `registrationTo` is the instant; these keep how the source wrote it. */
     deadlineTimeZone: text("deadline_time_zone"),
-    deadlinePrecision: text(
-      "deadline_precision",
-    ).$type<OpportunityDeadlinePrecision>(),
+    deadlinePrecision:
+      text("deadline_precision").$type<OpportunityDeadlinePrecision>(),
     deadlineOriginal: text("deadline_original"),
     /** Whether an entity or person from Brazil can apply, and the readable reason of the rule that decided. */
     brazilEligibility: text("brazil_eligibility").$type<BrazilEligibility>(),
@@ -119,6 +122,33 @@ export const culturalOpportunitiesTable = pgTable(
       withTimezone: true,
     }),
     sourceUrl: text("source_url"),
+    /**
+     * Where to apply, read without AI from the call page or its documents. Empty when the reading found no
+     * link with enough confidence. `applicationPlatform` is the slug of a known platform, `null` for a link
+     * accepted only by its context.
+     */
+    applicationUrl: text("application_url"),
+    applicationPlatform: text("application_platform"),
+    applicationLabel: text("application_label"),
+    applicationSource:
+      text("application_source").$type<OpportunityNoticeOrigin>(),
+    applicationDocumentTitle: text("application_document_title"),
+    /** Last reading of the page and documents, and the inputs it read, so an unchanged call is not read again. */
+    applicationCheckedAt: timestamp("application_checked_at", {
+      withTimezone: true,
+    }),
+    applicationInputHash: text("application_input_hash"),
+    /** Registration period read from the notice, kept apart from the dates the source publishes. */
+    noticeRegistrationFrom: timestamp("notice_registration_from", {
+      withTimezone: true,
+    }),
+    noticeRegistrationTo: timestamp("notice_registration_to", {
+      withTimezone: true,
+    }),
+    noticeDatesSource: text(
+      "notice_dates_source",
+    ).$type<OpportunityNoticeOrigin>(),
+    noticeDatesDocumentTitle: text("notice_dates_document_title"),
     searchText: text("search_text").notNull(),
     rawPayload: jsonb("raw_payload").notNull(),
     fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
@@ -181,6 +211,14 @@ export const culturalOpportunitiesTable = pgTable(
     check(
       "cultural_opportunities_amount_original_check",
       sql`${table.amountOriginal} is null or ${table.amountOriginal} >= 0`,
+    ),
+    check(
+      "cultural_opportunities_application_source_check",
+      sql`${table.applicationSource} is null or ${table.applicationSource} in ('source_page', 'document')`,
+    ),
+    check(
+      "cultural_opportunities_notice_dates_source_check",
+      sql`${table.noticeDatesSource} is null or ${table.noticeDatesSource} in ('source_page', 'document')`,
     ),
     check(
       "cultural_opportunities_amount_check",
