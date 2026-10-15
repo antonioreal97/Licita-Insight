@@ -1,7 +1,8 @@
-import type { BrazilEligibility, InternationalOpportunity, OpportunityScope, OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
+import type { BrazilEligibility, InternationalOpportunity, InternationalRegion, OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { formatNumber } from '@/lib/format';
 import { BRAZIL_ELIGIBILITIES } from '@/services/opportunity-service';
-import type { FilterOption } from './opportunity-filters';
+
+export type InternationalFilterOption = { value: string; label: string; count: number };
 
 type Facets = OpportunitySearchResponse['facets'];
 
@@ -20,6 +21,15 @@ export const brazilFundingLabels: Record<BrazilEligibility, string> = {
   conditional: 'Financiamento condicional',
   no: 'Sem financiamento direto',
   unknown: 'Financiamento a confirmar',
+};
+
+export const internationalRegionLabels: Record<InternationalRegion, string> = {
+  'america-latina': 'América Latina e Caribe',
+  africa: 'África',
+  europa: 'Europa',
+  asia: 'Ásia',
+  'oriente-medio': 'Oriente Médio e Norte da África',
+  global: 'Global',
 };
 
 /** Shown wherever an eligibility answer is: the badge is a reading of the notice, not the notice. */
@@ -122,7 +132,10 @@ export type AmountTexts = {
 };
 
 /** The value in the original currency and, when there is a quote, the approximate value in reais. */
-export function amountTexts(international: Pick<InternationalOpportunity, 'amountOriginal' | 'currency' | 'amountBrlApprox' | 'fxDate'>, compact = true): AmountTexts | null {
+export function amountTexts(
+  international: Pick<InternationalOpportunity, 'amountOriginal' | 'currency' | 'amountBrlApprox' | 'fxDate'>,
+  compact = true,
+): AmountTexts | null {
   if (international.amountOriginal === null || !international.currency) return null;
   const converted = international.amountBrlApprox !== null && international.fxDate !== null;
   return {
@@ -164,7 +177,7 @@ export function eligibilityPatch(value: string): Partial<OpportunitySearchParams
 }
 
 /** One option per answer, with how many calls the other filters leave in it. */
-export function eligibilityOptions(facets: Facets): FilterOption[] {
+export function eligibilityOptions(facets: Facets): InternationalFilterOption[] {
   const counts = new Map((facets?.eligibility ?? []).map((bucket) => [bucket.value, bucket.count]));
   return BRAZIL_ELIGIBILITIES.map((status) => {
     const count = counts.get(status) ?? 0;
@@ -172,8 +185,16 @@ export function eligibilityOptions(facets: Facets): FilterOption[] {
   });
 }
 
+export function fundingOptions(facets: Facets): InternationalFilterOption[] {
+  const counts = new Map((facets?.funding ?? []).map((bucket) => [bucket.value, bucket.count]));
+  return BRAZIL_ELIGIBILITIES.map((status) => {
+    const count = counts.get(status) ?? 0;
+    return { value: status, label: `${brazilFundingLabels[status]} (${formatNumber(count)})`, count };
+  });
+}
+
 /** Options of a facet as the API labelled them, most calls first; a selected value never leaves the list. */
-export function facetOptions(buckets: { value: string; label: string; count: number }[] | undefined, selected?: string): FilterOption[] {
+export function facetOptions(buckets: { value: string; label: string; count: number }[] | undefined, selected?: string): InternationalFilterOption[] {
   const options = [...(buckets ?? [])];
   if (selected && !options.some((bucket) => bucket.value === selected)) options.push({ value: selected, label: selected, count: 0 });
   return options

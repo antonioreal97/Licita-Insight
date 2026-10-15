@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { OpportunityFilters } from '../components/opportunity-filters';
+import { opportunityAppliedMessage, opportunityApplyLabel } from '../components/opportunity-filter-sheet';
 import { deadlinePresetPatch } from '@/features/search/lib/filter-presets';
 import { opportunityParamsFromUrl, opportunityParamsToUrl } from '@/services/opportunity-service';
 import {
@@ -11,6 +12,7 @@ import {
   areaOptions,
   cityOptions,
   cityPatch,
+  countMoreInternationalFilters,
   countMoreOpportunityFilters,
   individualListingsLabel,
   opportunityChipShowsGroup,
@@ -164,7 +166,10 @@ test('oportunidades seguem o mesmo padrão: Onde? O quê? Até quando? e "Mais f
   const html = render({});
   const order = ['Onde?', 'O quê?', 'Até quando?', 'Mais filtros'].map((title) => html.indexOf(`>${title}<`));
   assert.ok(order.every((index) => index >= 0));
-  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  assert.deepEqual(
+    [...order].sort((a, b) => a - b),
+    order,
+  );
   assert.match(html, /aria-expanded="false"[^>]*data-testid="button-opportunity-more-filters"/);
   assert.match(html, /<div[^>]*hidden=""[^>]*data-testid="opportunity-more-filters"/);
   assert.match(html, /Escolha um estado para ver os municípios/);
@@ -176,7 +181,11 @@ test('oportunidades seguem o mesmo padrão: Onde? O quê? Até quando? e "Mais f
 test('áreas: poucas de início, "Ver todas" e a selecionada nunca some', () => {
   const many = {
     ...facets,
-    area: ['musica', 'audiovisual', 'teatro', 'danca', 'circo', 'literatura', 'patrimonio', 'artesanato'].map((value, index) => ({ value, label: value, count: 100 - index })),
+    area: ['musica', 'audiovisual', 'teatro', 'danca', 'circo', 'literatura', 'patrimonio', 'artesanato'].map((value, index) => ({
+      value,
+      label: value,
+      count: 100 - index,
+    })),
   };
   const html = render({}, many);
   assert.match(html, /data-testid="button-opportunity-areas-more"[^>]*>Ver todas \(8\)</);
@@ -190,6 +199,8 @@ test('"Mais filtros" das oportunidades conta instituição, fonte e anúncios in
   assert.equal(countMoreOpportunityFilters({ organization: ['Secult CE'], source: ['mapas'], includeIndividual: true }), 3);
   assert.match(render({ organization: ['Secult CE'] }), /data-testid="badge-opportunity-more-filters"[^>]*>1<span class="sr-only"> ativo<\/span>/);
   assert.doesNotMatch(render({}), /badge-opportunity-more-filters/);
+  assert.equal(countMoreOpportunityFilters({ program: ['lpg'], installation: ['mapas-ce'], status: ['closed'] }), 3);
+  assert.equal(countMoreInternationalFilters({ agency: ['Banco Mundial'], source: ['worldbank'], language: ['en'], status: ['open'] }), 4);
 });
 
 test('URL antiga de oportunidades vira chips legíveis, e o atalho de prazo usa os mesmos parâmetros', () => {
@@ -220,4 +231,33 @@ test('URL antiga de oportunidades vira chips legíveis, e o atalho de prazo usa 
     ['kind:funding'],
     'na aba internacional, filtros nacionais esquecidos na URL não viram chip',
   );
+});
+
+test('URL internacional antiga mantém parâmetros e produz chips legíveis e removíveis', () => {
+  const search =
+    'scope=international&region=africa&country=BR&kind=procurement&status=open&agency=Banco+Mundial&source=worldbank&language=en&opportunityType=Consultoria&eligibility=all&funding=yes';
+  const params = opportunityParamsFromUrl(search);
+  assert.deepEqual(opportunityParamsFromUrl(opportunityParamsToUrl(params)), params);
+  assert.deepEqual(
+    opportunityFilterChips(params).map((chip) => [chip.id, chip.label]),
+    [
+      ['kind:procurement', 'Licitação internacional'],
+      ['status:open', 'Inscrições abertas'],
+      ['source:worldbank', 'Banco Mundial'],
+      ['region:africa', 'África'],
+      ['country:BR', 'Projetos no Brasil'],
+      ['opportunityType:Consultoria', 'Consultoria'],
+      ['eligibility:all', 'Qualquer elegibilidade'],
+      ['funding:yes', 'Financia participante do Brasil'],
+      ['agency:Banco Mundial', 'Banco Mundial'],
+      ['language:en', 'EN'],
+    ],
+  );
+});
+
+test('folha móvel usa oportunidades no CTA e no anúncio ao leitor de tela', () => {
+  assert.equal(opportunityApplyLabel(undefined), 'Ver oportunidades');
+  assert.equal(opportunityApplyLabel(1), 'Ver 1 oportunidade');
+  assert.equal(opportunityApplyLabel(1234), 'Ver 1.234 oportunidades');
+  assert.equal(opportunityAppliedMessage(12), 'Filtros aplicados: 12 oportunidades.');
 });
