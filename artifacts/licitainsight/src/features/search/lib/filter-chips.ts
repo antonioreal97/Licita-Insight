@@ -1,6 +1,7 @@
 import type { TenderSearchParams, TenderSearchResponse } from '@/api';
 import { formatDate, formatNumber } from '@/lib/format';
 import { FACET_GROUPS, labelFor, selectedValues } from './facet-config';
+import { activeDeadlinePreset } from './filter-presets';
 import { DEFAULT_STATUS, isDefaultStatus } from './search-defaults';
 
 export type FilterChip = { id: string; group: string; label: string; remove: Partial<TenderSearchParams> };
@@ -8,11 +9,31 @@ export type FilterChip = { id: string; group: string; label: string; remove: Par
 const compactCurrency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 });
 export const formatCompactCurrency = (value: number) => compactCurrency.format(value);
 
-function rangeLabel(from: string | undefined, to: string | undefined, format: (value: string) => string) {
-  if (from && to) return `${format(from)} – ${format(to)}`;
-  if (from) return `a partir de ${format(from)}`;
-  return `até ${format(to!)}`;
+/** "Até R$ 50 mil", "A partir de R$ 500 mil", "R$ 50 mil a R$ 500 mil": the value chip reads on its own. */
+export function valueRangeLabel(min: number | undefined, max: number | undefined) {
+  if (min !== undefined && max !== undefined) return `${formatCompactCurrency(min)} a ${formatCompactCurrency(max)}`;
+  if (min !== undefined) return `A partir de ${formatCompactCurrency(min)}`;
+  return `Até ${formatCompactCurrency(max!)}`;
 }
+
+function dateRangeLabel(verb: string, from: string | undefined, to: string | undefined) {
+  if (from && to) return `${verb} entre ${formatDate(from)} e ${formatDate(to)}`;
+  if (from) return `${verb} a partir de ${formatDate(from)}`;
+  return `${verb} até ${formatDate(to!)}`;
+}
+
+/** "Encerra em até 7 dias" for a shortcut, otherwise the dates. */
+export function deadlineRangeLabel(from: string | undefined, to: string | undefined, now = new Date()) {
+  const preset = activeDeadlinePreset({ deadlineFrom: from, deadlineTo: to }, now);
+  return preset ? `Encerra em até ${preset} dias` : dateRangeLabel('Encerra', from, to);
+}
+
+/**
+ * Chips whose label says what it filters ("SP", "Encerra em até 7 dias") show only the label; the others
+ * (an organization, a platform, a source) keep the group name in front so a bare "Licitanet" is not a riddle.
+ */
+const SELF_EXPLANATORY = /^(?:status|state|city|category|modality):|^(?:value|deadline|published|newOnly)$/;
+export const chipShowsGroup = (chip: { id: string }) => !SELF_EXPLANATORY.test(chip.id);
 
 /**
  * One chip per selected value, plus one per range. `remove` is the patch that drops it.
@@ -20,10 +41,14 @@ function rangeLabel(from: string | undefined, to: string | undefined, format: (v
  */
 export function buildFilterChips(
   params: TenderSearchParams,
-  { statusDefault = false, notification }: { statusDefault?: boolean; notification?: NonNullable<TenderSearchResponse['meta']['notification']> | null } = {},
+  {
+    statusDefault = false,
+    notification,
+    now = new Date(),
+  }: { statusDefault?: boolean; notification?: NonNullable<TenderSearchResponse['meta']['notification']> | null; now?: Date } = {},
 ): FilterChip[] {
   const chips: FilterChip[] = [];
-  if (statusDefault && !params.status?.length) chips.push({ id: 'status:all', group: 'Status', label: 'Todos', remove: { status: DEFAULT_STATUS } });
+  if (statusDefault && !params.status?.length) chips.push({ id: 'status:all', group: 'Situação', label: 'Todas as situações', remove: { status: DEFAULT_STATUS } });
   const markDefault = statusDefault && isDefaultStatus(params.status);
   for (const group of FACET_GROUPS) {
     const values = selectedValues(params, group.param);
@@ -41,7 +66,7 @@ export function buildFilterChips(
     chips.push({
       id: 'value',
       group: 'Valor',
-      label: rangeLabel(params.valueMin?.toString(), params.valueMax?.toString(), (value) => formatCompactCurrency(Number(value))),
+      label: valueRangeLabel(params.valueMin, params.valueMax),
       remove: { valueMin: undefined, valueMax: undefined },
     });
   }
@@ -49,7 +74,7 @@ export function buildFilterChips(
     chips.push({
       id: 'deadline',
       group: 'Prazo',
-      label: rangeLabel(params.deadlineFrom, params.deadlineTo, (value) => formatDate(value)),
+      label: deadlineRangeLabel(params.deadlineFrom, params.deadlineTo, now),
       remove: { deadlineFrom: undefined, deadlineTo: undefined },
     });
   }
@@ -57,12 +82,12 @@ export function buildFilterChips(
     chips.push({
       id: 'published',
       group: 'Publicação',
-      label: rangeLabel(params.publishedFrom, params.publishedTo, (value) => formatDate(value)),
+      label: dateRangeLabel('Publicado', params.publishedFrom, params.publishedTo),
       remove: { publishedFrom: undefined, publishedTo: undefined },
     });
   }
   if (params.newOnly) {
-    chips.push({ id: 'newOnly', group: 'Entrada no Pardal', label: 'Novos (24 h)', remove: { newOnly: undefined } });
+    chips.push({ id: 'newOnly', group: 'Novidades', label: 'Entraram nas últimas 24 h', remove: { newOnly: undefined } });
   }
   if (params.notification) {
     const label = notification

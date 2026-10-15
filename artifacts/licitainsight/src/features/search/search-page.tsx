@@ -16,7 +16,7 @@ import { countActiveFilters, DEFAULT_PAGE_SIZE } from '@/services/search-service
 import { ActiveFilters } from './components/active-filters';
 import { EmptySearch } from './components/empty-search';
 import { FacetPanel } from './components/facet-panel';
-import { FiltersSheet } from './components/filters-sheet';
+import { appliedMessage, FiltersSheet } from './components/filters-sheet';
 import { ResultsTable } from './components/results-table';
 import { SaveSearchButton } from './components/save-search-button';
 import { SearchCombobox } from './components/search-combobox';
@@ -43,6 +43,8 @@ export default function SearchPage() {
   const { isSaved, toggle } = useSavedTenders();
   const recent = useRecentSearches();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Said once after "Ver N editais" closes the sheet (the count line may not change, so it would stay silent).
+  const [appliedAnnouncement, setAppliedAnnouncement] = useState('');
   const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState(false);
   const resultsRef = useRef<HTMLElement>(null);
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
@@ -449,8 +451,16 @@ export default function SearchPage() {
         onOpenChange={setSheetOpen}
         params={params}
         triggerRef={filtersButtonRef}
-        onApply={(next: TenderSearchParams) => replaceAll({ ...next, page: 1 })}
+        onApply={(next: TenderSearchParams, total) => {
+          replaceAll({ ...next, page: 1 });
+          // Emptied first so the same message twice in a row is still spoken.
+          setAppliedAnnouncement('');
+          window.setTimeout(() => setAppliedAnnouncement(appliedMessage(total)), 150);
+        }}
       />
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="text-filters-applied">
+        {appliedAnnouncement}
+      </p>
     </>
   );
 }
