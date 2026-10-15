@@ -1,35 +1,30 @@
-import { FormEvent } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ExternalLink, SearchX } from 'lucide-react';
-import { isApiError, type OpportunityKind, type OpportunityScope, type OpportunitySource, type OpportunityStatus, type OpportunitySummary } from '@/api';
+import { ExternalLink, Loader2, SearchX } from 'lucide-react';
+import { isApiError, type OpportunityScope, type OpportunitySummary } from '@/api';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { EmptyState } from '@/components/common/empty-state';
+import { FilterSidebar, filterWorkspaceClass } from '@/components/filters/filter-sidebar';
 import { SearchPagination } from '@/features/search/components/search-pagination';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { deniedAccess, useOpportunitySearch } from './hooks/use-opportunities';
 import { useOpportunityUrlState } from './hooks/use-opportunity-url-state';
 import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
-import { ActiveOpportunityFilters, OpportunityFiltersBar } from './components/opportunity-filter-sheet';
+import { ActiveOpportunityFilters, OpportunityFilterSheet, OpportunityFiltersButton, opportunityAppliedMessage } from './components/opportunity-filter-sheet';
 import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
+import { CLEAR_INTERNATIONAL_FILTERS } from './components/international';
+import { CLEAR_NATIONAL_FILTERS, OpportunityFilters } from './components/opportunity-filters';
 import { ApplicationBadge } from './components/application-panel';
 import { NOTICE_DATE_NOTE, registrationDates } from './lib/application';
 import {
-  INTERNATIONAL_KINDS,
-  INTERNATIONAL_SOURCES,
   IndividualListingBadge,
   OpportunityStatusBadge,
   opportunityAreaLabels,
   opportunityKindLabels,
   opportunityProgramLabels,
-  opportunitySourceLabels,
-  opportunityStatusLabels,
 } from './components/opportunity-status';
-
-const STATUSES = Object.keys(opportunityStatusLabels) as OpportunityStatus[];
-
-const selectClass =
-  'h-10 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+import { opportunityFilterChips } from './lib/opportunity-filters';
 
 /** At most this many areas on a row; a call can list dozens. */
 const AREAS_ON_ROW = 3;
@@ -110,8 +105,13 @@ export default function OpportunitiesPage() {
 }
 
 function OpportunitySearch() {
-  const { params, update } = useOpportunityUrlState();
+  const { params, update, replaceAll } = useOpportunityUrlState();
   const search = useOpportunitySearch(params);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState(false);
+  const [appliedAnnouncement, setAppliedAnnouncement] = useState('');
+  const filtersButtonRef = useRef<HTMLButtonElement>(null);
+  const resultsRef = useRef<HTMLElement>(null);
   const response = search.data;
   const pagination = response?.pagination;
   const unavailable = search.isError && isApiError(search.error) && search.error.code === 'SEARCH_UNAVAILABLE';
@@ -126,16 +126,23 @@ function OpportunitySearch() {
   };
 
   const facets = response?.facets ?? null;
-  const setStatus = (value: string) => update({ status: value ? [value as OpportunityStatus] : undefined });
-  const setKind = (value: string) => update({ kind: value ? [value as OpportunityKind] : undefined });
-  const setSource = (value: string) => update({ source: value ? [value as OpportunitySource] : undefined });
   const scope: OpportunityScope = params.scope ?? 'national';
   const international = scope === 'international';
+  const activeFilters = opportunityFilterChips(params, new Date(), facets).length;
+  const clearFilters = () => update(international ? CLEAR_INTERNATIONAL_FILTERS : CLEAR_NATIONAL_FILTERS);
+  const resultCount = search.isPending
+    ? 'Buscando oportunidades…'
+    : search.isError
+      ? 'Resultados indisponíveis'
+      : pagination
+        ? `${formatNumber(pagination.total)} ${pagination.total === 1 ? 'oportunidade' : 'oportunidades'}`
+        : '';
+  const refreshing = search.isFetching && !search.isPending;
 
   return (
     <>
       {international && <OfficialNoticeBanner className="mb-4" />}
-      <form onSubmit={onSearch} className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <form onSubmit={onSearch} className="mb-5 sm:mb-6">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Buscar chamadas</span>
           <input
@@ -147,146 +154,152 @@ function OpportunitySearch() {
             className="h-10 w-full rounded-lg border border-input bg-card px-3 type-ui text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
         </label>
-        {/* The national filters live in the question panel below; the international tab keeps its row of selects. */}
-        {international && (
-          <>
-            <label>
-              <span className="sr-only">Tipo de oportunidade</span>
-              <select
-                data-testid="select-opportunity-kind"
-                className={selectClass}
-                value={params.kind?.[0] ?? ''}
-                onChange={(event) => setKind(event.target.value)}
-              >
-                <option value="">Todos os tipos</option>
-                {INTERNATIONAL_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {opportunityKindLabels[kind]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="sr-only">Fonte</span>
-              <select
-                data-testid="select-opportunity-source"
-                className={selectClass}
-                value={params.source?.[0] ?? ''}
-                onChange={(event) => setSource(event.target.value)}
-              >
-                <option value="">Todas as fontes</option>
-                {INTERNATIONAL_SOURCES.map((source) => (
-                  <option key={source} value={source}>
-                    {opportunitySourceLabels[source]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="sr-only">Situação das inscrições</span>
-              <select
-                data-testid="select-opportunity-status"
-                className={selectClass}
-                value={params.status?.[0] ?? ''}
-                onChange={(event) => setStatus(event.target.value)}
-              >
-                <option value="">Qualquer prazo</option>
-                {STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {opportunityStatusLabels[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </>
-        )}
       </form>
 
-      {international ? (
-        <InternationalFilters params={params} facets={facets} onChange={update} />
-      ) : (
-        <OpportunityFiltersBar
-          params={params}
-          facets={facets}
-          hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0}
-          onChange={update}
-          total={search.isError ? undefined : pagination?.total}
-          fetching={search.isFetching}
-        />
-      )}
-
-      {international && response && !response.meta.internationalInProfile && (
-        <p data-testid="notice-international-profile" className="mb-4 type-meta text-muted-foreground">
-          Oportunidades internacionais não entram nas suas recomendações nem na combinação com o perfil.{' '}
-          <Link href="/settings#recomendacoes" className="font-semibold text-primary hover:underline">
-            Ativar em Configurações
-          </Link>
-          .
-        </p>
-      )}
-
-      {response && response.meta.installationIssues.length > 0 && (
-        <details data-testid="banner-installation-issues" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground">
-          <summary className="cursor-pointer font-semibold">
-            {response.meta.installationIssues.length === 1
-              ? '1 fonte não respondeu por completo.'
-              : `${formatNumber(response.meta.installationIssues.length)} fontes não responderam por completo.`}
-          </summary>
-          <ul className="mt-2 space-y-1">
-            {response.meta.installationIssues.map((issue) => (
-              <li key={issue.installationId}>
-                {issue.name}: {issue.message}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {response && response.meta.gaps.length > 0 && (
-        <p data-testid="banner-gaps" className="mb-4 type-meta text-muted-foreground">
-          {response.meta.gaps.length} estados não têm instalação estadual do Mapas Culturais: {response.meta.gaps.map((gap) => gap.uf).join(', ')}. Neles só
-          entram chamadas de municípios com instalação própria.
-        </p>
-      )}
-
-      {/* Also above an empty list, where removing one filter is the way out. */}
-      <ActiveOpportunityFilters params={params} onChange={update} />
-
-      {search.isPending ? (
-        <RowsSkeleton />
-      ) : search.isError ? (
-        unavailable ? (
-          <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
-            <h2 className="type-section">Chamadas temporariamente indisponíveis</h2>
-            <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">O banco de editais nacionais não respondeu. Tente de novo em instantes.</p>
-          </div>
-        ) : (
-          <ErrorState error={search.error} onRetry={() => search.refetch()} />
-        )
-      ) : response && response.data.length === 0 ? (
-        <EmptyState icon={SearchX} title="Nenhuma chamada encontrada" testId="state-empty">
-          {international
-            ? 'Não há oportunidades internacionais com esses filtros. Experimente “Qualquer elegibilidade”; a coleta internacional também pode estar desligada.'
-            : 'Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.'}
-        </EmptyState>
-      ) : (
-        <section aria-label="Oportunidades" data-testid="list-opportunities">
-          <p className="mb-3 type-meta text-muted-foreground">
-            {pagination ? `${formatNumber(pagination.total)} ${pagination.total === 1 ? 'chamada' : 'chamadas'}` : ''}
-            {response?.meta.indexUpdatedAt ? ` · Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}` : ''}
-          </p>
-          <ul className="overflow-hidden rounded-xl border border-border bg-card">
-            {response?.data.map((opportunity) =>
-              opportunity.international ? (
-                <InternationalRow key={opportunity.id} opportunity={opportunity} />
-              ) : (
-                <OpportunityRow key={opportunity.id} opportunity={opportunity} />
-              ),
+      <div className="@container/page">
+        <div className={filterWorkspaceClass(desktopFiltersCollapsed)}>
+          <FilterSidebar
+            collapsed={desktopFiltersCollapsed}
+            onCollapsedChange={setDesktopFiltersCollapsed}
+            activeCount={activeFilters}
+            onClear={clearFilters}
+            panelId="desktop-opportunity-filters"
+            titleId="opportunity-filters-title"
+            testIdPrefix="opportunity-"
+            layoutKey={scope}
+          >
+            {international ? (
+              <InternationalFilters params={params} facets={facets} onChange={update} />
+            ) : (
+              <OpportunityFilters params={params} facets={facets} hiddenIndividualListings={response?.meta.hiddenIndividualListings ?? 0} onChange={update} />
             )}
-          </ul>
-          {pagination && <SearchPagination pagination={pagination} page={params.page ?? 1} onPageChange={(page) => update({ page })} />}
-        </section>
-      )}
+          </FilterSidebar>
+
+          <section ref={resultsRef} aria-labelledby="opportunity-results-title" className="min-w-0 scroll-mt-24">
+            <h2 id="opportunity-results-title" className="sr-only">
+              Oportunidades
+            </h2>
+            <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <OpportunityFiltersButton params={params} facets={facets} open={sheetOpen} onOpen={() => setSheetOpen(true)} triggerRef={filtersButtonRef} />
+              <p aria-live="polite" aria-atomic="true" data-testid="text-opportunity-result-count" className="min-w-0 text-sm text-muted-foreground">
+                <span className={search.isError ? 'font-medium' : 'font-semibold text-foreground'}>{resultCount}</span>
+                {params.q && pagination && !search.isPending && !search.isError && <span className="hidden sm:inline"> para “{params.q}”</span>}
+                {appliedAnnouncement && <span className="sr-only"> {appliedAnnouncement}</span>}
+              </p>
+              {refreshing && (
+                <span role="status" className="inline-flex items-center gap-1 type-meta text-muted-foreground" data-testid="status-opportunity-refreshing">
+                  <Loader2 size={13} className="animate-spin" aria-hidden />
+                  Atualizando…
+                </span>
+              )}
+              {!search.isPending && !search.isError && (
+                <span className="type-meta text-muted-foreground">
+                  {response?.meta.indexUpdatedAt ? `Atualizado em ${formatDateTime(response.meta.indexUpdatedAt)}` : 'Nenhuma coleta registrada'}
+                </span>
+              )}
+            </div>
+
+            <div className="mb-3 empty:hidden">
+              <ActiveOpportunityFilters params={params} facets={facets} onChange={update} />
+            </div>
+
+            {international && response && !response.meta.internationalInProfile && (
+              <p data-testid="notice-international-profile" className="mb-4 type-meta text-muted-foreground">
+                Oportunidades internacionais não entram nas suas recomendações nem na combinação com o perfil.{' '}
+                <Link href="/settings#recomendacoes" className="font-semibold text-primary hover:underline">
+                  Ativar em Configurações
+                </Link>
+                .
+              </p>
+            )}
+
+            {response && response.meta.installationIssues.length > 0 && (
+              <details
+                data-testid="banner-installation-issues"
+                className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 type-ui text-foreground"
+              >
+                <summary className="cursor-pointer font-semibold">
+                  {response.meta.installationIssues.length === 1
+                    ? '1 fonte não respondeu por completo.'
+                    : `${formatNumber(response.meta.installationIssues.length)} fontes não responderam por completo.`}
+                </summary>
+                <ul className="mt-2 space-y-1">
+                  {response.meta.installationIssues.map((issue) => (
+                    <li key={issue.installationId}>
+                      {issue.name}: {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
+            {response && response.meta.gaps.length > 0 && (
+              <p data-testid="banner-gaps" className="mb-4 type-meta text-muted-foreground">
+                {response.meta.gaps.length} estados não têm instalação estadual do Mapas Culturais: {response.meta.gaps.map((gap) => gap.uf).join(', ')}. Neles
+                só entram chamadas de municípios com instalação própria.
+              </p>
+            )}
+
+            {search.isPending ? (
+              <RowsSkeleton />
+            ) : search.isError ? (
+              unavailable ? (
+                <div data-testid="state-error" className="rounded-xl border border-dashed border-border-strong px-5 py-14 text-center">
+                  <h2 className="type-section">Chamadas temporariamente indisponíveis</h2>
+                  <p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">
+                    O banco de editais nacionais não respondeu. Tente de novo em instantes.
+                  </p>
+                </div>
+              ) : (
+                <ErrorState error={search.error} onRetry={() => search.refetch()} />
+              )
+            ) : response && response.data.length === 0 ? (
+              <EmptyState icon={SearchX} title="Nenhuma chamada encontrada" testId="state-empty">
+                {international
+                  ? 'Não há oportunidades internacionais com esses filtros. Experimente “Qualquer elegibilidade”; a coleta internacional também pode estar desligada.'
+                  : 'Não há oportunidades com esses filtros. A coleta ainda pode não ter rodado.'}
+              </EmptyState>
+            ) : (
+              <section aria-label="Oportunidades" data-testid="list-opportunities">
+                <ul className="overflow-hidden rounded-xl border border-border bg-card">
+                  {response?.data.map((opportunity) =>
+                    opportunity.international ? (
+                      <InternationalRow key={opportunity.id} opportunity={opportunity} />
+                    ) : (
+                      <OpportunityRow key={opportunity.id} opportunity={opportunity} />
+                    ),
+                  )}
+                </ul>
+                {pagination && (
+                  <SearchPagination
+                    pagination={pagination}
+                    page={params.page ?? 1}
+                    onPageChange={(page) => {
+                      update({ page });
+                      resultsRef.current?.scrollIntoView({
+                        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                        block: 'start',
+                      });
+                    }}
+                  />
+                )}
+              </section>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <OpportunityFilterSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        params={params}
+        facets={facets}
+        triggerRef={filtersButtonRef}
+        onApply={(next, total) => {
+          replaceAll(next);
+          setAppliedAnnouncement(opportunityAppliedMessage(total));
+        }}
+      />
     </>
   );
 }

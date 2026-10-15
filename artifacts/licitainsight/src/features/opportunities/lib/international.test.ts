@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import type { InternationalOpportunity, OpportunitySearchResponse } from '@/api';
+import { InternationalFilters } from '../components/international';
 import {
   amountLine,
   amountTexts,
@@ -27,17 +30,23 @@ const deadline = (value: Partial<InternationalOpportunity['deadline']>): Interna
 
 test('prazo sempre em horário de Brasília, com o original ao lado', () => {
   // Uganda: 11:00 em Kampala (GMT+3) são 05:00 em Brasília.
-  assert.deepEqual(deadlineTexts(deadline({ at: '2026-10-27T08:00:00.000Z', precision: 'datetime', timeZone: 'Africa/Kampala', original: '2026-10-27 11:00' })), {
-    brasilia: '27/10/2026 às 05:00 (horário de Brasília)',
-    original: '27/10/2026 às 11:00 (GMT+3, Kampala)',
-    note: null,
-  });
+  assert.deepEqual(
+    deadlineTexts(deadline({ at: '2026-10-27T08:00:00.000Z', precision: 'datetime', timeZone: 'Africa/Kampala', original: '2026-10-27 11:00' })),
+    {
+      brasilia: '27/10/2026 às 05:00 (horário de Brasília)',
+      original: '27/10/2026 às 11:00 (GMT+3, Kampala)',
+      note: null,
+    },
+  );
   // Bruxelas no inverno: 14:00 (GMT+1) são 10:00 em Brasília.
-  assert.deepEqual(deadlineTexts(deadline({ at: '2027-03-04T13:00:00.000Z', precision: 'datetime', timeZone: 'Europe/Brussels', original: '2027-03-04 14:00' })), {
-    brasilia: '04/03/2027 às 10:00 (horário de Brasília)',
-    original: '04/03/2027 às 14:00 (GMT+1, Bruxelas)',
-    note: null,
-  });
+  assert.deepEqual(
+    deadlineTexts(deadline({ at: '2027-03-04T13:00:00.000Z', precision: 'datetime', timeZone: 'Europe/Brussels', original: '2027-03-04 14:00' })),
+    {
+      brasilia: '04/03/2027 às 10:00 (horário de Brasília)',
+      original: '04/03/2027 às 14:00 (GMT+1, Bruxelas)',
+      note: null,
+    },
+  );
   // Prazo de madrugada no Pacífico cai no dia anterior em Brasília.
   assert.equal(
     deadlineTexts(deadline({ at: '2026-11-04T21:00:00.000Z', precision: 'datetime', timeZone: 'Pacific/Fiji', original: '2026-11-05 09:00' })).brasilia,
@@ -68,7 +77,10 @@ test('valor na moeda original com o aproximado em reais e a data da PTAX', () =>
   assert.match(texts.approx!, /^≈ R\$\s19,2\smi$/);
   assert.match(amountLine(texts), /^€\s3,4\smi ≈ R\$\s19,2\smi \(PTAX de 09\/10\/2026\)$/);
   // Por extenso no detalhe.
-  assert.match(amountTexts({ amountOriginal: 3_430_000, currency: 'EUR', amountBrlApprox: 19_154_492, fxDate: '2026-10-09' }, false)!.original, /^€\s3\.430\.000$/);
+  assert.match(
+    amountTexts({ amountOriginal: 3_430_000, currency: 'EUR', amountBrlApprox: 19_154_492, fxDate: '2026-10-09' }, false)!.original,
+    /^€\s3\.430\.000$/,
+  );
   // Moeda sem cotação PTAX: só o original, sem inventar conversão.
   const cfa = amountTexts({ amountOriginal: 50_000_000, currency: 'XOF', amountBrlApprox: null, fxDate: null })!;
   assert.equal(cfa.approx, null);
@@ -138,4 +150,24 @@ test('atalho "só projetos no Brasil", título original e local', () => {
   assert.equal(placeLabel({ countryName: 'Uganda', regionName: 'África' }), 'Uganda');
   assert.equal(placeLabel({ countryName: null, regionName: 'Europa' }), 'Europa');
   assert.equal(placeLabel({ countryName: null, regionName: null }), 'Vários países');
+});
+
+test('painel internacional segue as perguntas didáticas e recolhe os filtros secundários', () => {
+  const html = renderToStaticMarkup(
+    createElement(InternationalFilters, {
+      params: { scope: 'international', agency: ['Banco Mundial'] },
+      facets: null,
+      onChange: () => undefined,
+    }),
+  );
+  const order = ['Onde?', 'O quê?', 'Até quando?', 'Para brasileiros?', 'Mais filtros'].map((title) => html.indexOf(`>${title}<`));
+  assert.ok(order.every((index) => index >= 0));
+  assert.deepEqual(
+    [...order].sort((a, b) => a - b),
+    order,
+  );
+  assert.match(html, /aria-expanded="false"[^>]*data-testid="button-international-more-filters"/);
+  assert.match(html, /data-testid="badge-international-more-filters"[^>]*>1<span class="sr-only"> ativo<\/span>/);
+  assert.match(html, /data-testid="select-opportunity-funding"/);
+  assert.match(html, /Por padrão, mostramos o que um brasileiro pode disputar/);
 });
