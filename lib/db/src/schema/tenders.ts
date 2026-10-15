@@ -147,6 +147,18 @@ export const tendersTable = pgTable(
     index("tenders_open_by_state_value_idx")
       .on(table.state, table.estimatedValue, table.fetchedAt, table.estimatedValueFlag)
       .where(sql`${table.status} = 'open'`),
+    // First page of open tenders in the default (publication) and deadline orders, without sorting every open row.
+    index("tenders_open_published_at_idx")
+      .on(table.publishedAt.desc().nullsLast(), table.id.asc())
+      .where(sql`${table.status} = 'open'`),
+    index("tenders_open_deadline_idx")
+      .on(table.proposalDeadline.asc().nullsLast(), table.id.asc())
+      .where(sql`${table.status} = 'open'`),
+    // Status facet with a state, modality or platform filter: every status, read from the index alone. An expression index
+    // only serves index-only scans when it also holds the column itself, hence the trailing `state`.
+    index("tenders_upper_state_status_idx").on(sql`upper(${table.state})`, table.status, table.state),
+    index("tenders_modality_status_idx").on(table.modality, table.status),
+    index("tenders_platform_status_idx").on(table.platform, table.status),
     // The only rows a plausibility rule can flag; see ESTIMATED_VALUE_REVIEW_FLOOR.
     index("tenders_estimated_value_review_idx")
       .on(table.id)
