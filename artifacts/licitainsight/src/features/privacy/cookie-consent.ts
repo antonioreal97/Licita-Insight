@@ -24,8 +24,13 @@ export function setCookieConsent(value: CookieConsent): void {
   try {
     localStorage.setItem(COOKIE_CONSENT_KEY, value);
     if (value === 'refused') {
-      sessionStorage.removeItem('pardal-triage-v1');
       for (const key of OPTIONAL_KEYS) localStorage.removeItem(key);
+      // Separate guard: an unavailable sessionStorage must not keep the optional keys above in localStorage.
+      try {
+        sessionStorage.removeItem('pardal-triage-v1');
+      } catch (error) {
+        console.error('[cookies] Não foi possível limpar o progresso da triagem.', error);
+      }
     }
   } catch (error) {
     console.error('[cookies] Não foi possível gravar a escolha de cookies.', error);
