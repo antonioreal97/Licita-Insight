@@ -1716,6 +1716,64 @@ export interface InternationalOpportunity {
   details: InternationalOpportunityDetail[];
 }
 
+/**
+ * Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+ * @nullable
+ */
+export type OpportunityApplicationArticle = typeof OpportunityApplicationArticle[keyof typeof OpportunityApplicationArticle] | null;
+
+
+export const OpportunityApplicationArticle = {
+  a: 'a',
+  o: 'o',
+} as const;
+
+/**
+ * `source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.
+ */
+export type OpportunityNoticeOrigin = typeof OpportunityNoticeOrigin[keyof typeof OpportunityNoticeOrigin];
+
+
+export const OpportunityNoticeOrigin = {
+  source_page: 'source_page',
+  document: 'document',
+} as const;
+
+export interface OpportunityApplication {
+  url: string;
+  /**
+     * Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.
+     * @nullable
+     */
+  platform: string | null;
+  /**
+     * Platform name to show ("Plataforma Sucupira").
+     * @nullable
+     */
+  label: string | null;
+  /**
+     * Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+     * @nullable
+     */
+  article: OpportunityApplicationArticle;
+  origin: OpportunityNoticeOrigin;
+  /**
+     * Title of the document that indicates the link, when `origin` is `document`.
+     * @nullable
+     */
+  documentTitle: string | null;
+}
+
+export interface OpportunityNoticeDates {
+  /** @nullable */
+  registrationFrom: string | null;
+  /** @nullable */
+  registrationTo: string | null;
+  origin: OpportunityNoticeOrigin;
+  /** @nullable */
+  documentTitle: string | null;
+}
+
 export interface OpportunitySummary {
   id: string;
   title: string;
@@ -1749,6 +1807,15 @@ export interface OpportunitySummary {
   scope: OpportunityScope;
   /** Set on international calls only. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence. */
+  application?: OpportunityApplication | null;
+  /**
+     * Last reading of the call page and documents. `null` while the call was never read.
+     * @nullable
+     */
+  applicationCheckedAt?: string | null;
+  /** Registration period read from the notice. Set only when the source publishes no dates of its own. */
+  noticeDates?: OpportunityNoticeDates | null;
 }
 
 export interface OpportunityRecommendation {

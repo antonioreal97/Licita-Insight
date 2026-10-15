@@ -23,6 +23,7 @@ O endpoint preserva o contrato cultural original e passa a reunir oportunidades 
 - `installation` continua presente para clientes v1, agora com `city`. Em fontes não-Mapas, seu `id` é o id da fonte e o nome é a atribuição oficial. Instalações municipais usam o id `<uf>-<município>` (`rn-natal`).
 - `sourceUrl` é sempre o link canônico oficial quando disponível.
 - `profileMatch` é uma pontuação determinística opcional, baseada nos termos, exclusões, UFs e faixa de valor do perfil autenticado; `null` significa ausência de combinação suficiente.
+- `application`, `applicationCheckedAt` e `noticeDates`: onde se inscrever e o período de inscrição lido do edital (seção "Onde se inscrever"). Campos aditivos: clientes que não os conhecem continuam iguais.
 
 A migração `0031_opportunities_hub.sql` é não destrutiva: mantém `cultural_opportunities`, adiciona colunas com defaults `culture`/`mapas`, preserva todos os registros e relaxa somente o `NOT NULL` de `program`. No PostgreSQL 11+, defaults constantes são adicionados por metadados e não reescrevem a tabela; ainda assim, índices são construídos e devem ser aplicados na janela operacional normal.
 
@@ -33,6 +34,52 @@ A minimização de dados pessoais (11/10/2026) não tem migração: tipo do dono
 A migração `0040_opportunity_federal_sources.sql` só amplia a lista de valores aceitos em `source`; não toca em nenhuma linha. É manual em produção e deve ser aplicada antes de ligar a coleta federal (`docs/migrations/0040-opportunity-federal-sources.md`).
 
 A migração `0041_international_opportunities.sql` adiciona as colunas das chamadas internacionais, amplia as listas de `kind` e `source` e cria a preferência `users.show_international_opportunities`. É manual em produção e deve ser aplicada **antes** de publicar a API (`docs/migrations/0041-international-opportunities.md`).
+
+A migração `0043_opportunity_application.sql` adiciona, todas nulas, as colunas do link de inscrição (`application_*`) e do período lido do edital (`notice_*`). É manual em produção e deve ser aplicada **antes** de publicar a API (`docs/migrations/0043-opportunity-application.md`).
+
+## Onde se inscrever
+
+Sem IA e sem custo de modelo: regras determinísticas sobre a página da chamada na fonte e o texto dos documentos oficiais (PDF, DOCX, ODT, lidos pelo mesmo extrator dos editais do PNCP). Na dúvida, nada é preenchido: um link errado é pior que nenhum.
+
+`application` (ou `null`):
+
+| Campo | Conteúdo |
+| --- | --- |
+| `url` | Link para se inscrever. |
+| `platform` | Slug de plataforma conhecida (`sucupira`, `sicapes`, `carlos-chagas`, `salic`, `transferegov`, `sigproj`, `prosas`, `mapa-da-cultura`, `mapas-culturais`, `fapesp-sage`, `sisfaperj`, `fapemig-everest`, `facepe-agil`, `sigfap`, `eu-funding-tenders`, `eu-prospect`, `google-forms`, `even3`) ou `null` para um link aceito só pelas palavras ao redor. A tabela fica em `artifacts/api-server/src/ingest/application-platforms.ts` e cresce com uma entrada por plataforma (host, caminho, nomes e página de entrada). |
+| `label` | Nome a exibir ("Plataforma Sucupira"); `null` sem plataforma conhecida. |
+| `article` | Artigo de `label` (`a`/`o`), para "na Plataforma Sucupira", "no Salic". |
+| `origin` | `source_page` (a página da chamada, ou a página é a própria plataforma) ou `document` (um documento oficial). |
+| `documentTitle` | Título do documento que indica o link, quando `origin = document`. |
+
+Regras:
+
+- **A página é a plataforma**: Mapas Culturais (inscrição na página da oportunidade), Transferegov.br (o portal recebe as propostas), tópicos do Funding & Tenders da UE (`topic-details`, botão de submissão na própria página) e chamadas de ação externa no PROSPECT. Sem requisição.
+- **Plataforma conhecida** citada (link ou nome) logo depois de palavras de inscrição ("inscrição", "submissão", "propostas deverão ser encaminhadas", "formulário de propostas"…), sem palavra de outra etapa no meio (recurso, resultado, homologação, contato, legislação, verificação, Lattes…). Nome sem link usa a página de entrada da plataforma. Duas plataformas com a mesma força: nada.
+- **Outro link**: só se for o único, vier logo depois de palavras de inscrição e a frase disser que é um lugar ("no link", "pelo sistema", "acesse", "formulário"…).
+- Nunca: e-mail, legislação (planalto, DOU, `leg.br`), gov.br genérico, redes sociais, login gov.br, Lattes, Linha Direta, autenticação do SEI, o próprio PDF/página da chamada ou qualquer arquivo.
+
+`noticeDates` (ou `null`): `registrationFrom`, `registrationTo`, `origin` e `documentTitle`. Só existe quando a fonte não publica datas (`registrationFrom` e `registrationTo` nulos); as datas da fonte sempre prevalecem e `registrationFrom`/`registrationTo` não mudam. Vem de expressões em português logo depois de "inscrição/inscrições/submissão/envio das propostas" — "de 24 de agosto de 2026 até as 18h do dia 18 de dezembro de 2026", "De 20 de outubro a 18 de novembro de 2026", "01/12/2026 a 15/01/2027", "até 30/11/2026, às 18h", "Data limite para submissão 11/12/2026". Horário de Brasília; sem hora, o período abre às 00:00 e fecha às 23:59:59. Não preenche quando: falta o ano; uma data solta não diz se abre ou encerra; a data é de outra etapa (homologação, resultado, seleção interna); duas afirmações discordam (cronograma alterado, segunda etapa); ou existe retificação/alteração listada que não pôde ser lida. A página da fonte vem antes dos documentos (no PDSE ela traz o cronograma alterado). `status` não muda com essas datas.
+
+`applicationCheckedAt`: última leitura da página e dos documentos. `null` = ainda não lida; com data e `application = null`, o edital foi lido e não indica um link com confiança.
+
+### Leitura (dentro das coletas existentes)
+
+Não há agenda nova: a leitura roda no fim de cada coleta já agendada, depois de gravar as chamadas, e nunca a faz falhar (o resultado vai em `ingest_runs.details.applications`).
+
+| Coleta | Fontes lidas | Requisições |
+| --- | --- | --- |
+| Fomento (`collect:funding`) | CAPES, CNPq, FINEP | Página da chamada e até 3 documentos do edital |
+| Cultura federal (`collect:culture-federal`) | MinC, Salic, Funarte; Transferegov por regra | Idem; Transferegov sem requisição |
+| Internacional (`collect:international`) | Funding & Tenders por regra | Nenhuma (Banco Mundial e cascata ficam sem link) |
+| Mapas Culturais (`collect:opportunities`) | Mapas por regra | Nenhuma (um `UPDATE` em lote) |
+
+- Só chamadas não encerradas. Até `APPLICATION_READ_MAX_CALLS` (20) chamadas lidas por coleta, as nunca lidas primeiro; o resto fica para a próxima.
+- Documentos: os listados pela fonte e os PDFs da página cujo título é de edital, chamada, regulamento ou alteração, do ano mais recente; nunca resultados, listas, anexos, modelos ou portarias. Até 15 MB e 150 páginas por arquivo, 30 s de timeout, um download por endereço na coleta. O texto é lido em memória e descartado; só link, datas e título do documento são gravados.
+- Ritmo: `APPLICATION_READ_DELAY_MS` (1000) entre requisições, robots.txt de cada host consultado antes, até 3 redirecionamentos seguidos à mão, mesmo User-Agent das coletas.
+- Cache: `application_input_hash` (versão do leitor + `sourceUrl` + URLs de `documents`). Chamada com o mesmo hash lida há menos de 7 dias não é relida; documento novo na fonte (retificação) muda o hash e força a releitura. Página proibida no robots.txt ou com 4xx conta como lida até a próxima janela; timeout e 5xx tentam de novo na próxima coleta.
+- `OPPORTUNITY_APPLICATION_READING=false` desliga a leitura (as coletas seguem iguais).
+- Coleta repetida: o upsert não toca nas colunas `application_*`/`notice_*`; a mesma chamada continua com o link e não duplica.
 
 ## `GET /api/v1/opportunities`
 
@@ -109,7 +156,7 @@ Regras comuns às páginas gov.br:
 - `robots.txt` do `www.gov.br` e do portal do órgão lidos antes de qualquer página; proibição vira `blocked_by_robots`. Resposta diferente de 200 (403, 5xx) vira falha registrada, sem nova tentativa no mesmo dia.
 - Só GET de página pública, com o User-Agent do coletor e 1 segundo entre requisições (`CULTURE_FEDERAL_PAGE_DELAY_MS`). Sem login, sem cookies, sem execução de JavaScript. Redirecionamento só é seguido dentro do portal do órgão.
 - Tetos por coleta: 30 cartões por lista, 12 chamadas por página de programa e 60 requisições por fonte. No dia 11/10/2026 a coleta inteira fez 25 requisições.
-- Da página saem título, situação ("Inscrições abertas"), datas de inscrição, um trecho de até 400 caracteres e os anexos (`documents`: título, link oficial e tipo). Os arquivos não são baixados. O conteúdo do gov.br é CC BY-ND 3.0: o trecho é literal e vai com a fonte e o link.
+- Da página saem título, situação ("Inscrições abertas"), datas de inscrição, um trecho de até 400 caracteres e os anexos (`documents`: título, link oficial e tipo). A coleta não baixa os arquivos; a leitura de "Onde se inscrever", no fim da coleta, lê até 3 deles em memória e não guarda o conteúdo. O conteúdo do gov.br é CC BY-ND 3.0: o trecho é literal e vai com a fonte e o link.
 - Datas: caixa "De … Até …" da Funarte, cronograma ("Início das inscrições", "Encerramento do prazo de inscrição") e frases que falam de inscrição. Sem data explícita na página, `registrationFrom`/`registrationTo` ficam `null` e a situação é `open`, porque a própria lista oficial é a de editais abertos. "Fluxo contínuo" sem data final marca `continuousFlow`.
 - Deduplicação: `(installationId, externalId)`, com `installationId` igual à fonte. `externalId` é `programa-<COD_PROGRAMA>` ou `parcerias-<id_programa>` no Transferegov e o SHA-256 truncado da URL canônica nas páginas gov.br. O mesmo edital listado pelo MinC e pela Funarte (as duas apontam para a mesma oportunidade do Mapa da Cultura) fica só na primeira fonte que o lista.
 - Encerramento: pela data (`registrationTo`), a cada coleta; e, quando a listagem oficial foi lida inteira, o que saiu dela é encerrado. Listagem vazia, incompleta ou com falha não encerra nada.

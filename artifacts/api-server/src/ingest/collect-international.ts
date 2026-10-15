@@ -30,6 +30,10 @@ import {
 } from "./upsert-opportunities";
 import { STALE_HEARTBEAT_ERROR } from "./international-collect-decision";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
+import {
+  readApplicationsSafely,
+  type ApplicationReader,
+} from "./application-enrichment";
 
 const INGEST_SOURCE = "international";
 export const INTERNATIONAL_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -117,6 +121,7 @@ export async function collectInternational(
     /** Fetcher of the PTAX quotes; the source collectors bring their own. */
     ptaxFetcher?: InternationalFetch;
     translator?: TitleTranslator | null;
+    readApplications?: ApplicationReader;
   } = {},
 ): Promise<CollectInternationalResult> {
   const collect = options.collect ?? collectInternationalOnce;
@@ -140,6 +145,7 @@ export async function collectInternational(
 
   const stopHeartbeat = startIngestRunHeartbeat(runId);
   let result: Omit<CollectInternationalResult, "translation">;
+  let applications: unknown = null;
   try {
     const sources = await collect({ now });
     const drafts = sources.flatMap((source) => source.drafts);
@@ -174,6 +180,11 @@ export async function collectInternational(
         .where(eq(ingestRunsTable.id, runId));
     }
     const refreshed = (await refreshOpportunityStatuses(now)) + closed;
+    // The Funding & Tenders topic page is where one applies; no other page is read here.
+    applications = await (options.readApplications ?? readApplicationsSafely)(
+      ["eu_ft", "worldbank"],
+      now,
+    );
     const read = sources.filter(
       (source) => source.outcome === "ok" || source.outcome === "partial",
     );
@@ -196,7 +207,7 @@ export async function collectInternational(
         refreshed,
         refreshErrors: errors.length,
         error: errors.length ? errors.join("\n") : null,
-        details,
+        details: { ...details, applications },
         heartbeatAt: new Date(),
         finishedAt: new Date(),
       })
@@ -237,6 +248,7 @@ export async function collectInternational(
           sources: result.sources,
           counts: result.counts,
           ptax: result.ptax,
+          applications,
           translation,
         },
       })

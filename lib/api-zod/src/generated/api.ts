@@ -2097,7 +2097,22 @@ export const SearchOpportunitiesResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -2280,7 +2295,22 @@ export const GetOpportunityByIdResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 })
 
 
@@ -3096,7 +3126,22 @@ export const ListRecommendationsResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 }),
   "score": zod.number(),
   "reasons": zod.array(zod.string())
