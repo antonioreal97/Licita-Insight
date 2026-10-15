@@ -30,7 +30,7 @@ const dispensa = { modalidadeId: 8, modalidadeNome: "Dispensa" };
 const byValue = { codigo: 19, nome: "Lei 14.133/2021, Art. 75, II" };
 const emergency = { codigo: 39, nome: "Lei 14.133/2021, Art. 75, VIII" };
 
-test("valor estimado suspeito: ingestão, revisão idempotente, ordenação, filtro e facetas", {
+test("valor estimado suspeito: ingestão, revisão idempotente, mapa, ordenação, filtro e facetas", {
   skip: !process.env.PNCP_TEST_DATABASE_URL,
 }, async () => {
   const schema = `value_flag_test_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -49,10 +49,14 @@ test("valor estimado suspeito: ingestão, revisão idempotente, ordenação, fil
       { upsertPublications },
       { reviewEstimatedValues, runEstimatedValueReview },
       { PostgresTenderRepository },
+      { selectOpenTendersByState },
+      { createOpenTendersByStateCache },
     ] = await Promise.all([
       import("./upsert-tenders"),
       import("./estimated-value-review"),
       import("../repositories/postgres-tender-repository"),
+      import("../repositories/postgres-open-tenders-by-state"),
+      import("../services/open-tenders-by-state"),
     ]);
 
     const rows = [
@@ -147,9 +151,26 @@ test("valor estimado suspeito: ingestão, revisão idempotente, ordenação, fil
         `explain select id from tenders where id > '' and estimated_value >= 100000000 order by id limit 1000`,
       );
       assert.ok(plan.rows.map((row) => row["QUERY PLAN"]).join("\n").includes(` on ${reviewIndex.rows[0]!.indexname} `));
+      const aggregate = await client.query<{ "QUERY PLAN": string }>(
+        `explain select state, count(*), sum(estimated_value) filter (where estimated_value_flag is null), max(fetched_at)
+         from tenders where status = 'open' and state is not null group by state`,
+      );
+      assert.match(aggregate.rows.map((row) => row["QUERY PLAN"]).join("\n"), /Index Only Scan/);
     } finally {
       client.release();
     }
+
+    // The map counts every open tender and adds only the values that raised no doubt.
+    const plausibleTotal = 24_000_000_000 + 12_000_000 + 5_250_000_000 + 48_500.5;
+    const alagoas = (await selectOpenTendersByState()).find(({ state }) => state === "AL");
+    assert.equal(alagoas?.openTenders, 9);
+    assert.equal(alagoas?.estimatedValueTotal, plausibleTotal);
+    const served = await createOpenTendersByStateCache(selectOpenTendersByState).get();
+    assert.equal(served.data.find(({ state }) => state === "AL")?.estimatedValueTotal, plausibleTotal);
+    const naive = await pool.query<{ total: string }>(
+      "select sum(estimated_value)::text as total from tenders where status = 'open' and state = 'AL'",
+    );
+    assert.equal(Number(naive.rows[0]?.total), plausibleTotal + VEST + 126_000_000 + 10_700_000_000);
 
     const repository = new PostgresTenderRepository();
     const criteria = {
