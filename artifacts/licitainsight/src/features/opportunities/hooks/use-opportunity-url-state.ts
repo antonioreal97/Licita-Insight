@@ -22,5 +22,12 @@ export function useOpportunityUrlState() {
     [navigate, params],
   );
 
-  return { params, update };
+  const replaceAll = useCallback(
+    (next: OpportunitySearchParams) => {
+      navigate(`/oportunidades${opportunityParamsToUrl({ ...next, page: undefined })}`);
+    },
+    [navigate],
+  );
+
+  return { params, update, replaceAll };
 }
