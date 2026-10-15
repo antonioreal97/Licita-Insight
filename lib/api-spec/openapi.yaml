@@ -1537,8 +1537,14 @@ paths:
           in: path
           required: true
           schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DismissRecommendationRequest" }
       responses:
         "204": { description: Recommendation dismissed }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "402": { $ref: "#/components/responses/SubscriptionRequired" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -2150,6 +2156,13 @@ components:
           type: boolean
           description: Kept as it is when omitted.
       required: [personalizationEnabled]
+    DismissRecommendationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [not_offering, region, value, deadline]
+          description: Optional explicit feedback; omitted preserves the existing topic penalty.
     RecommendationEventRequest:
       oneOf:
         - type: object

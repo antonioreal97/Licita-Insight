@@ -3229,6 +3229,10 @@ export const DismissRecommendationParams = zod.object({
   "tenderId": zod.coerce.string().min(1).max(dismissRecommendationPathTenderIdMax)
 })
 
+export const DismissRecommendationBody = zod.object({
+  "reason": zod.enum(['not_offering', 'region', 'value', 'deadline']).optional().describe('Optional explicit feedback; omitted preserves the existing topic penalty.')
+})
+
 export const DismissRecommendationResponse = zod.void()
 
 

@@ -293,6 +293,24 @@ export interface UpdateRecommendationPreferencesRequest {
   showInternationalOpportunities?: boolean;
 }
 
+/**
+ * Optional explicit feedback; omitted preserves the existing topic penalty.
+ */
+export type DismissRecommendationRequestReason = typeof DismissRecommendationRequestReason[keyof typeof DismissRecommendationRequestReason];
+
+
+export const DismissRecommendationRequestReason = {
+  not_offering: 'not_offering',
+  region: 'region',
+  value: 'value',
+  deadline: 'deadline',
+} as const;
+
+export interface DismissRecommendationRequest {
+  /** Optional explicit feedback; omitted preserves the existing topic penalty. */
+  reason?: DismissRecommendationRequestReason;
+}
+
 export type RecommendationEventRequest = {
   type: 'search';
   /** @maxLength 2000 */

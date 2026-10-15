@@ -96,6 +96,8 @@ export * from './deadlineToParameter';
 export * from './deleteAccountRequest';
 export * from './deleteAccountRequestConfirm';
 export * from './devLoginRequest';
+export * from './dismissRecommendationRequest';
+export * from './dismissRecommendationRequestReason';
 export * from './documentReadingSummary';
 export * from './documentReadingUnread';
 export * from './emailDigestPreference';
