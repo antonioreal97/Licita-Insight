@@ -7,13 +7,14 @@ import { toast } from '@/hooks/use-toast';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling, useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
-import { queryKeys } from '@/services/query-keys';
+import { scopedMeQueryKeys } from '@/services/query-keys';
 import { trackTenderAction } from '@/features/analytics/google-analytics';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
 /** Before accounts, saved ids lived in this browser. They are imported once into the account, then the key is removed. */
 const LEGACY_STORAGE_KEY = 'licita-saved-tenders';
 const EMPTY: string[] = [];
-const MUTATION_KEY = ['saved-tenders', 'change'];
+const mutationKey = (workspaceId?: string) => (workspaceId ? ['saved-tenders', workspaceId, 'change'] : ['saved-tenders', 'change']);
 
 export type SavedTendersStatus = 'anonymous' | 'loading' | 'ready' | 'error';
 
@@ -50,8 +51,9 @@ function readLegacyIds(): string[] {
 // Once per page load: every useSavedTenders caller mounts this effect, only the first one imports.
 let importStarted = false;
 
-function useImportLegacySaved(entitled: boolean) {
+function useImportLegacySaved(entitled: boolean, workspaceId?: string) {
   const queryClient = useQueryClient();
+  const keys = scopedMeQueryKeys(workspaceId);
   useEffect(() => {
     if (!entitled || importStarted) return;
     importStarted = true;
@@ -64,7 +66,7 @@ function useImportLegacySaved(entitled: boolean) {
         } catch (error) {
           console.error(`[saved-tenders] Importado, mas não foi possível apagar localStorage "${LEGACY_STORAGE_KEY}".`, error);
         }
-        queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+        queryClient.invalidateQueries({ queryKey: keys.savedTenders.all });
         const missing = result.notFound.length;
         const skipped = result.skippedByLimit;
         if (result.imported === 0 && missing === 0 && skipped === 0) return;
@@ -89,7 +91,7 @@ function useImportLegacySaved(entitled: boolean) {
         toast({ variant: 'destructive', title: 'Não foi possível trazer os editais salvos neste navegador', description: errorDescription(error) });
       },
     );
-  }, [entitled, queryClient]);
+  }, [entitled, keys.savedTenders.all, queryClient]);
 }
 
 /**
@@ -103,29 +105,32 @@ export function useSavedTenders() {
   const entitled = billing.data?.entitled === true;
   const authenticated = session.status === 'authenticated';
   const queryClient = useQueryClient();
-  useImportLegacySaved(entitled);
+  const workspaceId = useActiveWorkspaceId();
+  const keys = scopedMeQueryKeys(workspaceId);
+  const mutations = mutationKey(workspaceId);
+  useImportLegacySaved(entitled, workspaceId);
 
   const ids = useQuery({
-    queryKey: queryKeys.me.savedTenders.ids,
+    queryKey: keys.savedTenders.ids,
     queryFn: ({ signal }) => accountService.getSavedTenderIds(signal),
     enabled: entitled,
     staleTime: 60_000,
   });
 
   const mutation = useMutation({
-    mutationKey: MUTATION_KEY,
+    mutationKey: mutations,
     mutationFn: async (change: Change) => {
       if (change.save) await accountService.saveTender(change.id, change.monitored);
       else await accountService.removeSavedTender(change.id);
     },
     onMutate: async (change) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.me.savedTenders.ids });
-      const previous = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
-      if (previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, applyChange(previous, change));
+      await queryClient.cancelQueries({ queryKey: keys.savedTenders.ids });
+      const previous = queryClient.getQueryData<SavedTenderIdsResponse>(keys.savedTenders.ids);
+      if (previous) queryClient.setQueryData(keys.savedTenders.ids, applyChange(previous, change));
       return { previous };
     },
     onError: (error, change, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.previous);
+      if (context?.previous) queryClient.setQueryData(keys.savedTenders.ids, context.previous);
       console.error('[saved-tenders] Falha ao atualizar edital salvo.', error);
       // 401 ("Sua sessão expirou") and the maintenance window are announced once, globally.
       if ((isApiError(error) && error.status === 401) || isMaintenance(error)) return;
@@ -159,7 +164,7 @@ export function useSavedTenders() {
     },
     // Refetch the truth once the last in-flight toggle settles; earlier refetches would flash intermediate states.
     onSettled: () => {
-      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+      if (queryClient.isMutating({ mutationKey: mutations }) === 1) queryClient.invalidateQueries({ queryKey: keys.savedTenders.all });
     },
   });
 
@@ -174,9 +179,9 @@ export function useSavedTenders() {
   const change = useCallback(
     (build: (current: SavedTenderIdsResponse) => Change | undefined, onSuccess?: () => void) => {
       if (!requireEntitled()) return;
-      const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      const current = queryClient.getQueryData<SavedTenderIdsResponse>(keys.savedTenders.ids);
       if (!current) {
-        const failed = queryClient.getQueryState(queryKeys.me.savedTenders.ids)?.status === 'error';
+        const failed = queryClient.getQueryState(keys.savedTenders.ids)?.status === 'error';
         toast({
           variant: 'destructive',
           title: failed ? 'Não foi possível carregar seus editais salvos' : 'Seus editais salvos ainda não carregaram',
@@ -187,11 +192,11 @@ export function useSavedTenders() {
       const next = build(current);
       if (next) mutate(next, onSuccess ? { onSuccess } : undefined);
     },
-    [queryClient, mutate, requireEntitled],
+    [keys.savedTenders.ids, queryClient, mutate, requireEntitled],
   );
   const toggle = useCallback(
     (id: string) => {
-      const current = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      const current = queryClient.getQueryData<SavedTenderIdsResponse>(keys.savedTenders.ids);
       if (
         current?.saved.includes(id) &&
         !window.confirm(
@@ -204,7 +209,7 @@ export function useSavedTenders() {
         return { id, save: false, wasMonitored: current.monitored.includes(id) };
       });
     },
-    [change, queryClient],
+    [change, keys.savedTenders.ids, queryClient],
   );
   const save = useCallback(
     (id: string, onSuccess?: () => void) => change((current) => (current.saved.includes(id) ? undefined : { id, save: true }), onSuccess),

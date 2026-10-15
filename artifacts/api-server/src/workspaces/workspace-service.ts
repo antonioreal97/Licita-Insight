@@ -40,6 +40,7 @@ export type WorkspaceSummary = {
   id: string;
   type: WorkspaceType;
   name: string;
+  slot: number;
   role: "owner";
   accessMode: WorkspaceAccessMode;
   onboardingStatus: WorkspaceOnboardingStatus;
@@ -252,6 +253,7 @@ export async function createWorkspace(
     id: workspace!.id,
     type: workspace!.type,
     name: workspace!.name,
+    slot: workspace!.limitSlot,
     role: "owner",
     accessMode,
     onboardingStatus: workspace!.onboardingStatus,
@@ -334,8 +336,9 @@ export async function listWorkspaces(
   return {
     workspaces: all
       .filter((row) => options.archived || row.archivedAt === null)
-      .map(({ limitSlot: _slot, lastSelectedAt: _selected, profileCompleteness, ...row }) => ({
+      .map(({ limitSlot, lastSelectedAt: _selected, profileCompleteness, ...row }) => ({
         ...row,
+        slot: limitSlot,
         role: "owner" as const,
         profileCompleteness: profileCompleteness ?? 0,
       })),

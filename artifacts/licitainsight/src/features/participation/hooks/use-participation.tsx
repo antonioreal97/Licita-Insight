@@ -7,12 +7,13 @@ import { toast } from '@/hooks/use-toast';
 import { useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { errorDescription, useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { accountService } from '@/services/account-service';
-import { queryKeys } from '@/services/query-keys';
+import { scopedMeQueryKeys } from '@/services/query-keys';
 import { MONITORED_STAGES, STAGE_LABELS } from '../lib/stages';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
-const MUTATION_KEY = ['saved-tenders', 'participation'];
+const mutationKey = (workspaceId?: string) => (workspaceId ? ['saved-tenders', workspaceId, 'participation'] : ['saved-tenders', 'participation']);
 /** Prefix of this hook's mutations and of the save/monitor toggles in `useSavedTenders`. */
-const SAVED_TENDERS_MUTATIONS = ['saved-tenders'];
+const savedTenderMutations = (workspaceId?: string) => (workspaceId ? ['saved-tenders', workspaceId] : ['saved-tenders']);
 
 /**
  * `previous` is the saved tender before the change, `null` when it is not saved yet: it drives the optimistic state,
@@ -64,11 +65,13 @@ function errorTitle(change: ParticipationChange) {
 /** The user's participation in one tender (`GET /me/saved-tenders/{id}`). Only fetched when the tender is saved. */
 export function useSavedTender(tenderId: string) {
   const { isSaved, entitled } = useSavedTenders();
+  const workspaceId = useActiveWorkspaceId();
+  const keys = scopedMeQueryKeys(workspaceId);
   const saved = isSaved(tenderId);
   // A GET while a save is in flight would 404: wait for the PUT, whose response fills the cache.
-  const mutating = useIsMutating({ mutationKey: SAVED_TENDERS_MUTATIONS }) > 0;
+  const mutating = useIsMutating({ mutationKey: savedTenderMutations(workspaceId) }) > 0;
   const query = useQuery({
-    queryKey: queryKeys.me.savedTenders.detail(tenderId),
+    queryKey: keys.savedTenders.detail(tenderId),
     queryFn: ({ signal }) => accountService.getSavedTender(tenderId, signal),
     enabled: entitled && saved && !mutating,
   });
@@ -82,10 +85,14 @@ export function useSavedTender(tenderId: string) {
 export function useUpdateParticipation() {
   const queryClient = useQueryClient();
   const requireEntitled = useRequireEntitled();
-  const busy = useIsMutating({ mutationKey: SAVED_TENDERS_MUTATIONS }) > 0;
+  const workspaceId = useActiveWorkspaceId();
+  const keys = scopedMeQueryKeys(workspaceId);
+  const mutations = mutationKey(workspaceId);
+  const mutationPrefix = savedTenderMutations(workspaceId);
+  const busy = useIsMutating({ mutationKey: mutationPrefix }) > 0;
 
   const mutation = useMutation({
-    mutationKey: MUTATION_KEY,
+    mutationKey: mutations,
     mutationFn: async (change: ParticipationChange): Promise<SavedTender | null> => {
       if ('remove' in change) {
         await accountService.removeSavedTender(change.tenderId);
@@ -98,17 +105,17 @@ export function useUpdateParticipation() {
         : saved;
     },
     onMutate: async (change) => {
-      const detailKey = queryKeys.me.savedTenders.detail(change.tenderId);
-      await Promise.all([queryClient.cancelQueries({ queryKey: detailKey }), queryClient.cancelQueries({ queryKey: queryKeys.me.savedTenders.ids })]);
+      const detailKey = keys.savedTenders.detail(change.tenderId);
+      await Promise.all([queryClient.cancelQueries({ queryKey: detailKey }), queryClient.cancelQueries({ queryKey: keys.savedTenders.ids })]);
       const detail = queryClient.getQueryData<SavedTender>(detailKey);
-      const ids = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
+      const ids = queryClient.getQueryData<SavedTenderIdsResponse>(keys.savedTenders.ids);
       if (detail && !('remove' in change)) queryClient.setQueryData(detailKey, applyBody(detail, change.body));
-      if (ids) queryClient.setQueryData(queryKeys.me.savedTenders.ids, applyIds(ids, change));
+      if (ids) queryClient.setQueryData(keys.savedTenders.ids, applyIds(ids, change));
       return { detail, ids };
     },
     onError: (error, change, context) => {
-      if (context?.detail) queryClient.setQueryData(queryKeys.me.savedTenders.detail(change.tenderId), context.detail);
-      if (context?.ids) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.ids);
+      if (context?.detail) queryClient.setQueryData(keys.savedTenders.detail(change.tenderId), context.detail);
+      if (context?.ids) queryClient.setQueryData(keys.savedTenders.ids, context.ids);
       console.error('[participation] Falha ao atualizar a participação.', error);
       // 401 ("Sua sessão expirou") and the maintenance window are announced once, globally.
       if ((isApiError(error) && error.status === 401) || isMaintenance(error)) return;
@@ -116,7 +123,7 @@ export function useUpdateParticipation() {
     },
     onSuccess: (data, change) => {
       if (!data || 'remove' in change) return;
-      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.setQueryData(queryKeys.me.savedTenders.detail(change.tenderId), data);
+      if (queryClient.isMutating({ mutationKey: mutations }) === 1) queryClient.setQueryData(keys.savedTenders.detail(change.tenderId), data);
 
       const { previous } = change;
       const undo = previous ? (
@@ -124,7 +131,7 @@ export function useUpdateParticipation() {
           altText="Desfazer"
           data-testid="button-undo-participation"
           onClick={() =>
-            !queryClient.isMutating({ mutationKey: SAVED_TENDERS_MUTATIONS }) && mutation.mutate({ tenderId: change.tenderId, previous: data, body: { stage: previous.stage }, restoreMonitoring: previous.monitored })
+            !queryClient.isMutating({ mutationKey: mutationPrefix }) && mutation.mutate({ tenderId: change.tenderId, previous: data, body: { stage: previous.stage }, restoreMonitoring: previous.monitored })
           }
         >
           Desfazer
@@ -156,16 +163,16 @@ export function useUpdateParticipation() {
     },
     // Refetch the truth once the last in-flight change settles; earlier refetches would flash intermediate states.
     onSettled: () => {
-      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+      if (queryClient.isMutating({ mutationKey: mutations }) === 1) queryClient.invalidateQueries({ queryKey: keys.savedTenders.all });
     },
   });
 
   const { mutate } = mutation;
   const update = useCallback(
     (change: ParticipationChange) => {
-      if (requireEntitled() && !queryClient.isMutating({ mutationKey: SAVED_TENDERS_MUTATIONS })) mutate(change);
+      if (requireEntitled() && !queryClient.isMutating({ mutationKey: mutationPrefix })) mutate(change);
     },
-    [mutate, requireEntitled, queryClient],
+    [mutate, mutationPrefix, requireEntitled, queryClient],
   );
   /** The stage this instance is switching to, for the button spinner. */
   const pendingStage = mutation.isPending && mutation.variables && 'body' in mutation.variables ? mutation.variables.body.stage : undefined;

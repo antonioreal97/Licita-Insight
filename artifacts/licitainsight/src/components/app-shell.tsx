@@ -51,6 +51,8 @@ import { NotificationItem } from '@/features/monitoring/components/notification-
 import { useMarkNotificationsRead, useNotifications, useUnreadCount } from '@/features/monitoring/hooks/use-notifications';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { WorkspaceScopeProvider } from '@/features/workspaces/workspace-scope';
+import { WorkspaceControls, WorkspaceShellNotices } from '@/features/workspaces/components/workspace-controls';
 
 type NavItem = { href: string; label: string; icon: LucideIcon; testId: string };
 
@@ -162,6 +164,14 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <WorkspaceScopeProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </WorkspaceScopeProvider>
+  );
+}
+
+function AppShellContent({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -285,7 +295,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <AccountMenu />
             </div>
           </header>
+          <WorkspaceControls />
           <TrialEndingBanner />
+          <WorkspaceShellNotices />
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
             {children}
           </main>
