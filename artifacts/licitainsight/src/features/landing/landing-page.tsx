@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { formatCurrencyPrecise } from '@/lib/format';
@@ -494,6 +495,7 @@ export default function LandingPage() {
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <Hero reducedMotion={reducedMotion} />
         <HowItWorksSection />
+        <OpportunityMapSection />
         <FindsSection />
         <PlanSection />
         <FaqSection />
@@ -506,7 +508,12 @@ export default function LandingPage() {
             <p className="font-semibold text-foreground">Pardal Digital · Editais públicos e oportunidades</p>
             <p>© 2026 Pardal Digital · Dados oficiais do PNCP, do Mapas Culturais e de organismos internacionais.</p>
           </div>
-          <LegalLinks className="sm:justify-end" />
+          <div className="flex flex-col gap-2 sm:items-end">
+            <Link href="/ajuda" data-testid="link-footer-help" className="font-semibold text-primary underline-offset-4 hover:underline">
+              Ajuda e glossário de licitações
+            </Link>
+            <LegalLinks className="sm:justify-end" />
+          </div>
         </div>
       </footer>
     </div>

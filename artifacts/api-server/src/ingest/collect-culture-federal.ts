@@ -9,6 +9,10 @@ import {
   upsertFundingOpportunities,
 } from "./upsert-opportunities";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
+import {
+  readApplicationsSafely,
+  type ApplicationReader,
+} from "./application-enrichment";
 
 const INGEST_SOURCE = "culture-federal";
 export const CULTURE_FEDERAL_STALE_AFTER_MS = 30 * 60 * 1_000;
@@ -50,6 +54,7 @@ export async function abandonStaleCultureFederalRuns(
 export async function collectCultureFederal(
   now = new Date(),
   collect: typeof collectFederalOnce = collectFederalOnce,
+  readApplications: ApplicationReader = readApplicationsSafely,
 ): Promise<{
   runId: string;
   status: "complete" | "failed";
@@ -96,6 +101,11 @@ export async function collectCultureFederal(
         .where(eq(ingestRunsTable.id, runId));
     }
     const refreshed = (await refreshOpportunityStatuses(now)) + closed;
+    // Where to apply: read after the calls are stored, never failing the run.
+    const applications = await readApplications(
+      ["minc", "funarte", "salic", "transferegov"],
+      now,
+    );
     const read = sources.filter(
       (source) => source.outcome === "ok" || source.outcome === "partial",
     );
@@ -115,7 +125,7 @@ export async function collectCultureFederal(
         refreshed,
         refreshErrors: errors.length,
         error: errors.length ? errors.join("\n") : null,
-        details,
+        details: { ...details, applications },
         heartbeatAt: new Date(),
         finishedAt: new Date(),
       })

@@ -358,6 +358,50 @@ export interface CouponRedemptionResponse {
   alreadyRedeemed: boolean;
 }
 
+export interface OpenTendersByState {
+  /**
+     * State code (UF)
+     * @pattern ^[A-Z]{2}$
+     */
+  state: string;
+  /** @minimum 0 */
+  openTenders: number;
+  /**
+     * Sum of the estimated values that were published, leaving out the ones flagged as implausible (`estimatedValueFlag`); null when no open tender in the state has a value to add
+     * @minimum 0
+     * @nullable
+     */
+  estimatedValueTotal: number | null;
+  /**
+     * Most recent fetch among the open tenders of the state; null when it has none
+     * @nullable
+     */
+  updatedAt: string | null;
+}
+
+export interface OpenTendersByStateMeta {
+  /** @minimum 0 */
+  totalOpenTenders: number;
+  /** When the aggregate was computed */
+  generatedAt: string;
+  /**
+     * Most recent fetch among all counted tenders
+     * @nullable
+     */
+  indexUpdatedAt: string | null;
+  /** @minimum 0 */
+  cacheTtlSeconds: number;
+}
+
+export interface OpenTendersByStateResponse {
+  /**
+     * @minItems 27
+     * @maxItems 27
+     */
+  data: OpenTendersByState[];
+  meta: OpenTendersByStateMeta;
+}
+
 export type BillingPlanResponseTrialDays = typeof BillingPlanResponseTrialDays[keyof typeof BillingPlanResponseTrialDays];
 
 
@@ -1417,6 +1461,40 @@ export interface TenderFitsResponse {
   results: TenderFitsResponseResults;
 }
 
+export type TenderRequirementHighlightCode = typeof TenderRequirementHighlightCode[keyof typeof TenderRequirementHighlightCode];
+
+
+export const TenderRequirementHighlightCode = {
+  me_epp_exclusive: 'me_epp_exclusive',
+  me_epp_quota: 'me_epp_quota',
+  site_visit: 'site_visit',
+  bid_guarantee: 'bid_guarantee',
+  samples: 'samples',
+  technical_certificate: 'technical_certificate',
+  technical_qualification: 'technical_qualification',
+  minimum_capital: 'minimum_capital',
+  contract_guarantee: 'contract_guarantee',
+} as const;
+
+export interface TenderRequirementHighlight {
+  code: TenderRequirementHighlightCode;
+  label: string;
+}
+
+export interface TenderHighlights {
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  requirements: TenderRequirementHighlight[];
+}
+
+export type TenderHighlightsResponseResults = {[key: string]: TenderHighlights};
+
+export interface TenderHighlightsResponse {
+  results: TenderHighlightsResponseResults;
+}
+
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -1864,6 +1942,64 @@ export interface InternationalOpportunity {
   details: InternationalOpportunityDetail[];
 }
 
+/**
+ * Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+ * @nullable
+ */
+export type OpportunityApplicationArticle = typeof OpportunityApplicationArticle[keyof typeof OpportunityApplicationArticle] | null;
+
+
+export const OpportunityApplicationArticle = {
+  a: 'a',
+  o: 'o',
+} as const;
+
+/**
+ * `source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.
+ */
+export type OpportunityNoticeOrigin = typeof OpportunityNoticeOrigin[keyof typeof OpportunityNoticeOrigin];
+
+
+export const OpportunityNoticeOrigin = {
+  source_page: 'source_page',
+  document: 'document',
+} as const;
+
+export interface OpportunityApplication {
+  url: string;
+  /**
+     * Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.
+     * @nullable
+     */
+  platform: string | null;
+  /**
+     * Platform name to show ("Plataforma Sucupira").
+     * @nullable
+     */
+  label: string | null;
+  /**
+     * Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+     * @nullable
+     */
+  article: OpportunityApplicationArticle;
+  origin: OpportunityNoticeOrigin;
+  /**
+     * Title of the document that indicates the link, when `origin` is `document`.
+     * @nullable
+     */
+  documentTitle: string | null;
+}
+
+export interface OpportunityNoticeDates {
+  /** @nullable */
+  registrationFrom: string | null;
+  /** @nullable */
+  registrationTo: string | null;
+  origin: OpportunityNoticeOrigin;
+  /** @nullable */
+  documentTitle: string | null;
+}
+
 export interface OpportunitySummary {
   id: string;
   title: string;
@@ -1897,6 +2033,15 @@ export interface OpportunitySummary {
   scope: OpportunityScope;
   /** Set on international calls only. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence. */
+  application?: OpportunityApplication | null;
+  /**
+     * Last reading of the call page and documents. `null` while the call was never read.
+     * @nullable
+     */
+  applicationCheckedAt?: string | null;
+  /** Registration period read from the notice. Set only when the source publishes no dates of its own. */
+  noticeDates?: OpportunityNoticeDates | null;
 }
 
 export interface OpportunityRecommendation {
@@ -2111,6 +2256,151 @@ export interface TransparencyTenderContractsResponse {
 export interface TransparencyTenderResultsResponse {
   data: TransparencyResult[];
   meta: TransparencyMeta;
+}
+
+export type AwardHistoryWinnerKind = typeof AwardHistoryWinnerKind[keyof typeof AwardHistoryWinnerKind];
+
+
+export const AwardHistoryWinnerKind = {
+  company: 'company',
+  individual: 'individual',
+  foreign: 'foreign',
+  unidentified: 'unidentified',
+} as const;
+
+/**
+ * `name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.
+ */
+export interface AwardHistoryWinner {
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  cnpj: string | null;
+  kind: AwardHistoryWinnerKind;
+  /** @minimum 1 */
+  wins: number;
+}
+
+/**
+ * @nullable
+ */
+export type AwardHistoryRecentPurchaseValueSource = typeof AwardHistoryRecentPurchaseValueSource[keyof typeof AwardHistoryRecentPurchaseValueSource] | null;
+
+
+export const AwardHistoryRecentPurchaseValueSource = {
+  results: 'results',
+  contracts: 'contracts',
+} as const;
+
+export interface AwardHistoryRecentPurchase {
+  purchasePncpControlNumber: string;
+  /** @nullable */
+  tenderId: string | null;
+  /** @nullable */
+  date: string | null;
+  /** @nullable */
+  object: string | null;
+  /** @nullable */
+  value: number | null;
+  /** @nullable */
+  valueSource: AwardHistoryRecentPurchaseValueSource;
+  winners: AwardHistoryWinner[];
+  /** @nullable */
+  officialUrl: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type AwardHistoryRange = {
+  min: number;
+  median: number;
+  max: number;
+  count: number;
+} | null;
+
+/**
+ * @nullable
+ */
+export type AwardHistorySpread = {
+  p25: number;
+  median: number;
+  p75: number;
+  count: number;
+} | null;
+
+export type AwardHistoryScope = typeof AwardHistoryScope[keyof typeof AwardHistoryScope];
+
+
+export const AwardHistoryScope = {
+  unit: 'unit',
+  organization: 'organization',
+} as const;
+
+export type AwardHistoryCriteriaCategoriesItem = {
+  slug: string;
+  label: string;
+};
+
+export type AwardHistoryCriteria = {
+  keywords: string[];
+  categories: AwardHistoryCriteriaCategoriesItem[];
+  rule: string;
+};
+
+export type AwardHistoryPurchases = {
+  total: number;
+  last12Months: number;
+  withResults: number;
+};
+
+export type AwardHistoryWinners = {
+  distinct: number;
+  top: AwardHistoryWinner[];
+};
+
+export type AwardHistoryPrices = {
+  purchaseValue: AwardHistoryRange | null;
+  discountPercent: AwardHistorySpread | null;
+};
+
+export interface AwardHistory {
+  tenderId: string;
+  scope: AwardHistoryScope;
+  organizationName: string;
+  /** @nullable */
+  purchasingUnit: string | null;
+  windowMonths: number;
+  since: string;
+  criteria: AwardHistoryCriteria;
+  purchases: AwardHistoryPurchases;
+  winners: AwardHistoryWinners;
+  prices: AwardHistoryPrices;
+  recent: AwardHistoryRecentPurchase[];
+}
+
+export type AwardHistoryResponseMetaAccessWinnerNames = typeof AwardHistoryResponseMetaAccessWinnerNames[keyof typeof AwardHistoryResponseMetaAccessWinnerNames];
+
+
+export const AwardHistoryResponseMetaAccessWinnerNames = {
+  entitled: 'entitled',
+  public: 'public',
+} as const;
+
+export type AwardHistoryResponseMetaAccess = {
+  winnerNames: AwardHistoryResponseMetaAccessWinnerNames;
+  unlocked: boolean;
+};
+
+export type AwardHistoryResponseMeta = {
+  coverage: string;
+  valueSemantics: string;
+  access: AwardHistoryResponseMetaAccess;
+};
+
+export interface AwardHistoryResponse {
+  data: AwardHistory;
+  meta: AwardHistoryResponseMeta;
 }
 
 export type ParticipationChecklistPatchKey = typeof ParticipationChecklistPatchKey[keyof typeof ParticipationChecklistPatchKey];
@@ -2925,6 +3215,16 @@ q: string;
 };
 
 export type GetTenderFitsParams = {
+/**
+ * @minItems 1
+ * @maxItems 100
+ * @items.minLength 1
+ * @items.maxLength 200
+ */
+tenderIds: string[];
+};
+
+export type GetTenderHighlightsParams = {
 /**
  * @minItems 1
  * @maxItems 100

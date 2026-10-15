@@ -9,6 +9,7 @@ import {
   usersTable,
   type BrazilEligibility,
   type OpportunityDeadlinePrecision,
+  type OpportunityNoticeOrigin,
   type OpportunityDocument,
   type OpportunityKind,
   type OpportunityScope,
@@ -34,6 +35,7 @@ import {
   type OpportunityArea,
 } from "../ingest/opportunity-areas";
 import { storedOwnerReview } from "../ingest/opportunity-owner";
+import { platformBySlug } from "../ingest/application-platforms";
 import {
   INTERNATIONAL_REGIONS,
   internationalLanguageLabels,
@@ -141,6 +143,31 @@ export type OpportunitySummary = {
   scope: OpportunityScope;
   /** Set on international calls only; `null` on every national one. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. `null` when none was found. */
+  application: OpportunityApplication | null;
+  /** When the call page or its documents were last read for `application` and `noticeDates`. */
+  applicationCheckedAt: string | null;
+  /** Registration period read from the notice, set only when the source publishes no dates. */
+  noticeDates: OpportunityNoticeDates | null;
+};
+
+export type OpportunityApplication = {
+  url: string;
+  /** Slug of a known platform, `null` for a link accepted by the words around it in the notice. */
+  platform: string | null;
+  label: string | null;
+  /** Definite article of `label` in Portuguese ("a Plataforma Sucupira", "o Salic"). */
+  article: "a" | "o" | null;
+  /** `source_page`: the call page (or the page is the platform itself). `document`: one of its documents. */
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
+};
+
+export type OpportunityNoticeDates = {
+  registrationFrom: string | null;
+  registrationTo: string | null;
+  origin: OpportunityNoticeOrigin;
+  documentTitle: string | null;
 };
 
 export type EligibilityAnswer = {
@@ -454,6 +481,33 @@ const toInternational = (row: OpportunityRow): InternationalOpportunity => {
   };
 };
 
+const toApplication = (row: OpportunityRow): OpportunityApplication | null => {
+  if (!row.applicationUrl || !row.applicationSource) return null;
+  const platform = platformBySlug(row.applicationPlatform);
+  return {
+    url: row.applicationUrl,
+    platform: row.applicationPlatform,
+    label: row.applicationLabel,
+    article: platform?.article ?? null,
+    origin: row.applicationSource,
+    documentTitle: row.applicationDocumentTitle,
+  };
+};
+
+const toNoticeDates = (row: OpportunityRow): OpportunityNoticeDates | null =>
+  // The dates of the source always win; the notice only fills a call published without any.
+  row.noticeDatesSource &&
+  (row.noticeRegistrationFrom || row.noticeRegistrationTo) &&
+  !row.registrationFrom &&
+  !row.registrationTo
+    ? {
+        registrationFrom: iso(row.noticeRegistrationFrom),
+        registrationTo: iso(row.noticeRegistrationTo),
+        origin: row.noticeDatesSource,
+        documentTitle: row.noticeDatesDocumentTitle,
+      }
+    : null;
+
 type ProfileContext = {
   profile: OpportunityProfile | null;
   /** The account opted in to international calls in recommendations and profile matching. */
@@ -517,6 +571,9 @@ const toSummary = (
     profileMatch,
     scope: row.scope,
     international: international ? toInternational(row) : null,
+    application: toApplication(row),
+    applicationCheckedAt: iso(row.applicationCheckedAt),
+    noticeDates: toNoticeDates(row),
   };
 };
 

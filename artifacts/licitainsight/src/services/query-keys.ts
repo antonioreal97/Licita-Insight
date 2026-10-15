@@ -5,6 +5,7 @@ export const queryKeys = {
     all: ['tenders'] as const,
     search: (params: TenderSearchParams) => ['tenders', 'search', params] as const,
     detail: (id: string) => ['tenders', 'detail', id] as const,
+    openByState: ['tenders', 'open-by-state'] as const,
   },
   suggestions: (q: string) => ['suggestions', q] as const,
   transparency: {
@@ -12,6 +13,8 @@ export const queryKeys = {
     contracts: (params: TransparencyContractSearchParams) => ['transparency', 'contracts', params] as const,
     tenderContracts: (tenderId: string) => ['transparency', 'tenders', tenderId, 'contracts'] as const,
     tenderResults: (tenderId: string) => ['transparency', 'tenders', tenderId, 'results'] as const,
+    /** Per viewer: winner names depend on the viewer's access. */
+    tenderAwardHistory: (tenderId: string, viewer: string) => ['transparency', 'tenders', tenderId, 'award-history', viewer] as const,
   },
   opportunities: {
     all: ['opportunities'] as const,
@@ -34,6 +37,8 @@ export const queryKeys = {
     askStatus: (tenderId: string) => ['me', 'ask-status', tenderId] as const,
     /** The sheet is public tender data, but only served with access: it lives under `me` so sign-out drops it. */
     tenderSheet: (tenderId: string) => ['me', 'tender-sheet', tenderId] as const,
+    /** Requirement highlights of a result page, from already-ready sheets (same `me` scoping as the sheet). */
+    tenderHighlights: (tenderIds: string[]) => ['me', 'tender-highlights', [...new Set(tenderIds)].sort()] as const,
     companyProfile: ['me', 'company-profile'] as const,
     profileCategories: ['me', 'profile-categories'] as const,
     profileMunicipalities: (query: string) => ['me', 'profile-municipalities', query] as const,

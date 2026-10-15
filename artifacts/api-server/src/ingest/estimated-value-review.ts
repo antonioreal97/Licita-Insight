@@ -4,6 +4,7 @@ import { assessEstimatedValue } from "../domain/estimated-value-plausibility";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { logger } from "../lib/logger";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
+import { clearOpenTendersByStateCache } from "../services/open-tenders-by-state";
 
 export type EstimatedValueReviewBatchResult = {
   scanned: number;
@@ -134,6 +135,8 @@ export async function runEstimatedValueReview(
     return null;
   }
   logger.info({ reason, ...result.value }, "Tender estimated value review finished");
+  // The per-state sums changed; where the API runs in another process, its cache expires on its own (15 min).
+  if (result.value.updated > 0) clearOpenTendersByStateCache();
   return result.value;
 }
 

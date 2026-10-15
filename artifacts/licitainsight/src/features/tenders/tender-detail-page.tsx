@@ -32,10 +32,11 @@ import { ErrorState } from '@/components/common/query-states';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
-import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber } from '@/lib/format';
+import { formatBytes, formatCurrency, formatCurrencyPrecise, formatDate, formatDateNumeric, formatDateTime, formatNumber, formatTime } from '@/lib/format';
 import { modalityLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
 import { DecisionPanel } from '@/features/participation/components/decision-panel';
+import { GlossaryScope, GlossaryText } from '@/features/help/components/glossary-text';
 import { NextStepsPanel } from '@/features/participation/components/next-steps-panel';
 import { ParticipationPanel } from '@/features/participation/components/participation-panel';
 import { AskTenderPanel } from './components/ask-tender-panel';
@@ -47,6 +48,7 @@ import { PlatformBadge } from './components/platform-badge';
 import { StatusBadge } from './components/status-badge';
 import { ValueDisplay } from './components/value-display';
 import { useTender } from './hooks/use-tender';
+import { TenderAwardHistory } from '@/features/transparency/tender-award-history';
 import { TenderTransparency } from '@/features/transparency/tender-transparency';
 import { isFuture } from './lib/deadline';
 import { formatPlace, isMostlyUppercase, shortTenderNumber, sumItems } from './lib/tender-display';
@@ -194,7 +196,8 @@ export default function TenderDetailPage() {
   const description = tender.description && (long || comparable(tender.description) !== comparable(tender.title)) ? tender.description : null;
 
   return (
-    <>
+    // One glossary scope per page: each term opens its definition only where it first appears.
+    <GlossaryScope>
       <nav aria-label="Trilha" className="mb-5 flex min-w-0 items-center gap-2 type-meta text-muted-foreground">
         <Link href="/search" className="shrink-0 transition-colors duration-fast ease-standard hover:text-primary">
           Explorar editais
@@ -341,6 +344,7 @@ export default function TenderDetailPage() {
         <div className="min-w-0 space-y-6">
           <TimelinePanel events={tender.timeline} />
           <ItemsPanel tender={tender} />
+          {tender.source.id === 'pncp' && <TenderAwardHistory tenderId={tender.id} />}
           {tender.source.id === 'pncp' && <TenderTransparency tenderId={tender.id} />}
           <DecisionPanel tender={tender} />
           <NextStepsPanel tender={tender} monitored={monitored} />
@@ -360,7 +364,9 @@ export default function TenderDetailPage() {
                 <span className="break-words text-sm">{tender.purchasingUnit ?? '—'}</span>
               </MetaItem>
               <MetaItem variant="stacked" icon={Gavel} label="Modalidade">
-                <span className="text-sm">{modality}</span>
+                <span className="text-sm">
+                  <GlossaryText>{modality}</GlossaryText>
+                </span>
                 {tender.modalityLabel !== modality && <span className="block type-meta text-muted-foreground">Na fonte: {tender.modalityLabel}</span>}
               </MetaItem>
             </dl>
@@ -428,15 +434,18 @@ export default function TenderDetailPage() {
           </Button>
         )}
       </div>
-    </>
+    </GlossaryScope>
   );
 }
 
 function DateValue({ value, withTime = false }: { value: string | null; withTime?: boolean }) {
   if (!value) return <span className="text-sm font-semibold text-muted-foreground">Não informado</span>;
+  // The time goes on its own line: in the six-column grid, date and time side by side overflowed into the next column.
+  const time = withTime ? formatTime(value) : null;
   return (
-    <time dateTime={value} className="text-sm xl:whitespace-nowrap font-semibold tabular-nums">
-      {withTime ? formatDateTime(value) : formatDate(value)}
+    <time dateTime={value} title={withTime ? formatDateTime(value) : undefined} className="block text-sm font-semibold tabular-nums">
+      <span className="block">{formatDate(value)}</span>
+      {time && <span className="type-meta block font-medium text-muted-foreground">{time}</span>}
     </time>
   );
 }
@@ -658,7 +667,9 @@ function TimelinePanel({ events }: { events: TimelineEvent[] }) {
                       <span className="rounded-lg bg-primary-subtle px-1.5 py-0.5 text-xs font-semibold text-primary-subtle-foreground">Previsto</span>
                     )}
                   </div>
-                  <p className="mt-1 break-words type-body">{event.description}</p>
+                  <p className="mt-1 break-words type-body">
+                    <GlossaryText>{event.description}</GlossaryText>
+                  </p>
                 </div>
               </li>
             );

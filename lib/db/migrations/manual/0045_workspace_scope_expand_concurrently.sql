@@ -1,9 +1,9 @@
--- Production variant of ../0044_workspace_scope_expand.sql: same columns, foreign keys and indexes, built without
+-- Production variant of ../0045_workspace_scope_expand.sql: same columns, foreign keys and indexes, built without
 -- blocking writes. NOT a Drizzle migration (absent from the journal) and NOT transactional: CREATE INDEX
 -- CONCURRENTLY refuses to run inside a transaction block, so run it with `psql -v ON_ERROR_STOP=1` and never with
 -- `-1`/`--single-transaction`. Every statement is idempotent, so a rerun after a failure is safe; an index left
 -- INVALID by a failed CONCURRENTLY build must be dropped before the rerun (see the procedure).
--- Procedure: docs/migrations/0044-workspace-scope-expand.md. The `statement-breakpoint` lines are plain comments
+-- Procedure: docs/migrations/0045-workspace-scope-expand.md. The `statement-breakpoint` lines are plain comments
 -- for psql; the parity test uses them to run one statement at a time.
 
 -- Fail fast instead of queueing every request behind a long transaction on these tables.

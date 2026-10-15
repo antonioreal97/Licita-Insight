@@ -499,6 +499,7 @@ estimated_value > 0 group by modality`. Nenhum limite pode ficar abaixo de R$ 10
 | `sort=value_desc` / `value_asc`                  | vai para o fim, depois dos editais sem valor                            |
 | `valueMin` / `valueMax`                          | não casa com nenhuma faixa, como um valor ausente                       |
 | `facets.valueRange` (mín., máx., histograma)     | fica fora                                                               |
+| `GET /api/v1/public/tenders/by-state`            | conta em `openTenders`, não soma em `estimatedValueTotal`               |
 | Recomendações                                    | não alarga a faixa inferida dos salvos; não pontua a favor nem contra   |
 | Aderência ao perfil (`out_of_value_range`)       | não elimina o edital                                                    |
 
@@ -513,6 +514,15 @@ execução interrompida é simplesmente repetida. `ESTIMATED_VALUE_REVIEW_BATCH_
 `ESTIMATED_VALUE_REVIEW_DAILY=false` desliga o agendamento. Para uso local,
 `pnpm --filter @workspace/api-server run review:estimated-values` executa o mesmo percurso sem pausa.
 Na imagem de produção: `docker exec licita-macbook-app-1 node artifacts/api-server/dist/review-estimated-values.mjs`. Usa o mesmo lock `tender_estimated_value_review` do job agendado.
+
+## Aditivo — destaques do card
+
+O payload da busca não muda: a resposta tem cache HTTP público e os destaques resumem a ficha, que é recurso
+pago. O card do edital (busca, editais salvos e prioridades da visão geral) mostra até duas linhas curtas a
+partir de dados já carregados em lote pela página — o principal motivo da aderência (`GET /me/fit`) e as
+exigências-chave da ficha pronta (`GET /me/tender-highlights`, ver `ai-v1.md`). A plataforma de disputa e o
+aviso “Você ainda não é cadastrado nesta plataforma” continuam no selo de plataforma do card. Sem dado, o card
+fica como antes. Nenhuma das duas leituras gera ficha.
 
 ## Performance esperada
 

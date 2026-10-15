@@ -816,6 +816,15 @@ export const listWorkspaceRecommendationsResponseDataItemTenderRelevanceScoreMax
 
 export const listWorkspaceRecommendationsResponseDataItemReasonsMax = 3;
 
+export const listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityAmountMin = 0;
+
+export const listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityProfileMatchOneScoreMin = 0;
+export const listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityProfileMatchOneScoreMax = 100;
+
+export const listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityInternationalOneAmountOriginalMin = 0;
+
+export const listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityInternationalOneAmountBrlApproxMin = 0;
+
 
 
 export const ListWorkspaceRecommendationsResponse = zod.object({
@@ -880,6 +889,99 @@ export const ListWorkspaceRecommendationsResponse = zod.object({
 })).min(1).max(listWorkspaceRecommendationsResponseDataItemReasonsMax),
   "generatedAt": zod.coerce.date()
 })),
+  "opportunities": zod.array(zod.object({
+  "opportunity": zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().nullable(),
+  "organizationName": zod.string(),
+  "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
+  "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
+  "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
+  "sourceName": zod.string(),
+  "audience": zod.string().nullable(),
+  "amount": zod.number().min(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityAmountMin).nullable(),
+  "documents": zod.array(zod.object({
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "mediaType": zod.string().nullable()
+})),
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "state": zod.string().nullable(),
+  "installation": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "uf": zod.string()
+}),
+  "sourceUrl": zod.string().url().nullable(),
+  "updatedAt": zod.coerce.date(),
+  "profileMatch": zod.union([zod.object({
+  "score": zod.number().min(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityProfileMatchOneScoreMin).max(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityProfileMatchOneScoreMax),
+  "reasons": zod.array(zod.string())
+}),zod.null()]),
+  "scope": zod.enum(['national', 'international']).describe('Reach of the call, not its nature. An international call still has a `kind`.'),
+  "international": zod.union([zod.object({
+  "agency": zod.string().nullable(),
+  "country": zod.string().nullable().describe('ISO 3166-1 alpha-2 of the country where the call is executed.'),
+  "countryName": zod.string().nullable(),
+  "region": zod.union([zod.enum(['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global']),zod.null()]),
+  "regionName": zod.string().nullable(),
+  "brazilProject": zod.boolean(),
+  "language": zod.string().nullable(),
+  "languageName": zod.string().nullable(),
+  "titleOriginal": zod.string().nullable(),
+  "titlePt": zod.string().nullable(),
+  "translationSource": zod.union([zod.literal('source'),zod.literal('model'),zod.literal(null)]).nullable(),
+  "amountOriginal": zod.number().min(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityInternationalOneAmountOriginalMin).nullable(),
+  "currency": zod.string().nullable().describe('ISO 4217 code of `amountOriginal`.'),
+  "amountBrlApprox": zod.number().min(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityInternationalOneAmountBrlApproxMin).nullable().describe('`amountOriginal` at the PTAX selling rate of `fxDate`. An approximation.'),
+  "fxRate": zod.number().nullable(),
+  "fxDate": zod.coerce.date().nullable(),
+  "deadline": zod.object({
+  "at": zod.coerce.date().nullable().describe('Same instant as `registrationTo`.'),
+  "precision": zod.union([zod.literal('datetime'),zod.literal('date'),zod.literal(null)]).nullable().describe('With `date` only the day is known; an hour in `original` was not converted.'),
+  "timeZone": zod.string().nullable().describe('IANA zone of the wall clock the source published.'),
+  "original": zod.string().nullable().describe('The deadline as the source wrote it, in its own wall clock.')
+}),
+  "brazilEligibility": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "brazilFunding": zod.union([zod.object({
+  "status": zod.enum(['yes', 'conditional', 'no', 'unknown']),
+  "label": zod.string(),
+  "reason": zod.string().nullable().describe('Readable sentence of the rule that decided. Indicative; the official notice prevails.'),
+  "rule": zod.string().nullish().describe('Slug of the rule. Present on `brazilEligibility` only.')
+}),zod.null()]),
+  "eligibilityCheckedAt": zod.coerce.date().nullable(),
+  "details": zod.array(zod.object({
+  "label": zod.string(),
+  "value": zod.string()
+}))
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
+}),
+  "score": zod.number(),
+  "reasons": zod.array(zod.string())
+})).optional().describe('Declared-purpose matches; absent when no purposes were answered'),
   "pagination": zod.object({
   "page": zod.number().int(),
   "pageSize": zod.number().int(),
@@ -917,6 +1019,36 @@ export const GetWorkspaceDashboardResponse = zod.object({
  * Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes and served from memory in between.
  * @summary Count open tenders and sum their estimated values by state
  */
+export const getOpenTendersByStateResponseDataItemStateRegExp = new RegExp('^[A-Z]{2}$');
+export const getOpenTendersByStateResponseDataItemOpenTendersMin = 0;
+
+export const getOpenTendersByStateResponseDataItemEstimatedValueTotalMin = 0;
+
+export const getOpenTendersByStateResponseDataMin = 27;
+export const getOpenTendersByStateResponseDataMax = 27;
+
+export const getOpenTendersByStateResponseMetaTotalOpenTendersMin = 0;
+
+export const getOpenTendersByStateResponseMetaCacheTtlSecondsMin = 0;
+
+
+
+export const GetOpenTendersByStateResponse = zod.object({
+  "data": zod.array(zod.object({
+  "state": zod.string().regex(getOpenTendersByStateResponseDataItemStateRegExp).describe('State code (UF)'),
+  "openTenders": zod.number().int().min(getOpenTendersByStateResponseDataItemOpenTendersMin),
+  "estimatedValueTotal": zod.number().min(getOpenTendersByStateResponseDataItemEstimatedValueTotalMin).nullable().describe('Sum of the estimated values that were published, leaving out the ones flagged as implausible (`estimatedValueFlag`); null when no open tender in the state has a value to add'),
+  "updatedAt": zod.coerce.date().nullable().describe('Most recent fetch among the open tenders of the state; null when it has none')
+})).min(getOpenTendersByStateResponseDataMin).max(getOpenTendersByStateResponseDataMax),
+  "meta": zod.object({
+  "totalOpenTenders": zod.number().int().min(getOpenTendersByStateResponseMetaTotalOpenTendersMin),
+  "generatedAt": zod.coerce.date().describe('When the aggregate was computed'),
+  "indexUpdatedAt": zod.coerce.date().nullable().describe('Most recent fetch among all counted tenders'),
+  "cacheTtlSeconds": zod.number().int().min(getOpenTendersByStateResponseMetaCacheTtlSecondsMin)
+})
+})
+
+
 /**
  * @summary Get a tender by id
  */
@@ -1209,6 +1341,92 @@ export const GetTenderTransparencyResultsResponse = zod.object({
   "contractValues": zod.string(),
   "resultValues": zod.string(),
   "paymentValues": zod.string()
+})
+})
+})
+
+
+/**
+ * Aggregates the last 24 months of PNCP contracts and item results of the tender's buying organization (same CNPJ; the buying unit when it has 3 or more similar purchases) whose object shares keywords with this tender. Public. Company names and CNPJs need active access (`meta.access.unlocked`); natural persons, foreign and unidentified suppliers are only counted as groups.
+ * @summary Get the award history of similar purchases by the same organization
+ */
+
+
+
+export const GetTenderAwardHistoryParams = zod.object({
+  "id": zod.coerce.string().min(1)
+})
+
+
+
+
+
+export const GetTenderAwardHistoryResponse = zod.object({
+  "data": zod.object({
+  "tenderId": zod.string(),
+  "scope": zod.enum(['unit', 'organization']),
+  "organizationName": zod.string(),
+  "purchasingUnit": zod.string().nullable(),
+  "windowMonths": zod.number().int(),
+  "since": zod.coerce.date(),
+  "criteria": zod.object({
+  "keywords": zod.array(zod.string()),
+  "categories": zod.array(zod.object({
+  "slug": zod.string(),
+  "label": zod.string()
+})),
+  "rule": zod.string()
+}),
+  "purchases": zod.object({
+  "total": zod.number().int(),
+  "last12Months": zod.number().int(),
+  "withResults": zod.number().int()
+}),
+  "winners": zod.object({
+  "distinct": zod.number().int(),
+  "top": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "cnpj": zod.string().nullable(),
+  "kind": zod.enum(['company', 'individual', 'foreign', 'unidentified']),
+  "wins": zod.number().int().min(1)
+}).describe('`name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.\n'))
+}),
+  "prices": zod.object({
+  "purchaseValue": zod.object({
+  "min": zod.number(),
+  "median": zod.number(),
+  "max": zod.number(),
+  "count": zod.number().int()
+}).nullable(),
+  "discountPercent": zod.object({
+  "p25": zod.number(),
+  "median": zod.number(),
+  "p75": zod.number(),
+  "count": zod.number().int()
+}).nullable()
+}),
+  "recent": zod.array(zod.object({
+  "purchasePncpControlNumber": zod.string(),
+  "tenderId": zod.string().nullable(),
+  "date": zod.coerce.date().nullable(),
+  "object": zod.string().nullable(),
+  "value": zod.number().nullable(),
+  "valueSource": zod.union([zod.literal('results'),zod.literal('contracts'),zod.literal(null)]).nullable(),
+  "winners": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "cnpj": zod.string().nullable(),
+  "kind": zod.enum(['company', 'individual', 'foreign', 'unidentified']),
+  "wins": zod.number().int().min(1)
+}).describe('`name` and `cnpj` are set only for companies and only when `meta.access.unlocked` is true. `individual` (CPF), `foreign` and `unidentified` are groups and never carry a name or document.\n')),
+  "officialUrl": zod.string().nullable()
+}))
+}),
+  "meta": zod.object({
+  "coverage": zod.string(),
+  "valueSemantics": zod.string(),
+  "access": zod.object({
+  "winnerNames": zod.enum(['entitled', 'public']),
+  "unlocked": zod.boolean()
 })
 })
 })
@@ -1925,6 +2143,34 @@ export const GetTenderFitsResponse = zod.object({
 
 
 /**
+ * Read only. Uses the latest ready tender sheet of each tender; never generates a sheet, enqueues a job or calls a model. Tenders without a ready sheet or without a highlighted requirement are absent from `results`.
+ * @summary Requirement highlights of up to 100 tenders, read from already-ready tender sheets
+ */
+export const getTenderHighlightsQueryTenderIdsItemMax = 200;
+
+export const getTenderHighlightsQueryTenderIdsMax = 100;
+
+
+
+export const GetTenderHighlightsQueryParams = zod.object({
+  "tenderIds": zod.array(zod.coerce.string().min(1).max(getTenderHighlightsQueryTenderIdsItemMax)).min(1).max(getTenderHighlightsQueryTenderIdsMax)
+})
+
+export const getTenderHighlightsResponseResultsRequirementsMax = 3;
+
+
+
+export const GetTenderHighlightsResponse = zod.object({
+  "results": zod.record(zod.string(), zod.object({
+  "requirements": zod.array(zod.object({
+  "code": zod.enum(['me_epp_exclusive', 'me_epp_quota', 'site_visit', 'bid_guarantee', 'samples', 'technical_certificate', 'technical_qualification', 'minimum_capital', 'contract_guarantee']),
+  "label": zod.string()
+})).min(1).max(getTenderHighlightsResponseResultsRequirementsMax)
+}))
+})
+
+
+/**
  * @summary Get search autocomplete suggestions
  */
 export const getSearchSuggestionsQueryQMin = 2;
@@ -2631,7 +2877,22 @@ export const SearchOpportunitiesResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 })),
   "pagination": zod.object({
   "page": zod.number().int(),
@@ -2814,7 +3075,22 @@ export const GetOpportunityByIdResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 })
 
 
@@ -3630,7 +3906,22 @@ export const ListRecommendationsResponse = zod.object({
   "label": zod.string(),
   "value": zod.string()
 }))
-}),zod.null()]).describe('Set on international calls only.')
+}),zod.null()]).describe('Set on international calls only.'),
+  "application": zod.union([zod.object({
+  "url": zod.string().url(),
+  "platform": zod.string().nullable().describe('Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.'),
+  "label": zod.string().nullable().describe('Platform name to show ("Plataforma Sucupira").'),
+  "article": zod.union([zod.literal('a'),zod.literal('o'),zod.literal(null)]).nullable().describe('Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".'),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable().describe('Title of the document that indicates the link, when `origin` is `document`.')
+}),zod.null()]).optional().describe('Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.'),
+  "applicationCheckedAt": zod.coerce.date().nullish().describe('Last reading of the call page and documents. `null` while the call was never read.'),
+  "noticeDates": zod.union([zod.object({
+  "registrationFrom": zod.coerce.date().nullable(),
+  "registrationTo": zod.coerce.date().nullable(),
+  "origin": zod.enum(['source_page', 'document']).describe('`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents.'),
+  "documentTitle": zod.string().nullable()
+}),zod.null()]).optional().describe('Registration period read from the notice. Set only when the source publishes no dates of its own.')
 }),
   "score": zod.number(),
   "reasons": zod.array(zod.string())

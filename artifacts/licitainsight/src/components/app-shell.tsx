@@ -11,6 +11,7 @@ import {
   Globe,
   LayoutDashboard,
   Landmark,
+  LifeBuoy,
   LogOut,
   Menu,
   Moon,
@@ -76,6 +77,7 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
     title: 'Conta',
     items: [
       { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
+      { href: '/ajuda', label: 'Ajuda e glossário', icon: LifeBuoy, testId: 'link-nav-ajuda' },
       // Internal reference page: never shown to customers.
     ],
   },
