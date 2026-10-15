@@ -4283,6 +4283,39 @@ components:
           eligibilityCheckedAt,
           details,
         ]
+    OpportunityNoticeOrigin:
+      type: string
+      enum: [source_page, document]
+      description: "`source_page`: the call page at the source (or the page is the platform itself). `document`: one of its official documents."
+    OpportunityApplication:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        platform:
+          type: [string, "null"]
+          description: Slug of a known platform (`sucupira`, `carlos-chagas`, `salic`, `mapas-culturais`…). `null` for a link accepted only by the words around it.
+        label:
+          type: [string, "null"]
+          description: Platform name to show ("Plataforma Sucupira").
+        article:
+          type: [string, "null"]
+          enum: [a, o, null]
+          description: Definite article of `label` in Portuguese, to write "na Plataforma Sucupira" or "no Salic".
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle:
+          type: [string, "null"]
+          description: Title of the document that indicates the link, when `origin` is `document`.
+      required: [url, platform, label, article, origin, documentTitle]
+    OpportunityNoticeDates:
+      type: object
+      properties:
+        registrationFrom: { type: [string, "null"], format: date-time }
+        registrationTo: { type: [string, "null"], format: date-time }
+        origin:
+          $ref: "#/components/schemas/OpportunityNoticeOrigin"
+        documentTitle: { type: [string, "null"] }
+      required: [registrationFrom, registrationTo, origin, documentTitle]
     OpportunityDocument:
       type: object
       properties:
@@ -4346,6 +4379,20 @@ components:
           description: Set on international calls only.
           anyOf:
             - $ref: "#/components/schemas/InternationalOpportunity"
+            - type: "null"
+        application:
+          description: Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityApplication"
+            - type: "null"
+        applicationCheckedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Last reading of the call page and documents. `null` while the call was never read.
+        noticeDates:
+          description: Registration period read from the notice. Set only when the source publishes no dates of its own.
+          anyOf:
+            - $ref: "#/components/schemas/OpportunityNoticeDates"
             - type: "null"
       required:
         [

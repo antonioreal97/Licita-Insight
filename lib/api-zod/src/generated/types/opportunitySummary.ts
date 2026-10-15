@@ -6,9 +6,11 @@
  * OpenAPI spec version: 1.3.0
  */
 import type { InternationalOpportunity } from './internationalOpportunity';
+import type { OpportunityApplication } from './opportunityApplication';
 import type { OpportunityDocument } from './opportunityDocument';
 import type { OpportunityInstallation } from './opportunityInstallation';
 import type { OpportunityKind } from './opportunityKind';
+import type { OpportunityNoticeDates } from './opportunityNoticeDates';
 import type { OpportunityProfileMatch } from './opportunityProfileMatch';
 import type { OpportunityProgram } from './opportunityProgram';
 import type { OpportunityScope } from './opportunityScope';
@@ -48,4 +50,13 @@ export interface OpportunitySummary {
   scope: OpportunityScope;
   /** Set on international calls only. */
   international: InternationalOpportunity | null;
+  /** Where to apply, read without AI from the call page or its documents. `null` when none was found with confidence. */
+  application?: OpportunityApplication | null;
+  /**
+     * Last reading of the call page and documents. `null` while the call was never read.
+     * @nullable
+     */
+  applicationCheckedAt?: Date | null;
+  /** Registration period read from the notice. Set only when the source publishes no dates of its own. */
+  noticeDates?: OpportunityNoticeDates | null;
 }
