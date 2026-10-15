@@ -4,12 +4,17 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { OpportunityFilters } from '../components/opportunity-filters';
+import { deadlinePresetPatch } from '@/features/search/lib/filter-presets';
+import { opportunityParamsFromUrl, opportunityParamsToUrl } from '@/services/opportunity-service';
 import {
   areaCounts,
   areaOptions,
   cityOptions,
   cityPatch,
+  countMoreOpportunityFilters,
   individualListingsLabel,
+  opportunityChipShowsGroup,
+  opportunityFilterChips,
   organizationOptions,
   selectedCityValue,
   stateOptions,
@@ -117,8 +122,7 @@ test('UFs mostram a contagem quando há chamadas', () => {
 
 test('os filtros renderizam área, município e instituição com o valor selecionado', () => {
   const html = render({ area: ['audiovisual'], city: ['Natal'], state: ['RN'], organization: ['Secult CE'] });
-  assert.match(html, /data-testid="select-opportunity-area"/);
-  assert.match(html, /<option value="audiovisual" selected="">Audiovisual \(12\)<\/option>/);
+  assert.match(html, /aria-pressed="true"[^>]*data-testid="button-opportunity-area-audiovisual"/);
   assert.match(html, /data-testid="select-opportunity-city"/);
   assert.match(html, /<option value="RN\|Natal" selected="">Natal \(RN\) \(3\)<\/option>/);
   assert.match(html, /data-testid="select-opportunity-organization"/);
@@ -127,7 +131,7 @@ test('os filtros renderizam área, município e instituição com o valor seleci
 
 test('a contagem por área marca a área ativa e só usa classes do design system', () => {
   const html = render({ area: ['audiovisual'] });
-  assert.match(html, /aria-label="Chamadas por área cultural"/);
+  assert.match(html, /role="group" aria-label="Área cultural"/);
   assert.match(html, /aria-pressed="true"[^>]*data-testid="button-opportunity-area-audiovisual"/);
   assert.match(html, /aria-pressed="false"[^>]*data-testid="button-opportunity-area-musica"/);
   assert.match(html, /Música<span[^>]*>1\.240<\/span>/);
@@ -139,8 +143,8 @@ test('a contagem por área marca a área ativa e só usa classes do design syste
 test('sem facetas a faixa de áreas não aparece e os filtros ficam só com a opção geral', () => {
   const html = render({}, null);
   assert.doesNotMatch(html, /list-opportunity-areas/);
-  assert.match(html, /Todas as áreas/);
-  assert.match(html, /Todos os municípios/);
+  assert.match(html, /Nenhuma área com chamadas nestes filtros/);
+  assert.match(html, /Todos os estados/);
   assert.match(html, /Todas as instituições/);
 });
 
@@ -154,4 +158,66 @@ test('anúncios de proponentes individuais: desligado por padrão, com a contage
   assert.doesNotMatch(off, /data-testid="checkbox-opportunity-individual"[^>]*checked/);
   assert.match(off, /Incluir anúncios de proponentes individuais \(7\)/);
   assert.match(render({ includeIndividual: true }, facets, 0), /data-testid="checkbox-opportunity-individual"[^>]*checked/);
+});
+
+test('oportunidades seguem o mesmo padrão: Onde? O quê? Até quando? e "Mais filtros" recolhido', () => {
+  const html = render({});
+  const order = ['Onde?', 'O quê?', 'Até quando?', 'Mais filtros'].map((title) => html.indexOf(`>${title}<`));
+  assert.ok(order.every((index) => index >= 0));
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  assert.match(html, /aria-expanded="false"[^>]*data-testid="button-opportunity-more-filters"/);
+  assert.match(html, /<div[^>]*hidden=""[^>]*data-testid="opportunity-more-filters"/);
+  assert.match(html, /Escolha um estado para ver os municípios/);
+  assert.doesNotMatch(html, /select-opportunity-city/, 'município só depois do estado');
+  assert.match(render({ state: ['CE'] }), /select-opportunity-city/);
+  assert.match(html, /aria-label="Inscrições encerram em até 7 dias"/);
+});
+
+test('áreas: poucas de início, "Ver todas" e a selecionada nunca some', () => {
+  const many = {
+    ...facets,
+    area: ['musica', 'audiovisual', 'teatro', 'danca', 'circo', 'literatura', 'patrimonio', 'artesanato'].map((value, index) => ({ value, label: value, count: 100 - index })),
+  };
+  const html = render({}, many);
+  assert.match(html, /data-testid="button-opportunity-areas-more"[^>]*>Ver todas \(8\)</);
+  assert.doesNotMatch(html, /button-opportunity-area-artesanato/);
+  assert.match(render({ area: ['artesanato'] }, many), /aria-pressed="true"[^>]*data-testid="button-opportunity-area-artesanato"/);
+  assert.match(render({ area: ['gastronomia'] }), /data-testid="button-opportunity-area-gastronomia"[^>]*>Gastronomia/);
+});
+
+test('"Mais filtros" das oportunidades conta instituição, fonte e anúncios individuais', () => {
+  assert.equal(countMoreOpportunityFilters({ state: ['CE'], area: ['musica'] }), 0);
+  assert.equal(countMoreOpportunityFilters({ organization: ['Secult CE'], source: ['mapas'], includeIndividual: true }), 3);
+  assert.match(render({ organization: ['Secult CE'] }), /data-testid="badge-opportunity-more-filters"[^>]*>1<span class="sr-only"> ativo<\/span>/);
+  assert.doesNotMatch(render({}), /badge-opportunity-more-filters/);
+});
+
+test('URL antiga de oportunidades vira chips legíveis, e o atalho de prazo usa os mesmos parâmetros', () => {
+  const now = new Date(2026, 9, 15, 9);
+  const preset = deadlinePresetPatch(7, now);
+  const search = `state=RN&city=Natal&area=musica&kind=culture&status=open&organization=Secult+CE&individual=1&deadlineFrom=${preset.deadlineFrom}&deadlineTo=${preset.deadlineTo}`;
+  const params = opportunityParamsFromUrl(search);
+  assert.deepEqual(opportunityParamsFromUrl(opportunityParamsToUrl(params)), params, 'a URL continua estável');
+  assert.deepEqual([params.deadlineFrom, params.deadlineTo], ['2026-10-15', '2026-10-22']);
+  const chips = opportunityFilterChips(params, now);
+  assert.deepEqual(
+    chips.map((chip) => [chip.id, chip.label, opportunityChipShowsGroup(chip)]),
+    [
+      ['state:RN', 'RN', false],
+      ['city:Natal', 'Natal', false],
+      ['area:musica', 'Música', false],
+      ['kind:culture', 'Cultura', false],
+      ['status:open', 'Inscrições abertas', false],
+      ['deadline', 'Inscrições encerram em até 7 dias', false],
+      ['organization:Secult CE', 'Secult CE', true],
+      ['individual', 'Com anúncios de pessoas físicas', false],
+    ],
+  );
+  assert.deepEqual(chips[0].remove, { state: undefined, city: undefined }, 'tirar o estado tira o município dele');
+  assert.equal(opportunityFilterChips({ deadlineTo: '2026-12-31' }, now)[0].label, 'Inscrições encerram até 31 de dez de 2026');
+  assert.deepEqual(
+    opportunityFilterChips({ scope: 'international', state: ['CE'], kind: ['funding'] }, now).map((chip) => chip.id),
+    ['kind:funding'],
+    'na aba internacional, filtros nacionais esquecidos na URL não viram chip',
+  );
 });

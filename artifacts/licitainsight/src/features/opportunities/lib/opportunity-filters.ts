@@ -1,7 +1,8 @@
 import type { FacetBucket, OpportunityArea, OpportunityCityBucket, OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
-import { formatNumber } from '@/lib/format';
+import { activeDeadlinePreset } from '@/features/search/lib/filter-presets';
+import { formatDate, formatNumber } from '@/lib/format';
 import { OPPORTUNITY_AREAS } from '@/services/opportunity-service';
-import { opportunityAreaLabels } from '../components/opportunity-status';
+import { opportunityAreaLabels, opportunityKindLabels, opportunitySourceLabels, opportunityStatusLabels } from '../components/opportunity-status';
 
 type Facets = OpportunitySearchResponse['facets'];
 
@@ -96,4 +97,57 @@ export function stateOptions(ufs: readonly string[], facets: Facets): FilterOpti
     const count = counts.get(uf) ?? 0;
     return { value: uf, label: count > 0 ? withCount(uf, count) : uf, count };
   });
+}
+
+export type OpportunityFilterChip = { id: string; group: string; label: string; remove: Partial<OpportunitySearchParams> };
+
+/** "Inscrições até 7 dias" for a shortcut, otherwise the dates. Same URL values as the search page shortcuts. */
+export function registrationDeadlineLabel(from: string | undefined, to: string | undefined, now = new Date()): string {
+  const preset = activeDeadlinePreset({ deadlineFrom: from, deadlineTo: to }, now);
+  if (preset) return `Inscrições encerram em até ${preset} dias`;
+  if (from && to) return `Inscrições encerram entre ${formatDate(from)} e ${formatDate(to)}`;
+  if (from) return `Inscrições encerram a partir de ${formatDate(from)}`;
+  return `Inscrições encerram até ${formatDate(to!)}`;
+}
+
+/**
+ * Removable chips for the national list, each labeled so it reads on its own. The international tab has its own
+ * controls (eligibility, funding body…) and keeps them on screen, so it gets chips only for the shared fields.
+ */
+export function opportunityFilterChips(params: OpportunitySearchParams, now = new Date()): OpportunityFilterChip[] {
+  const chips: OpportunityFilterChip[] = [];
+  const national = params.scope !== 'international';
+  if (national) {
+    params.state?.forEach((state) => chips.push({ id: `state:${state}`, group: 'Estado', label: state, remove: { state: undefined, city: undefined } }));
+    params.city?.forEach((city) => chips.push({ id: `city:${city}`, group: 'Município', label: city, remove: { city: undefined } }));
+    params.area?.forEach((area) => chips.push({ id: `area:${area}`, group: 'Área', label: opportunityAreaLabels[area], remove: { area: undefined } }));
+  }
+  params.kind?.forEach((kind) => chips.push({ id: `kind:${kind}`, group: 'Tipo', label: opportunityKindLabels[kind], remove: { kind: undefined } }));
+  params.status?.forEach((status) => chips.push({ id: `status:${status}`, group: 'Situação', label: opportunityStatusLabels[status], remove: { status: undefined } }));
+  if (params.deadlineFrom || params.deadlineTo) {
+    chips.push({
+      id: 'deadline',
+      group: 'Prazo',
+      label: registrationDeadlineLabel(params.deadlineFrom, params.deadlineTo, now),
+      remove: { deadlineFrom: undefined, deadlineTo: undefined },
+    });
+  }
+  if (national) {
+    params.organization?.forEach((organization) =>
+      chips.push({ id: `organization:${organization}`, group: 'Instituição', label: organization, remove: { organization: undefined } }),
+    );
+  }
+  params.source?.forEach((source) => chips.push({ id: `source:${source}`, group: 'Fonte', label: opportunitySourceLabels[source], remove: { source: undefined } }));
+  if (national && params.includeIndividual) {
+    chips.push({ id: 'individual', group: 'Quem publica', label: 'Com anúncios de pessoas físicas', remove: { includeIndividual: undefined } });
+  }
+  return chips;
+}
+
+/** Chips that need their group name in front (an institution or a source name alone is a riddle). */
+export const opportunityChipShowsGroup = (chip: { id: string }) => /^(?:organization|source):/.test(chip.id);
+
+/** Choices folded inside "Mais filtros" on the national list: institution, source and individual listings. */
+export function countMoreOpportunityFilters(params: OpportunitySearchParams): number {
+  return (params.organization?.length ?? 0) + (params.source?.length ?? 0) + (params.includeIndividual ? 1 : 0);
 }
