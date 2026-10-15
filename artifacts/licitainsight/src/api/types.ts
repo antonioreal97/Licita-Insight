@@ -758,6 +758,7 @@ export type ProfileKeywordSuggestion = {
   related: boolean;
 };
 export type ProfileKeywordSuggestionsResponse = { data: ProfileKeywordSuggestion[] };
+export type ProfileMatchPreview = { estimatedOpenTenderCount: number };
 export type ProfileDescriptionSuggestions = {
   keywords: ProfileKeywordSuggestion[];
   categories: ProfileCategory[];

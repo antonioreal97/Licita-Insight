@@ -7,6 +7,7 @@ import type {
   CompanyRegionPreviewResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfileMatchPreview,
   ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
@@ -31,6 +32,7 @@ export const httpAiAdapter: AiAdapter = {
   suggestProfileKeywords: (query, signal) => getJson<ProfileKeywordSuggestionsResponse>('/v1/profile/keywords/suggest', { q: query }, signal),
   suggestProfileFiltersFromDescription: (description, signal) =>
     sendJson<ProfileDescriptionSuggestions>('POST', '/v1/profile/keywords/from-description', { description }, signal),
+  previewProfileMatches: (input, signal) => sendJson<ProfileMatchPreview>('POST', '/v1/profile/match-preview', input, signal),
   getFits: (tenderIds, signal) => getJson<TenderFitsResponse>('/v1/me/fit', { tenderIds }, signal),
   getTenderHighlights: (tenderIds, signal) => getJson<TenderHighlightsResponse>('/v1/me/tender-highlights', { tenderIds }, signal),
 };
