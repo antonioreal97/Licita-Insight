@@ -1,7 +1,7 @@
 import type { TenderSearchParams } from '@/api';
 import { sortLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
-import { buildFilterChips } from '../lib/filter-chips';
+import { buildFilterChips, chipShowsGroup } from '../lib/filter-chips';
 import { SEARCH_MODE_ENABLED } from '../lib/search-defaults';
 
 /** Read-only summary of a search (term, filters, mode, sort) as small pills. Used by "Salvar busca" and /saved-searches. */
@@ -20,7 +20,7 @@ export function SearchSummary({ params, className }: { params: TenderSearchParam
           key={item.id}
           className="inline-flex max-w-full items-center gap-1 rounded-pill border border-border-subtle bg-surface-sunken px-2 py-0.5 type-meta"
         >
-          <span className="shrink-0 text-muted-foreground">{item.group}:</span>
+          {chipShowsGroup(item) && <span className="shrink-0 text-muted-foreground">{item.group}:</span>}
           <span className="truncate font-medium text-foreground">{item.label}</span>
         </li>
       ))}

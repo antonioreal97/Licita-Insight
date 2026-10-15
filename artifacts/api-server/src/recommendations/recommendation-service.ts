@@ -40,6 +40,11 @@ import {
   municipalityReference,
   type ServiceRegionCoverage,
 } from "../service-region/service-region";
+import {
+  contextualDismissalPenalty,
+  dismissalTerms,
+  type DismissReason,
+} from "./triage-feedback";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -674,6 +679,15 @@ export function scoreRecommendation(
     candidate.categories.map((category) => category.slug),
   );
   for (const negative of dismissed) {
+    const contextual = contextualDismissalPenalty(
+      negative.terms,
+      candidate,
+      now,
+    );
+    if (contextual !== null) {
+      score -= contextual;
+      continue;
+    }
     const categoryOverlap = negative.categories.some((category) =>
       candidateSlugs.has(category.slug),
     );
@@ -1052,6 +1066,7 @@ export async function dismissRecommendation(
   userId: string,
   tenderId: string,
   now = new Date(),
+  reason?: DismissReason,
 ) {
   const [tender] = await db
     .select()
@@ -1059,17 +1074,21 @@ export async function dismissRecommendation(
     .where(eq(tendersTable.id, tenderId))
     .limit(1);
   if (!tender) throw new NotFoundError("Tender was not found");
+  const terms = dismissalTerms(
+    reason,
+    normalizeSignalTerms(`${tender.title} ${tender.objectSummary ?? ""}`, 15),
+    tender,
+  );
+  const categories =
+    !reason || reason === "not_offering" ? tender.categories : [];
   await db.transaction(async (tx) => {
     await tx
       .insert(recommendationDismissalsTable)
       .values({
         userId,
         tenderId,
-        terms: normalizeSignalTerms(
-          `${tender.title} ${tender.objectSummary ?? ""}`,
-          15,
-        ),
-        categories: tender.categories,
+        terms,
+        categories,
         dismissedAt: now,
       })
       .onConflictDoUpdate({
@@ -1077,7 +1096,7 @@ export async function dismissRecommendation(
           recommendationDismissalsTable.userId,
           recommendationDismissalsTable.tenderId,
         ],
-        set: { dismissedAt: now },
+        set: { dismissedAt: now, terms, categories },
       });
     await tx
       .delete(userRecommendationsTable)

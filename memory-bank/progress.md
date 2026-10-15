@@ -23,6 +23,7 @@ Deriva de [activeContext](activeContext.md).
 - Validação final do calendário: 27 testes passaram, typecheck e build da API concluídos. A tentativa real em 22 set 2026 (DF, modalidade 6, publicação em 21 set) falhou por timeout do PNCP antes da primeira página; os 19 editais foram preservados e a partição ficou pendente. A verificação de duas execuções foi concluída com respostas controladas do PNCP no Postgres real, não no serviço externo.
 - Detalhe busca itens e arquivos do PNCP na primeira abertura e grava no banco.
 - A busca mostra `Atualizado em` a partir de `meta.indexUpdatedAt` (última `fetched_at`).
+- Latência da busca (15 out 2026): facetas só com consulta própria para os grupos selecionados, filtro de categoria por `@>` no GIN e índices da migração `0044` (aplicação manual com `CONCURRENTLY`). No banco sintético de 300 mil editais, buscas com `status=open` ficam em 12–134 ms no p95 com facetas. Medições, comandos para produção e parecer sobre motor de busca em [`docs/reviews/search-latency/depois.md`](../docs/reviews/search-latency/depois.md); benchmark em `artifacts/api-server/scripts/bench-search.ts`.
 - Chamadas de fomento audiovisual ficam fora de `tenders`. Tabela `cultural_opportunities`, coleta do Mapas Culturais (`source = mapas-culturais`) e lista em `/oportunidades`. Contrato: [`docs/contracts/opportunities-v1.md`](../docs/contracts/opportunities-v1.md). `CULTURE_DAILY_COLLECT=false` desliga a agenda. Comando: `pnpm --filter @workspace/api-server run collect:opportunities`. A consulta por termo `linguagem` foi trocada por `@keyword` depois que as instalações responderam 500 ou HTML.
 - Verificado em 22 set 2026: 19 pregões eletrônicos do DF publicados em 21 set 2026. A busca por “correios” abre o edital `34028316000103-1-000087-2026`, com link `https://pncp.gov.br/app/editais/34028316000103/2026/87`. O registro permanece depois de reiniciar a API. Uma segunda coleta não duplica a contagem.
 
@@ -138,6 +139,17 @@ Deriva de [activeContext](activeContext.md).
 - Exceção de movimento da landing em [`design-system/motion.md`](../design-system/motion.md).
 - Verificado em navegador (sem API): Chrome escolhe WebM, WebKit escolhe HEVC, alfa correto nos dois, temas Creme e
   Petróleo, movimento reduzido. Falta: Safari real, conferência com dados da API e ao vivo após o deploy.
+
+## Em PR — começo guiado e medidor de perfil (`feat/guided-onboarding`, 15 out 2026)
+
+- Só frontend, em `src/features/guided-onboarding/`. Quatro passos (o que vende, região, faixa de valor, porte e
+  plataformas) com o contador honesto do `match-preview` em cada passo; salva pelo `PUT` do perfil só no fim.
+- Abre uma vez após o primeiro login com perfil vazio e reabre pelo cartão da Visão geral; a dispensa fica em
+  memória por conta e só vai para o `localStorage` (`licita-guided-onboarding-dismissed-v1`) com o aviso aceito.
+- Medidor "Perfil N%" na Visão geral e no topo do perfil: até 3 próximos itens, cada um com o que destrava.
+- O alerta da conclusão é busca salva por termos e faixa de valor: buscas salvas não aceitam `myRegion`, e a tela diz isso.
+- Teste de navegador: `scripts/test-guided-onboarding.mjs` (API interceptada, sem banco); capturas em
+  `docs/reviews/guided-onboarding/`.
 
 ## O que falta
 

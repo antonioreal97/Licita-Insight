@@ -19,6 +19,7 @@ import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlig
 import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
+import { TriageEntry } from '@/features/recommendations/triage/triage-entry';
 import { useSaveUsageProfile, useUsageProfile } from '@/features/settings/hooks/use-usage-profile';
 import type { AccountUsageProfile } from '@/api';
 
@@ -263,15 +264,16 @@ export default function DashboardPage() {
           </Link>
         }
       />
+      {user && <div className="mb-6"><ProfileInviteCard /></div>}
       {user && <UsageInvite />}
       {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-8">
+        {personal && <TriageEntry />}
         {personal && <RecommendationsSection />}
         {personal && <PersonalDeadlines />}
         {personal && profile.isPending ? <RowsSkeleton rows={2} />
           : personal && profile.isError ? <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
-          : personal && !profile.data?.profile ? <ProfileInviteCard />
           : <section data-testid="dashboard-candidates">
           <div className="mb-3 flex items-center justify-between">
             <div>

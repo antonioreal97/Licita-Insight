@@ -47,15 +47,15 @@ test('limpar filtros volta ao padrão Abertos e mantém termo, ordem e tamanho d
 
 test('chips deixam claro quando o padrão está aplicado e quando são todos os status', () => {
   const [chip] = buildFilterChips({ status: ['open'] }, { statusDefault: true });
-  assert.equal(chip.label, 'Aberto (padrão)');
+  assert.equal(chip.label, 'Abertos (padrão)');
   assert.deepEqual(chip.remove, { status: [] }, 'remover o padrão mostra todos os status');
 
   const [all] = buildFilterChips({}, { statusDefault: true });
-  assert.deepEqual(all, { id: 'status:all', group: 'Status', label: 'Todos', remove: { status: ['open'] } });
+  assert.deepEqual(all, { id: 'status:all', group: 'Situação', label: 'Todas as situações', remove: { status: ['open'] } });
 
   assert.deepEqual(
     buildFilterChips({ status: ['open', 'closed'] }, { statusDefault: true }).map((item) => item.label),
-    ['Aberto', 'Encerrado'],
+    ['Abertos', 'Encerrados'],
     'escolha explícita não leva "(padrão)"',
   );
   assert.deepEqual(buildFilterChips({}), [], 'fora da página de busca (resumo de busca salva), sem status é só sem filtro');
@@ -83,8 +83,8 @@ test('filtro de novos e ordenação pela entrada no Pardal sobrevivem na URL', (
   assert.equal(savedQueryHref('q=limpeza&newOnly=true', { withoutNewOnly: true }), '/search?q=limpeza&status=all');
   assert.deepEqual(buildFilterChips(params).at(-1), {
     id: 'newOnly',
-    group: 'Entrada no Pardal',
-    label: 'Novos (24 h)',
+    group: 'Novidades',
+    label: 'Entraram nas últimas 24 h',
     remove: { newOnly: undefined },
   });
   assert.equal(withoutFilters(params).newOnly, undefined);

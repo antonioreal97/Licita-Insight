@@ -1,7 +1,16 @@
-import type { ReactNode } from 'react';
+import React, { useId, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
-import { ExternalLink, Info } from 'lucide-react';
-import type { BrazilEligibility, OpportunityEligibilityAnswer, OpportunitySearchParams, OpportunitySearchResponse, OpportunitySummary } from '@/api';
+import { ChevronDown, ExternalLink, Info } from 'lucide-react';
+import type {
+  BrazilEligibility,
+  InternationalRegion,
+  OpportunityEligibilityAnswer,
+  OpportunityKind,
+  OpportunitySearchParams,
+  OpportunitySearchResponse,
+  OpportunitySource,
+  OpportunitySummary,
+} from '@/api';
 import { INTERNATIONAL_REGIONS } from '@/services/opportunity-service';
 import {
   amountLine,
@@ -15,13 +24,22 @@ import {
   eligibilityOptions,
   eligibilityPatch,
   facetOptions,
+  fundingOptions,
   OFFICIAL_NOTICE_PREVAILS,
   originalTitle,
   placeLabel,
   selectedEligibility,
 } from '../lib/international';
-import type { FilterOption } from '../lib/opportunity-filters';
-import { OpportunityStatusBadge } from './opportunity-status';
+import { countMoreInternationalFilters } from '../lib/opportunity-filters';
+import {
+  OpportunityDeadlineQuestion,
+  OpportunityFilterSelect,
+  OpportunityQuestion,
+  OpportunityStatusQuestion,
+  opportunityPillClass,
+  type OpportunityFilterDensity,
+} from './opportunity-filters';
+import { INTERNATIONAL_KINDS, INTERNATIONAL_SOURCES, opportunityKindLabels, opportunitySourceLabels, OpportunityStatusBadge } from './opportunity-status';
 import { ApplicationBadge } from './application-panel';
 
 const tones: Record<BrazilEligibility, string> = {
@@ -90,12 +108,12 @@ function FilterSelect({
   testId: string;
   value: string;
   placeholder: string;
-  options: FilterOption[];
+  options: { value: string; label: string; count: number }[];
   onChange: (value: string) => void;
   children?: ReactNode;
 }) {
   return (
-    <label className="min-w-0 flex-1 sm:basis-52">
+    <label className="block min-w-0">
       <span className="sr-only">{label}</span>
       <select data-testid={testId} className={selectClass} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{placeholder}</option>
@@ -114,15 +132,83 @@ type FiltersProps = {
   params: OpportunitySearchParams;
   facets: OpportunitySearchResponse['facets'];
   onChange: (patch: Partial<OpportunitySearchParams>) => void;
+  density?: OpportunityFilterDensity;
 };
 
-/** Funding body, region, language, type and eligibility, plus the "projects in Brazil" shortcut. */
-export function InternationalFilters({ params, facets, onChange }: FiltersProps) {
+export const CLEAR_INTERNATIONAL_FILTERS: Partial<OpportunitySearchParams> = {
+  kind: undefined,
+  status: undefined,
+  source: undefined,
+  deadlineFrom: undefined,
+  deadlineTo: undefined,
+  agency: undefined,
+  region: undefined,
+  country: undefined,
+  language: undefined,
+  opportunityType: undefined,
+  eligibility: undefined,
+  funding: undefined,
+};
+
+/** International filters arranged in the same plain-language questions as the national list. */
+export function InternationalFilters({ params, facets, onChange, density = 'compact' }: FiltersProps) {
   const inBrazil = params.country?.includes('BR') === true;
   const regions = facetOptions(facets?.region, params.region?.[0]).filter((option) => (INTERNATIONAL_REGIONS as string[]).includes(option.value));
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreId = useId();
+  const moreCount = countMoreInternationalFilters(params);
   return (
-    <div className="mb-4 space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <div data-testid="international-opportunity-filters">
+      <OpportunityQuestion title="Onde?" help="Região da chamada ou projetos executados no Brasil.">
+        <OpportunityFilterSelect
+          label="Região"
+          testId="select-opportunity-region"
+          value={params.region?.[0] ?? ''}
+          placeholder="Todas as regiões"
+          options={regions}
+          onChange={(value) => onChange({ region: value ? [value as InternationalRegion] : undefined })}
+        />
+        <button
+          type="button"
+          aria-pressed={inBrazil}
+          data-testid="button-opportunity-brazil-projects"
+          onClick={() => onChange(brazilProjectsPatch(params))}
+          className={opportunityPillClass(inBrazil, density)}
+        >
+          Só projetos no Brasil
+        </button>
+      </OpportunityQuestion>
+
+      <OpportunityQuestion title="O quê?" help="Área de atuação e tipo de oportunidade." termId="edital">
+        <label className="block min-w-0">
+          <span className="sr-only">Área da oportunidade</span>
+          <select
+            data-testid="select-opportunity-kind"
+            className={selectClass}
+            value={params.kind?.[0] ?? ''}
+            onChange={(event) => onChange({ kind: event.target.value ? [event.target.value as OpportunityKind] : undefined })}
+          >
+            <option value="">Todas as áreas</option>
+            {INTERNATIONAL_KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {opportunityKindLabels[kind]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <FilterSelect
+          label="Tipo de chamada"
+          testId="select-opportunity-type"
+          value={params.opportunityType?.[0] ?? ''}
+          placeholder="Bens, obras, consultoria, subvenção…"
+          options={facetOptions(facets?.opportunityType, params.opportunityType?.[0])}
+          onChange={(value) => onChange({ opportunityType: value ? [value] : undefined })}
+        />
+      </OpportunityQuestion>
+
+      <OpportunityDeadlineQuestion params={params} onChange={onChange} density={density} />
+
+      <OpportunityQuestion title="Para brasileiros?" help="Quem pode participar e se há financiamento para o Brasil.">
         <FilterSelect
           label="Elegibilidade para brasileiros"
           testId="select-opportunity-eligibility"
@@ -134,54 +220,85 @@ export function InternationalFilters({ params, facets, onChange }: FiltersProps)
           <option value={ELIGIBILITY_ALL}>Qualquer elegibilidade</option>
         </FilterSelect>
         <FilterSelect
-          label="Organismo"
-          testId="select-opportunity-agency"
-          value={params.agency?.[0] ?? ''}
-          placeholder="Todos os organismos"
-          options={facetOptions(facets?.agency, params.agency?.[0])}
-          onChange={(value) => onChange({ agency: value ? [value] : undefined })}
+          label="Financiamento para brasileiros"
+          testId="select-opportunity-funding"
+          value={params.funding?.[0] ?? ''}
+          placeholder="Qualquer financiamento"
+          options={fundingOptions(facets)}
+          onChange={(value) => onChange({ funding: value ? [value as BrazilEligibility] : undefined })}
         />
-        <FilterSelect
-          label="Região"
-          testId="select-opportunity-region"
-          value={params.region?.[0] ?? ''}
-          placeholder="Todas as regiões"
-          options={regions}
-          onChange={(value) => onChange({ region: value ? [value as (typeof INTERNATIONAL_REGIONS)[number]] : undefined })}
-        />
-        <FilterSelect
-          label="Idioma do aviso"
-          testId="select-opportunity-language"
-          value={params.language?.[0] ?? ''}
-          placeholder="Todos os idiomas"
-          options={facetOptions(facets?.language, params.language?.[0])}
-          onChange={(value) => onChange({ language: value ? [value] : undefined })}
-        />
-        <FilterSelect
-          label="Tipo de chamada"
-          testId="select-opportunity-type"
-          value={params.opportunityType?.[0] ?? ''}
-          placeholder="Bens, obras, consultoria, subvenção…"
-          options={facetOptions(facets?.opportunityType, params.opportunityType?.[0])}
-          onChange={(value) => onChange({ opportunityType: value ? [value] : undefined })}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          aria-pressed={inBrazil}
-          data-testid="button-opportunity-brazil-projects"
-          onClick={() => onChange(brazilProjectsPatch(params))}
-          className={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 type-meta font-semibold transition-colors duration-fast focus-visible:focus-ring ${
-            inBrazil ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-surface text-foreground hover:border-border-strong'
-          }`}
-        >
-          Só projetos no Brasil
-        </button>
         {selectedEligibility(params) === ELIGIBILITY_DEFAULT && (
-          <span className="type-meta text-muted-foreground">Mostrando o que um brasileiro pode disputar: “aberto” e “condicional”.</span>
+          <p className="type-meta text-muted-foreground">Por padrão, mostramos o que um brasileiro pode disputar: aberto ou condicional.</p>
         )}
-      </div>
+      </OpportunityQuestion>
+
+      <section className="border-t border-border-subtle pt-2">
+        <h3>
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            aria-controls={moreId}
+            data-testid="button-international-more-filters"
+            onClick={() => setMoreOpen(!moreOpen)}
+            className={`flex items-center gap-2 rounded-lg text-left type-ui font-semibold text-foreground transition-colors duration-fast hover:text-primary focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10 w-full' : 'min-h-8'}`}
+          >
+            <span className={density === 'comfortable' ? 'flex-1' : undefined}>
+              Mais filtros
+              {moreCount > 0 && (
+                <span
+                  data-testid="badge-international-more-filters"
+                  className="ml-1.5 rounded-pill bg-primary px-1.5 py-0.5 type-data text-xs leading-none font-bold text-primary-foreground"
+                >
+                  {moreCount}
+                  <span className="sr-only"> {moreCount === 1 ? 'ativo' : 'ativos'}</span>
+                </span>
+              )}
+            </span>
+            <ChevronDown size={15} aria-hidden className={`transition-transform duration-fast ${moreOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </h3>
+        <div id={moreId} hidden={!moreOpen} data-testid="international-more-filters" className="pt-3">
+          <OpportunityStatusQuestion params={params} onChange={onChange} />
+          <OpportunityQuestion title="Organismo" help="Instituição internacional que publicou a chamada.">
+            <FilterSelect
+              label="Organismo"
+              testId="select-opportunity-agency"
+              value={params.agency?.[0] ?? ''}
+              placeholder="Todos os organismos"
+              options={facetOptions(facets?.agency, params.agency?.[0])}
+              onChange={(value) => onChange({ agency: value ? [value] : undefined })}
+            />
+          </OpportunityQuestion>
+          <OpportunityQuestion title="Fonte" help="Portal oficial de onde a chamada veio.">
+            <label className="block min-w-0">
+              <span className="sr-only">Fonte</span>
+              <select
+                data-testid="select-opportunity-source"
+                className={selectClass}
+                value={params.source?.[0] ?? ''}
+                onChange={(event) => onChange({ source: event.target.value ? [event.target.value as OpportunitySource] : undefined })}
+              >
+                <option value="">Todas as fontes</option>
+                {INTERNATIONAL_SOURCES.map((source) => (
+                  <option key={source} value={source}>
+                    {opportunitySourceLabels[source]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </OpportunityQuestion>
+          <OpportunityQuestion title="Idioma" help="Idioma em que o aviso foi publicado.">
+            <FilterSelect
+              label="Idioma do aviso"
+              testId="select-opportunity-language"
+              value={params.language?.[0] ?? ''}
+              placeholder="Todos os idiomas"
+              options={facetOptions(facets?.language, params.language?.[0])}
+              onChange={(value) => onChange({ language: value ? [value] : undefined })}
+            />
+          </OpportunityQuestion>
+        </div>
+      </section>
     </div>
   );
 }
@@ -210,7 +327,9 @@ export function InternationalRow({ opportunity }: { opportunity: OpportunitySumm
           {international.brazilEligibility && <EligibilityBadge answer={international.brazilEligibility} />}
           {international.brazilFunding && <FundingBadge answer={international.brazilFunding} />}
           {international.brazilProject && <BrazilProjectBadge />}
-          <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{international.agency ?? opportunity.sourceName}</span>
+          <span className="rounded-pill bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+            {international.agency ?? opportunity.sourceName}
+          </span>
           {opportunity.opportunityType && <span className="type-label text-muted-foreground">{opportunity.opportunityType}</span>}
           <span className="type-label text-muted-foreground">{placeLabel(international)}</span>
           {international.languageName && international.language !== 'pt' && (

@@ -1,9 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import type { RecommendationsResponse } from '@/api';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { ToastAction } from '@/components/ui/toast';
-import { ProfileInviteCard } from '@/features/company-profile/components/profile-invite-card';
 import { useCompanyProfile } from '@/features/company-profile/hooks/use-company-profile';
 import { useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { TenderRow } from '@/features/tenders/components/tender-row';
@@ -101,7 +100,7 @@ export function RecommendationsSection() {
           ))}
         </div>
       ) : !profile.data?.profile ? (
-        <ProfileInviteCard />
+        <p className="rounded-xl border border-border bg-card p-5 type-ui text-muted-foreground">Complete o começo guiado acima ou <Link href="/settings#perfil-empresa" className="underline">edite seu perfil</Link> para orientar esta seleção.</p>
       ) : (
         <p className="rounded-xl border border-border bg-card p-5 type-ui text-muted-foreground">
           Ainda não há recomendações suficientes. Salve ou monitore editais e buscas para melhorar esta seleção.

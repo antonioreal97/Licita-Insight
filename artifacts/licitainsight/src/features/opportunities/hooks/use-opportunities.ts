@@ -31,13 +31,14 @@ export function deniedAccess(error: unknown): 'anonymous' | 'no-access' | null {
   return null;
 }
 
-export function useOpportunitySearch(params: OpportunitySearchParams) {
+export function useOpportunitySearch(params: OpportunitySearchParams, { enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.opportunities.search(params),
     queryFn: ({ signal }) => opportunityService.search(params, signal),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
     retry: (failureCount, error) => isApiError(error) && error.isTransient && failureCount < 2,
+    enabled,
   });
 }
 
