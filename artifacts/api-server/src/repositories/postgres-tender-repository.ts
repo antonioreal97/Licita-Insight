@@ -94,6 +94,16 @@ const asModality = (value: string): Modality => {
   return value as Modality;
 };
 
+// Containment (`@>`) is what the `jsonb_path_ops` GIN index on categories can serve.
+const hasCategory = (slugs: string[]): SQL =>
+  sql`(${sql.join(
+    slugs.map(
+      (slug) =>
+        sql`${tendersTable.categories} @> ${JSON.stringify([{ slug }])}::jsonb`,
+    ),
+    sql` or `,
+  )})`;
+
 const plausibleValue = sql`${tendersTable.estimatedValueFlag} is null`;
 // Tenders with a flagged value go last in both directions, after the ones without a value.
 const flaggedValueLast = sql`(${tendersTable.estimatedValueFlag} is not null) asc`;
@@ -152,14 +162,7 @@ export const searchWhereFor = (
     filters.push(inArray(tendersTable.sourceId, criteria.sourceId));
   }
   if (skip !== "category" && criteria.category.length > 0) {
-    filters.push(sql`exists (
-      select 1
-      from jsonb_array_elements(${tendersTable.categories}) as cat
-      where cat->>'slug' in (${sql.join(
-        criteria.category.map((slug) => sql`${slug}`),
-        sql`, `,
-      )})
-    )`);
+    filters.push(hasCategory(criteria.category));
   }
   if (skip !== "platform" && criteria.platform.length > 0) {
     filters.push(inArray(tendersTable.platform, criteria.platform));
@@ -207,17 +210,7 @@ export const searchWhereFor = (
           : sql`false`
       }
       or ${municipalityCodes.length ? inArray(tendersTable.cityIbgeCode, municipalityCodes) : sql`false`}
-      or ${
-        remoteSlugs.length
-          ? sql`exists (
-        select 1 from jsonb_array_elements(${tendersTable.categories}) as cat
-        where cat->>'slug' in (${sql.join(
-          remoteSlugs.map((slug) => sql`${slug}`),
-          sql`, `,
-        )})
-      )`
-          : sql`false`
-      }
+      or ${remoteSlugs.length ? hasCategory(remoteSlugs) : sql`false`}
     )`);
   }
   if (skip !== "valueRange" && criteria.valueMin !== undefined) {
@@ -363,24 +356,25 @@ type CombinedFacetResult = {
 };
 
 /**
- * With no selected facet group, disjunctive faceting uses the same filtered
- * tender set for every bucket. Materializing it once avoids repeating the
- * trigram heap scan for every facet while preserving exact counts.
+ * Disjunctive faceting: a group with a selection counts the tenders matching
+ * every other filter, so it needs its own buckets and total. A group without a
+ * selection counts the filtered set itself, whose total is the search total.
  */
-export const canUseCombinedFacets = (criteria: SearchCriteria): boolean =>
-  queryTokens(criteria.query).length > 0 &&
-  criteria.tenderIds === undefined &&
-  criteria.status.length === 0 &&
-  criteria.modality.length === 0 &&
-  criteria.state.length === 0 &&
-  criteria.city.length === 0 &&
-  criteria.organizationId.length === 0 &&
-  criteria.sourceId.length === 0 &&
-  criteria.category.length === 0 &&
-  criteria.platform.length === 0 &&
-  !criteria.newOnly &&
-  criteria.valueMin === undefined &&
-  criteria.valueMax === undefined;
+const selectedFacetGroups = (
+  criteria: SearchCriteria,
+): Record<FacetGroup, boolean> => ({
+  new: criteria.newOnly,
+  status: criteria.status.length > 0,
+  modality: criteria.modality.length > 0,
+  state: criteria.state.length > 0,
+  city: criteria.city.length > 0,
+  source: criteria.sourceId.length > 0,
+  category: criteria.category.length > 0,
+  organization: criteria.organizationId.length > 0,
+  platform: criteria.platform.length > 0,
+  valueRange:
+    criteria.valueMin !== undefined || criteria.valueMax !== undefined,
+});
 
 const combinedFacetBuckets = (value: unknown, field: string): FacetBucket[] => {
   if (!Array.isArray(value)) {
@@ -505,29 +499,13 @@ export class PostgresTenderRepository {
       .orderBy(...orderBy(criteria, tokens))
       .limit(criteria.pageSize)
       .offset((criteria.page - 1) * criteria.pageSize);
-    let total: number;
-    let rows: TenderRow[];
-    let facets: SearchFacets | null;
-    let indexUpdatedAt: Date | null;
-
-    if (criteria.facets && canUseCombinedFacets(criteria)) {
-      const [pageRows, combined, updatedAt] = await Promise.all([
-        rowsQuery,
-        this.combinedFacets(criteria, now),
-        this.indexUpdatedAt(),
-      ]);
-      rows = pageRows;
-      total = combined.total;
-      facets = combined.facets;
-      indexUpdatedAt = updatedAt;
-    } else {
-      total = await countRows(where);
-      rows = await rowsQuery;
-      [facets, indexUpdatedAt] = await Promise.all([
-        criteria.facets ? this.facets(criteria, now) : Promise.resolve(null),
-        this.indexUpdatedAt(),
-      ]);
-    }
+    const [rows, { total, facets }, indexUpdatedAt] = await Promise.all([
+      rowsQuery,
+      criteria.facets
+        ? this.facets(criteria, now)
+        : countRows(where).then((total) => ({ total, facets: null })),
+      this.indexUpdatedAt(),
+    ]);
 
     return {
       data: normalizePageRelevance(
@@ -790,7 +768,9 @@ export class PostgresTenderRepository {
             label: modalityLabels[asModality(bucket.value)],
           }),
         ),
-        state: combinedFacetBuckets(row.state, "state facet"),
+        state: combinedFacetBuckets(row.state, "state facet").filter(
+          (bucket) => bucket.value.length > 0,
+        ),
         source: combinedFacetBuckets(row.source, "source facet"),
         city: combinedFacetBuckets(row.city, "city facet"),
         organization: combinedFacetBuckets(
@@ -821,8 +801,24 @@ export class PostgresTenderRepository {
   private async facets(
     criteria: SearchCriteria,
     now: Date,
-  ): Promise<SearchFacets> {
+  ): Promise<CombinedFacetResult> {
+    // Only a keyword filter makes the matched set expensive to find; without one, separate
+    // aggregations running in parallel beat materializing a large set.
+    const combine = queryTokens(criteria.query).length > 0;
+    const selected = selectedFacetGroups(criteria);
+    const whenSelected = <T>(
+      group: FacetGroup,
+      load: () => Promise<T>,
+    ): Promise<T | undefined> =>
+      selected[group] ? load() : Promise.resolve(undefined);
+    const ownQuery = <T>(
+      group: FacetGroup,
+      load: () => Promise<T>,
+    ): Promise<T | undefined> =>
+      !combine || selected[group] ? load() : Promise.resolve(undefined);
     const [
+      combined,
+      matchedTotal,
       status,
       modality,
       state,
@@ -841,97 +837,151 @@ export class PostgresTenderRepository {
       valueRows,
       newCount,
     ] = await Promise.all([
-      buckets(
-        tendersTable.status,
-        sql<string>`${tendersTable.status}`,
-        searchWhereFor(criteria, "status", now),
-      ),
-      buckets(
-        tendersTable.modality,
-        sql<string>`${tendersTable.modality}`,
-        searchWhereFor(criteria, "modality", now),
-      ),
-      buckets(
-        tendersTable.state,
-        sql<string>`${tendersTable.state}`,
-        and(
-          searchWhereFor(criteria, "state", now),
-          sql`${tendersTable.state} is not null`,
+      combine ? this.combinedFacets(criteria, now) : undefined,
+      combine
+        ? undefined
+        : countRows(searchWhereFor(criteria, undefined, now)),
+      ownQuery("status", () =>
+        buckets(
+          tendersTable.status,
+          sql<string>`${tendersTable.status}`,
+          searchWhereFor(criteria, "status", now),
         ),
       ),
-      buckets(
-        tendersTable.sourceId,
-        sql<string>`${tendersTable.sourceName}`,
-        searchWhereFor(criteria, "source", now),
+      ownQuery("modality", () =>
+        buckets(
+          tendersTable.modality,
+          sql<string>`${tendersTable.modality}`,
+          searchWhereFor(criteria, "modality", now),
+        ),
       ),
-      this.cityFacet(criteria, now),
-      this.organizationFacet(criteria, now),
-      this.categoryFacet(criteria, now),
-      buckets(
-        tendersTable.platform,
-        sql<string>`coalesce(${tendersTable.platformLabel}, ${tendersTable.platform})`,
-        searchWhereFor(criteria, "platform", now),
+      ownQuery("state", () =>
+        buckets(
+          tendersTable.state,
+          sql<string>`${tendersTable.state}`,
+          and(
+            searchWhereFor(criteria, "state", now),
+            sql`${tendersTable.state} is not null`,
+          ),
+        ),
       ),
-      countRows(searchWhereFor(criteria, "status", now)),
-      countRows(searchWhereFor(criteria, "modality", now)),
-      countRows(searchWhereFor(criteria, "state", now)),
-      countRows(searchWhereFor(criteria, "source", now)),
-      countRows(searchWhereFor(criteria, "category", now)),
-      countRows(searchWhereFor(criteria, "organization", now)),
-      countRows(searchWhereFor(criteria, "platform", now)),
-      db
-        .select({ value: tendersTable.estimatedValue })
-        .from(tendersTable)
-        .where(and(searchWhereFor(criteria, "valueRange", now), plausibleValue)),
-      countRows(
-        and(
-          searchWhereFor(criteria, "new", now),
-          sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
+      ownQuery("source", () =>
+        buckets(
+          tendersTable.sourceId,
+          sql<string>`${tendersTable.sourceName}`,
+          searchWhereFor(criteria, "source", now),
+        ),
+      ),
+      ownQuery("city", () => this.cityFacet(criteria, now)),
+      ownQuery("organization", () =>
+        this.organizationFacet(criteria, now),
+      ),
+      ownQuery("category", () => this.categoryFacet(criteria, now)),
+      ownQuery("platform", () =>
+        buckets(
+          tendersTable.platform,
+          sql<string>`coalesce(${tendersTable.platformLabel}, ${tendersTable.platform})`,
+          searchWhereFor(criteria, "platform", now),
+        ),
+      ),
+      whenSelected("status", () =>
+        countRows(searchWhereFor(criteria, "status", now)),
+      ),
+      whenSelected("modality", () =>
+        countRows(searchWhereFor(criteria, "modality", now)),
+      ),
+      whenSelected("state", () =>
+        countRows(searchWhereFor(criteria, "state", now)),
+      ),
+      whenSelected("source", () =>
+        countRows(searchWhereFor(criteria, "source", now)),
+      ),
+      whenSelected("category", () =>
+        countRows(searchWhereFor(criteria, "category", now)),
+      ),
+      whenSelected("organization", () =>
+        countRows(searchWhereFor(criteria, "organization", now)),
+      ),
+      whenSelected("platform", () =>
+        countRows(searchWhereFor(criteria, "platform", now)),
+      ),
+      ownQuery("valueRange", () =>
+        db
+          .select({ value: tendersTable.estimatedValue })
+          .from(tendersTable)
+          .where(
+            and(searchWhereFor(criteria, "valueRange", now), plausibleValue),
+          ),
+      ),
+      ownQuery("new", () =>
+        countRows(
+          and(
+            searchWhereFor(criteria, "new", now),
+            sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
+          ),
         ),
       ),
     ]);
 
-    const values = nonNegativeValues(
-      valueRows
-        .map((row) =>
-          row.value === null
-            ? null
-            : requireNumber(row.value, "estimatedValue"),
-        )
-        .filter((value): value is number => value !== null),
-    );
-    const range = numberRange(values);
+    const total = combined?.total ?? matchedTotal;
+    if (total === undefined) throw new Error("Facet query returned no total");
+    const shared = (): SearchFacets => {
+      if (!combined) {
+        throw new Error("Facet group has neither its own nor the combined query");
+      }
+      return combined.facets;
+    };
+    const values =
+      valueRows &&
+      nonNegativeValues(
+        valueRows
+          .map((row) =>
+            row.value === null
+              ? null
+              : requireNumber(row.value, "estimatedValue"),
+          )
+          .filter((value): value is number => value !== null),
+      );
+    const range = values && numberRange(values);
 
     return {
-      status: status.map((bucket) => ({
-        ...bucket,
-        label: statusLabels[asStatus(bucket.value)],
-      })),
-      modality: modality.map((bucket) => ({
-        ...bucket,
-        label: modalityLabels[asModality(bucket.value)],
-      })),
-      state: state.filter((bucket) => bucket.value.length > 0),
-      source,
-      category,
-      city,
-      organization,
-      platform,
-      groupTotals: {
-        status: statusTotal,
-        modality: modalityTotal,
-        state: stateTotal,
-        source: sourceTotal,
-        category: categoryTotal,
-        organization: organizationTotal,
-        platform: platformTotal,
+      total,
+      facets: {
+        status:
+          status?.map((bucket) => ({
+            ...bucket,
+            label: statusLabels[asStatus(bucket.value)],
+          })) ?? shared().status,
+        modality:
+          modality?.map((bucket) => ({
+            ...bucket,
+            label: modalityLabels[asModality(bucket.value)],
+          })) ?? shared().modality,
+        state:
+          state?.filter((bucket) => bucket.value.length > 0) ?? shared().state,
+        source: source ?? shared().source,
+        category: category ?? shared().category,
+        city: city ?? shared().city,
+        organization: organization ?? shared().organization,
+        platform: platform ?? shared().platform,
+        groupTotals: {
+          status: statusTotal ?? total,
+          modality: modalityTotal ?? total,
+          state: stateTotal ?? total,
+          source: sourceTotal ?? total,
+          category: categoryTotal ?? total,
+          organization: organizationTotal ?? total,
+          platform: platformTotal ?? total,
+        },
+        valueRange: values
+          ? {
+              min: range?.min ?? null,
+              max: range?.max ?? null,
+              histogram: createValueHistogram(values),
+            }
+          : shared().valueRange,
+        newCount: newCount ?? shared().newCount,
       },
-      valueRange: {
-        min: range?.min ?? null,
-        max: range?.max ?? null,
-        histogram: createValueHistogram(values),
-      },
-      newCount,
     };
   }
 
