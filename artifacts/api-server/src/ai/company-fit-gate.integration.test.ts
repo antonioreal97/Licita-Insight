@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
+test("fit lexical gate matches whole Portuguese expressions and honors shadow, on and off", {
   skip: !process.env.PNCP_TEST_DATABASE_URL,
 }, async () => {
   const schema = `fit_gate_test_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -19,6 +19,7 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
   for (const table of [
     "users", "subscriptions", "tenders", "company_profiles",
     "company_tender_fits", "ai_fit_daily_usage", "ai_jobs",
+    "coupon_codes", "coupon_redemptions",
   ]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
@@ -56,8 +57,12 @@ test("fit lexical gate uses Portuguese words and honors shadow, on and off", {
       return { userId, tenderId };
     };
 
-    const wordCase = await addCase("word", "obra civil");
-    assert.equal(await lexicalGatePasses(wordCase.tenderId, ["obra civil"]), true);
+    const wordCase = await addCase("word", "obra pública");
+    // Each term is an expression: "obra civil" no longer passes on the loose word "obra".
+    assert.equal(await lexicalGatePasses(wordCase.tenderId, ["obra civil"]), false);
+    assert.equal(await lexicalGatePasses(wordCase.tenderId, ["obra pública"]), true);
+    assert.equal(await lexicalGatePasses(wordCase.tenderId, ["obra"]), true);
+    assert.equal(await lexicalGatePasses(wordCase.tenderId, ["cimento"]), true);
 
     const shadow = await addCase("shadow", "medicamentos");
     process.env.AI_FIT_LEXICAL_GATE = "shadow";
