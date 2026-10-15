@@ -104,6 +104,33 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/SearchUnavailable"
+  /v1/public/tenders/by-state:
+    get:
+      operationId: getOpenTendersByState
+      tags: [search]
+      summary: Count open tenders and sum their estimated values by state
+      description: >-
+        Public, no session. Always returns the 27 states. The aggregate is computed at most once every 15 minutes
+        and served from memory in between.
+      security: []
+      responses:
+        "200":
+          description: Open tenders by state
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300, stale-while-revalidate=600
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenTendersByStateResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/SearchUnavailable"
   /v1/tenders/{id}:
     get:
       operationId: getTenderById
@@ -1977,6 +2004,53 @@ components:
         durationDays: { type: integer, enum: [7, 30] }
         alreadyRedeemed: { type: boolean }
       required: [accessUntil, durationDays, alreadyRedeemed]
+    OpenTendersByState:
+      type: object
+      properties:
+        state:
+          type: string
+          pattern: "^[A-Z]{2}$"
+          description: State code (UF)
+        openTenders:
+          type: integer
+          minimum: 0
+        estimatedValueTotal:
+          type: [number, "null"]
+          minimum: 0
+          description: >-
+            Sum of the estimated values that were published, leaving out the ones flagged as implausible
+            (`estimatedValueFlag`); null when no open tender in the state has a value to add
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among the open tenders of the state; null when it has none
+      required: [state, openTenders, estimatedValueTotal, updatedAt]
+    OpenTendersByStateMeta:
+      type: object
+      properties:
+        totalOpenTenders: { type: integer, minimum: 0 }
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the aggregate was computed
+        indexUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Most recent fetch among all counted tenders
+        cacheTtlSeconds: { type: integer, minimum: 0 }
+      required: [totalOpenTenders, generatedAt, indexUpdatedAt, cacheTtlSeconds]
+    OpenTendersByStateResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          minItems: 27
+          maxItems: 27
+          items:
+            $ref: "#/components/schemas/OpenTendersByState"
+        meta:
+          $ref: "#/components/schemas/OpenTendersByStateMeta"
+      required: [data, meta]
     BillingPlanResponse:
       type: object
       properties:

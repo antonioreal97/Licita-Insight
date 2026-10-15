@@ -90,6 +90,8 @@ escurece no Creme e clareia no Petróleo. `--mapa-vazio` (`--fundo-alt`) marca a
 - O mapa não tem rótulos: o texto ficaria abaixo de 4,5:1 nas faixas do meio. Os números estão no painel acima do
   mapa, no ranking e na tabela.
 - `src/styles/contrast.test.ts` confere, nos dois temas, que cada degrau se afasta do fundo mais que o anterior.
+- Na página inicial a seção vem logo depois de "Como funciona". Enquanto os dados chegam, um esqueleto com o mesmo
+  layout (`opportunity-map-layout.ts`) ocupa o lugar do mapa, então nada abaixo dele se mexe; em erro, a seção some.
 
 ## Tipografia
 
