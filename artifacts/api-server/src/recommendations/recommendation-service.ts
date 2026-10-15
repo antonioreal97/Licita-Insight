@@ -80,6 +80,19 @@ const STOP_WORDS = new Set([
   "edital",
   "registro",
   "precos",
+  // Procurement boilerplate present in most notices ("contratação de empresa especializada…").
+  "empresa",
+  "empresas",
+  "especializada",
+  "especializado",
+  "prestacao",
+  "execucao",
+  "objeto",
+  "eventual",
+  "futura",
+  "conforme",
+  "municipio",
+  "municipal",
 ]);
 
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
@@ -133,11 +146,13 @@ export const scoreOpportunityForProfile = (
     .filter(Boolean);
   if (exclusions.some((term) => haystack.includes(term))) return null;
 
+  // Profile terms match as whole expressions; only the free-text description is split into words.
   const terms = [
-    ...profile.selectedKeywords,
-    ...profile.offerings,
-    profile.description,
-  ].flatMap((value) => normalizeSignalTerms(value));
+    ...[...profile.selectedKeywords, ...profile.offerings].map((value) =>
+      normalizeText(value),
+    ),
+    ...normalizeSignalTerms(profile.description),
+  ].filter(Boolean);
   const matched = [
     ...new Set(terms.filter((term) => haystack.includes(term))),
   ].slice(0, 4);
@@ -322,9 +337,7 @@ export async function rebuildInterestProfile(
       addWeight(maps.categories, category, 12, `profile_category:${category}`),
     );
     profile.offerings.forEach((offering) =>
-      normalizeSignalTerms(offering).forEach((term) =>
-        addWeight(maps.terms, term, 6, `profile:${term}`),
-      ),
+      addWeight(maps.terms, offering, 6, `profile:${normalizeText(offering)}`),
     );
     normalizeSignalTerms(profile.description).forEach((term) =>
       addWeight(maps.terms, term, 2, `profile:${term}`),
@@ -680,8 +693,12 @@ const queryCandidates = async (
   userId: string,
   now: Date,
 ): Promise<ScoreCandidate[]> => {
-  const terms = profile.terms.slice(0, 12).map((term) => term.value);
-  const query = terms.join(" OR ");
+  // Quoted, so a multi-word profile term ("transmissao ao vivo") matches as a phrase, not as loose words.
+  const terms = profile.terms
+    .slice(0, 12)
+    .map((term) => term.value.replace(/"/g, " ").trim())
+    .filter(Boolean);
+  const query = terms.map((term) => `"${term}"`).join(" OR ");
   const textRank = query
     ? sql<number>`ts_rank_cd(${tendersTable.recommendationSearchVector}, websearch_to_tsquery('portuguese', ${query}))`
     : sql<number>`0`;

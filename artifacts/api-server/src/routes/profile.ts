@@ -3,6 +3,7 @@ import { asyncHandler, authContext, requireAuth } from "../auth/http";
 import { requireSubscription } from "../billing/require-subscription";
 import { InvalidParameterError } from "../lib/api-error";
 import {
+  countOpenTendersMatchingProfile,
   listProfileCategories,
   suggestProfileKeywords,
   suggestionsFromDescription,
@@ -93,6 +94,45 @@ router.post(
       );
     }
     res.json(await suggestionsFromDescription(description));
+  }),
+);
+
+const stringList = (
+  value: unknown,
+  field: string,
+  max: number,
+  maxLength: number,
+): string[] => {
+  if (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.length <= max &&
+      value.every(
+        (item) =>
+          typeof item === "string" &&
+          item.trim().length > 0 &&
+          item.trim().length <= maxLength,
+      ))
+  )
+    return ((value as string[] | undefined) ?? []).map((item) => item.trim());
+  throw new InvalidParameterError(`${field} is invalid`, [
+    { field, issue: "invalid_value" },
+  ]);
+};
+
+/** Live "≈ N editais abertos" for the profile form: the terms and categories being edited, before saving. */
+router.post(
+  "/v1/profile/match-preview",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const terms = stringList(req.body?.terms, "terms", 40, 80);
+    const categories = stringList(req.body?.categories, "categories", 20, 80);
+    res.json({
+      estimatedOpenTenderCount: await countOpenTendersMatchingProfile({
+        terms,
+        categories,
+      }),
+    });
   }),
 );
 

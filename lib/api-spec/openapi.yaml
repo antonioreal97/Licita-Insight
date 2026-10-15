@@ -543,6 +543,34 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/profile/match-preview:
+    post:
+      operationId: previewProfileOpenTenderMatches
+      tags: [account]
+      summary: Count open tenders matching the profile terms and categories being edited
+      description: >-
+        Each term matches as a whole expression (words together and in order, Portuguese stemming), or the tender
+        carries one of the categories. Nothing is stored.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileMatchPreviewRequest"
+      responses:
+        "200":
+          description: Approximate count of open tenders that match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileMatchPreview"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/me/fit:
     get:
       operationId: getTenderFits
@@ -3052,6 +3080,22 @@ components:
             $ref: "#/components/schemas/ProfileCategory"
         estimatedOpenTenderCount: { type: integer, minimum: 0 }
       required: [keywords, categories, estimatedOpenTenderCount]
+    ProfileMatchPreviewRequest:
+      type: object
+      properties:
+        terms:
+          type: array
+          maxItems: 40
+          items: { type: string, minLength: 1, maxLength: 80 }
+        categories:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 80 }
+    ProfileMatchPreview:
+      type: object
+      properties:
+        estimatedOpenTenderCount: { type: integer, minimum: 0 }
+      required: [estimatedOpenTenderCount]
     FitEvidence:
       type: object
       properties:

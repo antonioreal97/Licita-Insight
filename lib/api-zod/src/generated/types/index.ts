@@ -202,6 +202,8 @@ export * from './profileKeywordSuggestionPredominantCategory';
 export * from './profileKeywordSuggestionsResponse';
 export * from './profileMatchNotification';
 export * from './profileMatchNotificationLevel';
+export * from './profileMatchPreview';
+export * from './profileMatchPreviewRequest';
 export * from './profileMunicipalitiesResponse';
 export * from './profilePlatform';
 export * from './profilePlatformKind';

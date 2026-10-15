@@ -257,3 +257,48 @@ test("oportunidades reutilizam termos, cobertura e faixa do perfil", () => {
   assert.ok(match.score >= 55);
   assert.match(match.reasons.join(" "), /perfil|SP|Valor/);
 });
+
+test("termos do perfil casam como expressão inteira; boilerplate de licitação não vira sinal", () => {
+  assert.deepEqual(
+    normalizeSignalTerms(
+      "Contratação de empresa especializada para prestação de serviços de iluminação",
+    ),
+    ["iluminacao"],
+  );
+  const profile = {
+    description: "Produtora audiovisual",
+    offerings: ["transmissão ao vivo"],
+    exclusions: [],
+    selectedKeywords: [],
+    excludedKeywords: [],
+    coverageScope: "national",
+    coverageStates: [],
+    valueMin: null,
+    valueMax: null,
+  };
+  const loose = scoreOpportunityForProfile(
+    {
+      searchText: "show ao vivo na praca e transmissao de dados",
+      audience: null,
+      state: null,
+      amount: null,
+    },
+    profile,
+  );
+  assert.equal(
+    loose?.reasons.some((reason) => reason.startsWith("Combina com")) ?? false,
+    false,
+  );
+  const phrase = scoreOpportunityForProfile(
+    {
+      searchText: "edital de transmissao ao vivo de festivais",
+      audience: null,
+      state: null,
+      amount: null,
+    },
+    profile,
+  );
+  assert.ok(
+    phrase?.reasons.includes("Combina com seu perfil: transmissao ao vivo"),
+  );
+});
