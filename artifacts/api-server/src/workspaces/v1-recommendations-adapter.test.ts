@@ -10,7 +10,7 @@ const { deleteRecommendationHistory, dismissRecommendation, recordRecommendation
 );
 const { MaintenanceInProgressError } = await import("../lib/api-error");
 
-type GateDatabase = NonNullable<Parameters<typeof dismissRecommendation>[3]>;
+type GateDatabase = NonNullable<Parameters<typeof dismissRecommendation>[4]>;
 type Mode = "legacy" | "workspaces";
 
 const dialect = new PgDialect();
@@ -103,17 +103,17 @@ const recordingDatabase = (mode: Mode, options: { writesPaused?: boolean; recomm
 test("a dismissal is keyed by the user in legacy and stamped with the default workspace in workspaces", async () => {
   const legacy = recordingDatabase("legacy");
   // The account-wide metric uses the real database; its availability is unrelated to this adapter.
-  await dismissRecommendation("user-1", TENDER_ID, now, legacy.database).catch(() => undefined);
+  await dismissRecommendation("user-1", TENDER_ID, now, undefined, legacy.database).catch(() => undefined);
   assert.deepEqual(legacy.log, [
     "read tenders",
     "insert recommendation_dismissals",
     "delete user_recommendations by user_id",
   ]);
   assert.equal("workspaceId" in legacy.inserted[0]!, false, "legacy writes today's row");
-  assert.deepEqual(Object.keys(legacy.conflictSets[0]!), ["dismissedAt"]);
+  assert.deepEqual(Object.keys(legacy.conflictSets[0]!), ["dismissedAt", "terms", "categories"]);
 
   const workspaces = recordingDatabase("workspaces");
-  await dismissRecommendation("user-1", TENDER_ID, now, workspaces.database).catch(() => undefined);
+  await dismissRecommendation("user-1", TENDER_ID, now, undefined, workspaces.database).catch(() => undefined);
   assert.deepEqual(workspaces.log, [
     "read workspace_members",
     "read tenders",
@@ -123,7 +123,12 @@ test("a dismissal is keyed by the user in legacy and stamped with the default wo
   assert.equal(workspaces.inserted[0]!.workspaceId, WORKSPACE_ID);
   assert.equal(workspaces.inserted[0]!.userId, "user-1", "the legacy key is still written until W4");
   assert.deepEqual(workspaces.inserted[0]!.terms, ["computadores", "test", "data"]);
-  assert.deepEqual(workspaces.conflictSets[0], { workspaceId: WORKSPACE_ID, dismissedAt: now }, "an upsert stamps the row it rewrites");
+  assert.deepEqual(workspaces.conflictSets[0], {
+    workspaceId: WORKSPACE_ID,
+    dismissedAt: now,
+    terms: ["computadores", "test", "data"],
+    categories: [{ slug: "ti-telecom", label: "TI e telecom" }],
+  }, "an upsert stamps the row it rewrites and refreshes triage feedback");
 });
 
 test("an interest event removes the recommendation of the scope and counts in the account-wide metrics", async () => {
@@ -151,7 +156,7 @@ test("erasing the history reaches every event of the account in both modes", asy
 test("paused writes answer 503 in both modes before any table is touched", async () => {
   for (const mode of ["legacy", "workspaces"] as const) {
     const { database, log } = recordingDatabase(mode, { writesPaused: true });
-    await assert.rejects(dismissRecommendation("user-1", TENDER_ID, now, database), MaintenanceInProgressError);
+    await assert.rejects(dismissRecommendation("user-1", TENDER_ID, now, undefined, database), MaintenanceInProgressError);
     await assert.rejects(recordRecommendationEvent("user-1", { type: "interest", tenderId: TENDER_ID }, now, database), MaintenanceInProgressError);
     await assert.rejects(deleteRecommendationHistory("user-1", database), MaintenanceInProgressError);
     assert.deepEqual(log, []);

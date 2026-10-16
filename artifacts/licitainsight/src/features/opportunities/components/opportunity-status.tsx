@@ -52,10 +52,16 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   salic: 'Lei Rouanet (Salic)',
   worldbank: 'Banco Mundial',
   eu_ft: 'União Europeia (Funding & Tenders)',
+  idb: 'BID',
+};
+
+/** Credit a source requires as a condition of reuse, printed next to the link to the official notice. */
+export const opportunitySourceAttributions: Partial<Record<OpportunitySource, string>> = {
+  idb: 'Fonte: BID (Banco Interamericano de Desenvolvimento), CC BY 4.0',
 };
 
 /** Sources of each side of the hub, for the source filter. */
-export const INTERNATIONAL_SOURCES: OpportunitySource[] = ['worldbank', 'eu_ft'];
+export const INTERNATIONAL_SOURCES: OpportunitySource[] = ['worldbank', 'eu_ft', 'idb'];
 export const INTERNATIONAL_KINDS: OpportunityKind[] = ['procurement', 'funding', 'innovation', 'partnership'];
 export const NATIONAL_KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership'];
 

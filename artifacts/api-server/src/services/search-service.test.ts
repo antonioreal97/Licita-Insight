@@ -123,6 +123,7 @@ describe("search response semantics", () => {
       closed: "Encerrado",
       suspended: "Suspenso",
       cancelled: "Revogado",
+      direct: "Contratação direta",
     });
     assert.deepEqual(modalityLabels, {
       pregao_eletronico: "Pregão eletrônico",

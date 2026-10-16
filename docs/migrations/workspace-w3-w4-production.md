@@ -4,7 +4,7 @@
 
 ## Ordem exata
 
-1. `0043_opportunity_application` já está na `main` e aplicada. O dono aplica [W1 0044](./0044-workspaces-foundation.md) e [W2 0045](./0045-workspace-scope-expand.md) manualmente, com backup verificado e a variante concorrente de W2, e confere o schema.
+1. O diário da `main` até `0045_opportunity_source_idb` e o backfill manual `0046_direct_contracting_status` já foram aplicados. O dono aplica [W1 0047](./0047-workspaces-foundation.md) e [W2 0048](./0048-workspace-scope-expand.md) manualmente, com backup verificado e a variante concorrente de W2, e confere o schema.
 2. O dono sobe a API preparatória com a flag vazia (`legacy`), mantendo jornadas desligadas. Busca e detalhe públicos continuam ativos. O código da API exige W1/W2 na subida.
 3. O dono ensaia **duas cópias isoladas** com [`run-rehearsal.sh`](../../ops/rehearsal/workspaces/README.md), incluindo uma instância da API nova sem agendas nem efeitos externos. O relatório só traz contagens e tempos. A partir do pior ensaio, calcula `janela_max = min(15 min, 2 × (drenagem + lock + delta + invariantes + troca))` e `ponto_aborto = janela_max − tempo medido da desvirada`; os limites finais exigem aprovação do dono.
 4. Fora da janela, no banco alvo confirmado, o dono executa `cutover.sh batch` (W3 lote). O arquivo [`w3-core.sql`](../../ops/workspaces/w3-core.sql) grava marcos só de contagem/tempo, Espaços padrão determinísticos, perfil e artefatos contextuais. É retomável por faixas opcionais `--from-user-id`/`--to-user-id`. Não muda a flag.

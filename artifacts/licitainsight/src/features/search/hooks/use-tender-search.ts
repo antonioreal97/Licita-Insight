@@ -2,9 +2,11 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { isApiError, type TenderSearchParams } from '@/api';
 import { queryKeys } from '@/services/query-keys';
 import { normalizeSearchParams, searchService } from '@/services/search-service';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 
 export function useTenderSearch(params: TenderSearchParams, options: { enabled?: boolean } = {}) {
-  const normalized = normalizeSearchParams(params);
+  const workspaceId = useActiveWorkspaceId();
+  const normalized = normalizeSearchParams({ ...params, ...(workspaceId ? { workspaceId } : {}) });
   return useQuery({
     queryKey: queryKeys.tenders.search(normalized),
     queryFn: ({ signal }) => searchService.search(normalized, signal),

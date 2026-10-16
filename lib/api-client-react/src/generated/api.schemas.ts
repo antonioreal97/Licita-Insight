@@ -475,6 +475,24 @@ export interface UpdateRecommendationPreferencesRequest {
   showInternationalOpportunities?: boolean;
 }
 
+/**
+ * Optional explicit feedback; omitted preserves the existing topic penalty.
+ */
+export type DismissRecommendationRequestReason = typeof DismissRecommendationRequestReason[keyof typeof DismissRecommendationRequestReason];
+
+
+export const DismissRecommendationRequestReason = {
+  not_offering: 'not_offering',
+  region: 'region',
+  value: 'value',
+  deadline: 'deadline',
+} as const;
+
+export interface DismissRecommendationRequest {
+  /** Optional explicit feedback; omitted preserves the existing topic penalty. */
+  reason?: DismissRecommendationRequestReason;
+}
+
 export type RecommendationEventRequest = {
   type: 'search';
   /** @maxLength 2000 */
@@ -1379,6 +1397,26 @@ export interface ProfileDescriptionSuggestions {
   estimatedOpenTenderCount: number;
 }
 
+export interface ProfileMatchPreviewRequest {
+  /**
+     * @maxItems 40
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  terms?: string[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 80
+     */
+  categories?: string[];
+}
+
+export interface ProfileMatchPreview {
+  /** @minimum 0 */
+  estimatedOpenTenderCount: number;
+}
+
 export interface FitEvidence {
   documentTitle: string;
   documentUrl: string;
@@ -1495,6 +1533,9 @@ export interface TenderHighlightsResponse {
   results: TenderHighlightsResponseResults;
 }
 
+/**
+ * `open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.
+ */
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -1504,6 +1545,7 @@ export const TenderStatus = {
   closed: 'closed',
   suspended: 'suspended',
   cancelled: 'cancelled',
+  direct: 'direct',
 } as const;
 
 export type EstimatedValueStatus = typeof EstimatedValueStatus[keyof typeof EstimatedValueStatus];
@@ -1767,6 +1809,7 @@ export const OpportunitySource = {
   salic: 'salic',
   worldbank: 'worldbank',
   eu_ft: 'eu_ft',
+  idb: 'idb',
 } as const;
 
 export interface OpportunityDocument {
@@ -2949,6 +2992,11 @@ export type AiQuotaExceededResponse = ErrorResponse;
 export type AiUnavailableResponse = ErrorResponse;
 
 /**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ */
+export type ProfileWorkspaceIdParameter = string;
+
+/**
  * Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.
  */
 export type SearchWorkspaceIdParameter = string;
@@ -3188,6 +3236,30 @@ export const SearchTransparencyContractsSort = {
   value_asc: 'value_asc',
 } as const;
 
+export type GetCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
+export type PutCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
+export type DeleteCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
 export type ListProfileMunicipalitiesParams = {
 /**
  * @minLength 2
@@ -3199,6 +3271,14 @@ q: string;
  * @maxLength 2
  */
 state?: string;
+};
+
+export type GetCompanyRegionPreviewParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
 };
 
 export type GetCompanyRegionPreview200 = {

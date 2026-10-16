@@ -1,4 +1,4 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { queryKeys } from '@/services/query-keys';
@@ -49,9 +49,17 @@ export function WorkspaceScopeProvider({ children }: { children: ReactNode }) {
     enabled,
     staleTime: 30_000,
   });
+  const deepLinkWorkspaceId = typeof window === 'undefined'
+    ? null
+    : new URLSearchParams(window.location.search).get('workspaceId');
   // A successful list proves the runtime cutover is `workspaces`, W4 is applied and at least one journey is enabled.
   const available = enabled && list.isSuccess;
-  const activeWorkspace = available ? (list.data.workspaces.find((workspace) => workspace.id === list.data.activeWorkspaceId) ?? null) : null;
+  const deepLinkedWorkspace = available && /^ws_[0-9a-f]{32}$/.test(deepLinkWorkspaceId ?? '')
+    ? list.data.workspaces.find((workspace) => workspace.id === deepLinkWorkspaceId && workspace.archivedAt === null)
+    : undefined;
+  const activeWorkspace = available
+    ? (deepLinkedWorkspace ?? list.data.workspaces.find((workspace) => workspace.id === list.data.activeWorkspaceId) ?? null)
+    : null;
 
   const select = useMutation({
     mutationFn: (workspaceId: string) => workspaceService.setActive(workspaceId),
@@ -66,6 +74,11 @@ export function WorkspaceScopeProvider({ children }: { children: ReactNode }) {
       toast({ variant: 'destructive', title: 'Não foi possível trocar de Espaço', description: 'Tente novamente.' });
     },
   });
+
+  useEffect(() => {
+    if (!deepLinkedWorkspace || list.data?.activeWorkspaceId === deepLinkedWorkspace.id || select.isPending) return;
+    select.mutate(deepLinkedWorkspace.id);
+  }, [deepLinkedWorkspace, list.data?.activeWorkspaceId, select]);
 
   const create = useMutation({
     mutationFn: (input: { type: CreatableWorkspaceType; name: string }) => workspaceService.create(input),

@@ -2,7 +2,7 @@ import { searchAdapter, type Modality, type SearchMode, type SortOption, type Te
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-const STATUSES: TenderStatus[] = ['open', 'under_review', 'closed', 'suspended', 'cancelled'];
+const STATUSES: TenderStatus[] = ['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct'];
 const SORTS: SortOption[] = ['relevance', 'deadline_asc', 'published_desc', 'first_seen_desc', 'value_desc', 'value_asc'];
 const MODALITIES: Modality[] = [
   'pregao_eletronico',
@@ -82,6 +82,7 @@ export function normalizeSearchParams(params: TenderSearchParams): TenderSearchP
   const notification = params.notification?.trim();
   if (notification && notification.length <= 200) out.notification = notification;
   if (params.myRegion) out.myRegion = true;
+  if (params.workspaceId && /^ws_[0-9a-f]{32}$/.test(params.workspaceId)) out.workspaceId = params.workspaceId;
   if (params.sort && params.sort !== 'relevance') out.sort = params.sort;
   if (params.page && params.page > 1) out.page = Math.floor(params.page);
   out.pageSize = Math.min(100, Math.max(1, params.pageSize ?? DEFAULT_PAGE_SIZE));
@@ -126,7 +127,7 @@ export function searchParamsFromUrl(search: string): TenderSearchParams {
 }
 
 export function searchParamsToUrl(params: TenderSearchParams, view: ResultsView = 'list'): string {
-  const { pageSize, facets: _facets, ...rest } = normalizeSearchParams(params);
+  const { pageSize, facets: _facets, workspaceId: _workspaceId, ...rest } = normalizeSearchParams(params);
   const url = new URLSearchParams();
   for (const [key, value] of Object.entries(rest)) {
     if (Array.isArray(value)) value.forEach((item) => url.append(key, String(item)));

@@ -1,6 +1,6 @@
-# Migração 0044 — fundação de Espaços (W1)
+# Migração 0047 — fundação de Espaços (W1)
 
-`lib/db/migrations/0044_workspaces_foundation.sql` é a W1 do [roadmap do hub adaptativo](../plans/hub-adaptativo-roadmap-v2.md):
+`lib/db/migrations/0047_workspaces_foundation.sql` é a W1 do [roadmap do hub adaptativo](../plans/hub-adaptativo-roadmap-v2.md):
 cria as tabelas de Espaços vazias e a tabela da flag de corte. Deriva do rascunho de ensaio
 `ops/rehearsal/workspaces/w1_foundation.sql`, sem a guarda `_rehearsal` e sem a tabela de checkpoints do ensaio.
 
@@ -29,7 +29,9 @@ com `lock_timeout` (abaixo). `tenders` não é lida nem bloqueada.
 
 ## Procedimento em produção (o dono executa)
 
-Uma migração por vez, nesta ordem: 0043 da main, 0044, conferência, depois [0045](./0045-workspace-scope-expand.md). A versão da
+Uma migração por vez, nesta ordem: `0044_search_latency_indexes` e `0045_opportunity_source_idb` da `main`,
+o backfill manual `0046_direct_contracting_status` (sem entrada no diário), 0047, conferência, depois
+[0048](./0048-workspace-scope-expand.md). A versão da
 API que contém a Fase 1 **só sobe com as duas aplicadas**.
 
 1. Backup verificado (`pg_dump -Fc`), como no procedimento vigente.
@@ -54,7 +56,7 @@ antes do deploy é sempre seguro.
 
 ## Reversão
 
-Só com a API de volta à versão anterior à Fase 1 e depois de reverter a 0045 (as colunas `workspace_id` referenciam
+Só com a API de volta à versão anterior à Fase 1 e depois de reverter a 0048 (as colunas `workspace_id` referenciam
 `workspaces`):
 
 ```sql

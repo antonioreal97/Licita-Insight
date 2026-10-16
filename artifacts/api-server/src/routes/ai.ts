@@ -19,8 +19,19 @@ import {
 import { getTenderSheet } from "../ai/tender-sheet-service";
 import { loadRequirementHighlights } from "../ai/tender-highlights";
 import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
+import { isWorkspaceId } from "../workspaces/workspace-service";
 
 const router: IRouter = Router();
+
+const profileWorkspaceId = (value: unknown): string | undefined => {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !isWorkspaceId(value)) {
+    throw new InvalidParameterError("workspaceId is invalid", [
+      { field: "workspaceId", issue: "invalid_value" },
+    ]);
+  }
+  return value;
+};
 
 /** `tenderIds` query (repeated): 1 to 100 distinct ids. */
 const parseTenderIds = (raw: unknown): string[] => {
@@ -47,8 +58,8 @@ const parseTenderIds = (raw: unknown): string[] => {
 router.get(
   "/v1/me/company-profile",
   requireAuth,
-  asyncHandler(async (_req, res) => {
-    res.json({ profile: await getCompanyProfile(authContext(res).user.id) });
+  asyncHandler(async (req, res) => {
+    res.json({ profile: await getCompanyProfile(authContext(res).user.id, profileWorkspaceId(req.query.workspaceId)) });
   }),
 );
 
@@ -59,7 +70,7 @@ router.put(
   asyncHandler(async (req, res) => {
     const input = parseCompanyProfileInput(req.body);
     const userId = authContext(res).user.id;
-    res.json({ profile: await putCompanyProfile(userId, input) });
+    res.json({ profile: await putCompanyProfile(userId, input, new Date(), undefined, profileWorkspaceId(req.query.workspaceId)) });
     scheduleRecommendationRebuild(userId);
   }),
 );
@@ -68,8 +79,8 @@ router.delete(
   "/v1/me/company-profile",
   requireAuth,
   requireCsrf,
-  asyncHandler(async (_req, res) => {
-    await deleteCompanyProfile(authContext(res).user.id);
+  asyncHandler(async (req, res) => {
+    await deleteCompanyProfile(authContext(res).user.id, new Date(), undefined, profileWorkspaceId(req.query.workspaceId));
     scheduleRecommendationRebuild(authContext(res).user.id);
     res.status(204).end();
   }),

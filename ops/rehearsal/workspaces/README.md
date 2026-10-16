@@ -2,7 +2,7 @@
 
 A ferramenta executável está em [`ops/workspaces/`](../../workspaces/). Esta pasta mede **o mesmo W3 lote, W3 delta, cópia reversa e W4** da ferramenta definitiva. Os arquivos `w1_*`, `w2_*`, `w3_backfill.sql`, `w4_enforce.sql` e seus rollbacks nesta pasta são rascunhos históricos; `run-rehearsal.sh` não os executa. Nenhuma migração foi autorizada em produção.
 
-O dono restaura um backup verificado num banco descartável com sufixo `_rehearsal`, aplica 0043 da `main`, W1 0044 e W2 0045 conforme os [procedimentos](../../../docs/migrations/0044-workspaces-foundation.md) e [W2](../../../docs/migrations/0045-workspace-scope-expand.md), e só então roda o ensaio. Não se usa o banco da aplicação nem uma réplica que receba tráfego. Faça dois restores independentes e compare o pior tempo.
+O dono restaura um backup verificado num banco descartável com sufixo `_rehearsal`, confere o diário da `main` até 0045 e o backfill manual 0046, aplica W1 0047 e W2 0048 conforme os [procedimentos](../../../docs/migrations/0047-workspaces-foundation.md) e [W2](../../../docs/migrations/0048-workspace-scope-expand.md), e só então roda o ensaio. Não se usa o banco da aplicação nem uma réplica que receba tráfego. Faça dois restores independentes e compare o pior tempo.
 
 ## Medição
 
@@ -37,7 +37,7 @@ docker exec "$CUTOVER_POSTGRES_CONTAINER" createdb -U licita "$REHEARSAL_CONFIRM
 docker exec -i "$CUTOVER_POSTGRES_CONTAINER" pg_restore -U licita -d "$REHEARSAL_CONFIRM" \
   --no-owner --exit-on-error < /caminho/backup-validado.dump
 
-# Aplicar 0044/0045 na cópia conforme docs/migrations; conferir W1/W2:
+# Aplicar 0047/0048 na cópia conforme docs/migrations; conferir W1/W2:
 ops/workspaces/cutover.sh status
 ```
 

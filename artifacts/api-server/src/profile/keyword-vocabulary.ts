@@ -29,41 +29,148 @@ const STOP_WORDS = new Set([
   "aos",
   "as",
   "com",
+  "como",
   "da",
   "das",
   "de",
+  "deste",
+  "desta",
   "do",
   "dos",
   "e",
   "em",
+  "entre",
+  "esta",
+  "este",
   "na",
   "nas",
+  "neste",
+  "nesta",
   "no",
   "nos",
   "o",
   "os",
   "ou",
   "para",
+  "pela",
+  "pelas",
+  "pelo",
+  "pelos",
   "por",
   "que",
+  "sao",
+  "seu",
+  "seus",
   "sem",
   "sob",
+  "sua",
+  "suas",
   "um",
   "uma",
   "uns",
   "umas",
 ]);
+/**
+ * Procurement boilerplate: present in most notices ("contratação de empresa especializada para prestação de
+ * serviços…"), so it never identifies what a company sells. These words are never a suggestion on their own, a
+ * term made only of them is dropped, and a bi/trigram may not end with one ("empresa especializada") nor start
+ * with one unless it heads a real offering ("serviços de limpeza", "fornecimento de água").
+ */
 const GENERIC_WORDS = new Set([
+  "acesse",
+  "anexo",
+  "anexos",
   "aquisicao",
+  "atender",
+  "br",
+  "cnetmobile",
+  "compra",
+  "compras",
+  "comprasnet",
+  "condicoes",
+  "conforme",
   "contratacao",
+  "demais",
+  "destinados",
   "edital",
+  "eletronico",
+  "empresa",
+  "empresas",
+  "esclarecimentos",
+  "especializada",
+  "especializadas",
+  "especializado",
+  "especializados",
+  "especificacoes",
+  "estabelecidas",
+  "eventuais",
+  "eventual",
+  "execucao",
+  "exigencias",
   "fornecimento",
+  "futura",
+  "futuras",
+  "gov",
+  "http",
+  "https",
+  "impugnacao",
+  "impugnacoes",
+  "incluindo",
+  "item",
+  "itens",
+  "licitacao",
+  "link",
+  "lote",
+  "municipal",
+  "municipio",
+  "necessarios",
+  "necessidades",
+  "objeto",
+  "portal",
   "preco",
   "precos",
+  "pregao",
+  "prestacao",
+  "public",
+  "publicas",
+  "referencia",
   "registro",
+  "respostas",
+  "secretaria",
+  "servico",
+  "servicos",
+  "termo",
+  "visando",
+  "www",
+]);
+/** Generic words that may open a bi/trigram because they head a concrete offering. */
+const GENERIC_LEADING_WORDS = new Set([
+  "aquisicao",
+  "execucao",
+  "fornecimento",
+  "prestacao",
   "servico",
   "servicos",
 ]);
+const isGeneric = (normalized: string) =>
+  STOP_WORDS.has(normalized) || GENERIC_WORDS.has(normalized);
+
+/**
+ * A term in more than this share of the open notices does not tell them apart. Measured on 1,650 open PNCP notices
+ * (2026-10-14, see docs/contracts/account-v1.md): "empresa" 42.5%, "empresa especializada" 29.9%, "execução"
+ * 24.2%, while the most frequent real lines of business stayed below 15% ("engenharia" 14.8%, "obras" 13%,
+ * "manutenção" 11.4%).
+ */
+export const MAX_OPEN_TENDER_SHARE = 0.2;
+/** Below this many open notices a share says nothing (tests, a fresh database), so the ceiling is not applied. */
+const MIN_TENDERS_FOR_SHARE_CEILING = 50;
+
+export const withinOpenTenderShare = (
+  openTenderCount: number,
+  totalOpenTenders: number,
+): boolean =>
+  totalOpenTenders < MIN_TENDERS_FOR_SHARE_CEILING ||
+  openTenderCount <= totalOpenTenders * MAX_OPEN_TENDER_SHARE;
 
 export const normalizeProfileKeyword = (value: string): string =>
   value
@@ -104,19 +211,21 @@ export function extractProfileTerms(
   for (let size = 1; size <= 3; size += 1) {
     for (let index = 0; index + size <= words.length; index += 1) {
       const window = words.slice(index, index + size);
-      const content = window.filter(
-        ({ normalized }) =>
-          !STOP_WORDS.has(normalized) && !GENERIC_WORDS.has(normalized),
-      );
+      const content = window.filter(({ normalized }) => !isGeneric(normalized));
       if (
         content.length === 0 ||
-        (size === 1 && content[0]!.normalized.length < 3)
+        (size === 1 &&
+          (content[0]!.normalized.length < 3 ||
+            /^\d+$/.test(content[0]!.normalized)))
       )
         continue;
+      const first = window[0]!.normalized;
+      const last = window[window.length - 1]!.normalized;
       if (
         size > 1 &&
-        (STOP_WORDS.has(window[0]!.normalized) ||
-          STOP_WORDS.has(window[window.length - 1]!.normalized))
+        (STOP_WORDS.has(first) ||
+          isGeneric(last) ||
+          (GENERIC_WORDS.has(first) && !GENERIC_LEADING_WORDS.has(first)))
       )
         continue;
       const normalizedTerm = window
@@ -275,7 +384,11 @@ export async function rebuildProfileKeywordVocabulary(
     }
   });
   const retained = [...stats.values()]
-    .filter(({ openTenderCount }) => openTenderCount >= MIN_OPEN_TENDERS)
+    .filter(
+      ({ openTenderCount }) =>
+        openTenderCount >= MIN_OPEN_TENDERS &&
+        withinOpenTenderShare(openTenderCount, tenders),
+    )
     .sort(
       (a, b) =>
         b.openTenderCount - a.openTenderCount ||
@@ -396,6 +509,15 @@ const publicSuggestion = (
   related,
 });
 
+/**
+ * Applies the current extraction rules to stored rows, so a term the rules now reject (e.g. "empresa especializada")
+ * is not suggested while the table still holds it from an older rebuild.
+ */
+export const isSuggestableProfileTerm = (normalizedTerm: string): boolean =>
+  extractProfileTerms(normalizedTerm).some(
+    (term) => term.normalizedTerm === normalizedTerm,
+  );
+
 export async function suggestProfileKeywords(
   query: string,
   limit = 10,
@@ -411,8 +533,11 @@ export async function suggestProfileKeywords(
       desc(profileKeywordVocabularyTable.openTenderCount),
       desc(profileKeywordVocabularyTable.ngramSize),
     )
-    .limit(Math.min(limit, 7));
-  const result = direct.map((row) => publicSuggestion(row, false));
+    .limit(Math.min(limit, 7) + 5);
+  const result = direct
+    .filter(({ normalizedTerm }) => isSuggestableProfileTerm(normalizedTerm))
+    .slice(0, Math.min(limit, 7))
+    .map((row) => publicSuggestion(row, false));
   const relatedNames = [
     ...new Set(
       direct.flatMap((row) =>
@@ -431,7 +556,10 @@ export async function suggestProfileKeywords(
       .limit(limit - result.length);
     const seen = new Set(result.map(({ normalizedTerm }) => normalizedTerm));
     for (const row of related)
-      if (!seen.has(row.normalizedTerm))
+      if (
+        !seen.has(row.normalizedTerm) &&
+        isSuggestableProfileTerm(row.normalizedTerm)
+      )
         result.push(publicSuggestion(row, true));
   }
   return result.slice(0, limit);
@@ -500,7 +628,9 @@ export async function suggestionsFromDescription(
             desc(profileKeywordVocabularyTable.openTenderCount),
           )
           .limit(12);
-  const ranked = rankDescriptionVocabulary(description, matched);
+  const ranked = rankDescriptionVocabulary(description, matched).filter(
+    ({ normalizedTerm }) => isSuggestableProfileTerm(normalizedTerm),
+  );
   const keywords = ranked
     .slice(0, 6)
     .map((row) => publicSuggestion(row, false));
@@ -522,28 +652,47 @@ export async function suggestionsFromDescription(
         (categoryScores.get(b.slug) ?? 0) - (categoryScores.get(a.slug) ?? 0),
     )
     .slice(0, 4);
-  const categorySlugs = categories.map(({ slug }) => slug);
-  const keywordQuery = keywords
-    .map(({ displayTerm }) => `"${displayTerm.replace(/"/g, "")}"`)
-    .join(" OR ");
-  const countResult =
-    categories.length === 0 && keywords.length === 0
-      ? { rows: [{ count: 0 }] }
-      : await pool.query<{ count: number }>(
-          `select count(distinct id)::int as count from tenders
-      where status = 'open' and (proposal_deadline is null or proposal_deadline > now())
-        and (${categorySlugs.length ? `exists (select 1 from jsonb_array_elements(categories) category where category->>'slug' = any($1::text[]))` : "false"}
-          or ${keywordQuery ? `recommendation_search_vector @@ websearch_to_tsquery('portuguese', $${categorySlugs.length ? 2 : 1})` : "false"})`,
-          [
-            ...(categorySlugs.length ? [categorySlugs] : []),
-            ...(keywordQuery ? [keywordQuery] : []),
-          ],
-        );
   return {
     keywords,
     categories,
-    estimatedOpenTenderCount: Number(countResult.rows[0]?.count ?? 0),
+    estimatedOpenTenderCount: await countOpenTendersMatchingProfile({
+      terms: keywords.map(({ normalizedTerm }) => normalizedTerm),
+      categories: categories.map(({ slug }) => slug),
+    }),
   };
+}
+
+/**
+ * websearch_to_tsquery input where every term is a quoted phrase joined by OR: "transmissão ao vivo" needs the
+ * words together and in order (Portuguese stemming still applies), so a notice that only says "ao vivo" elsewhere
+ * does not count. The same rule as the fit gate (`phraseto_tsquery` per term in ai/company-fit-service.ts).
+ * Terms are folded like `tenders.search_text` (no accents, lower case) so stems line up with the indexed vector.
+ */
+export const profilePhraseQuery = (terms: string[]): string =>
+  [
+    ...new Set(
+      terms.map((term) => normalizeProfileKeyword(term)).filter(Boolean),
+    ),
+  ]
+    .map((term) => `"${term}"`)
+    .join(" OR ");
+
+/** Open notices that contain any of the terms as a phrase, or carry any of the categories. */
+export async function countOpenTendersMatchingProfile(input: {
+  terms: string[];
+  categories: string[];
+}): Promise<number> {
+  const query = profilePhraseQuery(input.terms);
+  const categories = [...new Set(input.categories)];
+  if (!query && categories.length === 0) return 0;
+  const result = await pool.query<{ count: number }>(
+    `select count(*)::int as count from tenders
+      where status = 'open' and (proposal_deadline is null or proposal_deadline > now())
+        and (exists (select 1 from jsonb_array_elements(categories) category where category->>'slug' = any($1::text[]))
+          or ($2::text <> '' and recommendation_search_vector @@ websearch_to_tsquery('portuguese', $2::text)))`,
+    [categories, query],
+  );
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function runDailyProfileKeywordRefresh(): Promise<VocabularyBuildMetrics | null> {

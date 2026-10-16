@@ -15,6 +15,7 @@ import {
   recordRecommendationEvent,
   updateRecommendationPreferences,
 } from "../recommendations/recommendation-service";
+import { isDismissReason } from "../recommendations/triage-feedback";
 
 const router: IRouter = Router();
 const positiveInteger = (value: unknown, fallback: number, maximum: number) => {
@@ -170,7 +171,17 @@ router.post(
       throw new InvalidParameterError("tenderId is invalid", [
         { field: "tenderId", issue: "invalid_value" },
       ]);
-    await dismissRecommendation(authContext(res).user.id, tenderId);
+    const reason = req.body?.reason;
+    if (reason !== undefined && !isDismissReason(reason))
+      throw new InvalidParameterError("Dismissal reason is invalid", [
+        { field: "reason", issue: "invalid_value" },
+      ]);
+    await dismissRecommendation(
+      authContext(res).user.id,
+      tenderId,
+      new Date(),
+      reason,
+    );
     res.status(204).end();
   }),
 );

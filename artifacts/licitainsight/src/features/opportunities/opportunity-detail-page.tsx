@@ -10,6 +10,7 @@ import {
   opportunityAreaLabels,
   opportunityKindLabels,
   opportunityProgramLabels,
+  opportunitySourceAttributions,
 } from './components/opportunity-status';
 import { deniedAccess, useOpportunity } from './hooks/use-opportunities';
 import { BrazilProjectBadge, EligibilityBadge, FundingBadge, OfficialNoticeBanner } from './components/international';
@@ -199,6 +200,11 @@ function OpportunityDetail() {
           <div>
             <dt className="type-label text-muted-foreground">Fonte</dt>
             <dd className="mt-1 type-ui">{opportunity.sourceName}</dd>
+            {opportunitySourceAttributions[opportunity.source] && (
+              <dd data-testid="text-source-attribution" className="mt-1 type-meta text-muted-foreground">
+                {opportunitySourceAttributions[opportunity.source]}
+              </dd>
+            )}
           </div>
           <div>
             <dt className="type-label text-muted-foreground">Atualizado em</dt>

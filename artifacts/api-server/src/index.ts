@@ -1,3 +1,9 @@
+import {
+  startWorkerSchedulers,
+  workerJobsFromEnv,
+  workerRunsHeavyJobs,
+  type WorkerJobs,
+} from "./worker-jobs";
 import type { Server } from "node:http";
 import app from "./app";
 import { appRoleFromEnv, roleRunsJobs, roleServesApi } from "./app-role";
@@ -38,6 +44,7 @@ import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 import { startPersonalDataRetentionScheduler } from "./account/personal-data-retention";
 import { startNightlyCategoryClassification } from "./titles/nightly-scheduler";
 import { verifyWorkspaceSchema } from "./workspaces/cutover-state";
+import { warmDefaultTenderSearch } from "./services/search-backend";
 
 const parsePort = (
   name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
@@ -76,35 +83,37 @@ const startHttpServer = (port: number, healthOnly: boolean): Server => {
   return server;
 };
 
-const startSchedulers = (): Array<() => void> => [
-  startAiJobWorker(),
-  startAiDocumentRetentionScheduler(),
-  startTrialNotificationScheduler(),
-  startEmailNotificationJobs(),
-  startAiRetentionScheduler(),
-  startDocumentRetryJob(),
-  startDailyPncpCollect(),
-  startDailyTransparencyCollect(),
-  startTenderDeadlineReconciliation(),
-  startPlatformBackfillScheduler(),
-  startEstimatedValueReviewScheduler(),
-  startOpportunityOwnerReviewScheduler(),
-  startDailyCultureCollect(),
-  startDailyFundingCollect(),
-  startDailyCultureFederalCollect(),
-  startDailyInternationalCollect(),
-  startDailyCategoryClassify(),
-  startNightlyCategoryClassification(),
-  startRecommendationScheduler(),
-  startProfileKeywordScheduler(),
-  startPersonalDataRetentionScheduler(),
-  startBillingReconciliationScheduler(),
-];
+const startSchedulers = (group: WorkerJobs): Array<() => void> =>
+  startWorkerSchedulers(group, {
+    startAiJobWorker,
+    startAiDocumentRetentionScheduler,
+    startTrialNotificationScheduler,
+    startEmailNotificationJobs,
+    startAiRetentionScheduler,
+    startDocumentRetryJob,
+    startDailyPncpCollect,
+    startDailyTransparencyCollect,
+    startTenderDeadlineReconciliation,
+    startPlatformBackfillScheduler,
+    startEstimatedValueReviewScheduler,
+    startOpportunityOwnerReviewScheduler,
+    startDailyCultureCollect,
+    startDailyFundingCollect,
+    startDailyCultureFederalCollect,
+    startDailyInternationalCollect,
+    startDailyCategoryClassify,
+    startNightlyCategoryClassification,
+    startRecommendationScheduler,
+    startProfileKeywordScheduler,
+    startPersonalDataRetentionScheduler,
+    startBillingReconciliationScheduler,
+  });
 
 const start = async (): Promise<void> => {
   const role = appRoleFromEnv();
   const servesApi = roleServesApi(role);
   const runsJobs = roleRunsJobs(role);
+  const workerJobs = runsJobs ? workerJobsFromEnv() : "all";
   const apiPort = servesApi ? parsePort("PORT", true) : undefined;
   const workerHealthPort =
     role === "worker" ? parsePort("WORKER_HEALTH_PORT", false) : undefined;
@@ -123,6 +132,8 @@ const start = async (): Promise<void> => {
     );
   }
 
+  if (servesApi) await warmDefaultTenderSearch();
+
   // Serve health/API traffic while startup observes existing ingest heartbeats;
   // schedulers are armed only after that reconciliation finishes.
   const server = apiPort
@@ -134,7 +145,7 @@ const start = async (): Promise<void> => {
     ? startMetricsServer(metricsPort)
     : undefined;
 
-  if (runsJobs) {
+  if (runsJobs && workerRunsHeavyJobs(workerJobs)) {
     try {
       await tryRunSingletonJob("ingest_reconciliation", async () => {
         await recoverInterruptedIngestRuns();
@@ -146,7 +157,7 @@ const start = async (): Promise<void> => {
       );
     }
   }
-  const stops = runsJobs ? startSchedulers() : [];
+  const stops = runsJobs ? startSchedulers(workerJobs) : [];
   const config = httpServerConfig();
   installGracefulShutdown({
     server,
@@ -158,7 +169,14 @@ const start = async (): Promise<void> => {
     timeoutMs: config.shutdownTimeoutMs,
   });
   logger.info(
-    { role, apiPort, workerHealthPort, metricsPort, schedulers: runsJobs },
+    {
+      role,
+      workerJobs: runsJobs ? workerJobs : undefined,
+      apiPort,
+      workerHealthPort,
+      metricsPort,
+      schedulers: runsJobs,
+    },
     "Application role started",
   );
 };

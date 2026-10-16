@@ -108,6 +108,7 @@ const changeDescription = (
       open: "Aberto",
       under_review: "Em análise",
       closed: "Encerrado",
+      direct: "Contratação direta",
     };
     return `Novo status: ${labels[String(change?.to)] ?? String(change?.to ?? "alterado")}`;
   }
@@ -523,6 +524,8 @@ export const renderNotificationEmail = (input: {
   deadlines?: readonly EmailDeadlineSnapshot[];
   /** Highlights of the cited tenders, by tender id (see ai/tender-highlights.ts); absent tenders render as before. */
   highlights?: ReadonlyMap<string, EmailTenderHighlight>;
+  /** Digest context after the cutover; omitted in legacy so emitted URLs stay byte-for-byte unchanged. */
+  workspaceId?: string;
   now?: Date;
 }) => {
   const highlights = input.highlights ?? new Map<string, EmailTenderHighlight>();
@@ -531,6 +534,7 @@ export const renderNotificationEmail = (input: {
   const unsubscribeApiUrl = `${input.origin}/api/v1/email/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const unsubscribePageUrl = `${input.origin}/descadastro?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const settingsUrl = `${input.origin}/settings#notificacoes`;
+  const triageUrl = `${input.origin}/triagem${input.workspaceId ? `?workspaceId=${encodeURIComponent(input.workspaceId)}` : ""}`;
   const dashboardUrl = `${input.origin}/dashboard`;
   const heading =
     input.mode === "digest"
@@ -617,6 +621,7 @@ ${fontFaces(input.origin)}
 </td></tr>
 <tr><td style="padding:24px 0 0">
 ${sectionsHtml}${primaryAction}
+${input.mode === "digest" ? `<p style="margin:16px 0;font-family:${textFont};font-size:14px"><a href="${escapeHtml(triageUrl)}" style="color:${colors.ink};text-decoration:underline">Fazer minha triagem de editais</a></p>` : ""}
 </td></tr>
 <tr><td style="padding:32px 0 8px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid ${colors.line};font-size:0;line-height:0">&nbsp;</td></tr></table>
@@ -636,6 +641,7 @@ ${sectionsHtml}${primaryAction}
       heading,
       "",
       sectionsText,
+      ...(input.mode === "digest" ? [`Fazer minha triagem de editais: ${triageUrl}`] : []),
       "",
       why,
       `Preferências: ${settingsUrl}`,

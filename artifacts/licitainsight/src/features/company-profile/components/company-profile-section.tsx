@@ -8,18 +8,22 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFoo
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { trackProfileSetup } from '@/features/analytics/google-analytics';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { ProfileMeter } from '@/features/guided-onboarding/profile-meter';
 import { toast } from '@/hooks/use-toast';
 import { formatDateTime } from '@/lib/format';
 import { UFS } from '@/lib/ufs';
 import { cn } from '@/lib/utils';
 import { PROFILE_LIMITS } from '@/services/ai-service';
 import { SmartKeywordCombobox } from './keyword-combobox';
+import { OfferingTermsField } from './offering-terms-field';
+import { addSuggestedTerm, combinedOfferingTerms, foldTerm, listsForSave } from './offering-terms-state';
 import {
   useCompanyProfile,
   useCompanyRegionPreview,
   useDeleteCompanyProfile,
   useProfileCategories,
   useProfileDescriptionSuggestions,
+  useProfileMatchPreview,
   useProfileMunicipalities,
   useProfilePlatforms,
   useSaveCompanyProfile,
@@ -121,7 +125,7 @@ function validate(draft: Draft): Errors {
   const errors: Errors = {};
   const length = draft.description.trim().length;
   if (length < PROFILE_LIMITS.descriptionMin) errors.description = `Escreva pelo menos ${PROFILE_LIMITS.descriptionMin} caracteres.`;
-  if (draft.offerings.length === 0) errors.offerings = 'Adicione pelo menos um produto ou serviço.';
+  if (combinedOfferingTerms(draft).length === 0) errors.offerings = 'Adicione pelo menos um termo do que a empresa vende ou faz.';
   if (!draft.national && draft.states.length === 0 && draft.regions.length === 0 && draft.municipalities.length === 0 && !draft.headquarters)
     errors.states = 'Escolha uma macrorregião, UF, município ou cidade-sede com raio.';
   const min = parseReais(draft.min);
@@ -133,10 +137,9 @@ function validate(draft: Draft): Errors {
 
 const toInput = (draft: Draft): CompanyProfileInput => ({
   description: draft.description.trim(),
-  offerings: draft.offerings,
+  ...listsForSave(draft),
   exclusions: draft.exclusions,
   selectedCategories: draft.selectedCategories,
-  selectedKeywords: draft.selectedKeywords,
   excludedKeywords: draft.excludedKeywords,
   registeredPlatforms: draft.registeredPlatforms,
   coverage: draft.national
@@ -169,11 +172,11 @@ function serverErrors(error: unknown): Errors {
   const errors: Errors = {};
   for (const { field } of error.details) {
     if (field.startsWith('description')) errors.description = 'Revise a descrição.';
-    else if (field.startsWith('offerings'))
+    else if (field.startsWith('offerings') || field.startsWith('selectedKeywords'))
       errors.offerings = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
     else if (field.startsWith('exclusions'))
       errors.exclusions = `Revise os termos: de ${PROFILE_LIMITS.termMin} a ${PROFILE_LIMITS.termMax} caracteres, sem repetir.`;
-    else if (field.startsWith('selectedCategories') || field.startsWith('selectedKeywords') || field.startsWith('excludedKeywords'))
+    else if (field.startsWith('selectedCategories') || field.startsWith('excludedKeywords'))
       errors.form = 'Revise os filtros inteligentes selecionados.';
     else if (field.startsWith('registeredPlatforms')) errors.form = 'Revise as plataformas em que a empresa é cadastrada.';
     else if (field.startsWith('coverage')) errors.states = 'Revise a área de atuação.';
@@ -300,7 +303,7 @@ function TermsField({
   );
 }
 
-function MunicipalityAutocomplete({
+export function MunicipalityAutocomplete({
   label,
   hint,
   selected,
@@ -438,6 +441,8 @@ export function CompanyProfileSection() {
   const [descriptionForSuggestions, setDescriptionForSuggestions] = useState('');
   const [dismissedSuggestion, setDismissedSuggestion] = useState('');
   const descriptionSuggestions = useProfileDescriptionSuggestions(descriptionForSuggestions);
+  const [previewInput, setPreviewInput] = useState<{ terms: string[]; categories: string[] }>({ terms: [], categories: [] });
+  const matchPreview = useProfileMatchPreview(previewInput.terms, previewInput.categories);
   const ids = useId();
   const profileStartTracked = useRef(false);
 
@@ -461,6 +466,14 @@ export function CompanyProfileSection() {
     const timer = window.setTimeout(() => setDescriptionForSuggestions(description), 650);
     return () => window.clearTimeout(timer);
   }, [draft.description]);
+
+  // The count follows what is on screen (saved or not), 600 ms after the last change to the terms or categories.
+  const previewTermsKey = JSON.stringify([combinedOfferingTerms(draft), draft.selectedCategories]);
+  useEffect(() => {
+    const [terms, categories] = JSON.parse(previewTermsKey) as [string[], string[]];
+    const timer = window.setTimeout(() => setPreviewInput({ terms, categories }), 600);
+    return () => window.clearTimeout(timer);
+  }, [previewTermsKey]);
 
   const set = (patch: Partial<Draft>) => {
     const next = { ...draft, ...patch };
@@ -494,20 +507,27 @@ export function CompanyProfileSection() {
 
   const descriptionLength = draft.description.trim().length;
   const suggestions = descriptionSuggestions.data;
+  const chosenTerms = new Set(combinedOfferingTerms(draft).map(foldTerm));
   const showSuggestions = Boolean(
     suggestions &&
     dismissedSuggestion !== descriptionForSuggestions &&
-    (suggestions.keywords.some(({ displayTerm }) => !draft.selectedKeywords.includes(displayTerm)) ||
+    (suggestions.keywords.some(({ displayTerm }) => !chosenTerms.has(foldTerm(displayTerm))) ||
       suggestions.categories.some(({ slug }) => !draft.selectedCategories.includes(slug))),
   );
   const acceptSuggestions = () => {
     if (!suggestions) return;
+    const lists = suggestions.keywords.reduce((current, { displayTerm }) => addSuggestedTerm(current, displayTerm), {
+      selectedKeywords: draft.selectedKeywords,
+      offerings: draft.offerings,
+    });
     set({
-      selectedKeywords: [...new Set([...draft.selectedKeywords, ...suggestions.keywords.map(({ displayTerm }) => displayTerm)])].slice(0, PROFILE_LIMITS.terms),
-      selectedCategories: [...new Set([...draft.selectedCategories, ...suggestions.categories.map(({ slug }) => slug)])],
+      ...lists,
+      selectedCategories: [...new Set([...draft.selectedCategories, ...suggestions.categories.map(({ slug }) => slug)])].slice(0, 20),
     });
     setDismissedSuggestion(descriptionForSuggestions);
   };
+  const previewCount = matchPreview.data?.estimatedOpenTenderCount;
+  const hasPreviewInput = combinedOfferingTerms(draft).length + draft.selectedCategories.length > 0;
 
   return (
     <section
@@ -523,6 +543,8 @@ export function CompanyProfileSection() {
         Usamos o perfil para indicar, na busca e no detalhe, quais editais combinam com a sua empresa. A descrição e os termos vão para o serviço de IA que faz
         a avaliação; nome e e-mail não.
       </p>
+
+      {profile.isSuccess && <div className="mt-5"><ProfileMeter profile={saved} /></div>}
 
       {billing.data && !billing.data.entitled && (
         <p
@@ -607,7 +629,7 @@ export function CompanyProfileSection() {
                       <button
                         key={keyword.normalizedTerm}
                         type="button"
-                        onClick={() => set({ selectedKeywords: [...new Set([...draft.selectedKeywords, keyword.displayTerm])].slice(0, PROFILE_LIMITS.terms) })}
+                        onClick={() => set(addSuggestedTerm(draft, keyword.displayTerm))}
                         className="rounded-pill border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary"
                       >
                         + {keyword.displayTerm}
@@ -721,14 +743,30 @@ export function CompanyProfileSection() {
             )}
           </fieldset>
 
-          <SmartKeywordCombobox
-            label="Palavras-chave inteligentes"
-            hint="Digite pelo menos 2 caracteres. As sugestões e relações vêm dos títulos, objetos e itens dos editais abertos."
-            placeholder="Ex.: som, ilumin, painel de led"
-            selected={draft.selectedKeywords}
-            onChange={(selectedKeywords) => set({ selectedKeywords })}
-            testId="smart-keywords"
-          />
+          <div className="grid gap-2.5">
+            <OfferingTermsField
+              id={`${ids}-offerings`}
+              lists={{ selectedKeywords: draft.selectedKeywords, offerings: draft.offerings }}
+              onChange={(lists) => set(lists)}
+              error={errors.offerings}
+            />
+            {hasPreviewInput && previewCount !== undefined && (
+              <p
+                role="status"
+                aria-live="polite"
+                className={cn(
+                  'rounded-lg border border-border bg-muted px-4 py-3 type-ui font-medium transition-opacity duration-fast ease-standard',
+                  matchPreview.isPlaceholderData && 'opacity-60',
+                )}
+                data-testid="profile-open-tender-preview"
+              >
+                ≈ {previewCount.toLocaleString('pt-BR')} editais abertos combinam com seu perfil
+                <span className="mt-0.5 block type-meta font-normal text-muted-foreground">
+                  Editais com algum destes termos (como expressão inteira) ou de uma categoria marcada.
+                </span>
+              </p>
+            )}
+          </div>
 
           <SmartKeywordCombobox
             label="Palavras-chave a excluir"
@@ -737,23 +775,6 @@ export function CompanyProfileSection() {
             selected={draft.excludedKeywords}
             onChange={(excludedKeywords) => set({ excludedKeywords })}
             testId="smart-exclusions"
-          />
-
-          {suggestions && (
-            <p role="status" className="rounded-lg border border-border bg-muted px-4 py-3 type-ui font-medium" data-testid="profile-open-tender-preview">
-              ≈ {suggestions.estimatedOpenTenderCount.toLocaleString('pt-BR')} editais abertos combinam com seu perfil
-            </p>
-          )}
-
-          <TermsField
-            id={`${ids}-offerings`}
-            label="Produtos e serviços principais"
-            hint="Os termos que aparecem nos editais que interessam. Enter ou vírgula adiciona."
-            placeholder="Ex.: limpeza predial, jardinagem"
-            terms={draft.offerings}
-            onChange={(offerings) => set({ offerings })}
-            error={errors.offerings}
-            testId="terms-offerings"
           />
 
           <TermsField

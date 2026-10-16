@@ -73,6 +73,7 @@ const statuses: { status: TenderStatus; token: string; className: string; light:
   { status: 'closed', token: '--status-closed', className: 'bg-status-closed text-status-closed-foreground', light: '6.2', dark: '6.2' },
   { status: 'suspended', token: '--status-suspended', className: 'bg-status-suspended text-status-suspended-foreground', light: '9.6', dark: '8.8' },
   { status: 'cancelled', token: '--status-cancelled', className: 'bg-status-cancelled text-status-cancelled-foreground', light: '4.9', dark: '4.7' },
+  { status: 'direct', token: '--status-direct', className: 'bg-status-direct text-status-direct-foreground', light: '5.4', dark: '5.4' },
 ];
 
 const typeRoles: { role: string; spec: string; className: string; sample: string }[] = [

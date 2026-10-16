@@ -11,6 +11,7 @@ import AuthPage, { LoginRedirect } from '@/features/auth/auth-page';
 import { useIdleSession } from '@/features/auth/hooks/use-session';
 import { RequireAuth } from '@/features/auth/components/require-auth';
 import { RequireSubscription } from '@/features/billing/components/require-subscription';
+import TriagePage from '@/features/recommendations/triage/triage-page';
 import DashboardPage from '@/features/dashboard/dashboard-page';
 import DesignSystemPage from '@/features/design-system/design-system-page';
 import HelpPage, { HELP_TITLE } from '@/features/help/help-page';
@@ -71,6 +72,7 @@ const routeTitles: Record<string, string> = {
   '/descadastro': 'Descadastro de e-mails · Pardal Digital',
   '/privacidade': 'Política de Privacidade · Pardal Digital',
   '/termos': 'Termos de Uso · Pardal Digital',
+  '/triagem': 'Triagem · Pardal Digital',
   '/dashboard': 'Visão geral · Pardal Digital',
   '/search': 'Explorar editais · Pardal Digital',
   '/oportunidades': 'Editais nacionais · Pardal Digital',
@@ -115,6 +117,17 @@ function Router() {
           {() => (
             <AppShell>
               <DashboardPage />
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/triagem">
+          {() => (
+            <AppShell>
+              <RequireAuth>
+                <RequireSubscription>
+                  <TriagePage />
+                </RequireSubscription>
+              </RequireAuth>
             </AppShell>
           )}
         </Route>

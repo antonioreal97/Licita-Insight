@@ -40,4 +40,18 @@ describe("tender notification diff", () => {
       ],
     );
   });
+
+  it("does not notify open ↔ direct reclassification", () => {
+    assert.deepEqual(
+      tenderChanges(baseline, { ...baseline, status: "direct" }).map(({ type }) => type),
+      [],
+    );
+    assert.deepEqual(
+      tenderChanges(
+        { ...baseline, status: "direct" },
+        { ...baseline, status: "open" },
+      ).map(({ type }) => type),
+      [],
+    );
+  });
 });

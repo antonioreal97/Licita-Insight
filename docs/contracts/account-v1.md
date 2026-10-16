@@ -88,7 +88,7 @@ rota não é registrada (404). Serve para QA/testes automatizados sem conta Goog
 
 Os três campos ficam em `users` e entram no objeto `user` da exportação LGPD. Excluir a conta exclui a linha e as respostas. A escolha por colunas evita uma tabela adicional para três atributos 1:1 e preserva os defaults vazios de contas anteriores.
 
-Na Fase 1 de Espaços, o backfill deve usar `usagePurposes` para sugerir/criar o Espaço inicial correspondente à finalidade principal e copiar `applicantTypes` como ponto de partida para `applicant_type` onde houver esse sinal. Respostas vazias não devem ser inferidas como finalidade ou proponente, e o perfil mínimo continua palavras-chave e região. A migração desta extensão é `0042` na `main`; depois de `0043_opportunity_application`, as migrações W1/W2 da Fase 1 são `0044` e `0045`.
+Na Fase 1 de Espaços, o backfill deve usar `usagePurposes` para sugerir/criar o Espaço inicial correspondente à finalidade principal e copiar `applicantTypes` como ponto de partida para `applicant_type` onde houver esse sinal. Respostas vazias não devem ser inferidas como finalidade ou proponente, e o perfil mínimo continua palavras-chave e região. A migração desta extensão é `0042` na `main`; depois de `0045_opportunity_source_idb` e do backfill manual `0046_direct_contracting_status`, as migrações W1/W2 da Fase 1 são `0047` e `0048`.
 
 ## 2. Editais salvos e monitorados
 
@@ -339,6 +339,10 @@ type NotificationPreferences = {
 
 O perfil da empresa (`GET|PUT|DELETE /api/v1/me/company-profile`) exige apenas sessão, com CSRF no `PUT` e no `DELETE`. A prévia da região exige acesso ativo (`402 SUBSCRIPTION_REQUIRED` sem acesso); alertas e aderência continuam pagos. A exportação LGPD permanece acessível com apenas sessão. Decisão do dono de 13/10/2026: o perfil da empresa continua disponível sem acesso ativo.
 
+Na Fase 1, esses três métodos e `GET /api/v1/me/company-profile/region-preview` aceitam `workspaceId` opcional.
+Sem o parâmetro, o adaptador v1 continua no perfil legado/Espaço padrão; com jornadas habilitadas, a UI envia o
+Espaço ativo e a API revalida associação e flag antes de ler ou gravar `workspace_profiles` pela porta de corte.
+
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
 ```ts
@@ -389,6 +393,9 @@ O catálogo e as coordenadas de sede vêm do produto oficial “Localidades do B
 | GET    | `/api/v1/profile/categories`                | —                                     | `{data: Array<{slug,label,openTenderCount}>}`    |
 | GET    | `/api/v1/profile/keywords/suggest?q=`       | `q` com 2–80 caracteres               | `{data: ProfileKeywordSuggestion[]}` (máx. 10)   |
 | POST   | `/api/v1/profile/keywords/from-description` | `{description}` com 20–600 caracteres | `{keywords,categories,estimatedOpenTenderCount}` |
+| POST   | `/api/v1/profile/match-preview`             | `{terms?: string[] (≤40, 1–80 car.), categories?: string[] (≤20)}` | `{estimatedOpenTenderCount}` |
+
+`match-preview` alimenta o “≈ N editais abertos combinam com seu perfil” do formulário com o que a pessoa escolheu ou digitou (ainda não salvo): conta editais abertos com prazo futuro que tenham ao menos uma das categorias **ou** contenham algum dos termos **como expressão inteira** (palavras juntas e na ordem, com o stemming do português, sem acento — mesmo critério de `tenders.search_text`). “transmissão ao vivo” não conta um edital que só diz “ao vivo”. O mesmo critério de expressão vale para o filtro lexical da aderência (`lexicalGatePasses`), para os termos do motivo “Combina com …” (`lexicalMatches`) e para os termos do perfil nas recomendações. O `estimatedOpenTenderCount` do `from-description` usa a mesma contagem, sobre as sugestões e categorias que ele devolve.
 
 ### Plataformas em que a empresa é cadastrada
 
@@ -400,9 +407,9 @@ A lista não entra no cálculo de aderência: quando só ela muda, o `PUT` atual
 | ------ | --------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/v1/profile/platforms` | —       | `{data: Array<{slug,label,url,kind:'platform'\|'registry',openTenderCount:number\|null}>}` (SICAF com `null`) |
 
-As rotas desta seção exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). O POST apenas calcula sugestões e não altera estado, portanto não exige assinatura.
+As rotas desta seção exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). Os POSTs (`from-description` e `match-preview`) apenas calculam e não alteram estado, portanto não exigem assinatura.
 
-O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
+O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Termos genéricos de licitação (“empresa”, “empresa especializada”, “contratação”, “aquisição”, “serviço(s)”, “fornecimento”, “prestação”, “registro de preços”, “objeto”, “eventual”, “futura”, “termo de referência”, “município” etc.) nunca são sugeridos sozinhos, e um bi/trigrama não termina com eles nem começa com eles (exceto “serviços de…”, “fornecimento de…”, “aquisição de…”, “prestação de…”, “execução de…”, que encabeçam uma oferta real). Além disso, um termo presente em mais de 20% dos editais abertos não entra no vocabulário (`MAX_OPEN_TENDER_SHARE`; o teto só vale com 50 editais abertos ou mais). O valor saiu de uma amostra pública de 1.650 editais abertos do PNCP (objeto + informação complementar, 14/10/2026): “empresa” 42,5%, “especializada” 33,6%, “empresa especializada” 29,9%, “execução” 24,2%, “município” 22,6%, “conforme” 21,5%; os ramos de negócio mais frequentes ficaram abaixo de 15% (“engenharia” 14,8%, “obras” 13%, “manutenção” 11,4%, “saúde” 7,3%). As leituras (`suggest` e `from-description`) reaplicam as regras de extração, então um termo genérico gravado por uma reconstrução antiga deixa de ser sugerido antes do próximo job. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 
 O job `profile_keyword_vocabulary` roda diariamente às 04:00 em `America/Sao_Paulo`, fora da coleta PNCP das 06:00, sob advisory lock. `PROFILE_KEYWORD_DAILY_REFRESH=false` o desliga; `pnpm --filter @workspace/api-server run profile-keywords:refresh` executa manualmente no host. Na imagem de produção, use `docker exec licita-macbook-app-1 node artifacts/api-server/dist/refresh-profile-keywords.mjs`; ele toma o mesmo lock. A troca do conteúdo ocorre em transação depois do cálculo, preservando o vocabulário anterior se o job falhar.
 

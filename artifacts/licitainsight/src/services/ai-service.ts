@@ -16,15 +16,16 @@ export const aiService = {
 
   getTenderSheet: (tenderId: string, signal?: AbortSignal) => aiAdapter.getTenderSheet(tenderId, signal),
 
-  getCompanyProfile: (signal?: AbortSignal) => aiAdapter.getCompanyProfile(signal),
-  saveCompanyProfile: (profile: CompanyProfileInput) => aiAdapter.saveCompanyProfile(profile),
-  deleteCompanyProfile: () => aiAdapter.deleteCompanyProfile(),
+  getCompanyProfile: (workspaceId?: string, signal?: AbortSignal) => aiAdapter.getCompanyProfile(workspaceId, signal),
+  saveCompanyProfile: (profile: CompanyProfileInput, workspaceId?: string) => aiAdapter.saveCompanyProfile(profile, workspaceId),
+  deleteCompanyProfile: (workspaceId?: string) => aiAdapter.deleteCompanyProfile(workspaceId),
   listProfileCategories: (signal?: AbortSignal) => aiAdapter.listProfileCategories(signal),
   listProfileMunicipalities: (query: string, signal?: AbortSignal) => aiAdapter.listProfileMunicipalities(query, signal),
-  getCompanyRegionPreview: (signal?: AbortSignal) => aiAdapter.getCompanyRegionPreview(signal),
+  getCompanyRegionPreview: (workspaceId?: string, signal?: AbortSignal) => aiAdapter.getCompanyRegionPreview(workspaceId, signal),
   listProfilePlatforms: (signal?: AbortSignal) => aiAdapter.listProfilePlatforms(signal),
   suggestProfileKeywords: (query: string, signal?: AbortSignal) => aiAdapter.suggestProfileKeywords(query, signal),
   suggestProfileFiltersFromDescription: (description: string, signal?: AbortSignal) => aiAdapter.suggestProfileFiltersFromDescription(description, signal),
+  previewProfileMatches: (input: { terms: string[]; categories: string[] }, signal?: AbortSignal) => aiAdapter.previewProfileMatches(input, signal),
   /** Sorted and de-duplicated so the cache key does not depend on list order. */
   getFits: (tenderIds: string[], signal?: AbortSignal) => aiAdapter.getFits([...new Set(tenderIds)].sort().slice(0, FIT_BATCH_MAX), signal),
   /** Same batch rules as the fits; the API only reads sheets that are already ready. */

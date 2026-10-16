@@ -490,6 +490,7 @@ const queueDelivery = async (
       ),
       now,
       origin: publicAppOrigin(),
+      ...(group.workspaceId === null ? {} : { workspaceId: group.workspaceId }),
       unsubscribeToken: createUnsubscribeToken(recipient.unsubscribeId),
     });
     const [delivery] = await tx

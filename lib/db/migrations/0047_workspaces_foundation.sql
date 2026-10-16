@@ -1,6 +1,6 @@
 -- W1 of the workspaces cutover (docs/plans/hub-adaptativo-roadmap-v2.md). Additive only: creates empty tables and
 -- touches no existing row. The only locks on existing tables are the brief SHARE ROW EXCLUSIVE taken on `users`
--- when each foreign key to it is created. Procedure for production: docs/migrations/0044-workspaces-foundation.md.
+-- when each foreign key to it is created. Procedure for production: docs/migrations/0047-workspaces-foundation.md.
 CREATE TABLE IF NOT EXISTS "workspaces" (
   "id" text PRIMARY KEY NOT NULL,
   "type" text NOT NULL,

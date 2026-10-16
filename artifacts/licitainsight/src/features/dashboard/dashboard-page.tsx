@@ -19,28 +19,7 @@ import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlig
 import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
-import { useSaveUsageProfile, useUsageProfile } from '@/features/settings/hooks/use-usage-profile';
-import type { AccountUsageProfile } from '@/api';
-
-export function shouldShowUsageInvite(profile: AccountUsageProfile | undefined): boolean {
-  return Boolean(profile && !profile.usageInviteDismissed && !profile.usagePurposes.length && !profile.applicantTypes.length);
-}
-
-function UsageInvite() {
-  const profile = useUsageProfile();
-  const save = useSaveUsageProfile();
-  if (!shouldShowUsageInvite(profile.data)) return null;
-  return <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5" data-testid="dashboard-usage-invite">
-    <div>
-      <h2 className="type-section text-foreground">O que você busca no Pardal?</h2>
-      <p className="mt-1 type-meta text-muted-foreground">Conte como usa o app para receber recomendações mais relevantes.</p>
-    </div>
-    <div className="flex flex-wrap items-center gap-3">
-      <Link href="/settings#perfil" className="rounded-lg type-ui font-semibold text-primary hover:underline focus-visible:focus-ring">Responder no perfil</Link>
-      <button type="button" className="rounded-lg px-2 py-1 type-meta text-muted-foreground hover:bg-muted focus-visible:focus-ring" disabled={save.isPending} onClick={() => save.mutate({ usageInviteDismissed: true })}>Dispensar</button>
-    </div>
-  </div>;
-}
+import { TriageEntry } from '@/features/recommendations/triage/triage-entry';
 
 function saoPauloDate(offsetDays = 0): string {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -153,7 +132,7 @@ function OpportunitiesCard() {
         <h2 className="type-section text-foreground">Editais nacionais</h2>
         {locked && <IncludedInAccessHint />}
       </div>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">Fomento audiovisual do Mapa da Cultura e das secretarias que publicam no Mapas Culturais.</p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">Oportunidades de cultura, fomento e inovação de todo o Brasil.</p>
       <Link
         href="/oportunidades"
         data-testid="link-dashboard-opportunities"
@@ -263,15 +242,15 @@ export default function DashboardPage() {
           </Link>
         }
       />
-      {user && <UsageInvite />}
+      {user && <ProfileInviteCard />}
       {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-8">
+        {personal && <TriageEntry />}
         {personal && <RecommendationsSection />}
         {personal && <PersonalDeadlines />}
         {personal && profile.isPending ? <RowsSkeleton rows={2} />
           : personal && profile.isError ? <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
-          : personal && !profile.data?.profile ? <ProfileInviteCard />
           : <section data-testid="dashboard-candidates">
           <div className="mb-3 flex items-center justify-between">
             <div>

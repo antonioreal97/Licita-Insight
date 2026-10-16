@@ -2,7 +2,7 @@
 // Source of truth: docs/contracts/search-v1.md and docs/contracts/account-v1.md — keep this file in lockstep with them.
 // When the backend publishes the OpenAPI spec, the HTTP adapter maps generated types onto these.
 
-export type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled';
+export type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled' | 'direct';
 
 export type Modality =
   | 'pregao_eletronico'
@@ -35,6 +35,8 @@ export type TenderSearchParams = {
   /** Exact tender snapshot captured by an owned notification. Never persisted in saved searches. */
   notification?: string;
   myRegion?: boolean;
+  /** Active Workspace context. Added by the request hook, never persisted in the shareable search URL. */
+  workspaceId?: string;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: string;
@@ -178,6 +180,12 @@ export type TenderSearchResponse = {
       storedTenderCount: number;
       savedSearchName: string | null;
       savedSearchQuery: string | null;
+    } | null;
+    workspace?: {
+      id: string;
+      type: string;
+      accessMode: string;
+      archivedAt: string | null;
     } | null;
   };
 };
@@ -760,6 +768,7 @@ export type ProfileKeywordSuggestion = {
   related: boolean;
 };
 export type ProfileKeywordSuggestionsResponse = { data: ProfileKeywordSuggestion[] };
+export type ProfileMatchPreview = { estimatedOpenTenderCount: number };
 export type ProfileDescriptionSuggestions = {
   keywords: ProfileKeywordSuggestion[];
   categories: ProfileCategory[];
@@ -818,7 +827,7 @@ export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
 export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership' | 'procurement';
-export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic' | 'worldbank' | 'eu_ft';
+export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic' | 'worldbank' | 'eu_ft' | 'idb';
 /** Reach of a call, not its nature: an international call still has a `kind`. */
 export type OpportunityScope = 'national' | 'international';
 export type InternationalRegion = 'america-latina' | 'africa' | 'europa' | 'asia' | 'oriente-medio' | 'global';
@@ -1019,3 +1028,5 @@ export type OpportunitySearchResponse = {
     internationalInProfile: boolean;
   };
 };
+
+export type RecommendationDismissReason = 'not_offering' | 'region' | 'value' | 'deadline';

@@ -6,6 +6,7 @@ test('jornadas desligadas preservam exatamente as chaves legadas', () => {
   const keys = scopedMeQueryKeys();
   assert.deepEqual(keys.companyProfile, ['me', 'company-profile']);
   assert.deepEqual(keys.companyProfile, queryKeys.me.companyProfile);
+  assert.deepEqual(keys.profileMatchPreview(['a'], ['b']), ['me', 'profile-match-preview', ['a'], ['b']]);
   assert.deepEqual(keys.savedTenders.ids, ['me', 'saved-tenders', 'ids']);
   assert.deepEqual(keys.savedTenders.list({ page: 1 }), ['me', 'saved-tenders', 'list', { page: 1 }]);
   assert.deepEqual(keys.savedSearches, ['me', 'saved-searches']);
@@ -21,6 +22,7 @@ test('jornadas ligadas isolam todos os caches contextuais por workspaceId', () =
   const prefix = ['me', 'workspace', workspaceId];
   assert.deepEqual(keys.companyProfile, [...prefix, 'company-profile']);
   assert.deepEqual(keys.companyRegionPreview, [...prefix, 'company-region-preview']);
+  assert.deepEqual(keys.profileMatchPreview(['a'], ['b']), [...prefix, 'profile-match-preview', ['a'], ['b']]);
   assert.deepEqual(keys.fit.batch(['b', 'a']), [...prefix, 'fit', ['a', 'b']]);
   assert.deepEqual(keys.savedTenders.ids, [...prefix, 'saved-tenders', 'ids']);
   assert.deepEqual(keys.savedSearches, [...prefix, 'saved-searches']);

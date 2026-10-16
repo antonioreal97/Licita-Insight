@@ -48,7 +48,9 @@ import {
 import {
   defaultWorkspaceId,
   requireDefaultWorkspace,
+  requireWorkspaceMember,
 } from "../workspaces/workspace-service";
+import { assertWorkspaceRouteEnabled, assertWorkspaceWriteEnabled } from "../workspaces/workspace-route-gate";
 import { logger } from "../lib/logger";
 import { dateInSaoPaulo } from "../lib/sao-paulo-date";
 import { hasAiAccess } from "./ask-tender-service";
@@ -189,7 +191,19 @@ export async function readCompanyProfileRow(
 
 export async function getCompanyProfile(
   userId: string,
+  workspaceId?: string,
 ): Promise<CompanyProfile | null> {
+  if (workspaceId) {
+    const workspace = await requireWorkspaceMember(db, userId, workspaceId);
+    await assertWorkspaceRouteEnabled(workspace.type);
+    if (workspace.type !== "procurement") return null;
+    const [profile] = await db
+      .select()
+      .from(workspaceProfilesTable)
+      .where(eq(workspaceProfilesTable.workspaceId, workspace.workspaceId))
+      .limit(1);
+    return profile ? toProfile(workspaceProfileToCompanyProfile(userId, profile)) : null;
+  }
   const row = await readCompanyProfileRow(userId);
   return row ? toProfile(row) : null;
 }
@@ -289,15 +303,24 @@ async function putWorkspaceCompanyProfile(
   userId: string,
   input: CompanyProfileInput,
   now: Date,
+  workspaceId?: string,
 ): Promise<CompanyProfileRow> {
-  const workspace = await requireDefaultWorkspace(tx, userId);
+  let resolvedWorkspaceId: string;
+  if (workspaceId) {
+    const workspace = await requireWorkspaceMember(tx, userId, workspaceId);
+    assertWorkspaceWriteEnabled("workspaces", workspace.type);
+    if (workspace.type !== "procurement") throw new Error("The v1 company profile only supports procurement workspaces");
+    resolvedWorkspaceId = workspace.workspaceId;
+  } else {
+    resolvedWorkspaceId = (await requireDefaultWorkspace(tx, userId)).id;
+  }
   await tx.execute(
-    sql`select pg_advisory_xact_lock(hashtextextended(${`licitai:workspace-profile:${workspace.id}`}, 0))`,
+    sql`select pg_advisory_xact_lock(hashtextextended(${`licitai:workspace-profile:${resolvedWorkspaceId}`}, 0))`,
   );
   const [current] = await tx
     .select()
     .from(workspaceProfilesTable)
-    .where(eq(workspaceProfilesTable.workspaceId, workspace.id))
+    .where(eq(workspaceProfilesTable.workspaceId, resolvedWorkspaceId))
     .limit(1);
   const existing = current
     ? workspaceProfileToCompanyProfile(userId, current)
@@ -309,7 +332,7 @@ async function putWorkspaceCompanyProfile(
   });
   const { row } = await writeWorkspaceProfile(
     tx,
-    workspace.id,
+    resolvedWorkspaceId,
     current,
     WorkspaceProfileSchema.parse({
       schemaVersion: WORKSPACE_PROFILE_SCHEMA_VERSION,
@@ -327,13 +350,14 @@ export async function putCompanyProfile(
   input: CompanyProfileInput,
   now = new Date(),
   database?: GateDatabase,
+  workspaceId?: string,
 ): Promise<CompanyProfile> {
   const row = await withCutoverGate(
     { kind: "http" },
     (tx, state) =>
       state.mode === "legacy"
         ? putLegacyCompanyProfile(tx, userId, input, now)
-        : putWorkspaceCompanyProfile(tx, userId, input, now),
+        : putWorkspaceCompanyProfile(tx, userId, input, now, workspaceId),
     database,
   );
   return toProfile(row);
@@ -343,6 +367,7 @@ export async function deleteCompanyProfile(
   userId: string,
   now = new Date(),
   database?: GateDatabase,
+  workspaceId?: string,
 ): Promise<void> {
   await withCutoverGate(
     { kind: "http" },
@@ -356,20 +381,28 @@ export async function deleteCompanyProfile(
           .where(eq(companyProfilesTable.userId, userId));
         return;
       }
-      const workspace = await requireDefaultWorkspace(tx, userId);
+      let resolvedWorkspaceId: string;
+      if (workspaceId) {
+        const workspace = await requireWorkspaceMember(tx, userId, workspaceId);
+        assertWorkspaceWriteEnabled(state.mode, workspace.type);
+        if (workspace.type !== "procurement") throw new Error("The v1 company profile only supports procurement workspaces");
+        resolvedWorkspaceId = workspace.workspaceId;
+      } else {
+        resolvedWorkspaceId = (await requireDefaultWorkspace(tx, userId)).id;
+      }
       await tx
         .delete(companyTenderFitsTable)
-        .where(eq(companyTenderFitsTable.workspaceId, workspace.id));
+        .where(eq(companyTenderFitsTable.workspaceId, resolvedWorkspaceId));
       await tx
         .delete(workspaceProfileSignalsTable)
-        .where(eq(workspaceProfileSignalsTable.workspaceId, workspace.id));
+        .where(eq(workspaceProfileSignalsTable.workspaceId, resolvedWorkspaceId));
       await tx
         .delete(workspaceProfilesTable)
-        .where(eq(workspaceProfilesTable.workspaceId, workspace.id));
+        .where(eq(workspaceProfilesTable.workspaceId, resolvedWorkspaceId));
       await tx
         .update(workspacesTable)
         .set({ onboardingStatus: "not_started", updatedAt: now })
-        .where(eq(workspacesTable.id, workspace.id));
+        .where(eq(workspacesTable.id, resolvedWorkspaceId));
     },
     database,
   );
@@ -412,12 +445,17 @@ async function lexicalMatches(
     from jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) terms(term)
     join tenders t on t.id = ${tenderId}
     where to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.description, t.items::text))
-      @@ websearch_to_tsquery('portuguese', term)
+      @@ phraseto_tsquery('portuguese', term)
     limit 20
   `);
   return result.rows.map(({ term }) => term);
 }
 
+/**
+ * Each profile term must appear as a whole expression (words together, in order, Portuguese stemming):
+ * "transmissão ao vivo" does not pass a notice that only says "ao vivo". Same rule as `lexicalMatches` and as the
+ * profile preview count (`profilePhraseQuery` in profile/keyword-vocabulary.ts).
+ */
 export async function lexicalGatePasses(
   tenderId: string,
   offerings: string[],
@@ -427,12 +465,11 @@ export async function lexicalGatePasses(
     select exists (
       select 1
       from tenders t,
-        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term),
-        regexp_split_to_table(terms.term, '[^[:alnum:]]+') words(word)
+        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term)
       where t.id = ${tenderId}
-        and length(words.word) >= 2
+        and numnode(phraseto_tsquery('portuguese', terms.term)) > 0
         and to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.items::text))
-          @@ plainto_tsquery('portuguese', words.word)
+          @@ phraseto_tsquery('portuguese', terms.term)
     ) as passed
   `);
   return result.rows[0]?.passed === true;
