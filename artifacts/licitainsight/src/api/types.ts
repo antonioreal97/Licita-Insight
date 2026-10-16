@@ -2,7 +2,7 @@
 // Source of truth: docs/contracts/search-v1.md and docs/contracts/account-v1.md — keep this file in lockstep with them.
 // When the backend publishes the OpenAPI spec, the HTTP adapter maps generated types onto these.
 
-export type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled';
+export type TenderStatus = 'open' | 'under_review' | 'closed' | 'suspended' | 'cancelled' | 'direct';
 
 export type Modality =
   | 'pregao_eletronico'

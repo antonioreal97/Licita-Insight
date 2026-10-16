@@ -2,7 +2,7 @@ import { searchAdapter, type Modality, type SearchMode, type SortOption, type Te
 
 export const DEFAULT_PAGE_SIZE = 20;
 
-const STATUSES: TenderStatus[] = ['open', 'under_review', 'closed', 'suspended', 'cancelled'];
+const STATUSES: TenderStatus[] = ['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct'];
 const SORTS: SortOption[] = ['relevance', 'deadline_asc', 'published_desc', 'first_seen_desc', 'value_desc', 'value_asc'];
 const MODALITIES: Modality[] = [
   'pregao_eletronico',

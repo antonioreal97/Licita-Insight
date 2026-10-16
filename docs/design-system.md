@@ -72,6 +72,7 @@ A paleta não tem vermelho nem âmbar. Nenhuma cor de fora foi criada; os estado
 | Erro / Suspenso / prazo ≤ 48 h | `superficie-inversa` + `texto-inverso` | Bloco invertido; texto de erro solto (`text-destructive`) tem a cor do texto e depende do ícone e da mensagem |
 | Encerrado | `nevoa` + `petroleo` | |
 | Revogado | preenchimento discreto + texto secundário | Rótulo riscado |
+| Contratação direta | `aqua` + `petroleo` | Dispensa/inexigibilidade sem prazo de disputa |
 
 Se o produto precisar de um erro que se distinga só pela cor, isso pede uma cor nova na paleta: decisão da marca,
 não do código.
