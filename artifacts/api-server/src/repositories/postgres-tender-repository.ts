@@ -177,6 +177,8 @@ export const searchWhereFor = (
       sql`${tendersTable.createdAt} > ${newTenderCutoff(now)} and ${tendersTable.createdAt} <= ${now}`,
     );
   }
+  // "Minha região" is strictly geographic: states, macroregions, municipalities and radius. Accepting remote work
+  // still widens fit and recommendations, but no longer pulls tenders from other states into this filter.
   if (criteria.serviceRegion?.scope === "custom") {
     const coverage = criteria.serviceRegion;
     const states = [
@@ -196,15 +198,6 @@ export const searchWhereFor = (
           : []),
       ]),
     ];
-    const remoteSlugs = coverage.acceptsRemote
-      ? [
-          "ti-telecom",
-          "consultoria-tecnica",
-          "educacao-capacitacao",
-          "publicidade-comunicacao",
-          "seguros-financeiros",
-        ]
-      : [];
     filters.push(sql`(
       ${
         states.length
@@ -215,7 +208,6 @@ export const searchWhereFor = (
           : sql`false`
       }
       or ${municipalityCodes.length ? inArray(tendersTable.cityIbgeCode, municipalityCodes) : sql`false`}
-      or ${remoteSlugs.length ? hasCategory(remoteSlugs) : sql`false`}
     )`);
   }
   if (skip !== "valueRange" && criteria.valueMin !== undefined) {
