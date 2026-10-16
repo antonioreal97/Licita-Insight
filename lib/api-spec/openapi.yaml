@@ -602,6 +602,8 @@ paths:
       tags: [ai]
       summary: Read the signed-in account company profile
       security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProfileWorkspaceId"
       responses:
         "200":
           description: Current profile, or null when none was created
@@ -616,6 +618,8 @@ paths:
       tags: [ai]
       summary: Replace the company profile and invalidate previous fit results
       security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProfileWorkspaceId"
       requestBody:
         required: true
         content:
@@ -640,6 +644,8 @@ paths:
       tags: [ai]
       summary: Delete the company profile and its cached fit results
       security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProfileWorkspaceId"
       responses:
         "204":
           description: Profile deleted
@@ -695,6 +701,8 @@ paths:
       tags: [account]
       summary: Count open tenders matching the saved service region
       security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProfileWorkspaceId"
       responses:
         "200":
           description: Approximate current open-tender count
@@ -1868,6 +1876,13 @@ components:
       in: cookie
       name: licita_session
   parameters:
+    ProfileWorkspaceId:
+      name: workspaceId
+      in: query
+      description: >-
+        Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior;
+        supplied ids require an enabled journey and membership.
+      schema: { type: string, pattern: '^ws_[0-9a-f]{32}$' }
     SearchWorkspaceId:
       name: workspaceId
       in: query

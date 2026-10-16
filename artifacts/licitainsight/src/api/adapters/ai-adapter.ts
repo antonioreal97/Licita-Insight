@@ -21,12 +21,12 @@ export interface AiAdapter {
   askTender(tenderId: string, question: string): Promise<AskTenderResult>;
   getTenderSheet(tenderId: string, signal?: AbortSignal): Promise<TenderSheet>;
 
-  getCompanyProfile(signal?: AbortSignal): Promise<CompanyProfileResponse>;
-  saveCompanyProfile(profile: CompanyProfileInput): Promise<CompanyProfileResponse>;
-  deleteCompanyProfile(): Promise<void>;
+  getCompanyProfile(workspaceId?: string, signal?: AbortSignal): Promise<CompanyProfileResponse>;
+  saveCompanyProfile(profile: CompanyProfileInput, workspaceId?: string): Promise<CompanyProfileResponse>;
+  deleteCompanyProfile(workspaceId?: string): Promise<void>;
   listProfileCategories(signal?: AbortSignal): Promise<ProfileCategoriesResponse>;
   listProfileMunicipalities(query: string, signal?: AbortSignal): Promise<ProfileMunicipalitiesResponse>;
-  getCompanyRegionPreview(signal?: AbortSignal): Promise<CompanyRegionPreviewResponse>;
+  getCompanyRegionPreview(workspaceId?: string, signal?: AbortSignal): Promise<CompanyRegionPreviewResponse>;
   listProfilePlatforms(signal?: AbortSignal): Promise<ProfilePlatformsResponse>;
   suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
   suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;

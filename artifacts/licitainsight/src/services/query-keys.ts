@@ -79,6 +79,7 @@ export function scopedMeQueryKeys(workspaceId?: string) {
     return {
       companyProfile: queryKeys.me.companyProfile,
       companyRegionPreview: queryKeys.me.companyRegionPreview,
+      profileMatchPreview: queryKeys.me.profileMatchPreview,
       fit: queryKeys.me.fit,
       savedTenders: queryKeys.me.savedTenders,
       savedSearches: queryKeys.me.savedSearches,
@@ -94,6 +95,7 @@ export function scopedMeQueryKeys(workspaceId?: string) {
   return {
     companyProfile: [...root, 'company-profile'] as const,
     companyRegionPreview: [...root, 'company-region-preview'] as const,
+    profileMatchPreview: (terms: readonly string[], categories: readonly string[]) => [...root, 'profile-match-preview', terms, categories] as const,
     fit: {
       all: fit,
       batch: (tenderIds: string[]) => [...fit, [...new Set(tenderIds)].sort()] as const,

@@ -43,13 +43,16 @@ import type {
   CreateSavedSearchRequest,
   CreateWorkspaceRequest,
   DeleteAccountRequest,
+  DeleteCompanyProfileParams,
   DevLoginRequest,
   DismissRecommendationRequest,
   EmailUnsubscribeRequest,
   EmailUnsubscribeResponse,
   FeatureDisabledResponse,
   ForbiddenResponse,
+  GetCompanyProfileParams,
   GetCompanyRegionPreview200,
+  GetCompanyRegionPreviewParams,
   GetSearchSuggestionsParams,
   GetTenderFitsParams,
   GetTenderHighlightsParams,
@@ -79,6 +82,7 @@ import type {
   ProfileMatchPreviewRequest,
   ProfileMunicipalitiesResponse,
   ProfilePlatformsResponse,
+  PutCompanyProfileParams,
   PutSavedTenderRequest,
   RateLimitedResponse,
   ReadinessCheck200,
@@ -2551,20 +2555,27 @@ export function useGetTenderSheet<TData = Awaited<ReturnType<typeof getTenderShe
 
 
 
-export const getGetCompanyProfileUrl = () => {
+export const getGetCompanyProfileUrl = (params?: GetCompanyProfileParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/me/company-profile`
+  return stringifiedParams.length > 0 ? `/api/v1/me/company-profile?${stringifiedParams}` : `/api/v1/me/company-profile`
 }
 
 /**
  * @summary Read the signed-in account company profile
  */
-export const getCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
+export const getCompanyProfile = async (params?: GetCompanyProfileParams, options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
 
-  return customFetch<CompanyProfileResponse>(getGetCompanyProfileUrl(),
+  return customFetch<CompanyProfileResponse>(getGetCompanyProfileUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2577,23 +2588,23 @@ export const getCompanyProfile = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getGetCompanyProfileQueryKey = () => {
+export const getGetCompanyProfileQueryKey = (params?: GetCompanyProfileParams,) => {
     return [
-    `/api/v1/me/company-profile`
+    `/api/v1/me/company-profile`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyProfile>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyProfile>>, TError = ErrorType<UnauthenticatedResponse>>(params?: GetCompanyProfileParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetCompanyProfileQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanyProfileQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyProfile>>> = ({ signal }) => getCompanyProfile({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyProfile>>> = ({ signal }) => getCompanyProfile(params, { signal, ...requestOptions });
 
 
 
@@ -2611,11 +2622,11 @@ export type GetCompanyProfileQueryError = ErrorType<UnauthenticatedResponse>
  */
 
 export function useGetCompanyProfile<TData = Awaited<ReturnType<typeof getCompanyProfile>>, TError = ErrorType<UnauthenticatedResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetCompanyProfileParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetCompanyProfileQueryOptions(options)
+  const queryOptions = getGetCompanyProfileQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2628,18 +2639,26 @@ export function useGetCompanyProfile<TData = Awaited<ReturnType<typeof getCompan
 
 
 
-export const getPutCompanyProfileUrl = () => {
+export const getPutCompanyProfileUrl = (params?: PutCompanyProfileParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/me/company-profile`
+  return stringifiedParams.length > 0 ? `/api/v1/me/company-profile?${stringifiedParams}` : `/api/v1/me/company-profile`
 }
 
 /**
  * @summary Replace the company profile and invalidate previous fit results
  */
-export const putCompanyProfile = async (companyProfileInput: CompanyProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
+export const putCompanyProfile = async (companyProfileInput: CompanyProfileInput,
+    params?: PutCompanyProfileParams, options?: Parameters<typeof customFetch>[1]): Promise<CompanyProfileResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2655,7 +2674,7 @@ export const putCompanyProfile = async (companyProfileInput: CompanyProfileInput
     }
     return headers;
   };
-return customFetch<CompanyProfileResponse>(getPutCompanyProfileUrl(),
+return customFetch<CompanyProfileResponse>(getPutCompanyProfileUrl(params),
   {
     ...options,
     method: 'PUT',
@@ -2685,9 +2704,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof putCompanyProfile>>, PutCompanyProfileMutationVariables> = (props) => {
-          const {data} = props ?? {};
+          const {data,params} = props ?? {};
 
-          return  putCompanyProfile(data,requestOptions)
+          return  putCompanyProfile(data,params,requestOptions)
         }
 
 
@@ -2700,7 +2719,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type PutCompanyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof putCompanyProfile>>>
     export type PutCompanyProfileMutationBody = BodyType<CompanyProfileInput>
     export type PutCompanyProfileMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
-    export type PutCompanyProfileMutationVariables = {data: BodyType<CompanyProfileInput>}
+    export type PutCompanyProfileMutationVariables = {data: BodyType<CompanyProfileInput>;params?: PutCompanyProfileParams}
 
     /**
  * @summary Replace the company profile and invalidate previous fit results
@@ -2716,20 +2735,27 @@ export const usePutCompanyProfile = <TError = ErrorType<InvalidParameterResponse
       return useMutation(getPutCompanyProfileMutationOptions(options));
     }
 
-export const getDeleteCompanyProfileUrl = () => {
+export const getDeleteCompanyProfileUrl = (params?: DeleteCompanyProfileParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/me/company-profile`
+  return stringifiedParams.length > 0 ? `/api/v1/me/company-profile?${stringifiedParams}` : `/api/v1/me/company-profile`
 }
 
 /**
  * @summary Delete the company profile and its cached fit results
  */
-export const deleteCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const deleteCompanyProfile = async (params?: DeleteCompanyProfileParams, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
-  return customFetch<void>(getDeleteCompanyProfileUrl(),
+  return customFetch<void>(getDeleteCompanyProfileUrl(params),
   {
     ...options,
     method: 'DELETE'
@@ -2745,8 +2771,8 @@ export const deleteCompanyProfile = async ( options?: Parameters<typeof customFe
 export const getDeleteCompanyProfileMutationKey = () => ['deleteCompanyProfile'] as const;
 
 export const getDeleteCompanyProfileMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,DeleteCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,DeleteCompanyProfileMutationVariables, TContext> => {
 
 const mutationKey = getDeleteCompanyProfileMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2758,10 +2784,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCompanyProfile>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCompanyProfile>>, DeleteCompanyProfileMutationVariables> = (props) => {
+          const {params} = props ?? {};
 
-
-          return  deleteCompanyProfile(requestOptions)
+          return  deleteCompanyProfile(params,requestOptions)
         }
 
 
@@ -2774,17 +2800,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteCompanyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCompanyProfile>>>
 
     export type DeleteCompanyProfileMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>
-
+    export type DeleteCompanyProfileMutationVariables = {params?: DeleteCompanyProfileParams}
 
     /**
  * @summary Delete the company profile and its cached fit results
  */
 export const useDeleteCompanyProfile = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyProfile>>, TError,DeleteCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteCompanyProfile>>,
         TError,
-        void,
+        DeleteCompanyProfileMutationVariables,
         TContext
       > => {
       return useMutation(getDeleteCompanyProfileMutationOptions(options));
@@ -2951,20 +2977,27 @@ export function useListProfileMunicipalities<TData = Awaited<ReturnType<typeof l
 
 
 
-export const getGetCompanyRegionPreviewUrl = () => {
+export const getGetCompanyRegionPreviewUrl = (params?: GetCompanyRegionPreviewParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/me/company-profile/region-preview`
+  return stringifiedParams.length > 0 ? `/api/v1/me/company-profile/region-preview?${stringifiedParams}` : `/api/v1/me/company-profile/region-preview`
 }
 
 /**
  * @summary Count open tenders matching the saved service region
  */
-export const getCompanyRegionPreview = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetCompanyRegionPreview200> => {
+export const getCompanyRegionPreview = async (params?: GetCompanyRegionPreviewParams, options?: Parameters<typeof customFetch>[1]): Promise<GetCompanyRegionPreview200> => {
 
-  return customFetch<GetCompanyRegionPreview200>(getGetCompanyRegionPreviewUrl(),
+  return customFetch<GetCompanyRegionPreview200>(getGetCompanyRegionPreviewUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2977,23 +3010,23 @@ export const getCompanyRegionPreview = async ( options?: Parameters<typeof custo
 
 
 
-export const getGetCompanyRegionPreviewQueryKey = () => {
+export const getGetCompanyRegionPreviewQueryKey = (params?: GetCompanyRegionPreviewParams,) => {
     return [
-    `/api/v1/me/company-profile/region-preview`
+    `/api/v1/me/company-profile/region-preview`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetCompanyRegionPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetCompanyRegionPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>(params?: GetCompanyRegionPreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetCompanyRegionPreviewQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetCompanyRegionPreviewQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyRegionPreview>>> = ({ signal }) => getCompanyRegionPreview({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyRegionPreview>>> = ({ signal }) => getCompanyRegionPreview(params, { signal, ...requestOptions });
 
 
 
@@ -3011,11 +3044,11 @@ export type GetCompanyRegionPreviewQueryError = ErrorType<UnauthenticatedRespons
  */
 
 export function useGetCompanyRegionPreview<TData = Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError = ErrorType<UnauthenticatedResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetCompanyRegionPreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCompanyRegionPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetCompanyRegionPreviewQueryOptions(options)
+  const queryOptions = getGetCompanyRegionPreviewQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

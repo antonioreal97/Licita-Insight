@@ -475,6 +475,117 @@ test(
     );
 
     await t.test(
+      "the v1 company profile can follow the explicit active workspace",
+      async () => {
+        const created = await request("/v1/me/workspaces", "POST", a.cookie, {
+          type: "procurement",
+          name: "Infraestrutura",
+        });
+        assert.equal(created.status, 201);
+        const workspaceId = ((await created.json()) as { id: string }).id;
+        const query = `?workspaceId=${encodeURIComponent(workspaceId)}`;
+        const profile = {
+          description: "Fornecemos computadores e suporte técnico corporativo.",
+          offerings: ["computadores"],
+          exclusions: [],
+          selectedCategories: ["ti-telecom"],
+          selectedKeywords: ["servidor rack"],
+          excludedKeywords: [],
+          registeredPlatforms: [],
+          coverage: {
+            scope: "national",
+            mode: "strict",
+            acceptsRemote: false,
+          },
+          valueRange: { min: null, max: null },
+          size: "other",
+        };
+
+        const saved = await request(
+          `/v1/me/company-profile${query}`,
+          "PUT",
+          a.cookie,
+          profile,
+        );
+        assert.equal(saved.status, 200);
+        assert.equal(
+          ((await saved.json()) as { profile: { description: string } }).profile
+            .description,
+          profile.description,
+        );
+        const explicit = await request(
+          `/v1/me/company-profile${query}`,
+          "GET",
+          a.cookie,
+        );
+        assert.equal(explicit.status, 200);
+        assert.equal(
+          ((await explicit.json()) as { profile: { description: string } })
+            .profile.description,
+          profile.description,
+        );
+        assert.equal(
+          (
+            await request(
+              `/v1/me/company-profile/region-preview${query}`,
+              "GET",
+              a.cookie,
+            )
+          ).status,
+          200,
+        );
+        assert.equal(
+          (
+            await request(
+              `/v1/me/company-profile?workspaceId=${wsB}`,
+              "GET",
+              a.cookie,
+            )
+          ).status,
+          404,
+        );
+        assert.equal(
+          (
+            await request(
+              "/v1/me/company-profile?workspaceId=not-a-workspace",
+              "GET",
+              a.cookie,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          (
+            await request(
+              `/v1/me/company-profile${query}`,
+              "DELETE",
+              a.cookie,
+            )
+          ).status,
+          204,
+        );
+        assert.equal(
+          (
+            await owner.query(
+              "select count(*)::int as count from workspace_profiles where workspace_id = $1",
+              [workspaceId],
+            )
+          ).rows[0].count,
+          0,
+        );
+        assert.equal(
+          (
+            await owner.query(
+              "select count(*)::int as count from workspace_profiles where workspace_id = $1",
+              [wsA],
+            )
+          ).rows[0].count,
+          1,
+        );
+      },
+    );
+
+    await t.test(
       "read-only workspaces remain readable and selectable; archived workspaces remain readable",
       async () => {
         const second = await request("/v1/me/workspaces", "POST", a.cookie, {

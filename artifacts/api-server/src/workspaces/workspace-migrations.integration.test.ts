@@ -138,7 +138,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     await admin.end();
   });
 
-  await t.test("upgrade from 0041 applies 0042 and 0043 from main before W1 and W2", async () => {
+  await t.test("upgrade from 0041 applies 0042 through 0045 from main before W1 and W2", async () => {
     await runMigrations(upgraded, 41);
     await insertLegacyRows(upgraded);
     const before = await rowCounts(upgraded);
@@ -162,6 +162,18 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     assert.equal(opportunityColumns.rows.length, 11);
     await assert.rejects(verifyWorkspaceSchema(upgraded), /table workspaces\b/);
     await runMigrations(upgraded, 44);
+    const searchIndexes = await upgraded.query(
+      "select indexname from pg_indexes where schemaname = 'public' and indexname = 'tenders_open_published_at_idx'",
+    );
+    assert.equal(searchIndexes.rows.length, 1);
+    await assert.rejects(verifyWorkspaceSchema(upgraded), /table workspaces\b/);
+    await runMigrations(upgraded, 45);
+    const idbConstraint = await upgraded.query(
+      "select pg_get_constraintdef(oid) as definition from pg_constraint where conname = 'cultural_opportunities_source_check'",
+    );
+    assert.match(idbConstraint.rows[0]?.definition ?? "", /idb/);
+    await assert.rejects(verifyWorkspaceSchema(upgraded), /table workspaces\b/);
+    await runMigrations(upgraded, 46);
     await assert.rejects(verifyWorkspaceSchema(upgraded), (error: Error) => {
       assert.doesNotMatch(error.message, /table /);
       for (const table of scopedTables) assert.match(error.message, new RegExp(`column ${table}\\.workspace_id`));
@@ -209,7 +221,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
   });
 
   await t.test("the concurrent production variant builds the same schema as the versioned 0048", async () => {
-    await runMigrations(concurrent, 44);
+    await runMigrations(concurrent, 46);
     const statements = readFileSync(
       path.join(migrationsFolder, "manual/0048_workspace_scope_expand_concurrently.sql"),
       "utf8",

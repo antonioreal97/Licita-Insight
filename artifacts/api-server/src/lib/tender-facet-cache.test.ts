@@ -42,7 +42,9 @@ describe("tender facet cache", () => {
   it("does not cache text or user-specific searches", () => {
     assert.equal(tenderFacetCacheKey(criteria({ query: "limpeza" })), null);
     assert.equal(tenderFacetCacheKey(criteria({ tenderIds: ["one"] })), null);
+    assert.equal(tenderFacetCacheKey(criteria({ notificationId: "notification-one" })), null);
     assert.equal(tenderFacetCacheKey(criteria({ myRegion: true })), null);
+    assert.equal(tenderFacetCacheKey(criteria({ serviceRegion: { scope: "national", mode: "prioritize", acceptsRemote: false } })), null);
   });
 
   it("serves a cached value and reloads it after collector invalidation", async () => {

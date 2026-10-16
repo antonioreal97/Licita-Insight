@@ -2992,6 +2992,11 @@ export type AiQuotaExceededResponse = ErrorResponse;
 export type AiUnavailableResponse = ErrorResponse;
 
 /**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ */
+export type ProfileWorkspaceIdParameter = string;
+
+/**
  * Optional workspace context. Without a session returns 401; malformed ids return 400. Missing, foreign or inaccessible ids, and all ids while workspace routes are disabled, produce the same universal response with meta.workspace null and Cache-Control no-store.
  */
 export type SearchWorkspaceIdParameter = string;
@@ -3231,6 +3236,30 @@ export const SearchTransparencyContractsSort = {
   value_asc: 'value_asc',
 } as const;
 
+export type GetCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
+export type PutCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
+export type DeleteCompanyProfileParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
+};
+
 export type ListProfileMunicipalitiesParams = {
 /**
  * @minLength 2
@@ -3242,6 +3271,14 @@ q: string;
  * @maxLength 2
  */
 state?: string;
+};
+
+export type GetCompanyRegionPreviewParams = {
+/**
+ * Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.
+ * @pattern ^ws_[0-9a-f]{32}$
+ */
+workspaceId?: ProfileWorkspaceIdParameter;
 };
 
 export type GetCompanyRegionPreview200 = {

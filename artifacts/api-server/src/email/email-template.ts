@@ -524,6 +524,8 @@ export const renderNotificationEmail = (input: {
   deadlines?: readonly EmailDeadlineSnapshot[];
   /** Highlights of the cited tenders, by tender id (see ai/tender-highlights.ts); absent tenders render as before. */
   highlights?: ReadonlyMap<string, EmailTenderHighlight>;
+  /** Digest context after the cutover; omitted in legacy so emitted URLs stay byte-for-byte unchanged. */
+  workspaceId?: string;
   now?: Date;
 }) => {
   const highlights = input.highlights ?? new Map<string, EmailTenderHighlight>();
@@ -532,7 +534,7 @@ export const renderNotificationEmail = (input: {
   const unsubscribeApiUrl = `${input.origin}/api/v1/email/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const unsubscribePageUrl = `${input.origin}/descadastro?token=${encodeURIComponent(input.unsubscribeToken)}&scope=all`;
   const settingsUrl = `${input.origin}/settings#notificacoes`;
-  const triageUrl = `${input.origin}/triagem`;
+  const triageUrl = `${input.origin}/triagem${input.workspaceId ? `?workspaceId=${encodeURIComponent(input.workspaceId)}` : ""}`;
   const dashboardUrl = `${input.origin}/dashboard`;
   const heading =
     input.mode === "digest"

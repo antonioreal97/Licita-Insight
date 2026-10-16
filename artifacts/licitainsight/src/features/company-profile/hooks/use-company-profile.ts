@@ -12,7 +12,7 @@ export function useCompanyProfile() {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: scopedMeQueryKeys(workspaceId).companyProfile,
-    queryFn: ({ signal }) => aiService.getCompanyProfile(signal),
+    queryFn: ({ signal }) => aiService.getCompanyProfile(workspaceId, signal),
     enabled: status === 'authenticated',
     staleTime: 60_000,
   });
@@ -40,7 +40,7 @@ export function useCompanyRegionPreview(enabled: boolean) {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: scopedMeQueryKeys(workspaceId).companyRegionPreview,
-    queryFn: ({ signal }) => aiService.getCompanyRegionPreview(signal),
+    queryFn: ({ signal }) => aiService.getCompanyRegionPreview(workspaceId, signal),
     enabled,
     staleTime: 60_000,
   });
@@ -85,10 +85,11 @@ export function useProfileDescriptionSuggestions(description: string) {
  * the next one loads.
  */
 export function useProfileMatchPreview(terms: string[], categories: string[]) {
+  const workspaceId = useActiveWorkspaceId();
   const sortedTerms = [...new Set(terms.map((term) => term.trim()).filter(Boolean))].sort();
   const sortedCategories = [...new Set(categories)].sort();
   return useQuery({
-    queryKey: queryKeys.me.profileMatchPreview(sortedTerms, sortedCategories),
+    queryKey: scopedMeQueryKeys(workspaceId).profileMatchPreview(sortedTerms, sortedCategories),
     queryFn: ({ signal }) => aiService.previewProfileMatches({ terms: sortedTerms, categories: sortedCategories }, signal),
     enabled: sortedTerms.length + sortedCategories.length > 0,
     placeholderData: keepPreviousData,
@@ -102,7 +103,7 @@ export function useSaveCompanyProfile() {
   const workspaceId = useActiveWorkspaceId();
   const keys = scopedMeQueryKeys(workspaceId);
   return useMutation({
-    mutationFn: (profile: CompanyProfileInput) => aiService.saveCompanyProfile(profile),
+    mutationFn: (profile: CompanyProfileInput) => aiService.saveCompanyProfile(profile, workspaceId),
     onSuccess: (response) => {
       queryClient.setQueryData<CompanyProfileResponse>(keys.companyProfile, response);
       void queryClient.invalidateQueries({ queryKey: keys.companyRegionPreview });
@@ -117,7 +118,7 @@ export function useDeleteCompanyProfile() {
   const workspaceId = useActiveWorkspaceId();
   const keys = scopedMeQueryKeys(workspaceId);
   return useMutation({
-    mutationFn: () => aiService.deleteCompanyProfile(),
+    mutationFn: () => aiService.deleteCompanyProfile(workspaceId),
     onSuccess: () => {
       queryClient.setQueryData<CompanyProfileResponse>(keys.companyProfile, { profile: null });
       queryClient.removeQueries({ queryKey: keys.companyRegionPreview });

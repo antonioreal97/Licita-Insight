@@ -8,7 +8,8 @@ import { useCompanyProfile, useSaveCompanyProfile } from '@/features/company-pro
 import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlights';
 import { accountService } from '@/services/account-service';
 import { aiService, PROFILE_LIMITS } from '@/services/ai-service';
-import { queryKeys } from '@/services/query-keys';
+import { scopedMeQueryKeys } from '@/services/query-keys';
+import { useActiveWorkspaceId } from '@/features/workspaces/workspace-scope';
 import { useRecommendations } from '../hooks/use-recommendations';
 import { advanceProgress, dismissalMessage, suggestedExclusion, TRIAGE_GOAL, type TriageAction } from './triage-state';
 import { useTriageProgress } from './use-triage-progress';
@@ -19,6 +20,8 @@ export default function TriagePage() {
   const profile = useCompanyProfile();
   const saveProfile = useSaveCompanyProfile();
   const client = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
+  const scopedKeys = scopedMeQueryKeys(workspaceId);
   const { progress, update } = useTriageProgress();
   const current = progress.reviewed.length < TRIAGE_GOAL ? recommendations.data?.data.find(item => !progress.reviewed.includes(item.tender.id)) : undefined;
   const highlights = useTenderHighlights(current ? [current.tender.id] : []);
@@ -40,7 +43,7 @@ export default function TriagePage() {
         void accountService
           .recordRecommendationInterest(tender.id)
           .catch((metricError) => console.error('[triage] Edital salvo, mas não foi possível registrar a métrica de interesse.', metricError));
-        void client.invalidateQueries({ queryKey: queryKeys.me.savedTenders.all });
+        void client.invalidateQueries({ queryKey: scopedKeys.savedTenders.all });
         setFeedback('Interesse marcado. O edital está em Editais salvos.');
       } else if (action === 'dismiss') {
         await accountService.dismissRecommendation(tender.id, reason);
@@ -49,7 +52,7 @@ export default function TriagePage() {
       setExclusion(reason === 'not_offering' ? suggestedExclusion(tender) || null : null);
       update(advanceProgress(progress, tender.id, action));
       // Keep this queue stable until the user leaves; dashboard recommendations refresh in the background.
-      void client.invalidateQueries({ queryKey: queryKeys.me.recommendations, refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: scopedKeys.recommendations, refetchType: 'none' });
     } catch (actionError) {
       console.error(`[triage] Falha ao registrar "${action}" no edital ${tender.id}.`, actionError);
       setError(`Não foi possível registrar sua escolha (${actionError instanceof Error ? actionError.message : String(actionError)}). O edital continua aqui; tente novamente.`);
@@ -61,12 +64,12 @@ export default function TriagePage() {
     locked.current = true; setBusy(true); setError('');
     try {
       // Re-read to preserve edits made since the triage started. No profile is changed before this confirmation.
-      const { profile: latest } = await aiService.getCompanyProfile();
+      const { profile: latest } = await aiService.getCompanyProfile(workspaceId);
       if (!latest) { setError('Seu perfil ainda não foi configurado. Configure-o antes de adicionar exclusões.'); return; }
       const exclusions = Array.from(new Set([...latest.exclusions, term]));
       if (exclusions.length > PROFILE_LIMITS.terms) { setError(`O perfil já tem o máximo de ${PROFILE_LIMITS.terms} exclusões. Remova uma em Configurações para adicionar “${term}”.`); return; }
       await saveProfile.mutateAsync({ ...latest, exclusions });
-      void client.invalidateQueries({ queryKey: queryKeys.me.recommendations, refetchType: 'none' });
+      void client.invalidateQueries({ queryKey: scopedKeys.recommendations, refetchType: 'none' });
       setFeedback(`“${term}” foi adicionado às exclusões do perfil.`); setExclusion(null);
     } catch (profileError) {
       console.error(`[triage] Falha ao adicionar "${term}" às exclusões do perfil.`, profileError);

@@ -361,7 +361,7 @@ test("e-mail jobs, retention and the drain query under the cutover flag", { skip
       `insert into notifications
        (id, user_id, workspace_id, type, dedupe_key, created_at, saved_search_id, saved_search_name,
         saved_search_query, match_count, tender_ids)
-       values ($1, $2, $3, 'saved_search_new_matches', $4, now(), 'highlight-search', 'Computadores',
+       values ($1, $2, $3, 'saved_search_new_matches', $4, now() - interval '1 second', 'highlight-search', 'Computadores',
         'q=computadores', 1, $5)`,
       [
         notificationId,

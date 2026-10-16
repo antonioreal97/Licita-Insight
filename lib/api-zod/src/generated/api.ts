@@ -842,7 +842,7 @@ export const ListWorkspaceRecommendationsResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -898,7 +898,7 @@ export const ListWorkspaceRecommendationsResponse = zod.object({
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
   "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(listWorkspaceRecommendationsResponseOpportunitiesItemOpportunityAmountMin).nullable(),
@@ -1622,6 +1622,13 @@ export const GetTenderSheetResponse = zod.object({
 /**
  * @summary Read the signed-in account company profile
  */
+export const getCompanyProfileQueryWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const GetCompanyProfileQueryParams = zod.object({
+  "workspaceId": zod.coerce.string().regex(getCompanyProfileQueryWorkspaceIdRegExp).optional().describe('Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.')
+})
+
 export const getCompanyProfileResponseProfileOneOneDescriptionMin = 20;
 export const getCompanyProfileResponseProfileOneOneDescriptionMax = 600;
 
@@ -1727,6 +1734,13 @@ export const GetCompanyProfileResponse = zod.object({
 /**
  * @summary Replace the company profile and invalidate previous fit results
  */
+export const putCompanyProfileQueryWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const PutCompanyProfileQueryParams = zod.object({
+  "workspaceId": zod.coerce.string().regex(putCompanyProfileQueryWorkspaceIdRegExp).optional().describe('Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.')
+})
+
 export const putCompanyProfileBodyDescriptionMin = 20;
 export const putCompanyProfileBodyDescriptionMax = 600;
 
@@ -1927,6 +1941,13 @@ export const PutCompanyProfileResponse = zod.object({
 /**
  * @summary Delete the company profile and its cached fit results
  */
+export const deleteCompanyProfileQueryWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const DeleteCompanyProfileQueryParams = zod.object({
+  "workspaceId": zod.coerce.string().regex(deleteCompanyProfileQueryWorkspaceIdRegExp).optional().describe('Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.')
+})
+
 export const DeleteCompanyProfileResponse = zod.void()
 
 
@@ -1982,6 +2003,13 @@ export const ListProfileMunicipalitiesResponse = zod.object({
 /**
  * @summary Count open tenders matching the saved service region
  */
+export const getCompanyRegionPreviewQueryWorkspaceIdRegExp = new RegExp('^ws_[0-9a-f]{32}$');
+
+
+export const GetCompanyRegionPreviewQueryParams = zod.object({
+  "workspaceId": zod.coerce.string().regex(getCompanyRegionPreviewQueryWorkspaceIdRegExp).optional().describe('Optional active Workspace context. Omitted clients keep the legacy/default-Workspace behavior; supplied ids require an enabled journey and membership.')
+})
+
 export const getCompanyRegionPreviewResponseCountMin = 0;
 
 

@@ -339,6 +339,10 @@ type NotificationPreferences = {
 
 O perfil da empresa (`GET|PUT|DELETE /api/v1/me/company-profile`) exige apenas sessão, com CSRF no `PUT` e no `DELETE`. A prévia da região exige acesso ativo (`402 SUBSCRIPTION_REQUIRED` sem acesso); alertas e aderência continuam pagos. A exportação LGPD permanece acessível com apenas sessão. Decisão do dono de 13/10/2026: o perfil da empresa continua disponível sem acesso ativo.
 
+Na Fase 1, esses três métodos e `GET /api/v1/me/company-profile/region-preview` aceitam `workspaceId` opcional.
+Sem o parâmetro, o adaptador v1 continua no perfil legado/Espaço padrão; com jornadas habilitadas, a UI envia o
+Espaço ativo e a API revalida associação e flag antes de ler ou gravar `workspace_profiles` pela porta de corte.
+
 `GET|PUT|DELETE /api/v1/me/company-profile` continua aceitando os campos históricos `description`, `offerings`, `exclusions`, `coverage`, `valueRange` e `size`. O `PUT` também persiste três listas explícitas, devolvidas no `GET` e incluídas na exportação LGPD:
 
 ```ts

@@ -32,13 +32,13 @@ pendentes dentro de uma única transação**, e `CREATE INDEX CONCURRENTLY` não
 
 As duas terminam no mesmo schema: mesmas colunas, mesmas FKs (validadas) e mesmos índices, com os mesmos nomes. O
 teste `artifacts/api-server/src/workspaces/workspace-migrations.integration.test.ts` prova isso num PostgreSQL
-temporário (aplica 0043 da main + 0047 + variante de produção e compara colunas, constraints e índices com a versionada; depois
+temporário (aplica o diário da `main` até 0045 + 0047 + variante de produção e compara colunas, constraints e índices com a versionada; depois
 confirma que a versionada aplicada por cima não muda nada). A versão manual fica fora do `_journal.json` e o
 migrador do Drizzle não a lê.
 
 ## Procedimento em produção (o dono executa)
 
-1. Conferir que a 0043 da main e a 0047 estão aplicadas (consulta da [0047](./0047-workspaces-foundation.md#procedimento-em-produção-o-dono-executa)).
+1. Conferir que as 0044/0045 da `main`, o backfill manual 0046 e a 0047 estão aplicados (consulta da [0047](./0047-workspaces-foundation.md#procedimento-em-produção-o-dono-executa)).
 2. Backup verificado (`pg_dump -Fc`).
 3. **Variante concorrente, sem transação.** Rodar
    `lib/db/migrations/manual/0048_workspace_scope_expand_concurrently.sql` com `psql -v ON_ERROR_STOP=1`, **sem `-1`
@@ -102,7 +102,7 @@ Aplicar só a versionada em produção, sem o passo 3, funciona, mas cada `CREAT
 (salvar edital, notificações, fila de IA) enquanto o índice é construído, e a validação das FKs varre cada tabela com
 escritas bloqueadas. Não é o caminho recomendado.
 
-**Ordem obrigatória: 0043 da main, 0047 e 0048 primeiro, API depois.** O schema Drizzle da Fase 1 declara `workspace_id` nessas
+**Ordem obrigatória: diário da `main` até 0045, backfill manual 0046, 0047 e 0048 primeiro, API depois.** O schema Drizzle da Fase 1 declara `workspace_id` nessas
 tabelas, e várias consultas usam `select()`/`returning()` sem projeção; sem a 0048, elas falhariam com
 `column "workspace_id" does not exist`. Por isso a API verifica na subida e se recusa a iniciar. A versão atual
 continua funcionando com a 0048 aplicada: não lê as colunas e grava `workspace_id` nulo.

@@ -35,6 +35,8 @@ export type TenderSearchParams = {
   /** Exact tender snapshot captured by an owned notification. Never persisted in saved searches. */
   notification?: string;
   myRegion?: boolean;
+  /** Active Workspace context. Added by the request hook, never persisted in the shareable search URL. */
+  workspaceId?: string;
   valueMin?: number;
   valueMax?: number;
   publishedFrom?: string;
@@ -178,6 +180,12 @@ export type TenderSearchResponse = {
       storedTenderCount: number;
       savedSearchName: string | null;
       savedSearchQuery: string | null;
+    } | null;
+    workspace?: {
+      id: string;
+      type: string;
+      accessMode: string;
+      archivedAt: string | null;
     } | null;
   };
 };

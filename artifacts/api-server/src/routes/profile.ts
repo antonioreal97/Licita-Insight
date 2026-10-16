@@ -12,6 +12,7 @@ import { listProfilePlatforms } from "../profile/platform-options";
 import { getCompanyProfile } from "../ai/company-fit-service";
 import { searchMunicipalities } from "../service-region/service-region";
 import { countOpenTendersInServiceRegion } from "../service-region/service-region-service";
+import { isWorkspaceId } from "../workspaces/workspace-service";
 
 const router: IRouter = Router();
 
@@ -38,8 +39,12 @@ router.get(
   "/v1/me/company-profile/region-preview",
   requireAuth,
   requireSubscription,
-  asyncHandler(async (_req, res) => {
-    const profile = await getCompanyProfile(authContext(res).user.id);
+  asyncHandler(async (req, res) => {
+    const rawWorkspaceId = req.query.workspaceId;
+    if (rawWorkspaceId !== undefined && (typeof rawWorkspaceId !== "string" || !isWorkspaceId(rawWorkspaceId))) {
+      throw new InvalidParameterError("workspaceId is invalid", [{ field: "workspaceId", issue: "invalid_value" }]);
+    }
+    const profile = await getCompanyProfile(authContext(res).user.id, rawWorkspaceId as string | undefined);
     res.json({
       count: profile
         ? await countOpenTendersInServiceRegion(profile.coverage)
