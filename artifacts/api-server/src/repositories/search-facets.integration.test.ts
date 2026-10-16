@@ -11,8 +11,12 @@ test(
     process.env.DATABASE_URL = url.toString();
 
     const { pool } = await import("@workspace/db");
-    const { PostgresTenderRepository } =
-      await import("./postgres-tender-repository");
+    const [{ PostgresTenderRepository }, { invalidateTenderFacetCache }] =
+      await Promise.all([
+        import("./postgres-tender-repository"),
+        import("../lib/tender-facet-cache"),
+      ]);
+    invalidateTenderFacetCache();
     await pool.query(`create schema "${schema}"`);
     await pool.query(
       `create table "${schema}"."tenders" (like public.tenders including all)`,
@@ -307,5 +311,59 @@ test(
       organization: 1,
       platform: 1,
     });
+
+    await insert({
+      id: "late-match",
+      title: "Fornecimento tardio de medicamentos",
+      status: "open",
+      modality: "dispensa",
+      state: "RJ",
+      city: "Rio de Janeiro",
+      cityCode: "3304557",
+      organizationId: "org-b",
+      organizationName: "Órgão B",
+      categories: [{ slug: "cat-b", label: "Categoria B" }],
+      estimatedValue: 400,
+      platform: null,
+      platformLabel: null,
+      createdAt: now,
+    });
+    const stillCached = await new PostgresTenderRepository().search({
+      query: null,
+      mode: "keyword",
+      status: ["open"],
+      modality: [],
+      state: [],
+      city: [],
+      organizationId: [],
+      sourceId: [],
+      category: ["cat-b"],
+      platform: [],
+      newOnly: false,
+      sort: "relevance",
+      page: 1,
+      pageSize: 20,
+      facets: true,
+    });
+    assert.equal(stillCached.pagination.total, 1);
+    invalidateTenderFacetCache();
+    const afterInvalidation = await new PostgresTenderRepository().search({
+      query: null,
+      mode: "keyword",
+      status: ["open"],
+      modality: [],
+      state: [],
+      city: [],
+      organizationId: [],
+      sourceId: [],
+      category: ["cat-b"],
+      platform: [],
+      newOnly: false,
+      sort: "relevance",
+      page: 1,
+      pageSize: 20,
+      facets: true,
+    });
+    assert.equal(afterInvalidation.pagination.total, 2);
   },
 );
