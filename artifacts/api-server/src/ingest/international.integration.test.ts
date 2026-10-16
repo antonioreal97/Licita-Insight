@@ -65,7 +65,12 @@ test(
         const { fetcher } = fixtureFetcher(overrides);
         return collectInternational(at, {
           collect: (options) =>
-            collectInternationalOnce({ ...options, delayMs: 0, fetcher }),
+            collectInternationalOnce({
+              ...options,
+              delayMs: 0,
+              fetcher,
+              sources: ["worldbank", "eu_ft"],
+            }),
           ptaxFetcher: fetcher,
           translator,
         });

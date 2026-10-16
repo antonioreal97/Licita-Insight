@@ -9,6 +9,7 @@ import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
+import { PardalTeaser } from '@/features/landing/components/pardal-teaser';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { formatCurrencyPrecise } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -187,6 +188,25 @@ function Hero({ reducedMotion }: { reducedMotion: boolean }) {
         <p className="mt-5 type-meta text-muted-foreground">Pesquisar é livre, sem cadastro. Os alertas vêm com a conta.</p>
       </div>
       <HeroArt reducedMotion={reducedMotion} />
+    </section>
+  );
+}
+
+function TeaserSection({ reducedMotion }: { reducedMotion: boolean }) {
+  return (
+    <section id="em-acao" data-testid="section-teaser" aria-labelledby="em-acao-titulo" className="pb-20 sm:pb-28">
+      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className={eyebrow}>Na prática</div>
+          <h2 id="em-acao-titulo" className={sectionTitle}>
+            Da busca ao edital certo.
+          </h2>
+          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
+            Escreva o que você vende e veja os editais abertos com órgão, prazo e valor.
+          </p>
+        </div>
+        <PardalTeaser reducedMotion={reducedMotion} className="mt-10 lg:mt-12" />
+      </div>
     </section>
   );
 }
@@ -494,6 +514,7 @@ export default function LandingPage() {
 
       <main id="conteudo" tabIndex={-1} className="outline-none">
         <Hero reducedMotion={reducedMotion} />
+        <TeaserSection reducedMotion={reducedMotion} />
         <HowItWorksSection />
         <OpportunityMapSection />
         <FindsSection />

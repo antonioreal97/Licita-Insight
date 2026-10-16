@@ -178,7 +178,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
 
     // Production applies these files by hand; a second run must change nothing.
     const schemaBefore = await catalog(upgraded);
-    for (const file of ["0044_workspaces_foundation.sql", "0045_workspace_scope_expand.sql"]) {
+    for (const file of ["0047_workspaces_foundation.sql", "0048_workspace_scope_expand.sql"]) {
       await upgraded.query(readFileSync(path.join(migrationsFolder, file), "utf8"));
     }
     assert.deepEqual(await catalog(upgraded), schemaBefore);
@@ -208,10 +208,10 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     );
   });
 
-  await t.test("the concurrent production variant builds the same schema as the versioned 0045", async () => {
+  await t.test("the concurrent production variant builds the same schema as the versioned 0048", async () => {
     await runMigrations(concurrent, 44);
     const statements = readFileSync(
-      path.join(migrationsFolder, "manual/0045_workspace_scope_expand_concurrently.sql"),
+      path.join(migrationsFolder, "manual/0048_workspace_scope_expand_concurrently.sql"),
       "utf8",
     ).split("--> statement-breakpoint");
     // One statement per query, outside any transaction block, as psql runs it without -1.
@@ -225,7 +225,7 @@ test("workspace migrations W1/W2 with PostgreSQL", { skip: !process.env.PNCP_TES
     assert.ok(manual.indexes.every((index) => index.valid === true));
     assert.ok(manual.constraints.every((constraint) => constraint.validated === true));
 
-    // Then the regular 0045 apply is a no-op on top of it.
+    // Then the regular 0048 apply is a no-op on top of it.
     await runMigrations(concurrent);
     assert.deepEqual(await catalog(concurrent), manual);
     assert.deepEqual(await verifyWorkspaceSchema(concurrent), { mode: "legacy", writesPaused: false });

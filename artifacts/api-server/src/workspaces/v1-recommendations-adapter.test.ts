@@ -103,7 +103,7 @@ const recordingDatabase = (mode: Mode, options: { writesPaused?: boolean; recomm
 test("a dismissal is keyed by the user in legacy and stamped with the default workspace in workspaces", async () => {
   const legacy = recordingDatabase("legacy");
   // The account-wide metric uses the real database; its availability is unrelated to this adapter.
-  await dismissRecommendation("user-1", TENDER_ID, now, legacy.database).catch(() => undefined);
+  await dismissRecommendation("user-1", TENDER_ID, now, undefined, legacy.database).catch(() => undefined);
   assert.deepEqual(legacy.log, [
     "read tenders",
     "insert recommendation_dismissals",
@@ -113,7 +113,7 @@ test("a dismissal is keyed by the user in legacy and stamped with the default wo
   assert.deepEqual(Object.keys(legacy.conflictSets[0]!), ["dismissedAt"]);
 
   const workspaces = recordingDatabase("workspaces");
-  await dismissRecommendation("user-1", TENDER_ID, now, workspaces.database).catch(() => undefined);
+  await dismissRecommendation("user-1", TENDER_ID, now, undefined, workspaces.database).catch(() => undefined);
   assert.deepEqual(workspaces.log, [
     "read workspace_members",
     "read tenders",
@@ -151,7 +151,7 @@ test("erasing the history reaches every event of the account in both modes", asy
 test("paused writes answer 503 in both modes before any table is touched", async () => {
   for (const mode of ["legacy", "workspaces"] as const) {
     const { database, log } = recordingDatabase(mode, { writesPaused: true });
-    await assert.rejects(dismissRecommendation("user-1", TENDER_ID, now, database), MaintenanceInProgressError);
+    await assert.rejects(dismissRecommendation("user-1", TENDER_ID, now, undefined, database), MaintenanceInProgressError);
     await assert.rejects(recordRecommendationEvent("user-1", { type: "interest", tenderId: TENDER_ID }, now, database), MaintenanceInProgressError);
     await assert.rejects(deleteRecommendationHistory("user-1", database), MaintenanceInProgressError);
     assert.deepEqual(log, []);

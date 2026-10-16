@@ -773,6 +773,34 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/profile/match-preview:
+    post:
+      operationId: previewProfileOpenTenderMatches
+      tags: [account]
+      summary: Count open tenders matching the profile terms and categories being edited
+      description: >-
+        Each term matches as a whole expression (words together and in order, Portuguese stemming), or the tender
+        carries one of the categories. Nothing is stored.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileMatchPreviewRequest"
+      responses:
+        "200":
+          description: Approximate count of open tenders that match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileMatchPreview"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/me/fit:
     get:
       operationId: getTenderFits
@@ -1739,8 +1767,14 @@ paths:
           in: path
           required: true
           schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DismissRecommendationRequest" }
       responses:
         "204": { description: Recommendation dismissed }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "402": { $ref: "#/components/responses/SubscriptionRequired" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -2468,6 +2502,13 @@ components:
           type: boolean
           description: Kept as it is when omitted.
       required: [personalizationEnabled]
+    DismissRecommendationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [not_offering, region, value, deadline]
+          description: Optional explicit feedback; omitted preserves the existing topic penalty.
     RecommendationEventRequest:
       oneOf:
         - type: object
@@ -3398,6 +3439,22 @@ components:
             $ref: "#/components/schemas/ProfileCategory"
         estimatedOpenTenderCount: { type: integer, minimum: 0 }
       required: [keywords, categories, estimatedOpenTenderCount]
+    ProfileMatchPreviewRequest:
+      type: object
+      properties:
+        terms:
+          type: array
+          maxItems: 40
+          items: { type: string, minLength: 1, maxLength: 80 }
+        categories:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 80 }
+    ProfileMatchPreview:
+      type: object
+      properties:
+        estimatedOpenTenderCount: { type: integer, minimum: 0 }
+      required: [estimatedOpenTenderCount]
     FitEvidence:
       type: object
       properties:
@@ -3507,7 +3564,13 @@ components:
       required: [results]
     TenderStatus:
       type: string
-      enum: [open, under_review, closed, suspended, cancelled]
+      enum: [open, under_review, closed, suspended, cancelled, direct]
+      description: >-
+        `open` is a competitive opportunity with an active window (including electronic
+        dispensa with a proposal deadline, and credenciamento without a deadline as a
+        continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline
+        (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by
+        the source situation and are not auto-promoted to `direct`.
     EstimatedValueStatus:
       type: string
       enum: [disclosed, confidential, not_published]
@@ -4507,6 +4570,7 @@ components:
           salic,
           worldbank,
           eu_ft,
+          idb,
         ]
     OpportunityScope:
       type: string

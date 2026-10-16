@@ -23,7 +23,9 @@ Deriva de [activeContext](activeContext.md).
 - Validação final do calendário: 27 testes passaram, typecheck e build da API concluídos. A tentativa real em 22 set 2026 (DF, modalidade 6, publicação em 21 set) falhou por timeout do PNCP antes da primeira página; os 19 editais foram preservados e a partição ficou pendente. A verificação de duas execuções foi concluída com respostas controladas do PNCP no Postgres real, não no serviço externo.
 - Detalhe busca itens e arquivos do PNCP na primeira abertura e grava no banco.
 - A busca mostra `Atualizado em` a partir de `meta.indexUpdatedAt` (última `fetched_at`).
+- Latência da busca (15 out 2026): facetas só com consulta própria para os grupos selecionados, filtro de categoria por `@>` no GIN e índices da migração `0044` (aplicação manual com `CONCURRENTLY`). No banco sintético de 300 mil editais, buscas com `status=open` ficam em 12–134 ms no p95 com facetas. Medições, comandos para produção e parecer sobre motor de busca em [`docs/reviews/search-latency/depois.md`](../docs/reviews/search-latency/depois.md); benchmark em `artifacts/api-server/scripts/bench-search.ts`.
 - Chamadas de fomento audiovisual ficam fora de `tenders`. Tabela `cultural_opportunities`, coleta do Mapas Culturais (`source = mapas-culturais`) e lista em `/oportunidades`. Contrato: [`docs/contracts/opportunities-v1.md`](../docs/contracts/opportunities-v1.md). `CULTURE_DAILY_COLLECT=false` desliga a agenda. Comando: `pnpm --filter @workspace/api-server run collect:opportunities`. A consulta por termo `linguagem` foi trocada por `@keyword` depois que as instalações responderam 500 ou HTML.
+- Avisos de aquisição do BID na coleta internacional (`source = idb`, 15 out 2026, branch `feat/idb-procurement`): DataStore CKAN de `data.iadb.org` com o User-Agent `PardalDigital/1.0`, cerca de 4 requisições e 113 avisos abertos por dia. Uso autorizado pelo BID em [`docs/ops/autorizacoes-fontes.md`](../docs/ops/autorizacoes-fontes.md). Exige a migração `0045_opportunity_source_idb` (só a constraint de `source`). Pendentes: emendas como itens separados e o órgão executor, que o dataset não traz.
 - Verificado em 22 set 2026: 19 pregões eletrônicos do DF publicados em 21 set 2026. A busca por “correios” abre o edital `34028316000103-1-000087-2026`, com link `https://pncp.gov.br/app/editais/34028316000103/2026/87`. O registro permanece depois de reiniciar a API. Uma segunda coleta não duplica a contagem.
 
 ## O que já funciona — assinatura (MVP)
@@ -129,6 +131,26 @@ Deriva de [activeContext](activeContext.md).
 - Exceção de movimento da landing em [`design-system/motion.md`](../design-system/motion.md).
 - Verificado em navegador (sem API): Chrome escolhe WebM, WebKit escolhe HEVC, alfa correto nos dois, temas Creme e
   Petróleo, movimento reduzido. Falta: Safari real, conferência com dados da API e ao vivo após o deploy.
+
+## Em PR — teaser em vídeo na landing (`feat/landing-teaser-section`, 15 out 2026)
+
+- Seção "Na prática" entre o topo e "Como funciona" (`pardal-teaser.tsx`): vídeo do dono, 12 s, mudo, em loop.
+  Arquivos em `public/motion/pardal-teaser*`: VP9 1080p (1,48 MB), H.264 1080p de reserva (1,67 MB), H.264 720p para
+  celular via `<source media>` (0,85 MB), capa AVIF (37 kB). Nada baixa antes de a seção chegar a meia tela da dobra;
+  toca só com metade visível, pausa fora da tela, botão Pausar/Reproduzir sempre visível; com movimento reduzido,
+  só a capa até o clique. Não é momento do pardal 3D (sem `data-pardal-momento`); voo e cortinas conferidos iguais.
+- Capturas e comparação dos momentos em `docs/reviews/teaser-landing/`. Falta: Safari real e conferir ao vivo.
+
+## Em PR — começo guiado e medidor de perfil (`feat/guided-onboarding`, 15 out 2026)
+
+- Só frontend, em `src/features/guided-onboarding/`. Quatro passos (o que vende, região, faixa de valor, porte e
+  plataformas) com o contador honesto do `match-preview` em cada passo; salva pelo `PUT` do perfil só no fim.
+- Abre uma vez após o primeiro login com perfil vazio e reabre pelo cartão da Visão geral; a dispensa fica em
+  memória por conta e só vai para o `localStorage` (`licita-guided-onboarding-dismissed-v1`) com o aviso aceito.
+- Medidor "Perfil N%" na Visão geral e no topo do perfil: até 3 próximos itens, cada um com o que destrava.
+- O alerta da conclusão é busca salva por termos e faixa de valor: buscas salvas não aceitam `myRegion`, e a tela diz isso.
+- Teste de navegador: `scripts/test-guided-onboarding.mjs` (API interceptada, sem banco); capturas em
+  `docs/reviews/guided-onboarding/`.
 
 ## O que falta
 

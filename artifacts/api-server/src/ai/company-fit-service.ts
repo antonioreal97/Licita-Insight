@@ -412,12 +412,17 @@ async function lexicalMatches(
     from jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) terms(term)
     join tenders t on t.id = ${tenderId}
     where to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.description, t.items::text))
-      @@ websearch_to_tsquery('portuguese', term)
+      @@ phraseto_tsquery('portuguese', term)
     limit 20
   `);
   return result.rows.map(({ term }) => term);
 }
 
+/**
+ * Each profile term must appear as a whole expression (words together, in order, Portuguese stemming):
+ * "transmissão ao vivo" does not pass a notice that only says "ao vivo". Same rule as `lexicalMatches` and as the
+ * profile preview count (`profilePhraseQuery` in profile/keyword-vocabulary.ts).
+ */
 export async function lexicalGatePasses(
   tenderId: string,
   offerings: string[],
@@ -427,12 +432,11 @@ export async function lexicalGatePasses(
     select exists (
       select 1
       from tenders t,
-        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term),
-        regexp_split_to_table(terms.term, '[^[:alnum:]]+') words(word)
+        jsonb_array_elements_text(${JSON.stringify(offerings)}::jsonb) terms(term)
       where t.id = ${tenderId}
-        and length(words.word) >= 2
+        and numnode(phraseto_tsquery('portuguese', terms.term)) > 0
         and to_tsvector('portuguese', concat_ws(' ', t.title, t.object_summary, t.items::text))
-          @@ plainto_tsquery('portuguese', words.word)
+          @@ phraseto_tsquery('portuguese', terms.term)
     ) as passed
   `);
   return result.rows[0]?.passed === true;

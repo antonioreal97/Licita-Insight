@@ -25,6 +25,7 @@ export const aiService = {
   listProfilePlatforms: (signal?: AbortSignal) => aiAdapter.listProfilePlatforms(signal),
   suggestProfileKeywords: (query: string, signal?: AbortSignal) => aiAdapter.suggestProfileKeywords(query, signal),
   suggestProfileFiltersFromDescription: (description: string, signal?: AbortSignal) => aiAdapter.suggestProfileFiltersFromDescription(description, signal),
+  previewProfileMatches: (input: { terms: string[]; categories: string[] }, signal?: AbortSignal) => aiAdapter.previewProfileMatches(input, signal),
   /** Sorted and de-duplicated so the cache key does not depend on list order. */
   getFits: (tenderIds: string[], signal?: AbortSignal) => aiAdapter.getFits([...new Set(tenderIds)].sort().slice(0, FIT_BATCH_MAX), signal),
   /** Same batch rules as the fits; the API only reads sheets that are already ready. */

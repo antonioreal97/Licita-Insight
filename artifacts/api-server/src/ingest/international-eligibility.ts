@@ -184,6 +184,47 @@ export const worldBankEligibility = (
 };
 
 /* ----------------------------------------------------------------------------------------------------------
+ * BID (Banco Interamericano de Desenvolvimento)
+ *
+ * The IDB procurement policies admit firms and individuals of its 48 member countries, and Brazil is one of
+ * them. The dataset has no restriction field: only the method ("National Competitive Bidding") or the title can
+ * say the process is limited to the project country. The notice document itself is not read.
+ * -------------------------------------------------------------------------------------------------------- */
+
+export type IdbEligibilityInput = {
+  methodName: string | null;
+  country: string | null;
+  countryName: string | null;
+  texts: Array<string | null | undefined>;
+};
+
+export const idbEligibility = (
+  input: IdbEligibilityInput,
+): EligibilityDecision => {
+  const national = mentions(
+    plainTexts([...input.texts, input.methodName]),
+    WB_NATIONAL,
+  );
+  if (national && input.country === "BR")
+    return decision(
+      "yes",
+      "idb-national-brazil",
+      "Processo nacional de projeto no Brasil, financiado pelo BID: aberto a fornecedores estabelecidos no país. Confira a habilitação exigida no aviso.",
+    );
+  if (national)
+    return decision(
+      "unknown",
+      "idb-national-restriction",
+      `O aviso indica processo nacional ou local (${input.countryName ?? "país do projeto"}). O BID admite firmas dos 48 países-membros, mas este processo pode se limitar a quem está estabelecido no país do projeto. Confira o aviso.`,
+    );
+  return decision(
+    "yes",
+    "idb-member-country",
+    "Financiado pelo BID: firmas e pessoas dos 48 países-membros podem participar, e o Brasil é membro. Confira no aviso se há restrição específica.",
+  );
+};
+
+/* ----------------------------------------------------------------------------------------------------------
  * Funding & Tenders da União Europeia
  *
  * Two separate answers: may an entity or person from Brazil take part, and does the EU pay for it. Brazil

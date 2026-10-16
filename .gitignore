@@ -47,6 +47,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.oracle.example
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
@@ -58,3 +59,4 @@ Thumbs.db
 
 # Prévias e saídas locais geradas por ferramentas
 Claude outputs/
+pardal-motion/

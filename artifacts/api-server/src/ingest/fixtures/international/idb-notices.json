@@ -1,0 +1,297 @@
+{
+  "success": true,
+  "result": {
+    "resource_id": "856aabfd-2c6a-48fb-a8b8-19f3ff443618",
+    "fields": [
+      {
+        "id": "noticeid",
+        "type": "text"
+      },
+      {
+        "id": "type",
+        "type": "text"
+      },
+      {
+        "id": "countryname",
+        "type": "text"
+      },
+      {
+        "id": "projectnumber",
+        "type": "text"
+      },
+      {
+        "id": "loannumber",
+        "type": "text"
+      },
+      {
+        "id": "noticetitle",
+        "type": "text"
+      },
+      {
+        "id": "documenturl",
+        "type": "text"
+      },
+      {
+        "id": "projectname",
+        "type": "text"
+      },
+      {
+        "id": "publicationdate",
+        "type": "text"
+      },
+      {
+        "id": "deadline",
+        "type": "text"
+      },
+      {
+        "id": "sectorenglnm",
+        "type": "text"
+      },
+      {
+        "id": "category_nm",
+        "type": "text"
+      },
+      {
+        "id": "prcrmnt_mthd_engl_nm",
+        "type": "text"
+      }
+    ],
+    "filters": {
+      "type": [
+        "SPECIFIC",
+        "EOI"
+      ]
+    },
+    "sort": "deadline desc, _id asc",
+    "limit": 100,
+    "offset": 0,
+    "records": [
+      {
+        "noticeid": "34717",
+        "type": "SPECIFIC",
+        "countryname": "SURINAME",
+        "projectnumber": "SU-L1068",
+        "loannumber": "5867/OC-SU",
+        "noticetitle": "General Procurement Notice - Paramaribo Urban Rehabilitation Program II (PURP II)",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000171-1375635338-40791",
+        "projectname": "Paramaribo Urban Rehabilitation Program II ",
+        "publicationdate": "2025-01-21 12:11:08.000000000",
+        "deadline": "2029-06-17",
+        "sectorenglnm": "URBAN DEVELOPMENT AND HOUSING",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39006",
+        "type": "EOI",
+        "countryname": "BRAZIL",
+        "projectnumber": "BR-L1548",
+        "loannumber": "5810/OC-BR",
+        "noticetitle": "ALTERAÇÃO - No 1 - Contratação de Consultor(a) Individual Técnico(a) em Educação Intercultural e Fortalecimento Pedagógico para Comunidades Tradicionais Atendidas pelo Programa Educação por Todo o Pará",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000138-2100561954-169",
+        "projectname": "Programa de Ampliação e Modernização da Infraestrutura e da Oferta Educacional para garantia do direito de aprender no Pará",
+        "publicationdate": "2026-09-16 04:00:00.000000000",
+        "deadline": "2027-09-28",
+        "sectorenglnm": "EDUCATION",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39007",
+        "type": "EOI",
+        "countryname": "BRAZIL",
+        "projectnumber": "BR-L1548",
+        "loannumber": "5810/OC-BR",
+        "noticetitle": "Contratação de Consultor(a) Individual Técnico(a) em Educação Intercultural e Fortalecimento Pedagógico para Comunidades Tradicionais Atendidas pelo Programa Educação por Todo o Pará",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000138-2100561954-168",
+        "projectname": "Programa de Ampliação e Modernização da Infraestrutura e da Oferta Educacional para garantia do direito de aprender no Pará",
+        "publicationdate": "2026-09-16 04:00:00.000000000",
+        "deadline": "2027-09-21",
+        "sectorenglnm": "EDUCATION",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39067",
+        "type": "SPECIFIC",
+        "countryname": "URUGUAY",
+        "projectnumber": "UR-L1215",
+        "loannumber": "UR-L1215",
+        "noticetitle": "Tercer Corredor 500 kV Chamberlain - Cardal - Pando",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB000903-1235725684-43",
+        "projectname": "Proyecto de Expansión de Redes Eléctricas para el Desarrollo Productivo y la Seguridad Energética",
+        "publicationdate": "2026-09-21 08:00:00.000000000",
+        "deadline": "2027-01-25",
+        "sectorenglnm": "ENERGY",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39272",
+        "type": "SPECIFIC",
+        "countryname": "EL SALVADOR",
+        "projectnumber": "ES-L1173",
+        "loannumber": "6073/OC-ES",
+        "noticetitle": "Contratación de obras para la construcción de la terminal de pasajeros ampliada con criterios de sostenibiliad, accesibilidad universal para PcD e infraestructura que facilite la movilidad del cuidado",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0003440-1039777545-105",
+        "projectname": "Programa de Modernización del Aeropuerto Internacional de El Salvador",
+        "publicationdate": "2026-10-08 05:00:00.000000000",
+        "deadline": "2026-11-20",
+        "sectorenglnm": "TRANSPORT",
+        "category_nm": "Works",
+        "prcrmnt_mthd_engl_nm": "International Competitive Bidding"
+      },
+      {
+        "noticeid": "39220",
+        "type": "SPECIFIC",
+        "countryname": "SURINAME",
+        "projectnumber": "SU-L1060",
+        "loannumber": "5727/OC-SU",
+        "noticetitle": "Purchase of High-Performance Server Hardware for DoTC ",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000489-1922759013-1154",
+        "projectname": "Fiscal Support Program to Regain Growth",
+        "publicationdate": "2026-10-05 04:00:00.000000000",
+        "deadline": "2026-11-19",
+        "sectorenglnm": "REFORM / MODERNIZATION OF THE STATE",
+        "category_nm": "Goods",
+        "prcrmnt_mthd_engl_nm": "International Competitive Bidding"
+      },
+      {
+        "noticeid": "39196",
+        "type": "SPECIFIC",
+        "countryname": "PERU",
+        "projectnumber": "PE-L1281",
+        "loannumber": "5834/OC-PE",
+        "noticetitle": "SERVICIO PARA LA IMPLEMENTACIÓN DE UN SISTEMA DE GESTIÓN DE APRENDIZAJE E-LEARNING PARA LA REALIZACIÓN DE CURSOS SÍNCRONOS Y ASÍNCRONOS PARA LA PLATAFORMA NACIONAL DE TALENTO DIGITAL",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000416-805241356-1076",
+        "projectname": "Proyecto de Transformación Digital con Equidad",
+        "publicationdate": "2026-10-02 04:00:00.000000000",
+        "deadline": "2026-11-13",
+        "sectorenglnm": "REFORM / MODERNIZATION OF THE STATE",
+        "category_nm": "Non-Consulting Services",
+        "prcrmnt_mthd_engl_nm": "National Competitive Bidding"
+      },
+      {
+        "noticeid": "39139",
+        "type": "SPECIFIC",
+        "countryname": "ECUADOR",
+        "projectnumber": "EC-L1253",
+        "loannumber": "5599/KI-EC-1",
+        "noticetitle": "ADQUISICIÓN DE EQUIPOS DE ADMINISTRACIÓN DE QoS",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000233-1967800758-2251",
+        "projectname": "Programa de Mejora de la Administración Tributaria y Aduanera",
+        "publicationdate": "2026-09-25 04:00:00.000000000",
+        "deadline": "2026-11-11",
+        "sectorenglnm": "REFORM / MODERNIZATION OF THE STATE",
+        "category_nm": "Goods",
+        "prcrmnt_mthd_engl_nm": "International Competitive Bidding"
+      },
+      {
+        "noticeid": "39285",
+        "type": "SPECIFIC",
+        "countryname": "BAHAMAS",
+        "projectnumber": "BH-L1061",
+        "loannumber": "5959/OC-BH",
+        "noticetitle": "AMENDMENT - N°2 - New Providence Distribution Mains Extension",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0001812-220203373-455",
+        "projectname": "The Bahamas Water Supply and Sanitation Systems Upgrade Program",
+        "publicationdate": "2026-10-09 18:00:00.000000000",
+        "deadline": "2026-11-04",
+        "sectorenglnm": "WATER AND SANITATION",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39186",
+        "type": "EOI",
+        "countryname": "BRAZIL",
+        "projectnumber": "BR-L1525",
+        "loannumber": "4930/OC-BR",
+        "noticetitle": "Seleção e contratação de empresa de consultoria/Governança de TIC com plano estratégico em Transformação Digital",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000138-1518790458-590",
+        "projectname": "Projeto de Modernizacao da Gestao Fiscal do Estado de Amapa PROFISCO II AP",
+        "publicationdate": "2026-10-01 04:00:00.000000000",
+        "deadline": "2026-10-30",
+        "sectorenglnm": "REFORM / MODERNIZATION OF THE STATE",
+        "category_nm": "Consulting Firms",
+        "prcrmnt_mthd_engl_nm": "Quality-and-Cost Based Selection (QCBS)"
+      },
+      {
+        "noticeid": "39237",
+        "type": "EOI",
+        "countryname": "SURINAME",
+        "projectnumber": "SU-L1059",
+        "loannumber": "4984/OC-SU",
+        "noticetitle": "Consultancy firm for Implementation Multilingualism Policy",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000489-1967619452-971",
+        "projectname": "Consolidating Access to Inclusive Quality Education in Suriname",
+        "publicationdate": "2026-10-06 08:00:00.000000000",
+        "deadline": "2026-10-22",
+        "sectorenglnm": "EDUCATION",
+        "category_nm": "Consulting Firms",
+        "prcrmnt_mthd_engl_nm": "Selection Based on the Consultants Qualification (CQS)"
+      },
+      {
+        "noticeid": "39214",
+        "type": "SPECIFIC",
+        "countryname": "EL SALVADOR",
+        "projectnumber": "ES-L1152",
+        "loannumber": "5577/OC-ES",
+        "noticetitle": "Diseño y Construcción de Obras Civiles, Suministro, Montaje y Puesta en Funcionamiento de Tanques de Acero Vitrificado para los Nodos Opico y Colombia, Sistema Zona Norte",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000251-1149216215-1419",
+        "projectname": "Programa de Fortalecimiento del Sector Agua y Saneamiento en El Salvador",
+        "publicationdate": "2026-10-05 04:00:00.000000000",
+        "deadline": "2026-10-12",
+        "sectorenglnm": "WATER AND SANITATION",
+        "category_nm": "Works",
+        "prcrmnt_mthd_engl_nm": "National Competitive Bidding"
+      },
+      {
+        "noticeid": "39100",
+        "type": "EOI",
+        "countryname": "TRINIDAD AND TOBAGO",
+        "projectnumber": "TT-L1061",
+        "loannumber": "5841/OC-TT",
+        "noticetitle": "Engagement of an Individual Consultant for Mid-Term Evaluation - Annex II",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000509-1921603006-218",
+        "projectname": "Programme to Accelerate the Digital Transformation Agenda",
+        "publicationdate": "2026-09-23 08:00:00.000000000",
+        "deadline": "2026-10-09",
+        "sectorenglnm": "MULTIPLE SECTORS",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "39153",
+        "type": "SPECIFIC",
+        "countryname": "REGIONAL",
+        "projectnumber": "RG-L1167",
+        "loannumber": "5767/OC-RG",
+        "noticetitle": "ENMIENDA - Circular No 34 Modificatoria - Diseño, suministro y montaje de equipamiento de transmisión de playa y potencia",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000470-1746704406-551",
+        "projectname": "Programa de Modernización del Complejo Hidroeléctrico Binacional de Salto Grande - Etapa II - a",
+        "publicationdate": "2026-09-29 12:00:00.000000000",
+        "deadline": "2026-10-08",
+        "sectorenglnm": "ENERGY",
+        "category_nm": "",
+        "prcrmnt_mthd_engl_nm": ""
+      },
+      {
+        "noticeid": "38772",
+        "type": "SPECIFIC",
+        "countryname": "EL SALVADOR",
+        "projectnumber": "ES-L1152",
+        "loannumber": "5577/OC-ES",
+        "noticetitle": "DISEÑO, SUMINISTRO DE INSTRUMENTACIÓN Y PUESTA EN MARCHA DE SISTEMA SCADA PARA ANDA",
+        "documenturl": "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0000251-1149216215-1403",
+        "projectname": "Programa de Fortalecimiento del Sector Agua y Saneamiento en El Salvador",
+        "publicationdate": "2026-08-25 05:00:00.000000000",
+        "deadline": "2026-10-08",
+        "sectorenglnm": "WATER AND SANITATION",
+        "category_nm": "Goods",
+        "prcrmnt_mthd_engl_nm": "International Competitive Bidding"
+      }
+    ],
+    "total": 25329
+  }
+}

@@ -116,6 +116,7 @@ const pairs: [string, string[], number][] = [
   ['status-closed-foreground', ['status-closed'], TEXT],
   ['status-suspended-foreground', ['status-suspended'], TEXT],
   ['status-cancelled-foreground', ['card', 'status-cancelled'], TEXT],
+  ['status-direct-foreground', ['status-direct'], TEXT],
   ['sidebar-foreground', ['sidebar'], TEXT],
   ['sidebar-muted-foreground', ['sidebar'], TEXT],
   ['sidebar-primary-foreground', ['sidebar-primary'], TEXT],

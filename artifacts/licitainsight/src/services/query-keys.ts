@@ -46,6 +46,7 @@ export const queryKeys = {
     profilePlatforms: ['me', 'profile-platforms'] as const,
     profileKeywords: (query: string) => ['me', 'profile-keywords', query] as const,
     profileDescription: (description: string) => ['me', 'profile-description', description] as const,
+    profileMatchPreview: (terms: readonly string[], categories: readonly string[]) => ['me', 'profile-match-preview', terms, categories] as const,
     /** Saving or deleting the profile invalidates every fit (`fit.all`). */
     fit: {
       all: ['me', 'fit'] as const,

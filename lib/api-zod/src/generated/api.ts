@@ -52,7 +52,7 @@ export const searchTendersQueryFacetsDefault = true;
 export const SearchTendersQueryParams = zod.object({
   "q": zod.coerce.string().optional(),
   "mode": zod.enum(['keyword', 'semantic', 'hybrid']).optional(),
-  "status": zod.array(zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled'])).optional(),
+  "status": zod.array(zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.')).optional(),
   "modality": zod.array(zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other'])).optional(),
   "state": zod.array(zod.coerce.string().regex(searchTendersQueryStateItemRegExp)).optional(),
   "city": zod.array(zod.coerce.string().min(1)).optional(),
@@ -144,7 +144,7 @@ export const SearchTendersResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -1077,7 +1077,7 @@ export const GetTenderByIdResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -2082,6 +2082,34 @@ export const SuggestProfileFiltersFromDescriptionResponse = zod.object({
 
 
 /**
+ * Each term matches as a whole expression (words together and in order, Portuguese stemming), or the tender carries one of the categories. Nothing is stored.
+ * @summary Count open tenders matching the profile terms and categories being edited
+ */
+export const previewProfileOpenTenderMatchesBodyTermsItemMax = 80;
+
+export const previewProfileOpenTenderMatchesBodyTermsMax = 40;
+
+export const previewProfileOpenTenderMatchesBodyCategoriesItemMax = 80;
+
+export const previewProfileOpenTenderMatchesBodyCategoriesMax = 20;
+
+
+
+export const PreviewProfileOpenTenderMatchesBody = zod.object({
+  "terms": zod.array(zod.string().min(1).max(previewProfileOpenTenderMatchesBodyTermsItemMax)).max(previewProfileOpenTenderMatchesBodyTermsMax).optional(),
+  "categories": zod.array(zod.string().min(1).max(previewProfileOpenTenderMatchesBodyCategoriesItemMax)).max(previewProfileOpenTenderMatchesBodyCategoriesMax).optional()
+})
+
+export const previewProfileOpenTenderMatchesResponseEstimatedOpenTenderCountMin = 0;
+
+
+
+export const PreviewProfileOpenTenderMatchesResponse = zod.object({
+  "estimatedOpenTenderCount": zod.number().int().min(previewProfileOpenTenderMatchesResponseEstimatedOpenTenderCountMin)
+})
+
+
+/**
  * @summary Read or enqueue company-profile fit for up to 100 tenders
  */
 export const getTenderFitsQueryTenderIdsItemMax = 200;
@@ -2751,7 +2779,7 @@ export const SearchOpportunitiesQueryParams = zod.object({
   "status": zod.array(zod.enum(['open', 'upcoming', 'closed', 'undated'])).optional(),
   "program": zod.array(zod.enum(['audiovisual', 'lpg', 'fac', 'fsa'])).optional(),
   "kind": zod.array(zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement'])).optional(),
-  "source": zod.array(zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft'])).optional(),
+  "source": zod.array(zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb'])).optional(),
   "scope": zod.enum(['national', 'international', 'all']).default(searchOpportunitiesQueryScopeDefault).describe('Reach of the calls. Without it only national calls are returned.'),
   "agency": zod.array(zod.coerce.string().min(1).max(searchOpportunitiesQueryAgencyItemMax)).max(searchOpportunitiesQueryAgencyMax).optional().describe('Funding body of an international call, exactly as returned in the facet.'),
   "region": zod.array(zod.enum(['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global'])).optional(),
@@ -2813,7 +2841,7 @@ export const SearchOpportunitiesResponse = zod.object({
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
   "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(searchOpportunitiesResponseDataItemAmountMin).nullable(),
@@ -3011,7 +3039,7 @@ export const GetOpportunityByIdResponse = zod.object({
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
   "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(getOpportunityByIdResponseAmountMin).nullable(),
@@ -3155,7 +3183,7 @@ export const ListSavedTendersResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -3291,7 +3319,7 @@ export const GetSavedTenderResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -3411,7 +3439,7 @@ export const PutSavedTenderResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -3786,7 +3814,7 @@ export const ListRecommendationsResponse = zod.object({
   "purchasingUnit": zod.string().nullable(),
   "modality": zod.enum(['pregao_eletronico', 'pregao_presencial', 'concorrencia', 'concorrencia_eletronica', 'dispensa', 'inexigibilidade', 'credenciamento', 'leilao', 'dialogo_competitivo', 'other']),
   "modalityLabel": zod.string(),
-  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled']),
+  "status": zod.enum(['open', 'under_review', 'closed', 'suspended', 'cancelled', 'direct']).describe('`open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.'),
   "tenderNumber": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullish().describe('Source-normalized tender number without the modality prefix.'),
   "estimatedValue": zod.number().nullable(),
@@ -3842,7 +3870,7 @@ export const ListRecommendationsResponse = zod.object({
   "status": zod.enum(['open', 'upcoming', 'closed', 'undated']),
   "program": zod.union([zod.enum(['audiovisual', 'lpg', 'fac', 'fsa']),zod.null()]),
   "kind": zod.enum(['culture', 'funding', 'innovation', 'partnership', 'procurement']),
-  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft']),
+  "source": zod.enum(['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb']),
   "sourceName": zod.string(),
   "audience": zod.string().nullable(),
   "amount": zod.number().min(listRecommendationsResponseOpportunitiesItemOpportunityAmountMin).nullable(),
@@ -3945,6 +3973,10 @@ export const dismissRecommendationPathTenderIdMax = 200;
 
 export const DismissRecommendationParams = zod.object({
   "tenderId": zod.coerce.string().min(1).max(dismissRecommendationPathTenderIdMax)
+})
+
+export const DismissRecommendationBody = zod.object({
+  "reason": zod.enum(['not_offering', 'region', 'value', 'deadline']).optional().describe('Optional explicit feedback; omitted preserves the existing topic penalty.')
 })
 
 export const DismissRecommendationResponse = zod.void()

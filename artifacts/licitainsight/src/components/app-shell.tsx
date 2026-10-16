@@ -42,6 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { signInWithGoogle, useSession, useSignOut } from '@/features/auth/hooks/use-session';
 import { AccessBadge, TrialEndingBanner } from '@/features/billing/components/trial-notice';
 import { useBilling } from '@/features/billing/hooks/use-billing';
+import { OnboardingHost } from '@/features/guided-onboarding/onboarding-host';
 import { IncludedInAccessHint } from '@/features/opportunities/components/access-gate';
 import { useOpportunityAccess } from '@/features/opportunities/hooks/use-opportunities';
 import { optionalStorageAllowed } from '@/features/privacy/cookie-consent';
@@ -107,7 +108,16 @@ function SidebarContent({ collapsed, location, onNavigate }: { collapsed: boolea
   return (
     <>
       <div className={`flex h-header-mobile items-center gap-3 border-b border-sidebar-border px-5 lg:h-header ${onNavigate ? 'pr-12' : ''}`}>
-        {collapsed ? <BrandLogo symbol className="mx-auto h-6" /> : <BrandLogo className="h-12" />}
+        {/* The logo goes back to the landing page, the only way out of the app to the home page. */}
+        <Link
+          href="/"
+          onClick={onNavigate}
+          aria-label="Pardal Digital — página inicial"
+          data-testid="link-sidebar-home"
+          className={`rounded-lg focus-visible:focus-ring ${collapsed ? 'mx-auto' : ''}`}
+        >
+          {collapsed ? <BrandLogo symbol className="h-6" /> : <BrandLogo className="h-12" />}
+        </Link>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-6">
         {navGroups.map((group, index) => (
@@ -266,7 +276,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
                   <Menu size={20} strokeWidth={1.75} />
                 </button>
               </SheetTrigger>
-              <Link href="/dashboard" aria-label="Pardal Digital — Visão geral" className="lg:hidden">
+              <Link href="/" aria-label="Pardal Digital — página inicial" className="lg:hidden">
                 <BrandLogo className="h-8" />
               </Link>
               <button
@@ -299,7 +309,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
           <TrialEndingBanner />
           <WorkspaceShellNotices />
           <main id="conteudo" tabIndex={-1} className="mx-auto max-w-page px-4 py-7 outline-none sm:px-8 lg:px-10">
-            {children}
+            <OnboardingHost>{children}</OnboardingHost>
           </main>
           <footer className="mx-auto flex max-w-page flex-col gap-2 border-t border-border px-4 py-6 type-meta text-muted-foreground sm:px-8 lg:px-10">
             <span>© {new Date().getFullYear()} Pardal Digital</span>

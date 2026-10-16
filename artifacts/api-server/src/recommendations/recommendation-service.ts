@@ -55,6 +55,11 @@ import {
   municipalityReference,
   type ServiceRegionCoverage,
 } from "../service-region/service-region";
+import {
+  contextualDismissalPenalty,
+  dismissalTerms,
+  type DismissReason,
+} from "./triage-feedback";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -95,6 +100,19 @@ const STOP_WORDS = new Set([
   "edital",
   "registro",
   "precos",
+  // Procurement boilerplate present in most notices ("contratação de empresa especializada…").
+  "empresa",
+  "empresas",
+  "especializada",
+  "especializado",
+  "prestacao",
+  "execucao",
+  "objeto",
+  "eventual",
+  "futura",
+  "conforme",
+  "municipio",
+  "municipal",
 ]);
 
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
@@ -148,11 +166,13 @@ export const scoreOpportunityForProfile = (
     .filter(Boolean);
   if (exclusions.some((term) => haystack.includes(term))) return null;
 
+  // Profile terms match as whole expressions; only the free-text description is split into words.
   const terms = [
-    ...profile.selectedKeywords,
-    ...profile.offerings,
-    profile.description,
-  ].flatMap((value) => normalizeSignalTerms(value));
+    ...[...profile.selectedKeywords, ...profile.offerings].map((value) =>
+      normalizeText(value),
+    ),
+    ...normalizeSignalTerms(profile.description),
+  ].filter(Boolean);
   const matched = [
     ...new Set(terms.filter((term) => haystack.includes(term))),
   ].slice(0, 4);
@@ -376,9 +396,7 @@ export async function rebuildInterestProfile(
       addWeight(maps.categories, category, 12, `profile_category:${category}`),
     );
     profile.offerings.forEach((offering) =>
-      normalizeSignalTerms(offering).forEach((term) =>
-        addWeight(maps.terms, term, 6, `profile:${term}`),
-      ),
+      addWeight(maps.terms, offering, 6, `profile:${normalizeText(offering)}`),
     );
     normalizeSignalTerms(profile.description).forEach((term) =>
       addWeight(maps.terms, term, 2, `profile:${term}`),
@@ -724,6 +742,15 @@ export function scoreRecommendation(
     candidate.categories.map((category) => category.slug),
   );
   for (const negative of dismissed) {
+    const contextual = contextualDismissalPenalty(
+      negative.terms,
+      candidate,
+      now,
+    );
+    if (contextual !== null) {
+      score -= contextual;
+      continue;
+    }
     const categoryOverlap = negative.categories.some((category) =>
       candidateSlugs.has(category.slug),
     );
@@ -743,8 +770,12 @@ const queryCandidates = async (
   scope: RecommendationScope,
   now: Date,
 ): Promise<ScoreCandidate[]> => {
-  const terms = profile.terms.slice(0, 12).map((term) => term.value);
-  const query = terms.join(" OR ");
+  // Quoted, so a multi-word profile term ("transmissao ao vivo") matches as a phrase, not as loose words.
+  const terms = profile.terms
+    .slice(0, 12)
+    .map((term) => term.value.replace(/"/g, " ").trim())
+    .filter(Boolean);
+  const query = terms.map((term) => `"${term}"`).join(" OR ");
   const textRank = query
     ? sql<number>`ts_rank_cd(${tendersTable.recommendationSearchVector}, websearch_to_tsquery('portuguese', ${query}))`
     : sql<number>`0`;
@@ -1129,6 +1160,7 @@ export async function dismissRecommendation(
   userId: string,
   tenderId: string,
   now = new Date(),
+  reason?: DismissReason,
   database?: GateDatabase,
 ) {
   await withCutoverGate({ kind: "http" }, async (tx, state) => {
@@ -1139,17 +1171,21 @@ export async function dismissRecommendation(
       .where(eq(tendersTable.id, tenderId))
       .limit(1);
     if (!tender) throw new NotFoundError("Tender was not found");
+    const terms = dismissalTerms(
+      reason,
+      normalizeSignalTerms(`${tender.title} ${tender.objectSummary ?? ""}`, 15),
+      tender,
+    );
+    const categories =
+      !reason || reason === "not_offering" ? tender.categories : [];
     await tx
       .insert(recommendationDismissalsTable)
       .values({
         userId,
         ...stamp(scope),
         tenderId,
-        terms: normalizeSignalTerms(
-          `${tender.title} ${tender.objectSummary ?? ""}`,
-          15,
-        ),
-        categories: tender.categories,
+        terms,
+        categories,
         dismissedAt: now,
       })
       .onConflictDoUpdate({
@@ -1157,7 +1193,7 @@ export async function dismissRecommendation(
           recommendationDismissalsTable.userId,
           recommendationDismissalsTable.tenderId,
         ],
-        set: { ...stamp(scope), dismissedAt: now },
+        set: { ...stamp(scope), dismissedAt: now, terms, categories },
       });
     await tx
       .delete(userRecommendationsTable)

@@ -48,7 +48,7 @@ fixa apenas a **forma pública** que o frontend consome. Mudanças de forma deve
 
 ```ts
 type TenderStatus =
-  "open" | "under_review" | "closed" | "suspended" | "cancelled";
+  "open" | "under_review" | "closed" | "suspended" | "cancelled" | "direct";
 type Modality =
   | "pregao_eletronico"
   | "pregao_presencial"
@@ -72,6 +72,17 @@ type SearchMode = "keyword" | "semantic" | "hybrid";
 
 `SearchMode`: v1 só precisa implementar `keyword`. `semantic`/`hybrid` podem responder como
 `keyword` e sinalizar em `meta.searchMode` o modo realmente aplicado.
+
+### Semântica de `TenderStatus`
+
+| Valor | Rótulo | Quando |
+| --- | --- | --- |
+| `open` | Aberto | Há disputa ou janela ativa: pregão e afins; **dispensa eletrônica com** `proposal_deadline`; **credenciamento sem prazo** (chamamento contínuo = oportunidade real). Padrão da busca (`status=open`). |
+| `direct` | Contratação direta | `modality` ∈ {`dispensa`, `inexigibilidade`} **e** `proposal_deadline` nulo. Continua pesquisável e no filtro Situação; **fora** do padrão Abertos. |
+| `under_review` | Em análise | Prazo de proposta já passou (ou situação equivalente na fonte). |
+| `closed` / `suspended` / `cancelled` | Encerrado / Suspenso / Revogado | Situação terminal na fonte. |
+
+Pregão e outras modalidades sem prazo não são promovidos a `direct` (são poucos; revisar depois). Recomendações e alertas de perfil filtram `status = 'open'`, então `direct` não entra.
 
 ---
 
@@ -388,7 +399,7 @@ highlight existentes.
 
 Os labels canônicos de facets são:
 
-- status: `Aberto`, `Em análise`, `Encerrado`, `Suspenso`, `Revogado`;
+- status: `Aberto`, `Em análise`, `Encerrado`, `Suspenso`, `Revogado`, `Contratação direta`;
 - modalidades: `Pregão eletrônico`, `Pregão presencial`, `Concorrência`,
   `Concorrência eletrônica`, `Dispensa`, `Inexigibilidade`, `Credenciamento`, `Leilão`,
   `Diálogo competitivo`, `Outra`.

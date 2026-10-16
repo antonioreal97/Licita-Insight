@@ -46,6 +46,11 @@ export function signInWithGoogle(returnTo: string = window.location.pathname + w
 
 function forgetSession(queryClient: ReturnType<typeof useQueryClient>): void {
   clearLastActivity();
+  try {
+    sessionStorage.removeItem('pardal-triage-v1');
+  } catch (error) {
+    console.error('[auth] Não foi possível apagar o progresso da triagem.', error);
+  }
   queryClient.removeQueries({ queryKey: queryKeys.me.all });
   queryClient.setQueryData(queryKeys.session, null);
 }

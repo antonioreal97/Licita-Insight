@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CompanyProfileInput, CompanyProfileResponse, TenderFitsResponse } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
@@ -75,6 +75,23 @@ export function useProfileDescriptionSuggestions(description: string) {
     queryKey: queryKeys.me.profileDescription(normalized),
     queryFn: ({ signal }) => aiService.suggestProfileFiltersFromDescription(normalized, signal),
     enabled: normalized.length >= PROFILE_LIMITS.descriptionMin,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * "≈ N editais abertos combinam" for the terms and categories being edited (not yet saved). The caller debounces;
+ * sorted lists keep the cache key stable when only the order changes. The previous count stays on screen while
+ * the next one loads.
+ */
+export function useProfileMatchPreview(terms: string[], categories: string[]) {
+  const sortedTerms = [...new Set(terms.map((term) => term.trim()).filter(Boolean))].sort();
+  const sortedCategories = [...new Set(categories)].sort();
+  return useQuery({
+    queryKey: queryKeys.me.profileMatchPreview(sortedTerms, sortedCategories),
+    queryFn: ({ signal }) => aiService.previewProfileMatches({ terms: sortedTerms, categories: sortedCategories }, signal),
+    enabled: sortedTerms.length + sortedCategories.length > 0,
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
   });
 }

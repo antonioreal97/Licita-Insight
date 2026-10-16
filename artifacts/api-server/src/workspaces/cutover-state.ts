@@ -93,9 +93,9 @@ export const verifyWorkspaceSchema = async (client: Queryable): Promise<CutoverS
   const missing = missingWorkspaceSchema(rows);
   if (missing.length > 0) {
     throw new Error(
-      `Database is missing the workspace migrations 0044 (W1) and 0045 (W2): ${missing.join(", ")}. ` +
-        "Apply them before starting this version (docs/migrations/0044-workspaces-foundation.md, " +
-        "docs/migrations/0045-workspace-scope-expand.md).",
+      `Database is missing the workspace migrations 0047 (W1) and 0048 (W2): ${missing.join(", ")}. ` +
+        "Apply them before starting this version (docs/migrations/0047-workspaces-foundation.md, " +
+        "docs/migrations/0048-workspace-scope-expand.md).",
     );
   }
   return readCutoverState(client);

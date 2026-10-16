@@ -1,10 +1,10 @@
-# Migração 0045 — `workspace_id` nas tabelas do escopo (W2)
+# Migração 0048 — `workspace_id` nas tabelas do escopo (W2)
 
-`lib/db/migrations/0045_workspace_scope_expand.sql` é a W2 do [roadmap do hub adaptativo](../plans/hub-adaptativo-roadmap-v2.md).
+`lib/db/migrations/0048_workspace_scope_expand.sql` é a W2 do [roadmap do hub adaptativo](../plans/hub-adaptativo-roadmap-v2.md).
 Deriva dos rascunhos de ensaio `ops/rehearsal/workspaces/w2_scope_expand.sql` e `w2_scope_expand_indexes.sql`, sem a
-guarda `_rehearsal`. Pré-requisito: [0044](./0044-workspaces-foundation.md) aplicada.
+guarda `_rehearsal`. Pré-requisito: [0047](./0047-workspaces-foundation.md) aplicada.
 
-> **Ainda não autorizada em produção.** Mesmo gate da 0044. Agentes não aplicam nem acessam o banco.
+> **Ainda não autorizada em produção.** Mesmo gate da 0047. Agentes não aplicam nem acessam o banco.
 
 O que muda:
 
@@ -27,21 +27,21 @@ pendentes dentro de uma única transação**, e `CREATE INDEX CONCURRENTLY` não
 
 | Variante | Arquivo | Onde | Índices | FK |
 | --- | --- | --- | --- | --- |
-| versionada | `lib/db/migrations/0045_workspace_scope_expand.sql` | desenvolvimento, testes, `pnpm --filter @workspace/db run migrate` | `CREATE INDEX` comum: lock `SHARE`, escritas na tabela esperam o fim do índice | criada válida, com varredura sob `SHARE ROW EXCLUSIVE` |
-| produção | `lib/db/migrations/manual/0045_workspace_scope_expand_concurrently.sql` | servidor, antes da versionada | `CREATE INDEX CONCURRENTLY`: escritas seguem | `NOT VALID` + `VALIDATE` em instruções separadas: escritas seguem durante a varredura |
+| versionada | `lib/db/migrations/0048_workspace_scope_expand.sql` | desenvolvimento, testes, `pnpm --filter @workspace/db run migrate` | `CREATE INDEX` comum: lock `SHARE`, escritas na tabela esperam o fim do índice | criada válida, com varredura sob `SHARE ROW EXCLUSIVE` |
+| produção | `lib/db/migrations/manual/0048_workspace_scope_expand_concurrently.sql` | servidor, antes da versionada | `CREATE INDEX CONCURRENTLY`: escritas seguem | `NOT VALID` + `VALIDATE` em instruções separadas: escritas seguem durante a varredura |
 
 As duas terminam no mesmo schema: mesmas colunas, mesmas FKs (validadas) e mesmos índices, com os mesmos nomes. O
 teste `artifacts/api-server/src/workspaces/workspace-migrations.integration.test.ts` prova isso num PostgreSQL
-temporário (aplica 0043 da main + 0044 + variante de produção e compara colunas, constraints e índices com a versionada; depois
+temporário (aplica 0043 da main + 0047 + variante de produção e compara colunas, constraints e índices com a versionada; depois
 confirma que a versionada aplicada por cima não muda nada). A versão manual fica fora do `_journal.json` e o
 migrador do Drizzle não a lê.
 
 ## Procedimento em produção (o dono executa)
 
-1. Conferir que a 0043 da main e a 0044 estão aplicadas (consulta da [0044](./0044-workspaces-foundation.md#procedimento-em-produção-o-dono-executa)).
+1. Conferir que a 0043 da main e a 0047 estão aplicadas (consulta da [0047](./0047-workspaces-foundation.md#procedimento-em-produção-o-dono-executa)).
 2. Backup verificado (`pg_dump -Fc`).
 3. **Variante concorrente, sem transação.** Rodar
-   `lib/db/migrations/manual/0045_workspace_scope_expand_concurrently.sql` com `psql -v ON_ERROR_STOP=1`, **sem `-1`
+   `lib/db/migrations/manual/0048_workspace_scope_expand_concurrently.sql` com `psql -v ON_ERROR_STOP=1`, **sem `-1`
    e sem `--single-transaction`** (com `-1` o primeiro `CREATE INDEX CONCURRENTLY` falha). No servidor, no mesmo
    formato do procedimento vigente, trocando só a flag: `docker exec -i licita-macbook-postgres-1 psql -U licita -d licita -v ON_ERROR_STOP=1 < arquivo.sql`.
    O próprio arquivo define `lock_timeout = 5s` para os `ALTER TABLE` e o remove antes dos índices. Se parar por
@@ -102,10 +102,10 @@ Aplicar só a versionada em produção, sem o passo 3, funciona, mas cada `CREAT
 (salvar edital, notificações, fila de IA) enquanto o índice é construído, e a validação das FKs varre cada tabela com
 escritas bloqueadas. Não é o caminho recomendado.
 
-**Ordem obrigatória: 0043 da main, 0044 e 0045 primeiro, API depois.** O schema Drizzle da Fase 1 declara `workspace_id` nessas
-tabelas, e várias consultas usam `select()`/`returning()` sem projeção; sem a 0045, elas falhariam com
+**Ordem obrigatória: 0043 da main, 0047 e 0048 primeiro, API depois.** O schema Drizzle da Fase 1 declara `workspace_id` nessas
+tabelas, e várias consultas usam `select()`/`returning()` sem projeção; sem a 0048, elas falhariam com
 `column "workspace_id" does not exist`. Por isso a API verifica na subida e se recusa a iniciar. A versão atual
-continua funcionando com a 0045 aplicada: não lê as colunas e grava `workspace_id` nulo.
+continua funcionando com a 0048 aplicada: não lê as colunas e grava `workspace_id` nulo.
 
 ## Reversão
 

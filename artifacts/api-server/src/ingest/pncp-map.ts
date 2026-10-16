@@ -198,10 +198,20 @@ export const mapEstimatedValue = (
 export const pncpLegalBasis = (record: Record<string, unknown>): string | null =>
   asString(asRecord(record.amparoLegal)?.nome);
 
+/**
+ * Maps a PNCP purchase situation to our TenderStatus.
+ *
+ * Direct contracting without a proposal window (`dispensa` / `inexigibilidade` and
+ * no `proposal_deadline`) is `direct`, not `open`: there is nothing to bid on in the
+ * default "Abertos" list. Electronic dispensa that publishes a deadline stays `open`.
+ * Credenciamento without a deadline stays `open` (continuous call = real opportunity).
+ * Pregão and other modalities without a deadline are left as `open` for now (rare).
+ */
 export const mapPncpStatus = (
   situationName: string | null,
   proposalDeadline: Date | null,
   now: Date,
+  modality?: Modality | null,
 ): TenderStatus => {
   const situation = normalizeText(situationName ?? "");
   if (situation.includes("suspens")) return "suspended";
@@ -222,6 +232,12 @@ export const mapPncpStatus = (
   }
   if (proposalDeadline && proposalDeadline.getTime() < now.getTime()) {
     return "under_review";
+  }
+  if (
+    !proposalDeadline &&
+    (modality === "dispensa" || modality === "inexigibilidade")
+  ) {
+    return "direct";
   }
   return "open";
 };
@@ -345,7 +361,7 @@ export const mapPublication = (
     purchasingUnit: asString(unidade?.nomeUnidade),
     modality,
     modalityLabel,
-    status: mapPncpStatus(asString(record.situacaoCompraNome), proposalDeadline, now),
+    status: mapPncpStatus(asString(record.situacaoCompraNome), proposalDeadline, now, modality),
     tenderNumber: tenderNumberShort
       ? `${modalityLabel} ${tenderNumberShort}`
       : null,
@@ -396,7 +412,10 @@ export const mergeTimeline = (
   if (!previous) return next.timeline;
 
   const timeline = [...previous.timeline];
-  if (previous.status !== next.status) {
+  const reclassifiedDirect =
+    (previous.status === "open" && next.status === "direct") ||
+    (previous.status === "direct" && next.status === "open");
+  if (previous.status !== next.status && !reclassifiedDirect) {
     timeline.push({
       at: now.toISOString(),
       type: "status_changed",

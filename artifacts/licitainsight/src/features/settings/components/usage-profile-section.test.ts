@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { test } from 'node:test';
 import { ChipGroup, PURPOSE_OPTIONS, APPLICANT_OPTIONS } from './usage-profile-section';
-import { shouldShowUsageInvite } from '../../dashboard/dashboard-page';
+import { shouldShowUsageInvite } from '../../company-profile/components/profile-invite-card';
 
 test('formulário mantém escolhas múltiplas e checkboxes acessíveis', () => {
   const html = renderToStaticMarkup(createElement(ChipGroup, {

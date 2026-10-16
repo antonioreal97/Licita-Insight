@@ -7,6 +7,7 @@ import type {
   CompanyRegionPreviewResponse,
   ProfileDescriptionSuggestions,
   ProfileKeywordSuggestionsResponse,
+  ProfileMatchPreview,
   ProfilePlatformsResponse,
   TenderAskStatus,
   TenderFitsResponse,
@@ -29,6 +30,7 @@ export interface AiAdapter {
   listProfilePlatforms(signal?: AbortSignal): Promise<ProfilePlatformsResponse>;
   suggestProfileKeywords(query: string, signal?: AbortSignal): Promise<ProfileKeywordSuggestionsResponse>;
   suggestProfileFiltersFromDescription(description: string, signal?: AbortSignal): Promise<ProfileDescriptionSuggestions>;
+  previewProfileMatches(input: { terms: string[]; categories: string[] }, signal?: AbortSignal): Promise<ProfileMatchPreview>;
   getFits(tenderIds: string[], signal?: AbortSignal): Promise<TenderFitsResponse>;
   getTenderHighlights(tenderIds: string[], signal?: AbortSignal): Promise<TenderHighlightsResponse>;
 }
