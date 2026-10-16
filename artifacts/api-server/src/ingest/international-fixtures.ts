@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { EU_FT_ROBOTS_URL } from "./eu-ft-parsers";
+import { IDB_API_URL, IDB_ROBOTS_URL } from "./idb-parsers";
 import type {
   InternationalFetch,
   InternationalRequest,
@@ -30,8 +31,9 @@ export const internationalResponse = (
 export type RecordedRequest = InternationalRequest & { at: number };
 
 /**
- * The sources as they answered on the recording day: no robots.txt on either host (404), one page of World
- * Bank notices, the EU facet tables and one page of EU results. `overrides` replaces an answer by URL prefix.
+ * The sources as they answered on the recording day: no robots.txt at the World Bank or the EU (404), one page
+ * of World Bank notices, the EU facet tables, one page of EU results, and the robots.txt, dataset record and one
+ * page of notices of the IDB. `overrides` replaces an answer by URL prefix.
  */
 export const fixtureFetcher = (
   overrides: Array<
@@ -48,6 +50,12 @@ export const fixtureFetcher = (
       request.url === EU_FT_ROBOTS_URL
     )
       return internationalResponse(404, "Not Found");
+    if (request.url === IDB_ROBOTS_URL)
+      return internationalResponse(200, internationalFixture("idb-robots.txt"));
+    if (request.url.startsWith(`${IDB_API_URL}/package_show`))
+      return internationalResponse(200, internationalFixture("idb-package.json"));
+    if (request.url.startsWith(`${IDB_API_URL}/datastore_search`))
+      return internationalResponse(200, internationalFixture("idb-notices.json"));
     if (request.url.startsWith("https://search.worldbank.org/api/v2/procnotices"))
       return internationalResponse(
         200,

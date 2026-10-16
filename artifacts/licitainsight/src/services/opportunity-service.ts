@@ -15,7 +15,7 @@ export const OPPORTUNITY_PAGE_SIZE = 20;
 const STATUSES: OpportunityStatus[] = ['open', 'upcoming', 'closed', 'undated'];
 const PROGRAMS: OpportunityProgram[] = ['audiovisual', 'lpg', 'fac', 'fsa'];
 const KINDS: OpportunityKind[] = ['culture', 'funding', 'innovation', 'partnership', 'procurement'];
-const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft'];
+const SOURCES: OpportunitySource[] = ['mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb'];
 export const INTERNATIONAL_REGIONS: InternationalRegion[] = ['america-latina', 'africa', 'europa', 'asia', 'oriente-medio', 'global'];
 export const BRAZIL_ELIGIBILITIES: BrazilEligibility[] = ['yes', 'conditional', 'no', 'unknown'];
 /** What the international tab lists when the URL says nothing about eligibility. */

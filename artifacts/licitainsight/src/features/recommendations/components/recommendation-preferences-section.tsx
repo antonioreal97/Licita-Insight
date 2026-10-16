@@ -49,7 +49,7 @@ export function RecommendationPreferencesSection() {
             Mostrar oportunidades internacionais
           </label>
           <span id="switch-international-opportunities-desc" className="mt-0.5 block type-meta text-muted-foreground">
-            Desligado por padrão. Quando ligado, avisos do Banco Mundial e chamadas da União Europeia entram na combinação com o seu perfil e nas
+            Desligado por padrão. Quando ligado, avisos do Banco Mundial e do BID e chamadas da União Europeia entram na combinação com o seu perfil e nas
             recomendações. A aba Internacionais do hub continua disponível de qualquer forma.
           </span>
         </span>

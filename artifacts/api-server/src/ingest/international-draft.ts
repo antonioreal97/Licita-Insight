@@ -16,12 +16,13 @@ import { opportunityStatus, type OpportunityStatus } from "./opportunity-map";
 
 export type InternationalSource = Extract<
   OpportunitySource,
-  "worldbank" | "eu_ft"
+  "worldbank" | "eu_ft" | "idb"
 >;
 
 export const internationalAgencies: Record<InternationalSource, string> = {
   worldbank: "Banco Mundial",
   eu_ft: "União Europeia",
+  idb: "BID",
 };
 
 /** A labelled fact of the notice shown on the detail page ("Método", "Projeto", "Programa"…). */

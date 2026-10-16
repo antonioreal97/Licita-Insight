@@ -8,6 +8,8 @@ export type InternationalRequest = {
   method?: "GET" | "POST";
   /** Parts of a `multipart/form-data` body, each sent as an `application/json` file part. */
   jsonParts?: Record<string, unknown>;
+  /** A source that authorized one exact identity gets it instead of `INTERNATIONAL_USER_AGENT`. */
+  userAgent?: string;
 };
 
 export type InternationalResponse = {
@@ -39,7 +41,7 @@ export const defaultInternationalFetch: InternationalFetch = async (
   const response = await fetch(request.url, {
     method: request.method ?? "GET",
     headers: {
-      "user-agent": INTERNATIONAL_USER_AGENT,
+      "user-agent": request.userAgent ?? INTERNATIONAL_USER_AGENT,
       accept: "application/json,text/plain;q=0.9,*/*;q=0.5",
     },
     body,

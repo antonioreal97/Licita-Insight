@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "result": {
+    "name": "project-procurement-bidding-notices-and-notification-of-contract-awards",
+    "title": {
+      "en": "IDB Project procurement bidding notices and notification of contract awards dataset",
+      "es": "Conjunto de datos sobre avisos de licitación y notificaciones de adjudicación de contratos para adquisiciones de proyectos del BID",
+      "fr": "Jeu de données sur les avis d'appel d'offres et les notifications d'attribution de marché pour les acquisitions de projets de la BID",
+      "pt_BR": "Conjunto de dados sobre avisos de licitação e notificações de adjudicação de contratos para aquisições de projetos do BID"
+    },
+    "license_id": "cc-by",
+    "license_title": "Creative Commons Attribution 4.0 International",
+    "metadata_modified": "2026-10-15T13:03:56.206934",
+    "resources": [
+      {
+        "id": "856aabfd-2c6a-48fb-a8b8-19f3ff443618",
+        "name": "Procurement Notices",
+        "format": "CSV",
+        "datastore_active": true,
+        "url": "https://data.iadb.org/files/download/9cc29cd0-c487-42e9-ad49-9971b4125066",
+        "last_modified": "2026-10-15T13:03:56.071701"
+      }
+    ]
+  }
+}
