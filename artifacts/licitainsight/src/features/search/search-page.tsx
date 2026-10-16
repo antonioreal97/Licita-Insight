@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { List, Loader2, SlidersHorizontal, Table2 } from 'lucide-react';
 import { Link } from 'wouter';
-import { isApiError, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
+import { isApiError, type CompanyCoverage, type SearchSuggestion, type SortOption, type TenderSearchParams } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
@@ -139,7 +139,8 @@ export default function SearchPage() {
           fallbackReason={search.isPlaceholderData || !params.q ? undefined : response?.meta.searchModeFallbackReason}
           onChange={(mode) => update({ mode })}
         />
-        {companyProfile.data?.profile && (
+        {/* A national profile covers the whole country, so "Minha região" would filter nothing. */}
+        {companyProfile.data?.profile?.coverage.scope === 'custom' && (
           <button
             type="button"
             aria-pressed={params.myRegion === true}
@@ -150,6 +151,7 @@ export default function SearchPage() {
                 : 'border-border bg-surface text-foreground hover:border-border-strong'
             }`}
             data-testid="button-my-region"
+            title={regionSummary(companyProfile.data.profile.coverage)}
           >
             Minha região
           </button>
@@ -374,4 +376,19 @@ export default function SearchPage() {
       </p>
     </>
   );
+}
+
+/** "SP, RJ e 3 municípios", the places "Minha região" keeps, for the button's tooltip. */
+function regionSummary(coverage: CompanyCoverage): string {
+  if (coverage.scope !== 'custom') return 'Todo o Brasil';
+  const regionNames = { north: 'Norte', northeast: 'Nordeste', central_west: 'Centro-Oeste', southeast: 'Sudeste', south: 'Sul' };
+  const parts = [
+    ...coverage.regions.map((region) => regionNames[region]),
+    ...coverage.states,
+    ...(coverage.municipalities.length
+      ? [`${coverage.municipalities.length} ${coverage.municipalities.length === 1 ? 'município' : 'municípios'}`]
+      : []),
+    ...(coverage.radius ? [`${coverage.radius.km} km de ${coverage.radius.center.name}`] : []),
+  ];
+  return parts.length ? `Só editais de: ${parts.join(', ')}` : 'Região do seu perfil';
 }
