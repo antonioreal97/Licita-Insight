@@ -40,6 +40,10 @@ import {
   statusLabels,
   toSummary,
 } from "../services/search-service";
+import {
+  getCachedTenderFacets,
+  tenderFacetCacheKey,
+} from "../lib/tender-facet-cache";
 
 const STATUSES = new Set<TenderStatus>([
   "open",
@@ -288,9 +292,17 @@ const orderBy = (criteria: SearchCriteria, tokens: string[]): SQL[] => {
     case "first_seen_desc":
       return [desc(tendersTable.createdAt), id];
     case "value_desc":
-      return [flaggedValueLast, sql`${tendersTable.estimatedValue} desc nulls last`, id];
+      return [
+        flaggedValueLast,
+        sql`${tendersTable.estimatedValue} desc nulls last`,
+        id,
+      ];
     case "value_asc":
-      return [flaggedValueLast, sql`${tendersTable.estimatedValue} asc nulls last`, id];
+      return [
+        flaggedValueLast,
+        sql`${tendersTable.estimatedValue} asc nulls last`,
+        id,
+      ];
     case "relevance":
       return tokens.length > 0
         ? [sql`${scoreSql(tokens)} desc`, published, id]
@@ -503,7 +515,7 @@ export class PostgresTenderRepository {
     const [rows, { total, facets }, indexUpdatedAt] = await Promise.all([
       rowsQuery,
       criteria.facets
-        ? this.facets(criteria, now)
+        ? this.cachedFacets(criteria, now)
         : countRows(where).then((total) => ({ total, facets: null })),
       this.indexUpdatedAt(),
     ]);
@@ -839,9 +851,7 @@ export class PostgresTenderRepository {
       newCount,
     ] = await Promise.all([
       combine ? this.combinedFacets(criteria, now) : undefined,
-      combine
-        ? undefined
-        : countRows(searchWhereFor(criteria, undefined, now)),
+      combine ? undefined : countRows(searchWhereFor(criteria, undefined, now)),
       ownQuery("status", () =>
         buckets(
           tendersTable.status,
@@ -874,9 +884,7 @@ export class PostgresTenderRepository {
         ),
       ),
       ownQuery("city", () => this.cityFacet(criteria, now)),
-      ownQuery("organization", () =>
-        this.organizationFacet(criteria, now),
-      ),
+      ownQuery("organization", () => this.organizationFacet(criteria, now)),
       ownQuery("category", () => this.categoryFacet(criteria, now)),
       ownQuery("platform", () =>
         buckets(
@@ -928,7 +936,9 @@ export class PostgresTenderRepository {
     if (total === undefined) throw new Error("Facet query returned no total");
     const shared = (): SearchFacets => {
       if (!combined) {
-        throw new Error("Facet group has neither its own nor the combined query");
+        throw new Error(
+          "Facet group has neither its own nor the combined query",
+        );
       }
       return combined.facets;
     };
@@ -984,6 +994,15 @@ export class PostgresTenderRepository {
         newCount: newCount ?? shared().newCount,
       },
     };
+  }
+
+  private cachedFacets(
+    criteria: SearchCriteria,
+    now: Date,
+  ): Promise<CombinedFacetResult> {
+    const key = tenderFacetCacheKey(criteria);
+    if (key === null) return this.facets(criteria, now);
+    return getCachedTenderFacets(key, () => this.facets(criteria, new Date()));
   }
 
   private async cityFacet(

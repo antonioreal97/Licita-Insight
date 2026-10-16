@@ -43,6 +43,7 @@ import { startRecommendationScheduler } from "./recommendations/recommendation-s
 import { startProfileKeywordScheduler } from "./profile/keyword-vocabulary";
 import { startPersonalDataRetentionScheduler } from "./account/personal-data-retention";
 import { startNightlyCategoryClassification } from "./titles/nightly-scheduler";
+import { warmDefaultTenderSearch } from "./services/search-backend";
 
 const parsePort = (
   name: "PORT" | "WORKER_HEALTH_PORT" | "METRICS_PORT",
@@ -123,6 +124,8 @@ const start = async (): Promise<void> => {
       "BILLING_DEV_ENTITLED is active; authenticated users bypass the subscription gate",
     );
   }
+
+  if (servesApi) await warmDefaultTenderSearch();
 
   // Serve health/API traffic while startup observes existing ingest heartbeats;
   // schedulers are armed only after that reconciliation finishes.
