@@ -33,6 +33,13 @@ O owner autorizou você a aplicar no servidor os commits publicados em `ops/macb
 abaixo, no clone `~/Documentos/LICITA/Licita-Insight`. O arquivo indicado (`~/licita-monitor/alerts/deploy-*.json`)
 traz `commits`, `files`, `kinds`, `fast_forward` e `local_changes`.
 
+**Janela de deploy (owner, 16/10/2026):** cada deploy com `app_build` reinicia o app, que começa uma coleta completa e
+deixa a busca lenta por cerca de meia hora. Por isso, `app_build` só é aplicado **de segunda a sexta entre 19:00 e
+08:00, ou a qualquer hora no sábado e no domingo** (horário de São Paulo). Fora dessa janela, não faça `pull`: responda
+"[deploy] aguardando janela" e encerre o turno; o monitor repassa de novo a cada 10 min e o deploy sai na primeira
+passagem dentro da janela. Exceções, aplicadas a qualquer hora: deploy só com `monitor_ops`/documentação (sem
+`app_build`), ou nota do Orchestrator com a palavra **URGENTE** autorizando o deploy daquele head.
+
 1. **Pare e só reporte** (sem `pull`) se `fast_forward` for `false`, se `kinds` tiver `db_schema` (migração exige
    plano do Orchestrator: a base veio de dump com histórico Drizzle divergente) ou se houver mudança local fora de
    `memory-bank/` e `docker-compose.yml`.
