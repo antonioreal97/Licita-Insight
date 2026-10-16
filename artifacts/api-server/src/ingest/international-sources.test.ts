@@ -12,7 +12,11 @@ import {
 } from "./eu-ft-parsers";
 import { placeFromName, languageCode } from "./international-countries";
 import type { InternationalOpportunityDraft } from "./international-draft";
-import { euEligibility, worldBankEligibility } from "./international-eligibility";
+import {
+  euEligibility,
+  idbEligibility,
+  worldBankEligibility,
+} from "./international-eligibility";
 import {
   fixtureFetcher,
   FIXTURE_NOW,
@@ -27,6 +31,12 @@ import {
   retryAfterMs,
 } from "./international-http";
 import { internationalSchedule } from "./international-schedule";
+import {
+  IDB_USER_AGENT,
+  idbPageUrl,
+  idbResourceId,
+  parseIdbPage,
+} from "./idb-parsers";
 import { parseWorldBankPage, worldBankPageUrl } from "./worldbank-parsers";
 
 const byId = (drafts: InternationalOpportunityDraft[]) =>
@@ -515,6 +525,16 @@ test("coleta: User-Agent honesto, robots consultado e poucas requisições", asy
         count: 11,
         message: null,
       },
+      {
+        source: "idb",
+        outcome: "ok",
+        complete: true,
+        requests: 3,
+        listed: 25329,
+        skipped: 4,
+        count: 11,
+        message: null,
+      },
     ],
   );
   assert.deepEqual(
@@ -525,8 +545,18 @@ test("coleta: User-Agent honesto, robots consultado e poucas requisições", asy
       "GET api.tech.ec.europa.eu/robots.txt",
       "POST api.tech.ec.europa.eu/search-api/prod/rest/facet",
       "POST api.tech.ec.europa.eu/search-api/prod/rest/search",
+      "GET data.iadb.org/robots.txt",
+      "GET data.iadb.org/api/3/action/package_show",
+      "GET data.iadb.org/api/3/action/datastore_search",
     ],
   );
+  // O BID recebe exatamente a identidade informada no pedido de autorização; as outras fontes, a padrão.
+  for (const request of requests)
+    assert.equal(
+      request.userAgent,
+      request.url.startsWith("https://data.iadb.org/") ? IDB_USER_AGENT : undefined,
+      request.url,
+    );
   // A consulta usa a DSL documentada: tipos 1, 2 e 8, abertos e previstos, ordem estável.
   assert.deepEqual(euSearchRequest(1).jsonParts.query, {
     bool: {
@@ -673,7 +703,7 @@ test("flags: INTERNATIONAL_COLLECT desligado por padrão e fora da janela noturn
       /INTERNATIONAL_HOUR must be an integer from 7 to 23/,
       hour,
     );
-  assert.deepEqual(internationalSourcesFromEnv({}), ["worldbank", "eu_ft"]);
+  assert.deepEqual(internationalSourcesFromEnv({}), ["worldbank", "eu_ft", "idb"]);
   assert.deepEqual(
     internationalSourcesFromEnv({ INTERNATIONAL_SOURCES: "eu_ft" }),
     ["eu_ft"],
@@ -681,5 +711,312 @@ test("flags: INTERNATIONAL_COLLECT desligado por padrão e fora da janela noturn
   assert.throws(
     () => internationalSourcesFromEnv({ INTERNATIONAL_SOURCES: "worldbank,ungm" }),
     /received "ungm"/,
+  );
+});
+
+const idb = () =>
+  parseIdbPage(internationalFixtureJson("idb-notices.json"), FIXTURE_NOW);
+
+test("BID: avisos específicos e manifestações de interesse com prazo vigente, com projeto, método e link oficial", () => {
+  const page = idb();
+  assert.equal(page.total, 25329);
+  assert.equal(page.rows, 15);
+  // Aviso geral de aquisições (prazo de 2029) e três avisos que fecharam antes de 11/10.
+  assert.equal(page.skipped, 4);
+  assert.equal(page.drafts.length, 11);
+  // A página chegou a prazos anteriores a ontem: as seguintes só têm avisos encerrados.
+  assert.equal(page.done, true);
+  const drafts = byId(page.drafts);
+  for (const id of ["34717", "39100", "39153", "38772"])
+    assert.ok(!drafts.has(id), id);
+
+  const terminal = drafts.get("39272")!;
+  assert.equal(terminal.id, "idb-39272");
+  assert.equal(terminal.source, "idb");
+  assert.equal(terminal.installationId, "idb");
+  assert.equal(terminal.scope, "international");
+  assert.equal(terminal.kind, "procurement");
+  assert.equal(terminal.agency, "BID");
+  assert.equal(terminal.organizationName, "Banco Interamericano de Desenvolvimento (BID)");
+  assert.equal(terminal.opportunityType, "Obras");
+  assert.equal(terminal.country, "SV");
+  assert.equal(terminal.region, "america-latina");
+  assert.equal(terminal.language, "es");
+  assert.equal(terminal.status, "open");
+  assert.equal(terminal.amountOriginal, null);
+  assert.equal(
+    terminal.originName,
+    "ES-L1173 · Programa de Modernización del Aeropuerto Internacional de El Salvador",
+  );
+  assert.equal(
+    terminal.sourceUrl,
+    "https://idbdocs.iadb.org/wsdocs/getdocument.aspx?docnum=EZIDB0003440-1039777545-105",
+  );
+  assert.equal(terminal.registrationFrom!.toISOString(), "2026-10-08T03:00:00.000Z");
+  // Prazo só com o dia: o fim do dia em San Salvador (UTC−6).
+  assert.equal(terminal.deadlinePrecision, "date");
+  assert.equal(terminal.deadlineTimeZone, "America/El_Salvador");
+  assert.equal(terminal.deadlineOriginal, "2026-11-20");
+  assert.equal(terminal.registrationTo!.toISOString(), "2026-11-21T05:59:59.000Z");
+  assert.match(
+    terminal.summary!,
+    /^Aviso específico de aquisição de obras em El Salvador, método International Competitive Bidding, no projeto Programa de Modernización/,
+  );
+  assert.deepEqual(
+    (terminal.raw.details as Array<{ label: string; value: string }>).map(
+      (detail) => detail.label,
+    ),
+    ["Tipo de aviso", "Método", "Operação", "Setor", "País do projeto", "Publicado em"],
+  );
+  assert.deepEqual(
+    (terminal.raw.details as Array<{ label: string; value: string }>).slice(3, 5),
+    [
+      { label: "Setor", value: "Transport" },
+      { label: "País do projeto", value: "El Salvador" },
+    ],
+  );
+  assert.match(terminal.searchText, /banco interamericano de desenvolvimento/);
+  assert.match(terminal.searchText, /6073\/oc-es/);
+
+  // Equador tem mais de um fuso: fica o dia, encerrado só quando acabou em toda a Terra.
+  const ecuador = drafts.get("39139")!;
+  assert.equal(ecuador.deadlineTimeZone, null);
+  assert.equal(ecuador.registrationTo!.toISOString(), "2026-11-12T11:59:59.000Z");
+
+  // Emenda continua sendo um aviso oficial com prazo próprio, marcada como tal.
+  const bahamas = drafts.get("39285")!;
+  assert.equal(bahamas.language, "en");
+  assert.equal(bahamas.raw.amendment, true);
+  assert.match(bahamas.summary!, /Emenda a um aviso já publicado/);
+  assert.deepEqual(
+    (bahamas.raw.details as Array<{ label: string; value: string }>)[0],
+    { label: "Tipo de aviso", value: "Aviso específico de aquisição (emenda)" },
+  );
+  assert.equal(drafts.get("39006")!.raw.amendment, true);
+  assert.equal(drafts.get("39007")!.raw.amendment, false);
+});
+
+test("BID: elegibilidade pela regra dos países-membros, com restrição nacional a confirmar", () => {
+  const drafts = byId(idb().drafts);
+  const rule = (id: string) => drafts.get(id)!.brazilEligibility;
+  assert.equal(rule("39272").status, "yes");
+  assert.equal(rule("39272").rule, "idb-member-country");
+  assert.match(rule("39272").reason, /48 países-membros/);
+  assert.equal(drafts.get("39272")!.brazilFunding, null);
+
+  // "National Competitive Bidding" fora do Brasil: o aviso pode limitar a disputa ao país do projeto.
+  assert.equal(rule("39196").status, "unknown");
+  assert.equal(rule("39196").rule, "idb-national-restriction");
+  assert.match(rule("39196").reason, /Peru/);
+  // Fecha em 12/10 em San Salvador: ainda aberto no instante da gravação.
+  assert.equal(rule("39214").rule, "idb-national-restriction");
+  assert.equal(drafts.get("39214")!.registrationTo!.toISOString(), "2026-10-13T05:59:59.000Z");
+
+  // Projeto no Brasil: português da fonte, sem tradução, consultoria por manifestação de interesse.
+  const para = drafts.get("39007")!;
+  assert.equal(para.country, "BR");
+  assert.equal(para.language, "pt");
+  assert.equal(para.translationSource, "source");
+  assert.equal(para.titlePt, para.titleOriginal);
+  assert.equal(para.opportunityType, "Consultoria");
+  assert.equal(rule("39007").status, "yes");
+
+  assert.deepEqual(
+    idbEligibility({
+      methodName: "National Competitive Bidding",
+      country: "BR",
+      countryName: "Brasil",
+      texts: ["Obras de saneamento"],
+    }),
+    {
+      status: "yes",
+      rule: "idb-national-brazil",
+      reason:
+        "Processo nacional de projeto no Brasil, financiado pelo BID: aberto a fornecedores estabelecidos no país. Confira a habilitação exigida no aviso.",
+    },
+  );
+  assert.equal(
+    idbEligibility({
+      methodName: null,
+      country: "CO",
+      countryName: "Colômbia",
+      texts: ["Licitación Pública Nacional No. 4/2026"],
+    }).status,
+    "unknown",
+  );
+});
+
+test("BID: tabela do dataset via package_show e consulta paginada só com as colunas usadas", () => {
+  const resourceId = idbResourceId(internationalFixtureJson("idb-package.json"));
+  assert.equal(resourceId, "856aabfd-2c6a-48fb-a8b8-19f3ff443618");
+  assert.throws(
+    () => idbResourceId({ success: true, result: { resources: [{ id: "x", datastore_active: false }] } }),
+    /datastore_active/,
+  );
+  const url = new URL(idbPageUrl(resourceId, 200));
+  assert.equal(url.pathname, "/api/3/action/datastore_search");
+  assert.equal(url.searchParams.get("offset"), "200");
+  assert.equal(url.searchParams.get("limit"), "100");
+  assert.equal(url.searchParams.get("sort"), "deadline desc, _id asc");
+  assert.deepEqual(JSON.parse(url.searchParams.get("filters")!), {
+    type: ["SPECIFIC", "EOI"],
+  });
+  assert.ok(!url.searchParams.get("fields")!.includes("ezshareid"));
+  for (const draft of idb().drafts)
+    assert.doesNotMatch(JSON.stringify(draft.raw), /documenturl|@/);
+});
+
+const idbRecords = () =>
+  (
+    internationalFixtureJson("idb-notices.json") as {
+      result: { records: Array<Record<string, unknown>> };
+    }
+  ).result.records;
+
+/** A page of 100 copies of an open notice; `lastDeadline` replaces the deadline of the last one. */
+const idbFullPage = (offset: number, lastDeadline?: string) =>
+  JSON.stringify({
+    success: true,
+    result: {
+      total: 25329,
+      records: Array.from({ length: 100 }, (_unused, index) => ({
+        ...idbRecords().find((record) => record.noticeid === "39272"),
+        noticeid: String(offset + index),
+        deadline: index === 99 && lastDeadline ? lastDeadline : "2026-12-01",
+      })),
+    },
+  });
+
+const offsetOf = (url: string) =>
+  Number(new URL(url).searchParams.get("offset"));
+
+test("BID: a leitura para na página que chega a prazos vencidos e respeita o teto de páginas", async () => {
+  const { fetcher, requests } = fixtureFetcher([
+    [
+      "https://data.iadb.org/api/3/action/datastore_search",
+      (request) =>
+        internationalResponse(
+          200,
+          idbFullPage(offsetOf(request.url), offsetOf(request.url) === 100 ? "2026-09-30" : undefined),
+        ),
+    ],
+  ]);
+  const [read] = await collectInternationalOnce({
+    fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    sources: ["idb"],
+  });
+  assert.equal(read!.outcome, "ok");
+  assert.equal(read!.complete, true);
+  assert.equal(read!.requests, 4);
+  assert.equal(read!.count, 199);
+  assert.equal(read!.skipped, 1);
+  assert.deepEqual(
+    requests.filter((request) => request.url.includes("datastore_search")).map((request) => offsetOf(request.url)),
+    [0, 100],
+  );
+
+  const endless = fixtureFetcher([
+    [
+      "https://data.iadb.org/api/3/action/datastore_search",
+      (request) => internationalResponse(200, idbFullPage(offsetOf(request.url))),
+    ],
+  ]);
+  const [capped] = await collectInternationalOnce({
+    fetcher: endless.fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    sources: ["idb"],
+  });
+  // Teto próprio de 10 páginas, abaixo do teto geral de 40: sem listagem completa, nada é encerrado.
+  assert.equal(capped!.outcome, "partial");
+  assert.equal(capped!.complete, false);
+  assert.equal(capped!.requests, 12);
+  assert.match(capped!.message!, /teto de 10 páginas/);
+});
+
+test("BID: erro 5xx é repetido com espera crescente; falha persistente não derruba as outras fontes", async () => {
+  let calls = 0;
+  const waits: number[] = [];
+  const flaky = fixtureFetcher([
+    [
+      "https://data.iadb.org/api/3/action/datastore_search",
+      () => {
+        calls += 1;
+        return calls === 1
+          ? internationalResponse(502, "Bad Gateway")
+          : internationalResponse(200, internationalFixture("idb-notices.json"));
+      },
+    ],
+  ]);
+  const [recovered] = await collectInternationalOnce({
+    fetcher: flaky.fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    wait: async (ms) => void waits.push(ms),
+    sources: ["idb"],
+  });
+  assert.equal(recovered!.outcome, "ok");
+  assert.equal(recovered!.count, 11);
+  assert.deepEqual(waits, [5_000]);
+
+  waits.length = 0;
+  const down = fixtureFetcher([
+    [
+      "https://data.iadb.org/api/3/action/",
+      () => internationalResponse(500, "Internal Server Error"),
+    ],
+  ]);
+  const [worldbank, eu, broken] = await collectInternationalOnce({
+    fetcher: down.fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    wait: async (ms) => void waits.push(ms),
+  });
+  assert.equal(broken!.outcome, "failed");
+  assert.match(broken!.message!, /data\.iadb\.org respondeu HTTP 500/);
+  assert.equal(broken!.requests, 4);
+  assert.deepEqual(waits, [5_000, 10_000]);
+  assert.equal(worldbank!.outcome, "ok");
+  assert.equal(eu!.outcome, "ok");
+
+  // 404 não é transitório: falha na hora, sem nova tentativa.
+  waits.length = 0;
+  const missing = fixtureFetcher([
+    [
+      "https://data.iadb.org/api/3/action/package_show",
+      () => internationalResponse(404, "Not Found"),
+    ],
+  ]);
+  const [gone] = await collectInternationalOnce({
+    fetcher: missing.fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    wait: async (ms) => void waits.push(ms),
+    sources: ["idb"],
+  });
+  assert.equal(gone!.outcome, "failed");
+  assert.equal(gone!.requests, 2);
+  assert.deepEqual(waits, []);
+});
+
+test("BID: o robots.txt publicado libera a API; um robots.txt que a proíba deixa a fonte de fora", async () => {
+  const blocked = fixtureFetcher([
+    [
+      "https://data.iadb.org/robots.txt",
+      () => internationalResponse(200, "User-agent: *\nDisallow: /api/\n"),
+    ],
+  ]);
+  const [idbRead] = await collectInternationalOnce({
+    fetcher: blocked.fetcher,
+    now: FIXTURE_NOW,
+    delayMs: 0,
+    sources: ["idb"],
+  });
+  assert.equal(idbRead!.outcome, "blocked_by_robots");
+  assert.deepEqual(
+    blocked.requests.map((request) => request.url),
+    ["https://data.iadb.org/robots.txt"],
   );
 });

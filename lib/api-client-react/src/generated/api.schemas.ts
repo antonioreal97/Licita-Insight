@@ -1623,6 +1623,7 @@ export const OpportunitySource = {
   salic: 'salic',
   worldbank: 'worldbank',
   eu_ft: 'eu_ft',
+  idb: 'idb',
 } as const;
 
 export interface OpportunityDocument {

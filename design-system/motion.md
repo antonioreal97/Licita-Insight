@@ -45,10 +45,15 @@ The public landing (`artifacts/licitainsight/src/features/landing/`) is a brand 
 - **Pre-rendered clips that play once** (`pardal-clip.tsx`): HyperFrames compositions in `artifacts/licitainsight/motion/`, rendered by
   `pnpm --filter @workspace/licitainsight run motion:render` into `public/motion/` (WebM with alpha for Chrome/Firefox, HEVC with alpha
   for Safari, PNG of the last frame). They start when scrolled into view and stop on the last frame.
+- **Teaser in a loop** (`pardal-teaser.tsx`, section "Na prática"): the owner's 12 s silent video, not a HyperFrames composition.
+  Files in `public/motion/pardal-teaser*` (VP9 1080p, H.264 1080p fallback, H.264 720p for phones, AVIF poster). Nothing, poster
+  included, downloads before the section nears the screen; it plays only while half visible, pauses off screen, and always has a
+  visible Pausar/Reproduzir button. To replace it, re-encode from the source and keep the names.
 
-Still forbidden on the landing: animating live data (index facts, tender preview), new infinite loops (the radar globe is the only
-one), and any motion under reduced motion. With reduced motion there is no transition: the bird is drawn once next to the hero (only from
-1360px) and the clips show only their last frame.
+Still forbidden on the landing: animating live data (index facts, tender preview), new infinite loops (the radar globe and the
+teaser are the only ones), and any motion under reduced motion. With reduced motion there is no transition: the bird is drawn once
+next to the hero (only from 1360px), the clips show only their last frame, and the teaser shows its poster until the visitor
+presses Reproduzir.
 
 ## Reduced motion
 

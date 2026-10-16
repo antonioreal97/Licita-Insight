@@ -39,7 +39,14 @@ import {
   opportunityPillClass,
   type OpportunityFilterDensity,
 } from './opportunity-filters';
-import { INTERNATIONAL_KINDS, INTERNATIONAL_SOURCES, opportunityKindLabels, opportunitySourceLabels, OpportunityStatusBadge } from './opportunity-status';
+import {
+  INTERNATIONAL_KINDS,
+  INTERNATIONAL_SOURCES,
+  opportunityKindLabels,
+  opportunitySourceAttributions,
+  opportunitySourceLabels,
+  OpportunityStatusBadge,
+} from './opportunity-status';
 import { ApplicationBadge } from './application-panel';
 
 const tones: Record<BrazilEligibility, string> = {
@@ -367,6 +374,11 @@ export function InternationalRow({ opportunity }: { opportunity: OpportunitySumm
           >
             Ver aviso oficial <ExternalLink size={13} aria-hidden />
           </a>
+        )}
+        {opportunitySourceAttributions[opportunity.source] && (
+          <p data-testid="text-source-attribution" className="type-meta text-muted-foreground">
+            {opportunitySourceAttributions[opportunity.source]}
+          </p>
         )}
       </div>
     </li>

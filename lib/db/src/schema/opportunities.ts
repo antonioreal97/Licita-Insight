@@ -24,7 +24,8 @@ export type OpportunitySource =
   | "minc"
   | "salic"
   | "worldbank"
-  | "eu_ft";
+  | "eu_ft"
+  | "idb";
 /** Reach of the call, not its nature: an international call still has a `kind`. */
 export type OpportunityScope = "national" | "international";
 export type BrazilEligibility = "yes" | "conditional" | "no" | "unknown";
@@ -190,7 +191,7 @@ export const culturalOpportunitiesTable = pgTable(
     ),
     check(
       "cultural_opportunities_source_check",
-      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft')`,
+      sql`${table.source} in ('mapas', 'finep', 'cnpq', 'capes', 'transferegov', 'funarte', 'minc', 'salic', 'worldbank', 'eu_ft', 'idb')`,
     ),
     check(
       "cultural_opportunities_scope_check",
