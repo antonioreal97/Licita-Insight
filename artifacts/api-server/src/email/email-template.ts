@@ -108,6 +108,7 @@ const changeDescription = (
       open: "Aberto",
       under_review: "Em análise",
       closed: "Encerrado",
+      direct: "Contratação direta",
     };
     return `Novo status: ${labels[String(change?.to)] ?? String(change?.to ?? "alterado")}`;
   }

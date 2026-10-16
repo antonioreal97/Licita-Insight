@@ -4,7 +4,11 @@ import { tryRunSingletonJob } from "../jobs/job-lock";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** A publication does not change when its proposal deadline passes, so PNCP refreshes cannot keep this status current. */
+/**
+ * A publication does not change when its proposal deadline passes, so PNCP refreshes cannot keep this status current.
+ * Only `open` rows with a past deadline move to `under_review`. `direct` (dispensa/inexigibilidade without a
+ * deadline) is left alone — there is no window to expire, and we never re-open those as `open` here.
+ */
 export async function reconcileExpiredTenderStatuses(
   now = new Date(),
   client: Pick<typeof pool, "query"> = pool,
