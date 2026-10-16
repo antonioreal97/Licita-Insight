@@ -67,7 +67,7 @@ The deep teal primary pair measures 5.75:1 in light mode and 7.49:1 in dark mode
 
 ## Tender status
 
-The API sends `TenderStatus` (`open | under_review | closed | suspended | cancelled`). PT-BR labels come from `lib/tender-labels.ts`. Use `bg-status-* text-status-*-foreground` pairs: never convey a status with color alone. Open now uses sage; closed and cancelled use quiet blue green neutrals. Under review and suspended keep their warning and error hues. Every status text pair measures at least 4.5:1 in both themes.
+The API sends `TenderStatus` (`open | under_review | closed | suspended | cancelled | direct`). PT-BR labels come from `lib/tender-labels.ts`. Use `bg-status-* text-status-*-foreground` pairs: never convey a status with color alone. Open uses sage; direct (contratação direta) uses aqua; closed and cancelled use quiet blue green neutrals. Under review and suspended keep their warning and error hues. Every status text pair measures at least 4.5:1 in both themes.
 
 ## Sidebar and charts
 

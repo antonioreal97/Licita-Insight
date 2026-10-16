@@ -47,6 +47,7 @@ const STATUSES = new Set<TenderStatus>([
   "closed",
   "suspended",
   "cancelled",
+  "direct",
 ]);
 
 const MODALITIES = new Set<Modality>([

@@ -166,8 +166,11 @@ function OptionList({
           {shown.map((option) => {
             const checked = selected.includes(option.value);
             const id = `${groupId}-${option.value}`;
-            // Modality options get a help icon beside the label (a button can't sit inside the checkbox label).
-            const termId = config.param === 'modality' ? entryForLabel(option.label) : undefined;
+            // Modality (and status "Contratação direta" via the dispensa alias) get a glossário icon.
+            const termId =
+              config.param === 'modality' || config.param === 'status'
+                ? entryForLabel(option.label)
+                : undefined;
             return (
               <li key={option.value} className={termId ? 'flex items-center gap-0.5' : undefined}>
                 <label

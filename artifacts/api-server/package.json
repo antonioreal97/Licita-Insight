@@ -26,6 +26,8 @@
     "try:openai-summary": "node --env-file-if-exists=../../.env --import tsx scripts/try-openai-summary.ts",
     "backfill:display-titles": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-display-titles.ts",
     "backfill:platform": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-platform.ts",
+    "backfill:direct-status": "node --env-file-if-exists=../../.env --import tsx scripts/backfill-direct-status.ts",
+    "bench:search": "node --env-file-if-exists=../../.env --import tsx scripts/bench-search.ts",
     "billing:reconcile": "node --env-file-if-exists=../../.env --import tsx src/billing/reconcile-billing-cli.ts",
     "review:estimated-values": "node --env-file-if-exists=../../.env --import tsx scripts/review-estimated-values.ts",
     "calibrate:estimated-value": "node --import tsx scripts/calibrate-estimated-value.ts",

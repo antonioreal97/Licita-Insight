@@ -25,6 +25,7 @@ test("reconciles only expired open PNCP tenders and is idempotent", { skip: !pro
        ('expired', 'open', 'pncp', $2::timestamptz),
        ('future', 'open', 'pncp', $3::timestamptz),
        ('unknown', 'open', 'pncp', null),
+       ('direct-row', 'direct', 'pncp', null),
        ('cancelled', 'cancelled', 'pncp', $2::timestamptz),
        ('other-source', 'open', 'other', $2::timestamptz)
      ) as sample(id, status, source_id, deadline)`,
@@ -36,6 +37,7 @@ test("reconciles only expired open PNCP tenders and is idempotent", { skip: !pro
   const result = await pool.query("select id, status from tenders order by id");
   assert.deepEqual(Object.fromEntries(result.rows.map(({ id, status }) => [id, status])), {
     cancelled: "cancelled",
+    "direct-row": "direct",
     expired: "under_review",
     future: "open",
     "other-source": "open",

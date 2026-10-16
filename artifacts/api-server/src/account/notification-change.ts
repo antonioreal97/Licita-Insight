@@ -44,7 +44,14 @@ export const tenderChanges = (
     scalarDate(previous.proposalDeadline),
     scalarDate(next.proposalDeadline),
   );
-  add("tender_status_changed", "status", previous.status, next.status);
+  // open ↔ direct is a product reclassification (contratação direta sem prazo), not a
+  // PNCP situation change — skip so backfill/upsert reclassifications do not flood monitors.
+  const reclassifiedDirect =
+    (previous.status === "open" && next.status === "direct") ||
+    (previous.status === "direct" && next.status === "open");
+  if (!reclassifiedDirect) {
+    add("tender_status_changed", "status", previous.status, next.status);
+  }
   add(
     "tender_value_changed",
     "estimatedValue",

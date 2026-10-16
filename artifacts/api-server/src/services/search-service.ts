@@ -27,6 +27,7 @@ export const statusLabels: Record<TenderStatus, string> = {
   closed: "Encerrado",
   suspended: "Suspenso",
   cancelled: "Revogado",
+  direct: "Contratação direta",
 };
 
 export const modalityLabels: Record<Modality, string> = {
