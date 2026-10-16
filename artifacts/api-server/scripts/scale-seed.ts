@@ -15,6 +15,12 @@ const arg = (name: string): string | undefined => {
 const rows = Number(arg("--rows") ?? "1500000");
 const seed = Number(arg("--seed") ?? "42");
 const openCount = Number(arg("--open-count") ?? "27000");
+// Production-shaped band: dispensa/inexigibilidade without deadline (default ~3.4× open when --rows is large).
+const directCount = Number(
+  arg("--direct-count") ?? (rows >= 200_000 ? String(Math.min(90_000, rows - openCount)) : "0"),
+);
+// When set, write that band as status=open so bench-search can measure the pre-reclassification cost.
+const directAsOpen = process.argv.includes("--direct-as-open");
 const skipSchema = process.argv.includes("--skip-schema");
 if (!Number.isSafeInteger(rows) || rows < 1 || rows > 2_000_000) {
   throw new Error("--rows must be an integer between 1 and 2000000");
@@ -22,6 +28,9 @@ if (!Number.isSafeInteger(rows) || rows < 1 || rows > 2_000_000) {
 if (!Number.isSafeInteger(seed)) throw new Error("--seed must be an integer");
 if (!Number.isSafeInteger(openCount) || openCount < 0 || openCount > rows) {
   throw new Error("--open-count must be an integer between 0 and --rows");
+}
+if (!Number.isSafeInteger(directCount) || directCount < 0 || openCount + directCount > rows) {
+  throw new Error("--direct-count must be an integer between 0 and --rows - --open-count");
 }
 
 await withAdmin(async (admin) => {
@@ -73,13 +82,20 @@ try {
         'ORG-' || lpad(((i + $2) % 5000)::text, 4, '0'),
         'Órgão Público ' || ((i + $2) % 5000)::text,
         'Unidade de Compras ' || ((i + $2) % 800)::text,
-        mods.slug,
-        mods.label,
+        case
+          when i > $3 and i <= ($3 + $4) then direct_mods.slug
+          else mods.slug
+        end,
+        case
+          when i > $3 and i <= ($3 + $4) then direct_mods.label
+          else mods.label
+        end,
         case
           when i <= $3 then 'open'
-          when (i - $3) % 10 < 7 then 'closed'
-          when (i - $3) % 10 = 7 then 'under_review'
-          when (i - $3) % 10 = 8 then 'suspended'
+          when i <= ($3 + $4) then case when $5::boolean then 'open' else 'direct' end
+          when (i - $3 - $4) % 10 < 7 then 'closed'
+          when (i - $3 - $4) % 10 = 7 then 'under_review'
+          when (i - $3 - $4) % 10 = 8 then 'suspended'
           else 'cancelled'
         end,
         (1000 + i)::text || '/2026',
@@ -88,14 +104,17 @@ try {
         'disclosed',
         case
           when i <= $3 then now() - interval '1 day' * (((i + $2) % 30) + 1)
+          when i <= ($3 + $4) then now() - interval '1 day' * (((i + $2) % 30) + 1)
           else now() - interval '1 day' * (((i + $2) % 730) + 16)
         end,
         case
           when i <= $3 then now() + interval '1 day' * (((i + $2) % 10) + 1)
+          when i <= ($3 + $4) then null
           else now() - interval '1 day' * (((i + $2) % 730) + 10)
         end,
         case
           when i <= $3 then now() + interval '1 day' * (((i + $2) % 30) + 1)
+          when i <= ($3 + $4) then null
           else now() - interval '1 day' * (((i + $2) % 730) + 1)
         end,
         states.uf,
@@ -180,6 +199,10 @@ try {
                (array['Pregão eletrônico','Pregão presencial','Concorrência','Concorrência eletrônica','Dispensa','Inexigibilidade','Credenciamento','Leilão'])[((i + $2) % 8) + 1] label
       ) mods
       cross join lateral (
+        select (array['dispensa','inexigibilidade'])[((i + $2) % 2) + 1] slug,
+               (array['Dispensa','Inexigibilidade'])[((i + $2) % 2) + 1] label
+      ) direct_mods
+      cross join lateral (
         select (array['comprasgov','licitanet','bll','bnc','portal-compras-publicas','licitacoes-e'])[((i + $2) % 6) + 1] slug,
                (array['Compras.gov.br','Licitanet','BLL Compras','BNC (Bolsa Nacional de Compras)','Portal de Compras Públicas','Licitações-e (Banco do Brasil)'])[((i + $2) % 6) + 1] label
       ) plats
@@ -199,17 +222,21 @@ try {
         from generate_series(1, 1 + ((i + $2) % 5)) n
       ) item_rows
     `,
-    [rows, seed, openCount],
+    [rows, seed, openCount, directCount, directAsOpen],
   );
   await client.query("analyze tenders");
   const stats = await client.query<{
     rows: number;
+    open_count: number;
+    direct_count: number;
     open_pct: number;
     avg_search_bytes: number;
     avg_items: number;
     database_bytes: string;
   }>(`
     select count(*)::int rows,
+           count(*) filter (where status = 'open')::int open_count,
+           count(*) filter (where status = 'direct')::int direct_count,
            round(100.0 * count(*) filter (where status = 'open') / count(*), 2)::float8 open_pct,
            round(avg(octet_length(search_text)))::int avg_search_bytes,
            round(avg(jsonb_array_length(items)), 2)::float8 avg_items,
@@ -219,6 +246,9 @@ try {
   process.stdout.write(`${JSON.stringify({
     ...stats.rows[0],
     seed,
+    requestedOpen: openCount,
+    requestedDirect: directCount,
+    directAsOpen,
     elapsedMs: Math.round(performance.now() - startedAt),
   }, null, 2)}\n`);
 } finally {

@@ -28,8 +28,8 @@ export const FACET_GROUPS: FacetGroupConfig[] = [
     facet: 'status',
     title: 'Situação',
     noun: 'situação',
-    visible: 5,
-    help: 'A busca abre só nos abertos, que ainda recebem propostas. Desmarque para ver os demais.',
+    visible: 6,
+    help: 'A busca abre só nos abertos, com disputa ou prazo. Contratação direta (dispensa/inexigibilidade sem prazo) fica fora desse padrão.',
   },
   {
     param: 'modality',
@@ -76,6 +76,7 @@ export const statusFilterLabels: Record<TenderStatus, string> = {
   closed: 'Encerrados',
   suspended: 'Suspensos',
   cancelled: 'Revogados (cancelados)',
+  direct: 'Contratação direta',
 };
 
 /**

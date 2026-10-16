@@ -168,6 +168,35 @@ describe("PNCP publication mapping", () => {
     );
     assert.equal(mapPncpStatus("Suspensa", null, now), "suspended");
     assert.equal(mapPncpStatus("Revogada", null, now), "cancelled");
+    assert.equal(
+      mapPncpStatus("Divulgada no PNCP", null, now, "dispensa"),
+      "direct",
+      "dispensa without a deadline is contratação direta",
+    );
+    assert.equal(
+      mapPncpStatus("Divulgada no PNCP", null, now, "inexigibilidade"),
+      "direct",
+    );
+    assert.equal(
+      mapPncpStatus(
+        "Divulgada no PNCP",
+        new Date("2026-09-30T17:00:00-03:00"),
+        now,
+        "dispensa",
+      ),
+      "open",
+      "electronic dispensa with a deadline stays open",
+    );
+    assert.equal(
+      mapPncpStatus("Divulgada no PNCP", null, now, "credenciamento"),
+      "open",
+      "credenciamento without a deadline stays open (continuous call)",
+    );
+    assert.equal(
+      mapPncpStatus("Divulgada no PNCP", null, now, "pregao_eletronico"),
+      "open",
+      "pregão without a deadline is left open for now",
+    );
     assert.deepEqual(
       mapEstimatedValue(0, null, null),
       { estimatedValue: null, estimatedValueStatus: "not_published" },
@@ -212,6 +241,42 @@ describe("PNCP publication mapping", () => {
     assert.throws(
       () => mapPublication({ objetoCompra: "sem identificação" }, now),
       /numeroControlePNCP/,
+    );
+  });
+
+  it("classifies dispensa/inexigibilidade without a deadline as direct and reopens when a deadline appears", () => {
+    const base = {
+      ...publication,
+      modalidadeId: 8,
+      modalidadeNome: "Dispensa",
+      dataEncerramentoProposta: null,
+      dataAberturaProposta: null,
+    };
+    assert.equal(mapPublication(base, now).status, "direct");
+    assert.equal(
+      mapPublication(
+        { ...base, modalidadeId: 9, modalidadeNome: "Inexigibilidade" },
+        now,
+      ).status,
+      "direct",
+    );
+    const withDeadline = mapPublication(
+      { ...base, dataEncerramentoProposta: "2026-09-30T17:00:00" },
+      now,
+    );
+    assert.equal(withDeadline.status, "open");
+    assert.ok(withDeadline.proposalDeadline);
+    assert.equal(
+      mapPublication(
+        {
+          ...publication,
+          modalidadeId: 12,
+          modalidadeNome: "Credenciamento",
+          dataEncerramentoProposta: null,
+        },
+        now,
+      ).status,
+      "open",
     );
   });
 });

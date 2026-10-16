@@ -1351,6 +1351,9 @@ export interface TenderHighlightsResponse {
   results: TenderHighlightsResponseResults;
 }
 
+/**
+ * `open` is a competitive opportunity with an active window (including electronic dispensa with a proposal deadline, and credenciamento without a deadline as a continuous call). `direct` is dispensa or inexigibilidade with no proposal_deadline (contratação direta sem disputa). Pregão/other without a deadline stay as mapped by the source situation and are not auto-promoted to `direct`.
+ */
 export type TenderStatus = typeof TenderStatus[keyof typeof TenderStatus];
 
 
@@ -1360,6 +1363,7 @@ export const TenderStatus = {
   closed: 'closed',
   suspended: 'suspended',
   cancelled: 'cancelled',
+  direct: 'direct',
 } as const;
 
 export type EstimatedValueStatus = typeof EstimatedValueStatus[keyof typeof EstimatedValueStatus];

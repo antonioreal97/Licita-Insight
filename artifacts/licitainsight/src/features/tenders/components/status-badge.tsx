@@ -8,6 +8,7 @@ const tones: Record<TenderStatus, string> = {
   closed: 'bg-status-closed text-status-closed-foreground',
   suspended: 'bg-status-suspended text-status-suspended-foreground',
   cancelled: 'bg-status-cancelled text-status-cancelled-foreground',
+  direct: 'bg-status-direct text-status-direct-foreground',
 };
 
 export function StatusBadge({ status }: { status: TenderStatus }) {
