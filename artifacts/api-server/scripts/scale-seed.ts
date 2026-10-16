@@ -5,7 +5,10 @@ import pg from "pg";
 import { SCALE_DATABASE, scaleDatabaseUrl, withAdmin } from "./scale-db";
 
 const { Client } = pg;
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
 
 const arg = (name: string): string | undefined => {
   const index = process.argv.indexOf(name);
@@ -17,7 +20,18 @@ const seed = Number(arg("--seed") ?? "42");
 const openCount = Number(arg("--open-count") ?? "27000");
 // Production-shaped band: dispensa/inexigibilidade without deadline (default ~3.4× open when --rows is large).
 const directCount = Number(
-  arg("--direct-count") ?? (rows >= 200_000 ? String(Math.min(90_000, rows - openCount)) : "0"),
+  arg("--direct-count") ??
+    (rows >= 200_000 ? String(Math.min(90_000, rows - openCount)) : "0"),
+);
+const remainingAfterDirect = rows - openCount - directCount;
+const underReviewCount = Number(
+  arg("--under-review-count") ?? String(Math.floor(remainingAfterDirect / 10)),
+);
+const suspendedCount = Number(
+  arg("--suspended-count") ?? String(Math.floor(remainingAfterDirect / 10)),
+);
+const cancelledCount = Number(
+  arg("--cancelled-count") ?? String(Math.floor(remainingAfterDirect / 10)),
 );
 // When set, write that band as status=open so bench-search can measure the pre-reclassification cost.
 const directAsOpen = process.argv.includes("--direct-as-open");
@@ -29,28 +43,61 @@ if (!Number.isSafeInteger(seed)) throw new Error("--seed must be an integer");
 if (!Number.isSafeInteger(openCount) || openCount < 0 || openCount > rows) {
   throw new Error("--open-count must be an integer between 0 and --rows");
 }
-if (!Number.isSafeInteger(directCount) || directCount < 0 || openCount + directCount > rows) {
-  throw new Error("--direct-count must be an integer between 0 and --rows - --open-count");
+if (
+  !Number.isSafeInteger(directCount) ||
+  directCount < 0 ||
+  openCount + directCount > rows
+) {
+  throw new Error(
+    "--direct-count must be an integer between 0 and --rows - --open-count",
+  );
+}
+if (
+  ![underReviewCount, suspendedCount, cancelledCount].every(
+    (count) => Number.isSafeInteger(count) && count >= 0,
+  ) ||
+  openCount + directCount + underReviewCount + suspendedCount + cancelledCount >
+    rows
+) {
+  throw new Error(
+    "status counts must be non-negative integers whose sum does not exceed --rows",
+  );
 }
 
 await withAdmin(async (admin) => {
-  const exists = await admin.query("select 1 from pg_database where datname = $1", [SCALE_DATABASE]);
-  if (exists.rowCount === 0) await admin.query(`create database ${SCALE_DATABASE}`);
+  const exists = await admin.query(
+    "select 1 from pg_database where datname = $1",
+    [SCALE_DATABASE],
+  );
+  if (exists.rowCount === 0)
+    await admin.query(`create database ${SCALE_DATABASE}`);
 });
 
 if (!skipSchema) {
-  const prepare = spawnSync("pnpm", ["--filter", "@workspace/db", "run", "prepare-extensions"], {
-    cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: scaleDatabaseUrl() },
-    encoding: "utf8",
-  });
-  if (prepare.status !== 0) throw new Error(`Extension preparation failed\n${prepare.stdout}\n${prepare.stderr}`);
-  const push = spawnSync("pnpm", ["--filter", "@workspace/db", "run", "push-force"], {
-    cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: scaleDatabaseUrl() },
-    encoding: "utf8",
-  });
-  if (push.status !== 0) throw new Error(`Schema push failed\n${push.stdout}\n${push.stderr}`);
+  const prepare = spawnSync(
+    "pnpm",
+    ["--filter", "@workspace/db", "run", "prepare-extensions"],
+    {
+      cwd: repoRoot,
+      env: { ...process.env, DATABASE_URL: scaleDatabaseUrl() },
+      encoding: "utf8",
+    },
+  );
+  if (prepare.status !== 0)
+    throw new Error(
+      `Extension preparation failed\n${prepare.stdout}\n${prepare.stderr}`,
+    );
+  const push = spawnSync(
+    "pnpm",
+    ["--filter", "@workspace/db", "run", "push-force"],
+    {
+      cwd: repoRoot,
+      env: { ...process.env, DATABASE_URL: scaleDatabaseUrl() },
+      encoding: "utf8",
+    },
+  );
+  if (push.status !== 0)
+    throw new Error(`Schema push failed\n${push.stdout}\n${push.stderr}`);
 }
 
 const client = new Client({ connectionString: scaleDatabaseUrl() });
@@ -93,10 +140,10 @@ try {
         case
           when i <= $3 then 'open'
           when i <= ($3 + $4) then case when $5::boolean then 'open' else 'direct' end
-          when (i - $3 - $4) % 10 < 7 then 'closed'
-          when (i - $3 - $4) % 10 = 7 then 'under_review'
-          when (i - $3 - $4) % 10 = 8 then 'suspended'
-          else 'cancelled'
+          when i <= ($3 + $4 + $6) then 'under_review'
+          when i <= ($3 + $4 + $6 + $7) then 'suspended'
+          when i <= ($3 + $4 + $6 + $7 + $8) then 'cancelled'
+          else 'closed'
         end,
         (1000 + i)::text || '/2026',
         'PROC-' || i::text,
@@ -222,13 +269,26 @@ try {
         from generate_series(1, 1 + ((i + $2) % 5)) n
       ) item_rows
     `,
-    [rows, seed, openCount, directCount, directAsOpen],
+    [
+      rows,
+      seed,
+      openCount,
+      directCount,
+      directAsOpen,
+      underReviewCount,
+      suspendedCount,
+      cancelledCount,
+    ],
   );
   await client.query("analyze tenders");
   const stats = await client.query<{
     rows: number;
     open_count: number;
     direct_count: number;
+    under_review_count: number;
+    suspended_count: number;
+    cancelled_count: number;
+    closed_count: number;
     open_pct: number;
     avg_search_bytes: number;
     avg_items: number;
@@ -237,20 +297,33 @@ try {
     select count(*)::int rows,
            count(*) filter (where status = 'open')::int open_count,
            count(*) filter (where status = 'direct')::int direct_count,
+           count(*) filter (where status = 'under_review')::int under_review_count,
+           count(*) filter (where status = 'suspended')::int suspended_count,
+           count(*) filter (where status = 'cancelled')::int cancelled_count,
+           count(*) filter (where status = 'closed')::int closed_count,
            round(100.0 * count(*) filter (where status = 'open') / count(*), 2)::float8 open_pct,
            round(avg(octet_length(search_text)))::int avg_search_bytes,
            round(avg(jsonb_array_length(items)), 2)::float8 avg_items,
            pg_database_size(current_database())::text database_bytes
     from tenders
   `);
-  process.stdout.write(`${JSON.stringify({
-    ...stats.rows[0],
-    seed,
-    requestedOpen: openCount,
-    requestedDirect: directCount,
-    directAsOpen,
-    elapsedMs: Math.round(performance.now() - startedAt),
-  }, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ...stats.rows[0],
+        seed,
+        requestedOpen: openCount,
+        requestedDirect: directCount,
+        requestedUnderReview: underReviewCount,
+        requestedSuspended: suspendedCount,
+        requestedCancelled: cancelledCount,
+        directAsOpen,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      },
+      null,
+      2,
+    )}\n`,
+  );
 } finally {
   await client.end();
 }

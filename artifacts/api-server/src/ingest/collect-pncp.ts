@@ -33,6 +33,9 @@ import {
   refreshPncpCandidatesWithEnrichment,
 } from "./pncp-refresh-failure";
 import { startIngestRunHeartbeat } from "./run-heartbeat";
+import { invalidateTenderFacetCache } from "../lib/tender-facet-cache";
+import { warmDefaultTenderSearch } from "../services/search-backend";
+import { appRoleFromEnv, roleServesApi } from "../app-role";
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -659,6 +662,8 @@ async function execute(
       })
       .where(eq(ingestRunsTable.id, runId));
   }
+  invalidateTenderFacetCache();
+  if (roleServesApi(appRoleFromEnv())) await warmDefaultTenderSearch();
 }
 
 export async function startPncpIngest(

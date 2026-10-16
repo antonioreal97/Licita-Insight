@@ -11,6 +11,7 @@ import {
 } from "./pncp-map";
 import { createTenderChangeNotifications } from "../account/notification-service";
 import { enqueueCollectedTitleRewrites } from "../titles/title-rewrite";
+import { invalidateTenderFacetCache } from "../lib/tender-facet-cache";
 
 export type ExistingTender = {
   pncpControlNumber: string;
@@ -75,13 +76,17 @@ export async function upsertPublications(
   const newOrRetitled: string[] = [];
   for (const { record, draft } of drafts) {
     const existing = existingByControl.get(draft.pncpControlNumber);
-    if (!existing || existing.title !== draft.title) newOrRetitled.push(draft.id);
-    const displayTitle = existing?.displayTitleSource === "model"
-      ? existing.displayTitle
-      : draft.displayTitle;
-    const categories = existing && (existing.categorySource === "teacher" || existing.categories.length > 0)
-      ? existing.categories
-      : draft.categories;
+    if (!existing || existing.title !== draft.title)
+      newOrRetitled.push(draft.id);
+    const displayTitle =
+      existing?.displayTitleSource === "model"
+        ? existing.displayTitle
+        : draft.displayTitle;
+    const categories =
+      existing &&
+      (existing.categorySource === "teacher" || existing.categories.length > 0)
+        ? existing.categories
+        : draft.categories;
     const search = buildSearchColumns({
       title: draft.title,
       displayTitle,
@@ -131,7 +136,7 @@ export async function upsertPublications(
       platform: draft.platform,
       platformLabel: draft.platformLabel,
       categories: draft.categories,
-      categorySource: draft.categories.length > 0 ? "rules" as const : null,
+      categorySource: draft.categories.length > 0 ? ("rules" as const) : null,
       categorizedAt: draft.categories.length > 0 ? now : null,
       searchText: search.searchText,
       titleNorm: draft.titleNorm,
@@ -279,6 +284,7 @@ export async function upsertPublications(
     });
   }
 
+  invalidateTenderFacetCache();
   await enqueueCollectedTitleRewrites(newOrRetitled);
   return drafts.length;
 }
