@@ -45,6 +45,7 @@ import {
   dismissalTerms,
   type DismissReason,
 } from "./triage-feedback";
+import { isSuggestableProfileTerm } from "../profile/keyword-vocabulary";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -52,62 +53,32 @@ const CANDIDATE_LIMIT = 500;
 const RESULT_LIMIT = 50;
 const TOP_TERMS = 30;
 
-const STOP_WORDS = new Set([
-  "a",
-  "ao",
-  "aos",
-  "as",
-  "com",
-  "da",
-  "das",
-  "de",
-  "do",
-  "dos",
-  "e",
-  "em",
-  "na",
-  "nas",
-  "no",
-  "nos",
-  "o",
-  "os",
-  "ou",
-  "para",
-  "por",
-  "que",
-  "um",
-  "uma",
-  "contratacao",
-  "aquisicao",
-  "servico",
-  "servicos",
-  "fornecimento",
-  "edital",
-  "registro",
-  "precos",
-  // Procurement boilerplate present in most notices ("contratação de empresa especializada…").
-  "empresa",
-  "empresas",
-  "especializada",
-  "especializado",
-  "prestacao",
-  "execucao",
-  "objeto",
-  "eventual",
-  "futura",
-  "conforme",
-  "municipio",
-  "municipal",
+const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
+const HISTORY_TERM_SOURCES = new Set([
+  "monitored",
+  "saved",
+  "view",
+  "search",
+  "saved_search",
 ]);
 
+/** History/profile free-text tokens: drop stopwords and the shared #142 generic vocabulary. */
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
   [
     ...new Set(
       queryTokens(value)
         .map((term) => term.replace(/[^\p{L}\p{N}]+/gu, ""))
-        .filter((term) => term.length >= 3 && !STOP_WORDS.has(term)),
+        .filter(
+          (term) => term.length >= 3 && isSuggestableProfileTerm(term),
+        ),
     ),
   ].slice(0, limit);
+
+const termSource = (label: string | undefined): string | undefined =>
+  label?.split(":", 1)[0];
+
+const isProfileCategoryLabel = (label: string | undefined): boolean =>
+  Boolean(label?.startsWith("profile_category:"));
 
 export const temporalWeight = (occurredAt: Date, now = new Date()): number => {
   const ageDays = Math.max(
@@ -501,35 +472,85 @@ export function scoreRecommendation(
     return null;
   const reasons: RecommendationReason[] = [];
   let score = 0;
-  const maxCategory = profile.categories[0]?.weight ?? 0;
-  const categoryMatches = candidate.categories
-    .map((category) => ({
-      category,
-      weight: weightFor(profile.categories, category.slug),
-    }))
-    .filter((entry) => entry.weight > 0)
+
+  // Whole-expression match (same rule as company-fit / opportunity scoring): profile offerings and
+  // selected keywords stay as phrases; only free-text description was tokenized into signal terms.
+  const profileTermMatches = profile.terms
+    .filter(
+      (term) =>
+        PROFILE_TERM_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  const profileCategoryMatches = candidate.categories
+    .map((category) => {
+      const entry = profile.categories.find(
+        (item) =>
+          item.value === normalizeText(category.slug) &&
+          isProfileCategoryLabel(item.label),
+      );
+      return entry
+        ? { category, weight: entry.weight, label: entry.label }
+        : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
     .sort((a, b) => b.weight - a.weight);
-  if (categoryMatches[0]) {
-    score += 25 * cappedRatio(categoryMatches[0].weight, maxCategory);
+  const directProfileMatch =
+    profileTermMatches.length > 0 || profileCategoryMatches.length > 0;
+  if (!directProfileMatch) return null;
+
+  const maxProfileCategory =
+    profile.categories.find((item) => isProfileCategoryLabel(item.label))
+      ?.weight ??
+    profileCategoryMatches[0]?.weight ??
+    0;
+  if (profileCategoryMatches[0]) {
+    score += 25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory);
     reasons.push({
-      kind: "saved",
-      text: `Categoria parecida com seus interesses: ${categoryMatches[0].category.label}`,
+      kind: "profile",
+      text: `Categoria do seu perfil: ${profileCategoryMatches[0].category.label}`,
     });
   }
-  const matchedTerms = profile.terms
-    .filter((term) => normalizedText.includes(term.value))
-    .slice(0, 3);
-  const termStrength = matchedTerms.reduce((sum, term) => sum + term.weight, 0);
-  const maxTerms = profile.terms
+  const profileTermStrength = profileTermMatches.reduce(
+    (sum, term) => sum + term.weight,
+    0,
+  );
+  const maxProfileTerms = profile.terms
+    .filter((term) => PROFILE_TERM_SOURCES.has(termSource(term.label) ?? ""))
     .slice(0, 3)
     .reduce((sum, term) => sum + term.weight, 0);
   score += Math.min(
     30,
-    candidate.textRank * 20 + 18 * cappedRatio(termStrength, maxTerms),
+    candidate.textRank * 20 +
+      18 * cappedRatio(profileTermStrength, maxProfileTerms),
   );
-  if (matchedTerms.length) {
-    const source = matchedTerms[0]!.label?.split(":", 1)[0];
-    const terms = matchedTerms.map((term) => term.value).join(", ");
+  if (profileTermMatches.length) {
+    reasons.push({
+      kind: "profile",
+      text: `No seu perfil de atividade: ${profileTermMatches.map((term) => term.value).join(", ")}`,
+    });
+  }
+
+  // History reinforces a profile match; it never creates a recommendation alone.
+  const historyTermMatches = profile.terms
+    .filter(
+      (term) =>
+        HISTORY_TERM_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  if (historyTermMatches.length) {
+    const historyStrength = historyTermMatches.reduce(
+      (sum, term) => sum + term.weight,
+      0,
+    );
+    const maxHistory = profile.terms
+      .filter((term) => HISTORY_TERM_SOURCES.has(termSource(term.label) ?? ""))
+      .slice(0, 3)
+      .reduce((sum, term) => sum + term.weight, 0);
+    score += 10 * cappedRatio(historyStrength, maxHistory);
+    const source = termSource(historyTermMatches[0]!.label);
+    const terms = historyTermMatches.map((term) => term.value).join(", ");
     if (source === "search")
       reasons.push({ kind: "search", text: `Você buscou: ${terms}` });
     else if (source === "saved_search")
@@ -542,21 +563,33 @@ export function scoreRecommendation(
         kind: "monitored",
         text: `Parecido com editais que você monitora: ${terms}`,
       });
-    else if (source === "saved")
+    else if (source === "saved" || source === "view")
       reasons.push({
         kind: "saved",
         text: `Parecido com editais salvos: ${terms}`,
       });
-    else if (source === "profile" || source === "profile_selected")
-      reasons.push({
-        kind: "profile",
-        text: `No seu perfil de atividade: ${terms}`,
-      });
-    else
-      reasons.push({
-        kind: "saved",
-        text: `Parecido com seus interesses: ${terms}`,
-      });
+  }
+  const historyCategoryMatches = candidate.categories
+    .map((category) => {
+      const entry = profile.categories.find(
+        (item) =>
+          item.value === normalizeText(category.slug) &&
+          !isProfileCategoryLabel(item.label),
+      );
+      return entry ? { category, weight: entry.weight } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((a, b) => b.weight - a.weight);
+  if (historyCategoryMatches[0] && !profileCategoryMatches[0]) {
+    const maxHistoryCategory =
+      profile.categories.find((item) => !isProfileCategoryLabel(item.label))
+        ?.weight ?? historyCategoryMatches[0].weight;
+    score +=
+      12 * cappedRatio(historyCategoryMatches[0].weight, maxHistoryCategory);
+    reasons.push({
+      kind: "saved",
+      text: `Categoria parecida com seus interesses: ${historyCategoryMatches[0].category.label}`,
+    });
   }
 
   const state = candidate.state?.toUpperCase() ?? null;
@@ -598,18 +631,22 @@ export function scoreRecommendation(
       municipalityIbge: candidate.municipalityIbge ?? null,
       categories: candidate.categories,
     });
+    // "Aceito remoto" only escapes geography when the tender already matches the profile directly
+    // (never via a generic remote-compatible category alone — that is checked above).
+    const geographicallyOk =
+      region.matches && (!region.remote || directProfileMatch);
     if (
-      !region.matches &&
+      !geographicallyOk &&
       coverage.scope === "custom" &&
       coverage.mode === "strict"
     )
       return null;
-    if (region.matches && coverage.scope === "custom") {
+    if (geographicallyOk && coverage.scope === "custom") {
       score += region.remote ? 18 : 32;
       reasons.push({ kind: "location", text: region.reason });
-    } else if (!region.matches && coverage.scope === "custom") {
+    } else if (!geographicallyOk && coverage.scope === "custom") {
       score -= 18;
-      reasons.push({ kind: "location", text: region.reason });
+      reasons.push({ kind: "location", text: "Fora da sua região" });
     }
   } else if (weightFor(profile.states, state) > 0) {
     score += 9;

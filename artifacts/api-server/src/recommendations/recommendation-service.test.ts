@@ -40,8 +40,10 @@ test("eventos perdem metade do peso a cada 30 dias", () => {
 });
 
 const profile = {
-  terms: [{ value: "hemodialise", weight: 10 }],
-  categories: [{ value: "saude", label: "Saúde", weight: 8 }],
+  terms: [{ value: "hemodialise", weight: 10, label: "profile:hemodialise" }],
+  categories: [
+    { value: "saude", label: "profile_category:saude", weight: 8 },
+  ],
   states: [{ value: "sp", weight: 5 }],
   organizations: [{ value: "org-1", label: "Hospital", weight: 4 }],
   modalities: [],
@@ -54,29 +56,30 @@ const profile = {
   signalCount: 3,
 };
 
+const baseCandidate = {
+  id: "T1",
+  searchText: "servicos de hemodialise",
+  categories: [{ slug: "saude", label: "Saúde" }],
+  organizationId: "org-1",
+  organizationName: "Hospital",
+  modality: "other",
+  platform: null,
+  platformLabel: null,
+  estimatedValue: "100000",
+  proposalDeadline: new Date("2026-10-20T12:00:00Z"),
+  publishedAt: new Date("2026-10-07T12:00:00Z"),
+  textRank: 0.5,
+};
+
 test("pontuação explica termos, categoria e cobertura e penaliza fora da área", () => {
-  const base = {
-    id: "T1",
-    searchText: "servicos de hemodialise",
-    categories: [{ slug: "saude", label: "Saúde" }],
-    organizationId: "org-1",
-    organizationName: "Hospital",
-    modality: "other",
-    platform: null,
-    platformLabel: null,
-    estimatedValue: "100000",
-    proposalDeadline: new Date("2026-10-20T12:00:00Z"),
-    publishedAt: new Date("2026-10-07T12:00:00Z"),
-    textRank: 0.5,
-  };
   const inside = scoreRecommendation(
-    { ...base, state: "SP" },
+    { ...baseCandidate, state: "SP" },
     profile,
     [],
     new Date("2026-10-08T12:00:00Z"),
   );
   const outside = scoreRecommendation(
-    { ...base, state: "RJ" },
+    { ...baseCandidate, state: "RJ" },
     profile,
     [],
     new Date("2026-10-08T12:00:00Z"),
@@ -94,7 +97,7 @@ test("valor suspeito não conta a favor nem contra a faixa de valor", () => {
   const candidate = {
     id: "T-value",
     searchText: "servicos de hemodialise",
-    categories: [],
+    categories: [] as { slug: string; label: string }[],
     state: "SP",
     organizationId: "O-value",
     organizationName: "Órgão",
@@ -125,7 +128,7 @@ test("plataforma cadastrada desempata, mas não recomenda sozinha", () => {
   const candidate = {
     id: "T3",
     searchText: "servicos de hemodialise",
-    categories: [],
+    categories: [] as { slug: string; label: string }[],
     state: "SP",
     organizationId: "O3",
     organizationName: "Órgão",
@@ -230,6 +233,168 @@ test("região rígida filtra e prioridade mantém edital de fora com motivo", ()
   assert.ok(
     prioritized.reasons.some(({ text }) => text === "Fora da sua região"),
   );
+});
+
+test("histórico sozinho ou termos genéricos não criam recomendação", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  assert.deepEqual(
+    normalizeSignalTerms("uso solucao destinados centro equipamentos materiais aquisicao"),
+    [],
+  );
+  const historyOnly = {
+    ...profile,
+    terms: [
+      { value: "cameras", weight: 10, label: "monitored:cameras" },
+      { value: "solucao", weight: 8, label: "saved:solucao" },
+    ],
+    categories: [
+      { value: "ti-telecom", label: "Tecnologia da informação", weight: 9 },
+    ],
+  };
+  assert.equal(
+    scoreRecommendation(
+      {
+        ...baseCandidate,
+        searchText: "solucao tecnologica para gestao com cameras de uso",
+        categories: [{ slug: "ti-telecom", label: "Tecnologia da informação" }],
+        state: "SP",
+      },
+      historyOnly,
+      [],
+      now,
+    ),
+    null,
+  );
+});
+
+test("caso do dono: DF+audiovisual strict não recomenda odontologia/medicamentos/pasta fora da região", () => {
+  const now = new Date("2026-10-16T20:00:00Z");
+  const owner = {
+    terms: [
+      { value: "audiovisual", weight: 12, label: "profile:audiovisual" },
+      { value: "cameras", weight: 10, label: "monitored:cameras" },
+      { value: "uso", weight: 8, label: "saved:uso" },
+      { value: "solucao", weight: 6, label: "saved:solucao" },
+    ],
+    categories: [
+      { value: "ti-telecom", label: "Tecnologia da informação", weight: 5 },
+      { value: "eventos-cultura", label: "Eventos, shows e cultura", weight: 4 },
+    ],
+    states: [{ value: "df", weight: 5 }],
+    organizations: [],
+    modalities: [],
+    valueMin: null,
+    valueMax: null,
+    coverageScope: "custom" as const,
+    coverageMode: "strict" as const,
+    coverageStates: ["DF"],
+    coverageRegions: [],
+    coverageMunicipalities: ["5300108"],
+    headquartersMunicipalityIbge: "5300108",
+    coverageRadiusKm: 100 as const,
+    acceptsRemote: true,
+    exclusions: [],
+    companySize: "me_epp" as const,
+    signalCount: 4,
+  };
+  const unrelated = [
+    {
+      id: "odontologia-ap",
+      searchText: "materiais de consumo odontologicos",
+      categories: [{ slug: "medicamentos-insumos-saude", label: "Medicamentos" }],
+      state: "AP",
+    },
+    {
+      id: "milrinona-pe",
+      searchText: "medicamentos milrinona",
+      categories: [{ slug: "medicamentos-insumos-saude", label: "Medicamentos" }],
+      state: "PE",
+    },
+    {
+      id: "diploma-go",
+      searchText: "pasta para diploma",
+      categories: [{ slug: "material-escritorio", label: "Material de escritório" }],
+      state: "GO",
+    },
+    {
+      id: "ti-sp",
+      searchText: "solucao tecnologica para gestao estrategica",
+      categories: [{ slug: "ti-telecom", label: "Tecnologia da informação" }],
+      state: "SP",
+    },
+  ];
+  for (const item of unrelated) {
+    assert.equal(
+      scoreRecommendation(
+        {
+          ...baseCandidate,
+          ...item,
+          organizationId: "org-x",
+          organizationName: "Órgão",
+          estimatedValue: null,
+          textRank: 0.2,
+        },
+        owner,
+        [],
+        now,
+      ),
+      null,
+      item.id,
+    );
+  }
+  const remoteAudiovisual = scoreRecommendation(
+    {
+      ...baseCandidate,
+      id: "av-remote",
+      searchText: "servicos de producao audiovisual e filmagem",
+      categories: [{ slug: "ti-telecom", label: "Tecnologia da informação" }],
+      state: "SP",
+      municipalityIbge: "3550308",
+      organizationId: "org-av",
+      organizationName: "Órgão",
+      estimatedValue: null,
+      textRank: 0.8,
+    },
+    owner,
+    [],
+    now,
+  );
+  assert.ok(remoteAudiovisual);
+  assert.ok(
+    remoteAudiovisual.reasons.some(({ text }) => /audiovisual|distância|distancia/i.test(text)),
+  );
+  assert.ok(
+    !remoteAudiovisual.reasons.some(({ text }) => /cameras|uso|solucao/i.test(text) && !/audiovisual/i.test(text)),
+  );
+});
+
+test("remoto sem casamento direto com o perfil é rejeitado em strict", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const result = scoreRecommendation(
+    {
+      ...baseCandidate,
+      searchText: "consultoria em tecnologia da informacao",
+      categories: [{ slug: "ti-telecom", label: "Tecnologia da informação" }],
+      state: "RJ",
+      municipalityIbge: "3304557",
+    },
+    {
+      ...profile,
+      terms: [{ value: "hemodialise", weight: 10, label: "profile:hemodialise" }],
+      categories: [],
+      coverageScope: "custom",
+      coverageMode: "strict",
+      coverageStates: ["SP"],
+      coverageRegions: [],
+      coverageMunicipalities: [],
+      headquartersMunicipalityIbge: null,
+      coverageRadiusKm: null,
+      acceptsRemote: true,
+    },
+    [],
+    now,
+  );
+  assert.equal(result, null);
 });
 
 test("oportunidades reutilizam termos, cobertura e faixa do perfil", () => {
