@@ -17,10 +17,11 @@ const records = Array.from({ length: 10 }, (_, i) => ({ tender: {
   source: { id: 'pncp', name: 'PNCP', url: null }, relevance: { score: 90, highlights: [] },
 }, score: 90, reasons: [{ kind: 'profile', text: 'Filmagem e produção audiovisual estão no seu perfil.' }, { kind: 'location', text: 'Oportunidade na sua região de atendimento.' }] }));
 const initialProfile = { description: 'Produção audiovisual e filmagem de eventos culturais.', offerings: ['filmagem'], exclusions: ['fotografia'], selectedKeywords: [], excludedKeywords: [], selectedCategories: ['audiovisual'], registeredPlatforms: [], coverage: { scope: 'national' }, valueRange: { min: null, max: null }, size: 'me_epp', version: 1, updatedAt: new Date().toISOString() };
-async function setup(options = {}, count = 10) {
+async function setup(options = {}, count = 10, { shrinkAfterDismiss = false } = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1200 }, reducedMotion: 'reduce', ...options });
   await context.addInitScript(() => { localStorage.setItem('licita-cookie-consent', 'accepted'); });
   const calls = []; let failSave = false; let profile = structuredClone(initialProfile);
+  let liveCount = count; let dismissals = 0;
   await context.route('**/*', async route => {
     const request = route.request(); const url = new URL(request.url());
     if (url.origin !== origin) return route.abort();
@@ -39,9 +40,14 @@ async function setup(options = {}, count = 10) {
       return json({ profile });
     }
     if (path === '/me/tender-highlights') return json({ results: Object.fromEntries(records.map(({ tender }) => [tender.id, { requirements: [{ label: 'Atestado de capacidade técnica' }, { label: 'Equipe técnica especializada' }, { label: 'Entrega de portfólio' }, { label: 'Quarta exigência oculta' }] }])) });
-    if (path === '/recommendations') return json({ data: records.slice(0, count), opportunities: [], pagination: { total: count, page: 1, pageSize: 50, totalPages: 1 } });
+    if (path === '/recommendations') return json({ data: records.slice(0, liveCount), opportunities: [], pagination: { total: liveCount, page: 1, pageSize: 50, totalPages: 1 } });
     if (path === '/recommendations/events') return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'UNAVAILABLE', message: 'Métrica indisponível' } }) });
-    if (path.endsWith('/dismiss')) return route.fulfill({ status: 204 });
+    if (path.endsWith('/dismiss')) {
+      dismissals += 1;
+      // Simulate the debounced server rebuild replacing the list after the 2nd dismiss (owner freeze at action #3).
+      if (shrinkAfterDismiss && dismissals >= 2) liveCount = Math.min(liveCount, 2);
+      return route.fulfill({ status: 204 });
+    }
     if (path === '/me/saved-tenders/ids') return json({ saved: [], monitored: [] });
     if (path.startsWith('/me/saved-tenders/') && method === 'PUT') {
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -130,5 +136,20 @@ try {
   await arrow(fewer.page, 'ArrowDown'); await progress(fewer.page, 2);
   await fewer.page.getByText('Você chegou ao fim desta seleção').waitFor();
   await fewer.context.close();
-  console.log('PASS: 10-item flow, optional reasons, errors/retry, duplicate guard, explicit exclusion, keyboard, touch swipes, buttons, reload, partial queue, both themes, mobile overflow, reduced motion, screenshots.');
+
+  // Rebuild shrinks the live API list after the 2nd dismiss; the frozen queue must keep serving cards.
+  const shrink = await setup({}, 8, { shrinkAfterDismiss: true });
+  await arrow(shrink.page, 'ArrowLeft'); await shrink.page.getByRole('button', { name: 'Fora da minha região', exact: true }).click(); await progress(shrink.page, 1);
+  await arrow(shrink.page, 'ArrowLeft'); await shrink.page.getByRole('button', { name: 'Valor fora da minha faixa', exact: true }).click(); await progress(shrink.page, 2);
+  await shrink.page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await arrow(shrink.page, 'ArrowRight'); await progress(shrink.page, 3);
+  await arrow(shrink.page, 'ArrowDown'); await progress(shrink.page, 4);
+  await arrow(shrink.page, 'ArrowLeft'); await shrink.page.getByRole('button', { name: 'Não faço isso', exact: true }).click(); await progress(shrink.page, 5);
+  await shrink.page.getByRole('button', { name: 'Agora não', exact: true }).click();
+  assert.equal(await progressValue(shrink.page), '5');
+  assert.ok(await shrink.page.getByRole('button', { name: 'Interessa', exact: true }).isEnabled());
+  assert.deepEqual(shrink.errors, []);
+  await shrink.context.close();
+
+  console.log('PASS: 10-item flow, optional reasons, errors/retry, duplicate guard, explicit exclusion, keyboard, touch swipes, buttons, reload, partial queue, frozen queue after rebuild shrink, both themes, mobile overflow, reduced motion, screenshots.');
 } finally { await browser.close(); }

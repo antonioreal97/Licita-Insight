@@ -3110,7 +3110,7 @@ export const ListRecommendationsResponse = zod.object({
 }),
   "score": zod.number(),
   "reasons": zod.array(zod.object({
-  "kind": zod.enum(['profile', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value', 'platform']),
+  "kind": zod.enum(['profile', 'interest', 'monitored', 'saved', 'saved_search', 'search', 'location', 'organization', 'value', 'platform']),
   "text": zod.string()
 })).min(1).max(listRecommendationsResponseDataItemReasonsMax),
   "generatedAt": zod.coerce.date()

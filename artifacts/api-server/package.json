@@ -38,6 +38,7 @@
     "categorize:rules": "node --env-file-if-exists=../../.env --import tsx scripts/categorize-rules.ts",
     "profile-keywords:refresh": "node --env-file-if-exists=../../.env --import tsx scripts/refresh-profile-keywords.ts",
     "profile-keywords:benchmark": "node --env-file-if-exists=../../.env --import tsx scripts/benchmark-profile-keywords.ts",
+    "rebuild:recommendations": "node --env-file-if-exists=../../.env --import tsx scripts/rebuild-recommendations.ts",
     "report:fit-gate": "node --env-file-if-exists=../../.env --import tsx scripts/report-fit-gate.ts",
     "report:retention": "node --env-file-if-exists=../../.env --import tsx scripts/report-retention.ts",
     "report:coverage-sample": "node --env-file-if-exists=../../.env --import tsx scripts/report-coverage-sample.ts",

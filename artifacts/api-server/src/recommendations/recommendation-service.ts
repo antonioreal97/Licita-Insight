@@ -45,76 +45,123 @@ import {
   dismissalTerms,
   type DismissReason,
 } from "./triage-feedback";
+import {
+  extractProfileTerms,
+  GENERIC_WORDS,
+  isSuggestableProfileTerm,
+  normalizeProfileKeyword,
+} from "../profile/keyword-vocabulary";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
+/** Explicit triage "Interessa" signals decay slower than passive search/view events. */
+const INTEREST_HALF_LIFE_DAYS = 60;
 const CANDIDATE_LIMIT = 500;
 const RESULT_LIMIT = 50;
 const TOP_TERMS = 30;
+/** After this many interest events share an expression, it can qualify new candidates alone. */
+const LEARNED_INTEREST_THRESHOLD = 2;
 
-const STOP_WORDS = new Set([
-  "a",
-  "ao",
-  "aos",
-  "as",
-  "com",
-  "da",
-  "das",
-  "de",
-  "do",
-  "dos",
-  "e",
-  "em",
-  "na",
-  "nas",
-  "no",
-  "nos",
-  "o",
-  "os",
-  "ou",
-  "para",
-  "por",
-  "que",
-  "um",
-  "uma",
-  "contratacao",
-  "aquisicao",
-  "servico",
-  "servicos",
-  "fornecimento",
-  "edital",
-  "registro",
-  "precos",
-  // Procurement boilerplate present in most notices ("contratação de empresa especializada…").
-  "empresa",
-  "empresas",
-  "especializada",
-  "especializado",
-  "prestacao",
-  "execucao",
-  "objeto",
-  "eventual",
-  "futura",
-  "conforme",
-  "municipio",
-  "municipal",
+const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
+const INTEREST_LEARNED_SOURCES = new Set(["interest_learned"]);
+const INTEREST_BOOST_SOURCES = new Set(["interest"]);
+const HISTORY_TERM_SOURCES = new Set([
+  "monitored",
+  "saved",
+  "view",
+  "search",
+  "saved_search",
 ]);
 
+/** History/profile free-text tokens: drop stopwords and the shared #142 generic vocabulary. */
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
   [
     ...new Set(
       queryTokens(value)
         .map((term) => term.replace(/[^\p{L}\p{N}]+/gu, ""))
-        .filter((term) => term.length >= 3 && !STOP_WORDS.has(term)),
+        .filter(
+          (term) => term.length >= 3 && isSuggestableProfileTerm(term),
+        ),
     ),
   ].slice(0, limit);
 
-export const temporalWeight = (occurredAt: Date, now = new Date()): number => {
+/**
+ * Phrases/unigrams from a triage "Interessa" tender, filtered with the #142 vocabulary rules.
+ * Prefer longer expressions. Unlike profile suggestions, mid-phrase generics are kept when both
+ * ends are concrete ("locacao de equipamentos audiovisuais").
+ */
+export function extractInterestExpressions(
+  tender: {
+    title: string;
+    objectSummary?: string | null;
+    description?: string | null;
+    items?: Array<{ description: string }>;
+    categories?: Array<{ slug: string; label: string }>;
+    organizationName?: string | null;
+  },
+  limit = 20,
+): string[] {
+  const text = [
+    tender.title,
+    tender.objectSummary ?? "",
+    tender.description ?? "",
+    ...(tender.items ?? []).map((item) => item.description),
+    tender.organizationName ?? "",
+    ...(tender.categories ?? []).map((category) => category.label),
+  ].join("\n");
+  const fromVocabulary = extractProfileTerms(text, 80).map(
+    (term) => term.normalizedTerm,
+  );
+  const tokens = text
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => normalizeProfileKeyword(word))
+    .filter((word) => word.length >= 2)
+    .slice(0, 80);
+  const withGenericMiddles: string[] = [];
+  for (let size = 2; size <= 4; size += 1) {
+    for (let index = 0; index + size <= tokens.length; index += 1) {
+      const window = tokens.slice(index, index + size);
+      const first = window[0]!;
+      const last = window[window.length - 1]!;
+      if (
+        GENERIC_WORDS.has(first) ||
+        GENERIC_WORDS.has(last) ||
+        first.length < 3 ||
+        last.length < 3
+      )
+        continue;
+      withGenericMiddles.push(window.join(" "));
+    }
+  }
+  return [
+    ...new Set(
+      [...withGenericMiddles, ...fromVocabulary].sort(
+        (a, b) => b.split(" ").length - a.split(" ").length || b.length - a.length,
+      ),
+    ),
+  ].slice(0, limit);
+}
+
+const termSource = (label: string | undefined): string | undefined =>
+  label?.split(":", 1)[0];
+
+const isProfileCategoryLabel = (label: string | undefined): boolean =>
+  Boolean(label?.startsWith("profile_category:"));
+
+export const temporalWeight = (
+  occurredAt: Date,
+  now = new Date(),
+  halfLifeDays = EVENT_HALF_LIFE_DAYS,
+): number => {
   const ageDays = Math.max(
     0,
     (now.getTime() - occurredAt.getTime()) / 86_400_000,
   );
-  return 2 ** (-ageDays / EVENT_HALF_LIFE_DAYS);
+  return 2 ** (-ageDays / halfLifeDays);
 };
 
 type OpportunityProfileInput = Pick<
@@ -385,7 +432,9 @@ export async function rebuildInterestProfile(
   }
   const viewIds = [
     ...new Set(
-      events.flatMap((event) => (event.tenderId ? [event.tenderId] : [])),
+      events.flatMap((event) =>
+        event.type !== "search" && event.tenderId ? [event.tenderId] : [],
+      ),
     ),
   ];
   const viewed =
@@ -396,20 +445,67 @@ export async function rebuildInterestProfile(
           .from(tendersTable)
           .where(inArray(tendersTable.id, viewIds));
   const viewedById = new Map(viewed.map((tender) => [tender.id, tender]));
+  const interestTermCounts = new Map<string, number>();
   for (const event of events) {
-    const decay = temporalWeight(event.occurredAt, now);
-    if (event.type === "search")
+    if (event.type !== "interest") continue;
+    for (const term of new Set(event.normalizedTerms))
+      interestTermCounts.set(term, (interestTermCounts.get(term) ?? 0) + 1);
+  }
+  for (const event of events) {
+    if (event.type === "search") {
+      const decay = temporalWeight(event.occurredAt, now);
       event.normalizedTerms.forEach((term) =>
         addWeight(maps.terms, term, 1.5 * decay, `search:${term}`),
       );
-    else if (event.tenderId && viewedById.has(event.tenderId))
+      signalCount += 1;
+      continue;
+    }
+    if (event.type === "interest") {
+      const decay = temporalWeight(
+        event.occurredAt,
+        now,
+        INTEREST_HALF_LIFE_DAYS,
+      );
+      for (const term of new Set(event.normalizedTerms)) {
+        const learned =
+          (interestTermCounts.get(term) ?? 0) >= LEARNED_INTEREST_THRESHOLD;
+        addWeight(
+          maps.terms,
+          term,
+          14 * decay,
+          learned ? `interest_learned:${term}` : `interest:${term}`,
+        );
+      }
+      const tender = event.tenderId ? viewedById.get(event.tenderId) : undefined;
+      if (tender) {
+        tender.categories.forEach((category) =>
+          addWeight(
+            maps.categories,
+            category.slug,
+            8 * decay,
+            category.label,
+          ),
+        );
+        addWeight(
+          maps.organizations,
+          tender.organizationId,
+          6 * decay,
+          tender.organizationName,
+        );
+      }
+      signalCount += 2;
+      continue;
+    }
+    if (event.tenderId && viewedById.has(event.tenderId)) {
+      const decay = temporalWeight(event.occurredAt, now);
       addTenderSignals(
         maps,
         viewedById.get(event.tenderId)!,
         2 * decay,
         "view",
       );
-    signalCount += 1;
+      signalCount += 1;
+    }
   }
   values.sort((a, b) => a - b);
   const interest: RecommendationInterestProfile = {
@@ -501,35 +597,124 @@ export function scoreRecommendation(
     return null;
   const reasons: RecommendationReason[] = [];
   let score = 0;
-  const maxCategory = profile.categories[0]?.weight ?? 0;
-  const categoryMatches = candidate.categories
-    .map((category) => ({
-      category,
-      weight: weightFor(profile.categories, category.slug),
-    }))
-    .filter((entry) => entry.weight > 0)
+
+  // Whole-expression match (same rule as company-fit / opportunity scoring): profile offerings and
+  // selected keywords stay as phrases; only free-text description was tokenized into signal terms.
+  const profileTermMatches = profile.terms
+    .filter(
+      (term) =>
+        PROFILE_TERM_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  const learnedInterestMatches = profile.terms
+    .filter(
+      (term) =>
+        INTEREST_LEARNED_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  const interestBoostMatches = profile.terms
+    .filter(
+      (term) =>
+        INTEREST_BOOST_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  const profileCategoryMatches = candidate.categories
+    .map((category) => {
+      const entry = profile.categories.find(
+        (item) =>
+          item.value === normalizeText(category.slug) &&
+          isProfileCategoryLabel(item.label),
+      );
+      return entry
+        ? { category, weight: entry.weight, label: entry.label }
+        : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
     .sort((a, b) => b.weight - a.weight);
-  if (categoryMatches[0]) {
-    score += 25 * cappedRatio(categoryMatches[0].weight, maxCategory);
+  const directProfileMatch =
+    profileTermMatches.length > 0 || profileCategoryMatches.length > 0;
+  const learnedInterestMatch = learnedInterestMatches.length > 0;
+  const adherenceMatch = directProfileMatch || learnedInterestMatch;
+  if (!adherenceMatch) return null;
+
+  const maxProfileCategory =
+    profile.categories.find((item) => isProfileCategoryLabel(item.label))
+      ?.weight ??
+    profileCategoryMatches[0]?.weight ??
+    0;
+  if (profileCategoryMatches[0]) {
+    score += 25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory);
     reasons.push({
-      kind: "saved",
-      text: `Categoria parecida com seus interesses: ${categoryMatches[0].category.label}`,
+      kind: "profile",
+      text: `Categoria do seu perfil: ${profileCategoryMatches[0].category.label}`,
     });
   }
-  const matchedTerms = profile.terms
-    .filter((term) => normalizedText.includes(term.value))
-    .slice(0, 3);
-  const termStrength = matchedTerms.reduce((sum, term) => sum + term.weight, 0);
-  const maxTerms = profile.terms
+  const profileTermStrength = profileTermMatches.reduce(
+    (sum, term) => sum + term.weight,
+    0,
+  );
+  const maxProfileTerms = profile.terms
+    .filter((term) => PROFILE_TERM_SOURCES.has(termSource(term.label) ?? ""))
     .slice(0, 3)
     .reduce((sum, term) => sum + term.weight, 0);
   score += Math.min(
     30,
-    candidate.textRank * 20 + 18 * cappedRatio(termStrength, maxTerms),
+    candidate.textRank * 20 +
+      18 * cappedRatio(profileTermStrength, maxProfileTerms),
   );
-  if (matchedTerms.length) {
-    const source = matchedTerms[0]!.label?.split(":", 1)[0];
-    const terms = matchedTerms.map((term) => term.value).join(", ");
+  if (profileTermMatches.length) {
+    reasons.push({
+      kind: "profile",
+      text: `No seu perfil de atividade: ${profileTermMatches.map((term) => term.value).join(", ")}`,
+    });
+  }
+
+  const interestMatches = [...learnedInterestMatches, ...interestBoostMatches].slice(
+    0,
+    3,
+  );
+  if (interestMatches.length) {
+    const interestStrength = interestMatches.reduce(
+      (sum, term) => sum + term.weight,
+      0,
+    );
+    const maxInterest = profile.terms
+      .filter((term) =>
+        INTEREST_LEARNED_SOURCES.has(termSource(term.label) ?? "") ||
+        INTEREST_BOOST_SOURCES.has(termSource(term.label) ?? ""),
+      )
+      .slice(0, 3)
+      .reduce((sum, term) => sum + term.weight, 0);
+    score += 16 * cappedRatio(interestStrength, maxInterest);
+    reasons.push({
+      kind: "interest",
+      text: `Parecido com editais que você marcou como interesse: ${interestMatches.map((term) => term.value).join(", ")}`,
+    });
+  }
+
+  // Passive reinforces an adherence match; it never creates a recommendation alone.
+  const historyTermMatches = profile.terms
+    .filter(
+      (term) =>
+        HISTORY_TERM_SOURCES.has(termSource(term.label) ?? "") &&
+        normalizedText.includes(term.value),
+    )
+    .slice(0, 3);
+  if (historyTermMatches.length) {
+    const historyStrength = historyTermMatches.reduce(
+      (sum, term) => sum + term.weight,
+      0,
+    );
+    const maxHistory = profile.terms
+      .filter((term) => HISTORY_TERM_SOURCES.has(termSource(term.label) ?? ""))
+      .slice(0, 3)
+      .reduce((sum, term) => sum + term.weight, 0);
+    score += 10 * cappedRatio(historyStrength, maxHistory);
+    const source = termSource(historyTermMatches[0]!.label);
+    const terms = historyTermMatches.map((term) => term.value).join(", ");
     if (source === "search")
       reasons.push({ kind: "search", text: `Você buscou: ${terms}` });
     else if (source === "saved_search")
@@ -542,21 +727,33 @@ export function scoreRecommendation(
         kind: "monitored",
         text: `Parecido com editais que você monitora: ${terms}`,
       });
-    else if (source === "saved")
+    else if (source === "saved" || source === "view")
       reasons.push({
         kind: "saved",
         text: `Parecido com editais salvos: ${terms}`,
       });
-    else if (source === "profile" || source === "profile_selected")
-      reasons.push({
-        kind: "profile",
-        text: `No seu perfil de atividade: ${terms}`,
-      });
-    else
-      reasons.push({
-        kind: "saved",
-        text: `Parecido com seus interesses: ${terms}`,
-      });
+  }
+  const historyCategoryMatches = candidate.categories
+    .map((category) => {
+      const entry = profile.categories.find(
+        (item) =>
+          item.value === normalizeText(category.slug) &&
+          !isProfileCategoryLabel(item.label),
+      );
+      return entry ? { category, weight: entry.weight } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((a, b) => b.weight - a.weight);
+  if (historyCategoryMatches[0] && !profileCategoryMatches[0]) {
+    const maxHistoryCategory =
+      profile.categories.find((item) => !isProfileCategoryLabel(item.label))
+        ?.weight ?? historyCategoryMatches[0].weight;
+    score +=
+      12 * cappedRatio(historyCategoryMatches[0].weight, maxHistoryCategory);
+    reasons.push({
+      kind: "saved",
+      text: `Categoria parecida com seus interesses: ${historyCategoryMatches[0].category.label}`,
+    });
   }
 
   const state = candidate.state?.toUpperCase() ?? null;
@@ -598,18 +795,21 @@ export function scoreRecommendation(
       municipalityIbge: candidate.municipalityIbge ?? null,
       categories: candidate.categories,
     });
+    // "Aceito remoto" only escapes geography when adherence already exists (profile or learned interest).
+    const geographicallyOk =
+      region.matches && (!region.remote || adherenceMatch);
     if (
-      !region.matches &&
+      !geographicallyOk &&
       coverage.scope === "custom" &&
       coverage.mode === "strict"
     )
       return null;
-    if (region.matches && coverage.scope === "custom") {
+    if (geographicallyOk && coverage.scope === "custom") {
       score += region.remote ? 18 : 32;
       reasons.push({ kind: "location", text: region.reason });
-    } else if (!region.matches && coverage.scope === "custom") {
+    } else if (!geographicallyOk && coverage.scope === "custom") {
       score -= 18;
-      reasons.push({ kind: "location", text: region.reason });
+      reasons.push({ kind: "location", text: "Fora da sua região" });
     }
   } else if (weightFor(profile.states, state) > 0) {
     score += 9;
@@ -681,7 +881,13 @@ export function scoreRecommendation(
   for (const negative of dismissed) {
     const contextual = contextualDismissalPenalty(
       negative.terms,
-      candidate,
+      {
+        state: candidate.state,
+        municipalityIbge: candidate.municipalityIbge ?? null,
+        estimatedValue: candidate.estimatedValue,
+        estimatedValueFlag: candidate.estimatedValueFlag,
+        proposalDeadline: candidate.proposalDeadline,
+      },
       now,
     );
     if (contextual !== null) {
@@ -1074,11 +1280,16 @@ export async function dismissRecommendation(
     .where(eq(tendersTable.id, tenderId))
     .limit(1);
   if (!tender) throw new NotFoundError("Tender was not found");
-  const terms = dismissalTerms(
-    reason,
-    normalizeSignalTerms(`${tender.title} ${tender.objectSummary ?? ""}`, 15),
-    tender,
-  );
+  const topicTerms =
+    !reason || reason === "not_offering"
+      ? extractInterestExpressions(tender, 15)
+      : [];
+  const terms = dismissalTerms(reason, topicTerms, {
+    state: tender.state,
+    municipalityIbge: tender.cityIbgeCode,
+    estimatedValue: tender.estimatedValue,
+    estimatedValueFlag: tender.estimatedValueFlag,
+  });
   const categories =
     !reason || reason === "not_offering" ? tender.categories : [];
   await db.transaction(async (tx) => {
@@ -1110,6 +1321,20 @@ export async function dismissRecommendation(
   await incrementMetric("dismissals", 1, now);
   scheduleRecommendationRebuild(userId);
 }
+
+const clearLearnedRecommendationSignals = async (
+  userId: string,
+  executor: {
+    delete: typeof db.delete;
+  } = db,
+) => {
+  await executor
+    .delete(recommendationEventsTable)
+    .where(eq(recommendationEventsTable.userId, userId));
+  await executor
+    .delete(recommendationDismissalsTable)
+    .where(eq(recommendationDismissalsTable.userId, userId));
+};
 
 export async function getRecommendationPreferences(userId: string) {
   const [user] = await db
@@ -1153,9 +1378,7 @@ export async function updateRecommendationPreferences(
         showInternationalOpportunities: usersTable.showInternationalOpportunities,
       });
     if (!enabled && deleteHistory)
-      await tx
-        .delete(recommendationEventsTable)
-        .where(eq(recommendationEventsTable.userId, userId));
+      await clearLearnedRecommendationSignals(userId, tx);
     return saved?.showInternationalOpportunities ?? false;
   });
   scheduleRecommendationRebuild(userId, 0);
@@ -1169,9 +1392,7 @@ export async function updateRecommendationPreferences(
 export async function deleteRecommendationHistory(
   userId: string,
 ): Promise<void> {
-  await db
-    .delete(recommendationEventsTable)
-    .where(eq(recommendationEventsTable.userId, userId));
+  await clearLearnedRecommendationSignals(userId);
   scheduleRecommendationRebuild(userId, 0);
 }
 
@@ -1189,7 +1410,43 @@ export async function recordRecommendationEvent(
     return true;
   }
   if (input.type === "interest") {
-    return db.transaction(async (tx) => {
+    const [tender] = await db
+      .select()
+      .from(tendersTable)
+      .where(eq(tendersTable.id, input.tenderId))
+      .limit(1);
+    if (!tender) throw new NotFoundError("Tender was not found");
+    const [owner] = await db
+      .select({ enabled: usersTable.recommendationPersonalizationEnabled })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    // Learning from "Interessa" is behavioral profiling: only with personalization on, and once per tender, so a
+    // repeated click can neither double the evidence for an expression nor inflate the daily metric.
+    const expressions = owner?.enabled ? extractInterestExpressions(tender) : [];
+    const recorded = await db.transaction(async (tx) => {
+      const [already] = expressions.length
+        ? await tx
+            .select({ id: recommendationEventsTable.id })
+            .from(recommendationEventsTable)
+            .where(
+              and(
+                eq(recommendationEventsTable.userId, userId),
+                eq(recommendationEventsTable.type, "interest"),
+                eq(recommendationEventsTable.tenderId, input.tenderId),
+              ),
+            )
+            .limit(1)
+        : [];
+      const learns = expressions.length > 0 && !already;
+      if (learns)
+        await tx.insert(recommendationEventsTable).values({
+          userId,
+          type: "interest",
+          tenderId: input.tenderId,
+          normalizedTerms: expressions,
+          occurredAt: now,
+        });
       const removed = await tx
         .delete(userRecommendationsTable)
         .where(
@@ -1199,20 +1456,24 @@ export async function recordRecommendationEvent(
           ),
         )
         .returning({ tenderId: userRecommendationsTable.tenderId });
-      if (removed.length === 0) return false;
-      const day = dateInSaoPaulo(now);
-      await tx
-        .insert(recommendationMetricsDailyTable)
-        .values({ day, interests: 1, updatedAt: now })
-        .onConflictDoUpdate({
-          target: recommendationMetricsDailyTable.day,
-          set: {
-            interests: sql`${recommendationMetricsDailyTable.interests} + 1`,
-            updatedAt: now,
-          },
-        });
+      if (removed.length === 0 && !learns) return false;
+      if (removed.length) {
+        const day = dateInSaoPaulo(now);
+        await tx
+          .insert(recommendationMetricsDailyTable)
+          .values({ day, interests: 1, updatedAt: now })
+          .onConflictDoUpdate({
+            target: recommendationMetricsDailyTable.day,
+            set: {
+              interests: sql`${recommendationMetricsDailyTable.interests} + 1`,
+              updatedAt: now,
+            },
+          });
+      }
       return true;
     });
+    if (recorded) scheduleRecommendationRebuild(userId);
+    return recorded;
   }
   const [user] = await db
     .select({ enabled: usersTable.recommendationPersonalizationEnabled })
