@@ -52,6 +52,8 @@ test("ask caches its summary and existing sheets refresh only their OpenAI summa
     "tender_ai_answers",
     "tender_ai_sheets",
     "ai_jobs",
+    "coupon_codes",
+    "coupon_redemptions",
   ]) {
     await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
   }
