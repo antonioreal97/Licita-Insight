@@ -1,4 +1,4 @@
-import { evaluateSavedSearchNotifications } from "../account/notification-service";
+import { createCompanyDocumentExpiryNotifications, evaluateSavedSearchNotifications } from "../account/notification-service";
 import { evaluateProfileAlertNotifications } from "../ai/company-fit-service";
 import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
@@ -119,6 +119,7 @@ export function startEmailNotificationJobs(): () => void {
         schedule.emailDigest ? "email_digest" : "profile_alert_evaluation",
         startedAt,
       );
+      await createCompanyDocumentExpiryNotifications();
       if (!schedule.emailDigest) return;
       const result = await runDailyEmailDigest();
       logEmailJobResult("email_digest", result, startedAt);

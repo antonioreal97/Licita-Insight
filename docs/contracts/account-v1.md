@@ -165,7 +165,8 @@ type NotificationType =
   | "tender_value_changed" // estimatedValue ou estimatedValueStatus mudou
   | "saved_search_new_matches" // editais novos que batem com uma busca salva com alertas
   | "profile_new_matches" // editais novos com alta aderência ao perfil da empresa
-  | "trial_ending"; // teste termina em até 3 dias
+  | "trial_ending" // teste termina em até 3 dias
+  | "company_document_expiring"; // documento vence em 15, 7 ou 1 dia
 
 type Notification = {
   id: string;
@@ -233,6 +234,11 @@ Regras de geração:
     apagadas nem consolidadas; o resumo diário as agrupa por busca (seção 5).
 - **Fim do teste:** um scheduler da API avalia a cada 6 horas usuários cujo `trialEndsAt` está entre
   agora e D-3 e cria exatamente uma notificação `trial_ending` por usuário.
+- **Documentos da empresa:** antes do resumo diário, a API cria um aviso quando um documento com
+  estado `have` está a 15, 7 ou 1 dia do vencimento. A chave
+  `company-document:<id>:<marco>:<expiresAt>` e o índice único de notificações garantem uma por
+  documento/marco, inclusive em retries. Esses avisos entram no resumo diário e nunca no e-mail
+  imediato.
 - **Perfil da empresa:** antes do digest diário, avaliar somente editais novos desde o checkpoint do
   perfil e criar no máximo uma `profile_new_matches` por usuário/dia quando houver aderência alta.
   Com mais de um edital, o link usa o mesmo snapshot por `notification=<id>`; com um, abre o edital.
@@ -403,6 +409,23 @@ A lista não entra no cálculo de aderência: quando só ela muda, o `PUT` atual
 | GET    | `/api/v1/profile/platforms` | —       | `{data: Array<{slug,label,url,kind:'platform'\|'registry',openTenderCount:number\|null}>}` (SICAF com `null`) |
 
 As rotas desta seção exigem sessão e usam o limite leve geral de leitura autenticada (240/min por padrão; o POST de sugestão usa o limite de escrita autenticada, 60/min). Os POSTs (`from-description` e `match-preview`) apenas calculam e não alteram estado, portanto não exigem assinatura.
+
+## 7. Prontidão para licitar
+
+`GET /api/v1/me/company-documents` exige sessão e devolve o catálogo fixo, os metadados salvos e
+`progress: { ready, total }`. `PUT /api/v1/me/company-documents/{kind}` exige sessão, CSRF e acesso
+ativo; sem acesso responde `402 SUBSCRIPTION_REQUIRED`. O `PUT` é idempotente por `(user_id, kind)`.
+
+Cada item usa `status: 'have' | 'missing' | 'not_applicable'`, `issuedAt`, `expiresAt` e uma
+`reference` opcional de até 160 caracteres. Datas e referência são apagadas quando o estado não é
+`have`. Não há upload nem armazenamento do conteúdo do documento. `suggestedValidityDays` é só um
+atalho: o usuário confirma a data real impressa/emitida antes de salvar. Itens `not_applicable` não
+entram no denominador; `have` vencido não conta como pronto.
+
+O catálogo cobre SICAF, CND federal, CRF/FGTS, CNDT, certidões estadual e municipal, falência e
+recuperação judicial, balanço/índices, contrato social, atestados de capacidade técnica, conselho
+profissional e cadastro nas plataformas. A exportação LGPD inclui `companyDocuments`; a exclusão da
+conta remove as linhas pela FK e também explicitamente na transação defensiva de deleção.
 
 O vocabulário global é materializado em `profile_keyword_vocabulary`: unigramas, bigramas e trigramas de títulos, objetos e itens de editais abertos, com chave em minúsculas sem acento, forma de exibição, contagem de editais, categoria predominante e seis relacionados por coocorrência. Stopwords não aparecem como unigramas. Termos genéricos de licitação (“empresa”, “empresa especializada”, “contratação”, “aquisição”, “serviço(s)”, “fornecimento”, “prestação”, “registro de preços”, “objeto”, “eventual”, “futura”, “termo de referência”, “município” etc.) nunca são sugeridos sozinhos, e um bi/trigrama não termina com eles nem começa com eles (exceto “serviços de…”, “fornecimento de…”, “aquisição de…”, “prestação de…”, “execução de…”, que encabeçam uma oferta real). Além disso, um termo presente em mais de 20% dos editais abertos não entra no vocabulário (`MAX_OPEN_TENDER_SHARE`; o teto só vale com 50 editais abertos ou mais). O valor saiu de uma amostra pública de 1.650 editais abertos do PNCP (objeto + informação complementar, 14/10/2026): “empresa” 42,5%, “especializada” 33,6%, “empresa especializada” 29,9%, “execução” 24,2%, “município” 22,6%, “conforme” 21,5%; os ramos de negócio mais frequentes ficaram abaixo de 15% (“engenharia” 14,8%, “obras” 13%, “manutenção” 11,4%, “saúde” 7,3%). As leituras (`suggest` e `from-description`) reaplicam as regras de extração, então um termo genérico gravado por uma reconstrução antiga deixa de ser sugerido antes do próximo job. Apenas termos presentes em pelo menos três editais entram, limitados aos 15 mil mais frequentes; a fase intermediária também é limitada a 60 mil candidatos e 250 mil hashes de termos vistos uma vez para manter a memória previsível. A extensão `pg_trgm`, já criada pelo baseline do projeto, alimenta o índice GIN do autocomplete; a normalização sem acento é feita pela aplicação, sem depender de `unaccent`.
 
