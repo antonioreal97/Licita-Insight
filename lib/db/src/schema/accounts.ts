@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -124,6 +125,51 @@ export const sessionsTable = pgTable(
   (table) => [
     index("sessions_user_id_idx").on(table.userId),
     index("sessions_expires_at_idx").on(table.expiresAt),
+  ],
+);
+
+export type CompanyDocumentStatus = "have" | "missing" | "not_applicable";
+export type CompanyDocumentKind =
+  | "sicaf"
+  | "cnd_federal"
+  | "crf_fgts"
+  | "cndt"
+  | "state_tax_clearance"
+  | "municipal_tax_clearance"
+  | "bankruptcy_clearance"
+  | "balance_sheet"
+  | "articles_of_association"
+  | "technical_capacity_certificate"
+  | "professional_council_registration"
+  | "platform_registration";
+
+/** Company-level readiness metadata only. Files and sensitive document contents are deliberately not stored. */
+export const companyDocumentsTable = pgTable(
+  "company_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<CompanyDocumentKind>().notNull(),
+    status: text("status").$type<CompanyDocumentStatus>().notNull(),
+    issuedAt: date("issued_at", { mode: "string" }),
+    expiresAt: date("expires_at", { mode: "string" }),
+    reference: text("reference"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("company_documents_user_kind_uidx").on(table.userId, table.kind),
+    index("company_documents_expiry_idx")
+      .on(table.expiresAt)
+      .where(sql`${table.status} = 'have' and ${table.expiresAt} is not null`),
+    check("company_documents_status_check", sql`${table.status} in ('have', 'missing', 'not_applicable')`),
+    check(
+      "company_documents_kind_check",
+      sql`${table.kind} in ('sicaf','cnd_federal','crf_fgts','cndt','state_tax_clearance','municipal_tax_clearance','bankruptcy_clearance','balance_sheet','articles_of_association','technical_capacity_certificate','professional_council_registration','platform_registration')`,
+    ),
+    check("company_documents_reference_length_check", sql`${table.reference} is null or char_length(${table.reference}) <= 160`),
   ],
 );
 
