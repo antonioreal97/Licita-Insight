@@ -46,13 +46,13 @@ export type BillingView = {
 
 type SubscriptionRow = typeof subscriptionsTable.$inferSelect;
 
-export async function getBilling(userId: string): Promise<BillingView> {
+export async function getBilling(userId: string, now = new Date()): Promise<BillingView> {
   const [row, trialEndsAt, couponAccessUntil] = await Promise.all([
     findByUser(userId),
     findTrialEndsAt(userId),
-    activeCouponAccessUntil(userId),
+    activeCouponAccessUntil(userId, now),
   ]);
-  return toView(row, trialEndsAt, await userHasBetaGrant(userId, new Date()), couponAccessUntil);
+  return toView(row, trialEndsAt, await userHasBetaGrant(userId, now), couponAccessUntil, now);
 }
 
 export const getBillingPlan = () => ({
@@ -146,6 +146,7 @@ export async function cancelSubscription(userId: string): Promise<BillingView> {
     trialEndsAt,
     await userHasBetaGrant(userId, updatedAt),
     couponAccessUntil,
+    updatedAt,
   );
 }
 
@@ -308,8 +309,8 @@ function toView(
   trialEndsAt: Date | null,
   betaGrant = false,
   couponAccessUntil: Date | null = null,
+  now = new Date(),
 ): BillingView {
-  const now = new Date();
   const status = isStatus(row?.status) ? row.status : "none";
   let source = entitlementSource(
     { status: row?.status ?? null, currentPeriodEnd: row?.currentPeriodEnd ?? null, trialEndsAt },

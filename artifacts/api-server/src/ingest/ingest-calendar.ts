@@ -44,13 +44,21 @@ export function planDay(
   const pendingScopes = partitions
     .filter((row) => row.status === "pending")
     .map((row) => row.uf);
+  const hasStatePartitions = partitions.some((row) => row.uf !== "all");
   if (pendingScopes.length > 0) {
     if (options.uf) {
-      return pendingScopes.includes("all") || pendingScopes.includes(options.uf)
-        ? [options.uf]
-        : [];
+      if (
+        pendingScopes.includes(options.uf) ||
+        (pendingScopes.includes("all") && !hasStatePartitions)
+      ) {
+        return [options.uf];
+      }
+      return [];
     }
-    if (pendingScopes.includes("all")) return ["all"];
+    // Once the national request has fallen back to state partitions, its pending
+    // "all" row is only the fallback marker. Resume the missing states instead
+    // of retrying the national endpoint and accidentally sealing partial coverage.
+    if (pendingScopes.includes("all") && !hasStatePartitions) return ["all"];
     if (partitions.some((row) => row.uf === "all" && isSealed(row, today))) {
       return [...new Set(pendingScopes)].filter((uf) => uf !== "all");
     }
@@ -62,7 +70,7 @@ export function planDay(
   );
   if (options.uf) return sealedUfs.has(options.uf) ? [] : [options.uf];
   // Even a pending UF records that national pagination fell back to states.
-  if (partitions.some((row) => row.uf !== "all")) {
+  if (hasStatePartitions) {
     return PNCP_UFS.filter((uf) => !sealedUfs.has(uf));
   }
   return ["all"];

@@ -39,6 +39,8 @@ test('terms draft explains AI limitations, subscription, acceptable use and priv
   assert.match(html, /não substituem o edital/i);
   assert.match(html, /Não envie dados pessoais/i);
   assert.match(html, /Assinatura, pagamento e cancelamento/);
+  assert.match(html, /editais nacionais e internacionais/i);
+  assert.doesNotMatch(html, /chamadas culturais/i);
   assert.match(html, /href="\/privacidade"/);
 });
 

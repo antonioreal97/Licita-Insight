@@ -217,7 +217,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground">
+    <div className="relative min-h-[100dvh] bg-background text-foreground">
       <a
         href="#conteudo"
         data-testid="link-skip-to-content"
@@ -225,6 +225,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         Pular para o conteúdo
       </a>
+      <div
+        aria-hidden
+        className={`absolute inset-y-0 left-0 hidden w-sidebar border-r border-sidebar-border bg-sidebar transition-[width] duration-slow ease-emphasized lg:block ${collapsed ? 'lg:w-sidebar-collapsed' : ''}`}
+      />
       <aside
         className={`fixed inset-y-0 left-0 z-nav hidden w-sidebar flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-slow ease-emphasized lg:flex ${collapsed ? 'lg:w-sidebar-collapsed' : ''}`}
       >
