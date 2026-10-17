@@ -76,13 +76,18 @@ const STOP_WORDS = new Set([
  * term made only of them is dropped, and a bi/trigram may not end with one ("empresa especializada") nor start
  * with one unless it heads a real offering ("serviços de limpeza", "fornecimento de água").
  */
-const GENERIC_WORDS = new Set([
+/**
+ * Shared with recommendation history term filtering. Short/generic procurement words never identify
+ * what a company sells and must not create recommendations from monitored/saved notices alone.
+ */
+export const GENERIC_WORDS = new Set([
   "acesse",
   "anexo",
   "anexos",
   "aquisicao",
   "atender",
   "br",
+  "centro",
   "cnetmobile",
   "compra",
   "compras",
@@ -96,6 +101,7 @@ const GENERIC_WORDS = new Set([
   "eletronico",
   "empresa",
   "empresas",
+  "equipamentos",
   "esclarecimentos",
   "especializada",
   "especializadas",
@@ -121,6 +127,8 @@ const GENERIC_WORDS = new Set([
   "licitacao",
   "link",
   "lote",
+  "materiais",
+  "material",
   "municipal",
   "municipio",
   "necessarios",
@@ -139,7 +147,10 @@ const GENERIC_WORDS = new Set([
   "secretaria",
   "servico",
   "servicos",
+  "solucao",
+  "solucoes",
   "termo",
+  "uso",
   "visando",
   "www",
 ]);

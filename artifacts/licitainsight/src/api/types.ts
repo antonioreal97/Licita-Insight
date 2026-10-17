@@ -621,7 +621,7 @@ export type RecommendationPreferences = {
   updatedAt: string | null;
 };
 export type RecommendationReason = {
-  kind: 'profile' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value' | 'platform';
+  kind: 'profile' | 'interest' | 'monitored' | 'saved' | 'saved_search' | 'search' | 'location' | 'organization' | 'value' | 'platform';
   text: string;
 };
 export type Recommendation = { tender: TenderSummary; score: number; reasons: RecommendationReason[]; generatedAt: string };

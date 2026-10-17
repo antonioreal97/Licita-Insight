@@ -18,6 +18,7 @@ import { tendersTable, type TenderCategory } from "./tenders";
 export type RecommendationReason = {
   kind:
     | "profile"
+    | "interest"
     | "monitored"
     | "saved"
     | "saved_search"
@@ -66,7 +67,7 @@ export const recommendationEventsTable = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
-    type: text("type").$type<"search" | "tender_view">().notNull(),
+    type: text("type").$type<"search" | "tender_view" | "interest">().notNull(),
     normalizedTerms: jsonb("normalized_terms")
       .$type<string[]>()
       .notNull()
@@ -81,12 +82,13 @@ export const recommendationEventsTable = pgTable(
   (table) => [
     check(
       "recommendation_events_type_check",
-      sql`${table.type} in ('search', 'tender_view')`,
+      sql`${table.type} in ('search', 'tender_view', 'interest')`,
     ),
     check(
       "recommendation_events_payload_check",
       sql`(${table.type} = 'search' and jsonb_array_length(${table.normalizedTerms}) > 0 and ${table.tenderId} is null)
-        or (${table.type} = 'tender_view' and ${table.tenderId} is not null)`,
+        or (${table.type} = 'tender_view' and ${table.tenderId} is not null)
+        or (${table.type} = 'interest' and ${table.tenderId} is not null and jsonb_array_length(${table.normalizedTerms}) > 0)`,
     ),
     index("recommendation_events_user_time_idx").on(
       table.userId,

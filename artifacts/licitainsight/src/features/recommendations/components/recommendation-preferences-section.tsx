@@ -15,7 +15,7 @@ export function RecommendationPreferencesSection() {
         Recomendações
       </h2>
       <p className="mt-1 type-meta text-muted-foreground">
-        O perfil da empresa, editais salvos, monitorados e buscas salvas sempre ajudam a ordenar recomendações.
+        O perfil da empresa, editais salvos, monitorados, buscas salvas e as respostas da triagem (Interessa / Não interessa) ajudam a ordenar recomendações.
       </p>
       <div className="mt-5 flex items-start justify-between gap-4">
         <span className="min-w-0 flex-1">
@@ -23,8 +23,8 @@ export function RecommendationPreferencesSection() {
             Personalizar recomendações com minhas buscas e cliques
           </label>
           <span id="switch-recommendation-personalization-desc" className="mt-0.5 block type-meta text-muted-foreground">
-            Desligado por padrão. Quando ligado, guardamos termos normalizados de buscas e aberturas de editais por até 180 dias. Não usamos esse histórico para
-            e-mail.
+            Desligado por padrão. Quando ligado, guardamos termos normalizados de buscas e aberturas de editais por até 180 dias. A triagem (Interessa / Não
+            interessa) ensina mesmo com esta opção desligada. Não usamos esse histórico para e-mail.
           </span>
         </span>
         <Switch
@@ -36,13 +36,11 @@ export function RecommendationPreferencesSection() {
         />
       </div>
       {!enabled && preferences.data && (
-        <p className="mt-3 type-meta text-muted-foreground">Seu histórico de buscas e cliques é apagado ao desligar esta opção.</p>
+        <p className="mt-3 type-meta text-muted-foreground">Ao desligar, apagamos buscas/cliques e também o aprendizado da triagem.</p>
       )}
-      {enabled && (
-        <Button variant="outline" size="sm" className="mt-4" loading={clear.isPending} onClick={() => clear.mutate()}>
-          <Trash2 size={14} aria-hidden /> Apagar histórico agora
-        </Button>
-      )}
+      <Button variant="outline" size="sm" className="mt-4" loading={clear.isPending} onClick={() => clear.mutate()}>
+        <Trash2 size={14} aria-hidden /> Apagar aprendizado e histórico
+      </Button>
       <div className="mt-6 flex items-start justify-between gap-4 border-t border-border-subtle pt-5">
         <span className="min-w-0 flex-1">
           <label htmlFor="switch-international-opportunities" className="block type-ui font-medium">

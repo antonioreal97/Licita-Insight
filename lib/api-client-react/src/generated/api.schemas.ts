@@ -1644,6 +1644,7 @@ export type RecommendationReasonKind = typeof RecommendationReasonKind[keyof typ
 
 export const RecommendationReasonKind = {
   profile: 'profile',
+  interest: 'interest',
   monitored: 'monitored',
   saved: 'saved',
   saved_search: 'saved_search',

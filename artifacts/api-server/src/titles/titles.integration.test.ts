@@ -5,8 +5,13 @@ import type { AddressInfo } from "node:net";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { createOllamaClient, OllamaError } from "../ai/ollama-client";
 
-const databaseUrl = process.env.PNCP_TEST_DATABASE_URL;
-if (databaseUrl) process.env.DATABASE_URL = databaseUrl;
+const baseDatabaseUrl = process.env.PNCP_TEST_DATABASE_URL;
+const schema = `titles_test_${crypto.randomUUID().replaceAll("-", "")}`;
+const databaseUrl = baseDatabaseUrl ? new URL(baseDatabaseUrl) : null;
+if (databaseUrl) {
+  databaseUrl.searchParams.set("options", `-c search_path=${schema}`);
+  process.env.DATABASE_URL = databaseUrl.toString();
+}
 process.env.PUBLIC_APP_ORIGIN ??= "http://localhost:24252";
 process.env.LOG_LEVEL ??= "silent";
 
@@ -97,7 +102,58 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     await pool.query("delete from tenders where organization_id = $1", [`pncp-${ORG}`]);
   };
 
-  before(cleanup);
+  before(async () => {
+    const { pool } = await import("@workspace/db");
+    await pool.query(`create schema "${schema}"`);
+    for (const table of [
+      "tenders",
+      "tender_title_examples",
+      "ai_jobs",
+      "ai_title_usage",
+      "ai_daily_usage",
+      "ai_fit_daily_usage",
+      "ai_sheet_daily_usage",
+      "tender_ai_sheets",
+      "ai_ask_requests",
+      "company_tender_fits",
+      "job_run_audit",
+      "saved_tenders",
+      "notifications",
+    ]) {
+      await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
+    }
+    await pool.query(`
+      create view ai_usage_ledger as
+        select created_at as occurred_at, user_id, 'ask'::text as feature,
+               tender_id, response_model as model, input_tokens, 0::integer as output_tokens,
+               estimated_cost_usd as cost_usd
+        from ai_ask_requests where status in ('answered', 'not_found') and cache_hit = false
+        union all
+        select created_at, user_id, 'ask_summary'::text, tender_id, summary_response_model,
+               summary_input_tokens, summary_output_tokens, summary_estimated_cost_usd
+        from ai_ask_requests
+        where summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0
+        union all
+        select checked_at, user_id, 'fit'::text, tender_id, response_model,
+               input_tokens, 0::integer, estimated_cost_usd
+        from company_tender_fits where status = 'ready' and checked_at is not null
+        union all
+        select generated_at, null::text, 'sheet'::text, tender_id, response_model,
+               input_tokens, 0::integer, estimated_cost_usd
+        from tender_ai_sheets where status = 'ready' and generated_at is not null
+        union all
+        select summary_generated_at, null::text, 'sheet_summary'::text, tender_id, summary_response_model,
+               summary_input_tokens, summary_output_tokens, summary_estimated_cost_usd
+        from tender_ai_sheets
+        where summary_generated_at is not null
+          and (summary_input_tokens > 0 or summary_output_tokens > 0 or summary_estimated_cost_usd > 0)
+        union all
+        select created_at, null::text, 'title'::text, tender_id, model,
+               input_tokens, output_tokens, estimated_cost_usd
+        from ai_title_usage
+    `);
+    await cleanup();
+  });
   beforeEach(() => {
     process.env = { ...savedEnv };
     delete process.env.TITLE_TEACHER_ENABLED;
@@ -114,6 +170,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
   after(async () => {
     await cleanup();
     const { pool } = await import("@workspace/db");
+    await pool.query(`drop schema "${schema}" cascade`);
     await pool.end();
   });
 

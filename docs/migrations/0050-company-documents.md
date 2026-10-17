@@ -1,6 +1,6 @@
 # 0050 — Documentos da empresa
 
-> **Numeração:** a `main` já usa 0044/0045; o backfill manual de contratação direta usa 0046; a branch `feat/workspaces-phase-1` usa 0047/0048; o PR #160 (triagem) reserva **0049** (`recommendation_interest_events`). Esta mudança é **0050**. A ordem do merge importa: aplicar 0049 do #160 antes desta 0050. As migrações da Fase 1 (Espaços, hoje 0047/0048) serão renumeradas para depois de 0050 na sincronização.
+> **Numeração:** a `main` já tem 0044/0045, o backfill manual 0046 e (via #160) **0049** `recommendation_interest_events` no diário (`idx` 46). Esta mudança é **0050** (`idx` 47, `when` crescente). A branch `feat/workspaces-phase-1` (0047/0048) será renumerada para depois de 0050 na sincronização. Em produção, aplicar a 0049 antes desta 0050.
 
 Cria, de forma aditiva, `company_documents`: metadados do checklist de prontidão da empresa por usuário. A tabela guarda somente tipo, estado, datas e uma referência opcional curta (por exemplo, número ou órgão emissor); não recebe upload, conteúdo do documento nem dado pessoal desnecessário. A unicidade `(user_id, kind)` torna o `PUT` idempotente, e a chave estrangeira com `ON DELETE CASCADE` inclui esses dados na exclusão da conta.
 

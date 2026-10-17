@@ -46,7 +46,7 @@ test("coupons persist, extend access and redeem idempotently with PostgreSQL", {
       const retry = await redeemCoupon(user.id, { code: issued.code }, new Date(now.getTime() + 86_400_000));
       assert.equal(retry.alreadyRedeemed, true);
       assert.equal(retry.accessUntil, first.accessUntil);
-      const billing = await getBilling(user.id);
+      const billing = await getBilling(user.id, now);
       assert.equal(billing.entitled, true);
       assert.equal(billing.source, "coupon");
       assert.equal(billing.couponAccessUntil, first.accessUntil);

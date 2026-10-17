@@ -10,11 +10,15 @@ test('legacy and topic feedback retain topic signals; reasons are bounded', () =
   for (const value of [null, '', 'custom', {}, 1]) assert.equal(isDismissReason(value), false);
   for (const value of ['region', 'value', 'deadline', 'not_offering']) assert.equal(isDismissReason(value), true);
 });
-test('region feedback lowers the rejected state, without penalizing the service elsewhere', () => {
-  const terms = dismissalTerms('region', ['filmagem'], tender);
+test('region feedback lowers the rejected state or municipality, without penalizing the service elsewhere', () => {
+  const terms = dismissalTerms('region', ['filmagem'], { ...tender, municipalityIbge: '3304557' });
   assert.equal(terms.includes('filmagem'), false);
-  assert.equal(contextualDismissalPenalty(terms, tender, now), 4);
-  assert.equal(contextualDismissalPenalty(terms, { ...tender, state: 'SP' }, now), 0);
+  assert.equal(contextualDismissalPenalty(terms, { ...tender, municipalityIbge: '3304557' }, now), 4);
+  assert.equal(contextualDismissalPenalty(terms, { ...tender, state: 'SP', municipalityIbge: '3550308' }, now), 0);
+  assert.equal(
+    contextualDismissalPenalty(terms, { ...tender, state: 'SP', municipalityIbge: '3304557' }, now),
+    4,
+  );
   assert.equal(contextualDismissalPenalty(dismissalTerms('region', [], { ...tender, state: null }), tender, now), 0);
 });
 test('value feedback compares approximate bands and ignores unknown or flagged values', () => {

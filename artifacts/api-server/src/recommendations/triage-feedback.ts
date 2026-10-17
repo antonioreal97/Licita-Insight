@@ -10,6 +10,7 @@ export type DismissReason = (typeof DISMISS_REASONS)[number];
 
 type TenderSignal = {
   state: string | null;
+  municipalityIbge?: string | null;
   estimatedValue: string | null;
   estimatedValueFlag?: string | null;
 };
@@ -29,6 +30,7 @@ export function dismissalTerms(
     JSON.stringify({
       reason,
       state: tender.state,
+      municipalityIbge: tender.municipalityIbge ?? null,
       value: tender.estimatedValueFlag
         ? null
         : Number(tender.estimatedValue) || null,
@@ -48,10 +50,18 @@ export function contextualDismissalPenalty(
   const feedback = JSON.parse(marker.slice(PREFIX.length)) as {
     reason: DismissReason;
     state: string | null;
+    municipalityIbge?: string | null;
     value: number | null;
   };
-  if (feedback.reason === "region")
+  if (feedback.reason === "region") {
+    if (
+      feedback.municipalityIbge &&
+      candidate.municipalityIbge &&
+      feedback.municipalityIbge === candidate.municipalityIbge
+    )
+      return 4;
     return feedback.state && feedback.state === candidate.state ? 4 : 0;
+  }
   if (feedback.reason === "value") {
     const value = candidate.estimatedValueFlag
       ? 0
