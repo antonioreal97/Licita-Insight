@@ -3446,6 +3446,7 @@ components:
           enum:
             [
               profile,
+              interest,
               monitored,
               saved,
               saved_search,

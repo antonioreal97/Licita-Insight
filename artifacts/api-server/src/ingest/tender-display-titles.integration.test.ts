@@ -1,17 +1,31 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { after, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 import { and, eq, inArray } from "drizzle-orm";
 import { normalizeText } from "../domain/normalize";
 import { DISPLAY_TITLE_RULES_VERSION } from "./title-normalizer";
 
-const databaseUrl = process.env.PNCP_TEST_DATABASE_URL;
-if (databaseUrl && !process.env.DATABASE_URL) process.env.DATABASE_URL = databaseUrl;
+const baseDatabaseUrl = process.env.PNCP_TEST_DATABASE_URL;
+const schema = `display_titles_test_${crypto.randomUUID().replaceAll("-", "")}`;
+const databaseUrl = baseDatabaseUrl ? new URL(baseDatabaseUrl) : null;
+if (databaseUrl) {
+  databaseUrl.searchParams.set("options", `-c search_path=${schema}`);
+  process.env.DATABASE_URL = databaseUrl.toString();
+}
 const repoRoot = fileURLToPath(new URL("../../../..", import.meta.url));
+before(async () => {
+  if (!databaseUrl) return;
+  const { pool } = await import("@workspace/db");
+  await pool.query(`create schema "${schema}"`);
+  for (const table of ["tenders", "saved_tenders", "notifications", "ai_jobs"]) {
+    await pool.query(`create table "${schema}"."${table}" (like public."${table}" including all)`);
+  }
+});
 after(async () => {
   if (databaseUrl) {
     const { pool } = await import("@workspace/db");
+    await pool.query(`drop schema "${schema}" cascade`);
     await pool.end();
   }
 });
@@ -144,7 +158,7 @@ describe("títulos padronizados no PostgreSQL", { skip: !databaseUrl }, () => {
     const run = (args: string[]) => spawnSync(
       "pnpm",
       ["--filter", "@workspace/api-server", "run", "backfill:display-titles", "--", ...args],
-      { cwd: repoRoot, env: { ...process.env, DATABASE_URL: databaseUrl }, encoding: "utf8" },
+      { cwd: repoRoot, env: { ...process.env, DATABASE_URL: databaseUrl!.toString() }, encoding: "utf8" },
     );
     const dryRun = run(["--dry-run", "--batch", "1", "--limit", "1"]);
     assert.equal(dryRun.status, 0, dryRun.stderr);

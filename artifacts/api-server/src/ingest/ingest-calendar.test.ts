@@ -51,7 +51,11 @@ describe("PNCP coverage calendar", () => {
   });
 
   it("resumes missing UFs without requesting the national listing or successful UFs", () => {
-    const rows = [row({ uf: "AC" }), row({ uf: "AL", status: "pending" })];
+    const rows = [
+      row({ uf: "all", status: "pending", completedAt: null }),
+      row({ uf: "AC" }),
+      row({ uf: "AL", status: "pending" }),
+    ];
     assert.deepEqual(
       planDay(rows, day, 6, today),
       PNCP_UFS.filter((uf) => uf !== "AC"),

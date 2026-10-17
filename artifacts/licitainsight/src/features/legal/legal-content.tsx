@@ -165,7 +165,7 @@ export function TermsPage() {
 
       <h2>2. O que o serviço oferece</h2>
       <p>
-        O Pardal Digital organiza dados e documentos de fontes públicas, permite buscas, salvamentos, monitoramento, alertas, chamadas culturais e recursos de
+        O Pardal Digital organiza dados e documentos de fontes públicas, permite buscas, salvamentos, monitoramento, alertas, editais nacionais e internacionais e recursos de
         inteligência artificial. Funcionalidades, limites e preços podem evoluir, com comunicação prévia quando a mudança afetar materialmente uma assinatura.
       </p>
 

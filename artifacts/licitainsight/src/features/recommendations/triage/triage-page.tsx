@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import type { RecommendationDismissReason } from '@/api';
+import type { Recommendation, RecommendationDismissReason } from '@/api';
 import { Button, buttonClass } from '@/components/common/action-button';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
 import { useCompanyProfile, useSaveCompanyProfile } from '@/features/company-profile/hooks/use-company-profile';
@@ -15,19 +15,27 @@ import { useTriageProgress } from './use-triage-progress';
 import { TriageCard } from './triage-card';
 
 export default function TriagePage() {
-  const recommendations = useRecommendations(50);
+  const recommendations = useRecommendations(50, { stable: true });
   const profile = useCompanyProfile();
   const saveProfile = useSaveCompanyProfile();
   const client = useQueryClient();
   const { progress, update } = useTriageProgress();
-  const current = progress.reviewed.length < TRIAGE_GOAL ? recommendations.data?.data.find(item => !progress.reviewed.includes(item.tender.id)) : undefined;
+  // Freeze the deck at first load so a server rebuild (1.5s after dismiss) cannot shrink/reorder the queue mid-session.
+  const [queue, setQueue] = useState<Recommendation[] | null>(null);
+  useEffect(() => {
+    if (queue || !recommendations.data?.data?.length) return;
+    setQueue(recommendations.data.data);
+  }, [queue, recommendations.data?.data]);
+  const current = progress.reviewed.length < TRIAGE_GOAL
+    ? queue?.find(item => !progress.reviewed.includes(item.tender.id))
+    : undefined;
   const highlights = useTenderHighlights(current ? [current.tender.id] : []);
   const locked = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [exclusion, setExclusion] = useState<string | null>(null);
-  const finished = !current && !recommendations.isPending && !recommendations.isError;
+  const finished = !current && !recommendations.isPending && !recommendations.isError && queue !== null;
 
   async function act(action: TriageAction, reason?: RecommendationDismissReason) {
     if (!current || locked.current) return;
@@ -48,7 +56,7 @@ export default function TriagePage() {
       } else setFeedback('Pulado por agora. Isso não altera suas recomendações.');
       setExclusion(reason === 'not_offering' ? suggestedExclusion(tender) || null : null);
       update(advanceProgress(progress, tender.id, action));
-      // Keep this queue stable until the user leaves; dashboard recommendations refresh in the background.
+      // Mark dashboard cache stale without refetching this page's frozen queue.
       void client.invalidateQueries({ queryKey: queryKeys.me.recommendations, refetchType: 'none' });
     } catch (actionError) {
       console.error(`[triage] Falha ao registrar "${action}" no edital ${tender.id}.`, actionError);
