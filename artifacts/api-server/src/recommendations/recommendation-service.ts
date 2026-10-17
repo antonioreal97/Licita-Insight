@@ -1416,9 +1416,30 @@ export async function recordRecommendationEvent(
       .where(eq(tendersTable.id, input.tenderId))
       .limit(1);
     if (!tender) throw new NotFoundError("Tender was not found");
-    const expressions = extractInterestExpressions(tender);
+    const [owner] = await db
+      .select({ enabled: usersTable.recommendationPersonalizationEnabled })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    // Learning from "Interessa" is behavioral profiling: only with personalization on, and once per tender, so a
+    // repeated click can neither double the evidence for an expression nor inflate the daily metric.
+    const expressions = owner?.enabled ? extractInterestExpressions(tender) : [];
     const recorded = await db.transaction(async (tx) => {
-      if (expressions.length)
+      const [already] = expressions.length
+        ? await tx
+            .select({ id: recommendationEventsTable.id })
+            .from(recommendationEventsTable)
+            .where(
+              and(
+                eq(recommendationEventsTable.userId, userId),
+                eq(recommendationEventsTable.type, "interest"),
+                eq(recommendationEventsTable.tenderId, input.tenderId),
+              ),
+            )
+            .limit(1)
+        : [];
+      const learns = expressions.length > 0 && !already;
+      if (learns)
         await tx.insert(recommendationEventsTable).values({
           userId,
           type: "interest",
@@ -1435,7 +1456,7 @@ export async function recordRecommendationEvent(
           ),
         )
         .returning({ tenderId: userRecommendationsTable.tenderId });
-      if (removed.length === 0 && expressions.length === 0) return false;
+      if (removed.length === 0 && !learns) return false;
       if (removed.length) {
         const day = dateInSaoPaulo(now);
         await tx
