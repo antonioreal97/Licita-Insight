@@ -732,6 +732,93 @@ export interface AccountExportCouponRedemption {
   durationDays: AccountExportCouponRedemptionDurationDays;
 }
 
+export type CompanyDocumentKind = typeof CompanyDocumentKind[keyof typeof CompanyDocumentKind];
+
+
+export const CompanyDocumentKind = {
+  sicaf: 'sicaf',
+  cnd_federal: 'cnd_federal',
+  crf_fgts: 'crf_fgts',
+  cndt: 'cndt',
+  state_tax_clearance: 'state_tax_clearance',
+  municipal_tax_clearance: 'municipal_tax_clearance',
+  bankruptcy_clearance: 'bankruptcy_clearance',
+  balance_sheet: 'balance_sheet',
+  articles_of_association: 'articles_of_association',
+  technical_capacity_certificate: 'technical_capacity_certificate',
+  professional_council_registration: 'professional_council_registration',
+  platform_registration: 'platform_registration',
+} as const;
+
+export type CompanyDocumentStatus = typeof CompanyDocumentStatus[keyof typeof CompanyDocumentStatus];
+
+
+export const CompanyDocumentStatus = {
+  have: 'have',
+  missing: 'missing',
+  not_applicable: 'not_applicable',
+} as const;
+
+export interface CompanyDocumentCatalogItem {
+  kind: CompanyDocumentKind;
+  label: string;
+  description: string;
+  glossaryId: string;
+  officialUrl: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  suggestedValidityDays: number | null;
+}
+
+export interface CompanyDocument {
+  id: string;
+  kind: CompanyDocumentKind;
+  status: CompanyDocumentStatus;
+  /** @nullable */
+  issuedAt: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+  /**
+     * @maxLength 160
+     * @nullable
+     */
+  reference: string | null;
+  updatedAt: string;
+}
+
+export interface CompanyDocumentPut {
+  status: CompanyDocumentStatus;
+  /** @nullable */
+  issuedAt?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+  /**
+     * @maxLength 160
+     * @nullable
+     */
+  reference?: string | null;
+}
+
+export interface CompanyDocumentChecklistItem {
+  catalog: CompanyDocumentCatalogItem;
+  document: CompanyDocument | null;
+}
+
+export type CompanyDocumentsResponseProgress = {
+  /** @minimum 0 */
+  ready: number;
+  /** @minimum 0 */
+  total: number;
+};
+
+export interface CompanyDocumentsResponse {
+  items: CompanyDocumentChecklistItem[];
+  progress: CompanyDocumentsResponseProgress;
+  asOf: string;
+}
+
 export type AccountExportCompanyFitsItem = { [key: string]: unknown };
 
 export type AccountExportFitUsageItem = { [key: string]: unknown };
@@ -892,6 +979,7 @@ export interface AccountExport {
   aiDailyTenders: AccountExportAiDailyTender[];
   aiJobs: AccountExportAiJob[];
   companyProfile: CompanyProfile | null;
+  companyDocuments: CompanyDocument[];
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];
   recommendationEvents: AccountExportRecommendationEvent[];
@@ -2405,6 +2493,7 @@ export const NotificationType = {
   saved_search_new_matches: 'saved_search_new_matches',
   profile_new_matches: 'profile_new_matches',
   trial_ending: 'trial_ending',
+  company_document_expiring: 'company_document_expiring',
 } as const;
 
 export type NotificationTender = {

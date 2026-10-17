@@ -34,6 +34,10 @@ import type {
   BillingPlanResponse,
   BillingResponse,
   BillingUnavailableResponse,
+  CompanyDocument,
+  CompanyDocumentKind,
+  CompanyDocumentPut,
+  CompanyDocumentsResponse,
   CompanyProfileInput,
   CompanyProfileResponse,
   ConflictResponse,
@@ -2908,6 +2912,172 @@ export const useUpdateUsageProfile = <TError = ErrorType<InvalidParameterRespons
         TContext
       > => {
       return useMutation(getUpdateUsageProfileMutationOptions(options));
+    }
+
+export const getListCompanyDocumentsUrl = () => {
+
+
+
+
+  return `/api/v1/me/company-documents`
+}
+
+/**
+ * @summary Read the authenticated company's bid-readiness checklist and fixed catalog
+ */
+export const listCompanyDocuments = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompanyDocumentsResponse> => {
+
+  return customFetch<CompanyDocumentsResponse>(getListCompanyDocumentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCompanyDocumentsQueryKey = () => {
+    return [
+    `/api/v1/me/company-documents`
+    ] as const;
+    }
+
+
+export const getListCompanyDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listCompanyDocuments>>, TError = ErrorType<UnauthenticatedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCompanyDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCompanyDocumentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCompanyDocuments>>> = ({ signal }) => listCompanyDocuments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCompanyDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCompanyDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listCompanyDocuments>>>
+export type ListCompanyDocumentsQueryError = ErrorType<UnauthenticatedResponse>
+
+
+/**
+ * @summary Read the authenticated company's bid-readiness checklist and fixed catalog
+ */
+
+export function useListCompanyDocuments<TData = Awaited<ReturnType<typeof listCompanyDocuments>>, TError = ErrorType<UnauthenticatedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCompanyDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCompanyDocumentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPutCompanyDocumentUrl = (kind: CompanyDocumentKind,) => {
+
+
+
+
+  return `/api/v1/me/company-documents/${kind}`
+}
+
+/**
+ * @summary Create or replace one company document metadata record
+ */
+export const putCompanyDocument = async (kind: CompanyDocumentKind,
+    companyDocumentPut: CompanyDocumentPut, options?: Parameters<typeof customFetch>[1]): Promise<CompanyDocument> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CompanyDocument>(getPutCompanyDocumentUrl(kind),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyDocumentPut)
+  }
+);}
+
+
+
+
+
+export const getPutCompanyDocumentMutationKey = () => ['putCompanyDocument'] as const;
+
+export const getPutCompanyDocumentMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putCompanyDocument>>, TError,PutCompanyDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putCompanyDocument>>, TError,PutCompanyDocumentMutationVariables, TContext> => {
+
+const mutationKey = getPutCompanyDocumentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putCompanyDocument>>, PutCompanyDocumentMutationVariables> = (props) => {
+          const {kind,data} = props ?? {};
+
+          return  putCompanyDocument(kind,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutCompanyDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof putCompanyDocument>>>
+    export type PutCompanyDocumentMutationBody = BodyType<CompanyDocumentPut>
+    export type PutCompanyDocumentMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse>
+    export type PutCompanyDocumentMutationVariables = {kind: CompanyDocumentKind;data: BodyType<CompanyDocumentPut>}
+
+    /**
+ * @summary Create or replace one company document metadata record
+ */
+export const usePutCompanyDocument = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | SubscriptionRequiredResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putCompanyDocument>>, TError,PutCompanyDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putCompanyDocument>>,
+        TError,
+        PutCompanyDocumentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutCompanyDocumentMutationOptions(options));
     }
 
 export const getGetBillingUrl = () => {

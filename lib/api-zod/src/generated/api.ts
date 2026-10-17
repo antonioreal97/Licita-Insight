@@ -1624,6 +1624,8 @@ export const exportAccountDataResponseCompanyProfileOneOneValueRangeMinMin = 0;
 export const exportAccountDataResponseCompanyProfileOneOneValueRangeMaxMin = 0;
 
 
+export const exportAccountDataResponseCompanyDocumentsItemReferenceMax = 160;
+
 
 
 export const ExportAccountDataResponse = zod.object({
@@ -1826,6 +1828,15 @@ export const ExportAccountDataResponse = zod.object({
   "version": zod.number().int().min(1),
   "updatedAt": zod.coerce.date()
 })),zod.null()]),
+  "companyDocuments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['sicaf', 'cnd_federal', 'crf_fgts', 'cndt', 'state_tax_clearance', 'municipal_tax_clearance', 'bankruptcy_clearance', 'balance_sheet', 'articles_of_association', 'technical_capacity_certificate', 'professional_council_registration', 'platform_registration']),
+  "status": zod.enum(['have', 'missing', 'not_applicable']),
+  "issuedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable(),
+  "reference": zod.string().max(exportAccountDataResponseCompanyDocumentsItemReferenceMax).nullable(),
+  "updatedAt": zod.coerce.date()
+})),
   "companyFits": zod.array(zod.record(zod.string(), zod.unknown())),
   "fitUsage": zod.array(zod.record(zod.string(), zod.unknown())),
   "recommendationEvents": zod.array(zod.object({
@@ -1882,6 +1893,79 @@ export const UpdateUsageProfileResponse = zod.object({
   "usagePurposes": zod.array(zod.enum(['procurement', 'culture', 'funding', 'research', 'study'])),
   "applicantTypes": zod.array(zod.enum(['individual', 'mei', 'company', 'nonprofit'])),
   "usageInviteDismissed": zod.boolean()
+})
+
+
+/**
+ * @summary Read the authenticated company's bid-readiness checklist and fixed catalog
+ */
+
+export const listCompanyDocumentsResponseItemsItemDocumentOneReferenceMax = 160;
+
+export const listCompanyDocumentsResponseProgressReadyMin = 0;
+
+export const listCompanyDocumentsResponseProgressTotalMin = 0;
+
+
+
+export const ListCompanyDocumentsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "catalog": zod.object({
+  "kind": zod.enum(['sicaf', 'cnd_federal', 'crf_fgts', 'cndt', 'state_tax_clearance', 'municipal_tax_clearance', 'bankruptcy_clearance', 'balance_sheet', 'articles_of_association', 'technical_capacity_certificate', 'professional_council_registration', 'platform_registration']),
+  "label": zod.string(),
+  "description": zod.string(),
+  "glossaryId": zod.string(),
+  "officialUrl": zod.string().url(),
+  "suggestedValidityDays": zod.number().int().min(1).nullable()
+}),
+  "document": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['sicaf', 'cnd_federal', 'crf_fgts', 'cndt', 'state_tax_clearance', 'municipal_tax_clearance', 'bankruptcy_clearance', 'balance_sheet', 'articles_of_association', 'technical_capacity_certificate', 'professional_council_registration', 'platform_registration']),
+  "status": zod.enum(['have', 'missing', 'not_applicable']),
+  "issuedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable(),
+  "reference": zod.string().max(listCompanyDocumentsResponseItemsItemDocumentOneReferenceMax).nullable(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
+})),
+  "progress": zod.object({
+  "ready": zod.number().int().min(listCompanyDocumentsResponseProgressReadyMin),
+  "total": zod.number().int().min(listCompanyDocumentsResponseProgressTotalMin)
+}),
+  "asOf": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or replace one company document metadata record
+ */
+export const PutCompanyDocumentParams = zod.object({
+  "kind": zod.enum(['sicaf', 'cnd_federal', 'crf_fgts', 'cndt', 'state_tax_clearance', 'municipal_tax_clearance', 'bankruptcy_clearance', 'balance_sheet', 'articles_of_association', 'technical_capacity_certificate', 'professional_council_registration', 'platform_registration'])
+})
+
+export const putCompanyDocumentBodyReferenceMax = 160;
+
+
+
+export const PutCompanyDocumentBody = zod.object({
+  "status": zod.enum(['have', 'missing', 'not_applicable']),
+  "issuedAt": zod.coerce.date().nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "reference": zod.string().max(putCompanyDocumentBodyReferenceMax).nullish()
+})
+
+export const putCompanyDocumentResponseReferenceMax = 160;
+
+
+
+export const PutCompanyDocumentResponse = zod.object({
+  "id": zod.string().uuid(),
+  "kind": zod.enum(['sicaf', 'cnd_federal', 'crf_fgts', 'cndt', 'state_tax_clearance', 'municipal_tax_clearance', 'bankruptcy_clearance', 'balance_sheet', 'articles_of_association', 'technical_capacity_certificate', 'professional_council_registration', 'platform_registration']),
+  "status": zod.enum(['have', 'missing', 'not_applicable']),
+  "issuedAt": zod.coerce.date().nullable(),
+  "expiresAt": zod.coerce.date().nullable(),
+  "reference": zod.string().max(putCompanyDocumentResponseReferenceMax).nullable(),
+  "updatedAt": zod.coerce.date()
 })
 
 
@@ -2910,7 +2994,7 @@ export const listNotificationsResponseUnreadCountMin = 0;
 export const ListNotificationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'profile_new_matches', 'trial_ending']),
+  "type": zod.enum(['tender_deadline_changed', 'tender_status_changed', 'tender_document_added', 'tender_value_changed', 'saved_search_new_matches', 'profile_new_matches', 'trial_ending', 'company_document_expiring']),
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable(),
   "tender": zod.union([zod.object({

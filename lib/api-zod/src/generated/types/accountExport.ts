@@ -23,6 +23,7 @@ import type { AccountExportSavedTender } from './accountExportSavedTender';
 import type { AccountExportSession } from './accountExportSession';
 import type { AccountExportSubscription } from './accountExportSubscription';
 import type { AccountExportUser } from './accountExportUser';
+import type { CompanyDocument } from './companyDocument';
 import type { CompanyProfile } from './companyProfile';
 
 export interface AccountExport {
@@ -38,6 +39,7 @@ export interface AccountExport {
   aiDailyTenders: AccountExportAiDailyTender[];
   aiJobs: AccountExportAiJob[];
   companyProfile: CompanyProfile | null;
+  companyDocuments: CompanyDocument[];
   companyFits: AccountExportCompanyFitsItem[];
   fitUsage: AccountExportFitUsageItem[];
   recommendationEvents: AccountExportRecommendationEvent[];
