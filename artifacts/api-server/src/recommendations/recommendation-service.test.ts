@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 process.env.DATABASE_URL ??= "postgresql://unused:unused@127.0.0.1:1/unused";
 const {
+  extractInterestExpressions,
   normalizeSignalTerms,
   scoreOpportunityForProfile,
   scoreRecommendation,
@@ -421,6 +422,155 @@ test("oportunidades reutilizam termos, cobertura e faixa do perfil", () => {
   assert.ok(match);
   assert.ok(match.score >= 55);
   assert.match(match.reasons.join(" "), /perfil|SP|Valor/);
+});
+
+test("Interessa extrai expressões úteis e ignora genéricos do vocabulário #142", () => {
+  const expressions = extractInterestExpressions({
+    title: "Contratação de empresa para locação de equipamentos audiovisuais",
+    objectSummary: "Locação de equipamentos audiovisuais para eventos",
+    items: [{ description: "Projetor e sistema de som" }],
+    categories: [{ slug: "eventos-cultura", label: "Eventos, shows e cultura" }],
+    organizationName: "Secretaria de Cultura do DF",
+  });
+  assert.ok(
+    expressions.some((term) => term === "locacao de equipamentos audiovisuais"),
+  );
+  assert.ok(expressions.some((term) => term.includes("audiovisua")));
+  assert.ok(!expressions.includes("empresa"));
+  assert.ok(!expressions.includes("contratacao"));
+  assert.ok(!expressions.includes("equipamentos"));
+});
+
+test("após 2 Interessa parecidos, expressões aprendidas qualificam em DF e não fora (strict)", () => {
+  const now = new Date("2026-10-16T20:00:00Z");
+  const learned = {
+    terms: [
+      {
+        value: "locacao de equipamentos audiovisuais",
+        weight: 20,
+        label: "interest_learned:locacao de equipamentos audiovisuais",
+      },
+      {
+        value: "audiovisuais",
+        weight: 18,
+        label: "interest_learned:audiovisuais",
+      },
+    ],
+    categories: [],
+    states: [{ value: "df", weight: 5 }],
+    organizations: [],
+    modalities: [],
+    valueMin: null,
+    valueMax: null,
+    coverageScope: "custom" as const,
+    coverageMode: "strict" as const,
+    coverageStates: ["DF"],
+    coverageRegions: [],
+    coverageMunicipalities: ["5300108"],
+    headquartersMunicipalityIbge: "5300108",
+    coverageRadiusKm: 100 as const,
+    acceptsRemote: true,
+    exclusions: [],
+    companySize: "me_epp" as const,
+    signalCount: 4,
+  };
+  const base = {
+    categories: [{ slug: "eventos-cultura", label: "Eventos, shows e cultura" }],
+    organizationId: "org-df",
+    organizationName: "Secretaria",
+    modality: "other",
+    platform: null,
+    platformLabel: null,
+    estimatedValue: null,
+    proposalDeadline: new Date("2026-11-20T12:00:00Z"),
+    publishedAt: new Date("2026-10-15T12:00:00Z"),
+    textRank: 0.6,
+  };
+  const inside = scoreRecommendation(
+    {
+      ...base,
+      id: "df-av",
+      searchText: "locacao de equipamentos audiovisuais para festival",
+      state: "DF",
+      municipalityIbge: "5300108",
+    },
+    learned,
+    [],
+    now,
+  );
+  const outside = scoreRecommendation(
+    {
+      ...base,
+      id: "sp-av",
+      searchText: "locacao de equipamentos audiovisuais para festival",
+      state: "SP",
+      municipalityIbge: "3550308",
+    },
+    learned,
+    [],
+    now,
+  );
+  assert.ok(inside);
+  assert.match(
+    inside.reasons.map(({ text }) => text).join(" "),
+    /marcou como interesse/,
+  );
+  assert.equal(outside, null);
+});
+
+test("um único Interessa só reforça; sozinho não qualifica sem perfil", () => {
+  const now = new Date("2026-10-16T20:00:00Z");
+  const once = {
+    terms: [
+      {
+        value: "audiovisuais",
+        weight: 14,
+        label: "interest:audiovisuais",
+      },
+    ],
+    categories: [],
+    states: [],
+    organizations: [],
+    modalities: [],
+    valueMin: null,
+    valueMax: null,
+    coverageScope: "national" as const,
+    coverageStates: [],
+    exclusions: [],
+    companySize: null,
+    signalCount: 1,
+  };
+  assert.equal(
+    scoreRecommendation(
+      {
+        id: "once",
+        searchText: "servicos audiovisuais",
+        categories: [],
+        state: "DF",
+        organizationId: "o",
+        organizationName: "Órgão",
+        modality: "other",
+        platform: null,
+        platformLabel: null,
+        estimatedValue: null,
+        proposalDeadline: new Date("2026-11-20"),
+        publishedAt: new Date("2026-10-15"),
+        textRank: 0.5,
+      },
+      once,
+      [],
+      now,
+    ),
+    null,
+  );
+});
+
+test("meia-vida de Interessa é 60 dias", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  assert.ok(
+    Math.abs(temporalWeight(new Date("2026-08-09T12:00:00Z"), now, 60) - 0.5) <
+      0.001,
+  );
 });
 
 test("termos do perfil casam como expressão inteira; boilerplate de licitação não vira sinal", () => {
