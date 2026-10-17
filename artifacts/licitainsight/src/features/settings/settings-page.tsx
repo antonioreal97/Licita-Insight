@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Info, LogOut } from 'lucide-react';
-import { useSearch } from 'wouter';
+import { FileCheck2, Info, LogOut } from 'lucide-react';
+import { Link, useSearch } from 'wouter';
 import { useLocationProperty } from 'wouter/use-browser-location';
 import { isApiError, type BillingResponse } from '@/api';
 import { Button } from '@/components/common/action-button';
@@ -30,6 +30,7 @@ const sections = [
   { name: 'Assinatura', id: 'assinatura' },
   { name: 'Perfil e conta', id: 'perfil' },
   { name: 'Perfil da empresa', id: 'perfil-empresa' },
+  { name: 'Prontidão', id: 'prontidao' },
   { name: 'Notificações', id: 'notificacoes' },
   { name: 'Recomendações', id: 'recomendacoes' },
   { name: 'Seus dados', id: 'seus-dados' },
@@ -117,6 +118,16 @@ export default function SettingsPage() {
             <UsageProfileSection />
           </section>
           <CompanyProfileSection />
+          <section id="prontidao" aria-labelledby="settings-readiness" className="scroll-mt-24 rounded-xl border border-border bg-card p-5 sm:p-7">
+            <div className="flex items-start gap-3">
+              <FileCheck2 size={20} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+              <div>
+                <h2 id="settings-readiness" className="type-section">Prontidão para licitar</h2>
+                <p className="mt-1 type-meta text-muted-foreground">Confira certidões, cadastros e qualificações da empresa antes de participar.</p>
+                <Link href="/readiness" className="mt-4 inline-flex rounded-lg type-ui font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring">Abrir checklist de documentos</Link>
+              </div>
+            </div>
+          </section>
           <NotificationPreferencesSection />
           <RecommendationPreferencesSection />
           <AccountDataSection />

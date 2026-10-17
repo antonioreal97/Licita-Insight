@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Notification } from '@/api/types';
-import { notificationDescription, notificationHref } from './notification-copy';
+import { notificationDescription, notificationHref, notificationTitle } from './notification-copy';
 
 const profileNotification = (profileMatches: Notification['profileMatches']): Notification => ({
   id: 'profile-1',
@@ -47,4 +47,18 @@ test('vários editais novos para o perfil abrem o snapshot da notificação', ()
 test('alerta de busca salva usa texto neutro e abre somente o snapshot, sem filtros relativos', () => {
   assert.equal(notificationDescription(savedSearchNotification), 'Abra para ver os editais.');
   assert.equal(notificationHref(savedSearchNotification), '/search?status=all&notification=saved-search-1');
+});
+
+test('aviso de documento mostra o marco e abre a prontidão', () => {
+  const notification: Notification = {
+    ...profileNotification([]),
+    id: 'document-1',
+    type: 'company_document_expiring',
+    change: { field: 'companyDocument:cndt', from: 7, to: '2026-10-23' },
+    matchCount: null,
+    newMatchCount: 0,
+  };
+  assert.equal(notificationTitle(notification), 'Documento vence em 7 dias');
+  assert.equal(notificationDescription(notification), 'CNDT: validade em 23 de out de 2026.');
+  assert.equal(notificationHref(notification), '/readiness');
 });

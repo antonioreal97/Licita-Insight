@@ -2,6 +2,10 @@ import type { AccountAdapter } from '../account-adapter';
 import type {
   AccountUsageProfile,
   AccountUsageProfilePatch,
+  CompanyDocument,
+  CompanyDocumentKind,
+  CompanyDocumentPut,
+  CompanyDocumentsResponse,
   BillingCheckoutResponse,
   BillingResponse,
   CouponRedemptionResponse,
@@ -30,6 +34,8 @@ export const httpAccountAdapter: AccountAdapter = {
   getSession: (signal) => getJson<SessionResponse>('/v1/auth/session', {}, signal),
   getUsageProfile: (signal) => getJson<AccountUsageProfile>('/v1/me/usage-profile', {}, signal),
   updateUsageProfile: (body: AccountUsageProfilePatch) => sendJson<AccountUsageProfile>('PATCH', '/v1/me/usage-profile', body),
+  listCompanyDocuments: (signal) => getJson<CompanyDocumentsResponse>('/v1/me/company-documents', {}, signal),
+  putCompanyDocument: (kind: CompanyDocumentKind, body: CompanyDocumentPut) => sendJson<CompanyDocument>('PUT', `/v1/me/company-documents/${enc(kind)}`, body),
   googleStartUrl: (returnTo) => `${apiBaseUrl}/v1/auth/google/start${toQueryString({ returnTo })}`,
   logout: () => sendJson<void>('POST', '/v1/auth/logout'),
 

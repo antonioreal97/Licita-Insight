@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Clapperboard,
   FileSearch,
+  FileCheck2,
   Globe,
   LayoutDashboard,
   Landmark,
@@ -76,6 +77,7 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
     label: 'Conta',
     title: 'Conta',
     items: [
+      { href: '/readiness', label: 'Prontidão para licitar', icon: FileCheck2, testId: 'link-nav-prontidao' },
       { href: '/settings', label: 'Configurações', icon: Settings, testId: 'link-nav-configuracoes' },
       { href: '/ajuda', label: 'Ajuda e glossário', icon: LifeBuoy, testId: 'link-nav-ajuda' },
       // Internal reference page: never shown to customers.

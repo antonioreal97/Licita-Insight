@@ -13,6 +13,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   saved_search_new_matches: Bell,
   profile_new_matches: Sparkles,
   trial_ending: Hourglass,
+  company_document_expiring: CalendarClock,
 };
 
 /**
