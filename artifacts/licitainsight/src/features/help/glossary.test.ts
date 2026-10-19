@@ -3,18 +3,18 @@ import test from 'node:test';
 import { CATEGORY_LABELS, CATEGORY_ORDER, FIRST_STEPS, GLOSSARY, GLOSSARY_DISCLAIMER } from './glossary';
 import { fold } from './lib/term-detection';
 
-const OFFICIAL_HOSTS = /(^|\.)(gov\.br|jus\.br)$/;
+const OFFICIAL_HOSTS = /(^|\.)(gov\.br|jus\.br|finep\.gov\.br|worldbank\.org|iadb\.org|europa\.eu)$/;
 const sentences = (text: string) => text.split(/[.!?](?=\s|$)/).filter((part) => part.trim()).length;
 
-test('the glossary has 30 to 50 entries with unique ids, all categorized', () => {
-  assert.ok(GLOSSARY.length >= 30 && GLOSSARY.length <= 50, `${GLOSSARY.length} entries`);
+test('the glossary has 60 to 80 entries with unique ids, all categorized', () => {
+  assert.ok(GLOSSARY.length >= 60 && GLOSSARY.length <= 80, `${GLOSSARY.length} entries`);
   assert.equal(new Set(GLOSSARY.map((entry) => entry.id)).size, GLOSSARY.length);
   assert.deepEqual(Object.keys(CATEGORY_LABELS).sort(), [...CATEGORY_ORDER].sort());
   for (const entry of GLOSSARY) assert.ok(CATEGORY_ORDER.includes(entry.category), entry.id);
 });
 
 test('covers the terms new suppliers ask about', () => {
-  for (const id of ['sicaf', 'cnd', 'me-epp', 'cota-reservada', 'pregao', 'dispensa', 'registro-de-precos', 'impugnacao', 'recurso', 'habilitacao', 'proposta', 'lance', 'garantia-proposta', 'garantia-contratual', 'atestado-capacidade-tecnica', 'lei-14133', 'regularizacao-me-epp']) {
+  for (const id of ['sicaf', 'cnd', 'me-epp', 'cota-reservada', 'pregao', 'dispensa', 'registro-de-precos', 'impugnacao', 'recurso', 'habilitacao', 'proposta', 'lance', 'garantia-proposta', 'garantia-contratual', 'atestado-capacidade-tecnica', 'lei-14133', 'regularizacao-me-epp', 'agente-cultural', 'subvencao-economica', 'termo-fomento-colaboracao', 'captacao-rouanet', 'expressao-interesse', 'ifb-rfb-rfp-rfq', 'call-topic', 'consorcio-pic']) {
     assert.ok(GLOSSARY.some((entry) => entry.id === id), `missing ${id}`);
   }
 });
@@ -34,9 +34,10 @@ test('each entry has a 2–3 sentence definition, what to do and only official h
   }
 });
 
-test('no alias points to two entries', () => {
+test('no automatically detected alias points to two entries', () => {
   const owners = new Map<string, string>();
   for (const entry of GLOSSARY) {
+    if (entry.detect === false) continue;
     for (const alias of [entry.term, ...entry.aliases]) {
       const key = fold(alias);
       const owner = owners.get(key);
