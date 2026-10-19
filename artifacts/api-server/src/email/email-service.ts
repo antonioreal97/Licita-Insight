@@ -110,13 +110,14 @@ const notificationSelection = {
   trialEndsAt: usersTable.trialEndsAt,
   subscriptionStatus: subscriptionsTable.status,
   currentPeriodEnd: subscriptionsTable.currentPeriodEnd,
+  // A raw subquery comes back from the driver as text; mapWith turns it into a Date, or the coupon would never count.
   couponAccessUntil: sql<Date | null>`(
     select max(${couponRedemptionsTable.accessUntil})
     from ${couponRedemptionsTable}
     inner join ${couponCodesTable} on ${couponCodesTable.id} = ${couponRedemptionsTable.couponId}
     where ${couponRedemptionsTable.userId} = ${usersTable.id}
       and ${couponCodesTable.revokedAt} is null
-  )`,
+  )`.mapWith(couponRedemptionsTable.accessUntil),
 };
 
 /** `betaEmails` comes lowercased from activeBetaGrantEmails, loaded once per job run. */
@@ -181,7 +182,7 @@ const digestDeadlines = async (
         inner join ${couponCodesTable} on ${couponCodesTable.id} = ${couponRedemptionsTable.couponId}
         where ${couponRedemptionsTable.userId} = ${usersTable.id}
           and ${couponCodesTable.revokedAt} is null
-      )`,
+      )`.mapWith(couponRedemptionsTable.accessUntil),
       tenderId: tendersTable.id,
       tenderTitle: tendersTable.title,
       tenderOrganizationName: tendersTable.organizationName,

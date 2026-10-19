@@ -39,6 +39,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     aiSheetDailyUsageTable,
     betaAccessGrantsTable,
     companyProfilesTable,
+    companyDocumentsTable,
     companyTenderFitsTable,
     profileKeywordVocabularyTable,
     db,
@@ -70,7 +71,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   const { BillingUnavailableError } = await import("../lib/api-error");
   const { upsertGoogleUser } = await import("../auth/session-service");
   const { upsertPublications } = await import("../ingest/upsert-tenders");
-  const { createDocumentAddedNotifications, createTrialEndingNotifications } = await import("./notification-service");
+  const { createCompanyDocumentExpiryNotifications, createDocumentAddedNotifications, createTrialEndingNotifications } = await import("./notification-service");
   const { createUnsubscribeToken } = await import("../email/unsubscribe-token");
   const { retryEmailDeliveries, runDailyEmailDigest, runImmediateEmailAlerts } = await import("../email/email-service");
   const { runSavedSearchEvaluationJob } = await import("../email/email-scheduler");
@@ -100,6 +101,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     "tender_ai_sheets",
     "ai_sheet_daily_usage",
     "company_profiles",
+    "company_documents",
     "company_tender_fits",
     "profile_keyword_vocabulary",
     "ai_fit_daily_usage",
@@ -217,6 +219,46 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
   const userACookie = await login("user-a@example.test");
   const userBCookie = await login("user-b@example.test");
+
+  await t.test("company document checklist enforces access, exports data and deduplicates expiry notices", async () => {
+    const freeCookie = await login("documents-free@example.test", false);
+    const endpoint = "/v1/me/company-documents";
+    assert.equal((await request(endpoint)).status, 401);
+    const freeRead = await request(endpoint, {}, freeCookie);
+    assert.equal(freeRead.status, 200);
+    assert.equal(((await freeRead.json()) as { items: unknown[] }).items.length, 12);
+    const freeSession = await request("/v1/auth/session", {}, freeCookie);
+    const freeUserId = ((await freeSession.json()) as { user: { id: string } }).user.id;
+    await db
+      .update(usersTable)
+      .set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") })
+      .where(eq(usersTable.id, freeUserId));
+    assert.equal((await request(`${endpoint}/cndt`, { method: "PUT", headers: csrf, body: JSON.stringify({ status: "have" }) }, freeCookie)).status, 402);
+
+    const cookie = await login("documents@example.test");
+    assert.equal((await request(`${endpoint}/unknown`, { method: "PUT", headers: csrf, body: JSON.stringify({ status: "have" }) }, cookie)).status, 400);
+    assert.equal((await request(`${endpoint}/cndt`, { method: "PUT", body: JSON.stringify({ status: "have" }) }, cookie)).status, 403);
+    assert.equal((await request(`${endpoint}/cndt`, { method: "PUT", headers: csrf, body: JSON.stringify({ status: "have", issuedAt: "2026-10-01", expiresAt: "2026-09-01" }) }, cookie)).status, 400);
+    const saved = await request(`${endpoint}/cndt`, { method: "PUT", headers: csrf, body: JSON.stringify({ status: "have", issuedAt: "2026-10-01", expiresAt: "2026-10-31", reference: "TST 123" }) }, cookie);
+    assert.equal(saved.status, 200);
+    const list = await request(endpoint, {}, cookie);
+    const body = await list.json() as { progress: { ready: number; total: number }; items: Array<{ document: { reference: string } | null }> };
+    assert.deepEqual(body.progress, { ready: 1, total: 12 });
+    assert.ok(body.items.some(({ document }) => document?.reference === "TST 123"));
+    const exported = await request("/v1/me/export", {}, cookie);
+    assert.ok(((await exported.json()) as { companyDocuments: Array<{ kind: string }> }).companyDocuments.some(({ kind }) => kind === "cndt"));
+
+    const session = await request("/v1/auth/session", {}, cookie);
+    const userId = ((await session.json()) as { user: { id: string } }).user.id;
+    await db.update(companyDocumentsTable).set({ expiresAt: "2026-10-31" }).where(eq(companyDocumentsTable.userId, userId));
+    const noticeNow = new Date("2026-10-16T12:00:00.000Z");
+    assert.equal(await createCompanyDocumentExpiryNotifications(noticeNow), 1);
+    assert.equal(await createCompanyDocumentExpiryNotifications(noticeNow), 0);
+    const notices = await db.select().from(notificationsTable).where(eq(notificationsTable.userId, userId));
+    assert.equal(notices.filter(({ type }) => type === "company_document_expiring").length, 1);
+    // Later cases still assume an empty notifications table before tender monitoring begins.
+    await db.delete(notificationsTable).where(eq(notificationsTable.userId, userId));
+  });
 
   await t.test("usage profile validates, persists, exports and is deleted with account", async () => {
     const cookie = await login("usage-profile@example.test", false);

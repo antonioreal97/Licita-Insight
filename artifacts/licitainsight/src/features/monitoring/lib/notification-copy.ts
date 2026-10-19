@@ -22,6 +22,10 @@ export function notificationTitle(n: Notification): string {
       if (days === null) return 'Seu teste está terminando';
       return days === 0 ? 'Seu teste termina hoje' : `Seu teste termina em ${daysLabel(days)}`;
     }
+    case 'company_document_expiring': {
+      const days = Number(n.change?.from);
+      return days === 1 ? 'Documento vence amanhã' : `Documento vence em ${days} dias`;
+    }
     case 'saved_search_new_matches': {
       const count = n.matchCount ?? n.tenderIds.length;
       const name = n.savedSearch?.name ?? 'sua busca salva';
@@ -65,6 +69,11 @@ function formatChangeValue(n: Notification, value: string | number | null): stri
 
 /** The change itself ("De 05 de out de 2026, 18:00 para 12 de out…"), or `null` when the API sent no details. */
 export function notificationDescription(n: Notification): string | null {
+  if (n.type === 'company_document_expiring') {
+    const kind = n.change?.field.replace('companyDocument:', '') ?? '';
+    const labels: Record<string, string> = { sicaf: 'SICAF', cnd_federal: 'CND federal', crf_fgts: 'CRF do FGTS', cndt: 'CNDT', state_tax_clearance: 'certidão estadual', municipal_tax_clearance: 'certidão municipal', bankruptcy_clearance: 'certidão de falência', balance_sheet: 'balanço patrimonial', articles_of_association: 'contrato social', technical_capacity_certificate: 'atestado de capacidade técnica', professional_council_registration: 'registro em conselho', platform_registration: 'cadastro em plataformas' };
+    return `${labels[kind] ?? 'Documento'}: validade em ${formatDate(String(n.change?.to ?? ''))}.`;
+  }
   if (n.type === 'saved_search_new_matches') {
     return 'Abra para ver os editais.';
   }
@@ -82,6 +91,7 @@ export function notificationDescription(n: Notification): string | null {
 
 /** Where a click goes: the tender, or the saved search's results. `null` when the payload has neither. */
 export function notificationHref(n: Notification): string | null {
+  if (n.type === 'company_document_expiring') return '/readiness';
   if (n.type === 'trial_ending') return BILLING_HREF;
   if (n.type === 'saved_search_new_matches') return notificationSearchHref(n.id);
   if (n.type === 'profile_new_matches') {

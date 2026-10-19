@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'wouter';
-import { ArrowRight, Bell, Search, Target } from 'lucide-react';
+import { ArrowRight, Bell, FileCheck2, Search, Target } from 'lucide-react';
 import { Button, buttonClass } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
@@ -20,6 +20,7 @@ import { formatNumber } from '@/lib/format';
 import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
 import { TriageEntry } from '@/features/recommendations/triage/triage-entry';
+import { useCompanyDocuments } from '@/features/bid-readiness/hooks/use-company-documents';
 
 function saoPauloDate(offsetDays = 0): string {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -140,6 +141,21 @@ function OpportunitiesCard() {
       >
         Ver chamadas <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
       </Link>
+    </div>
+  );
+}
+
+function BidReadinessCard() {
+  const session = useSession();
+  const documents = useCompanyDocuments();
+  if (session.status !== 'authenticated') return null;
+  const progress = documents.data?.progress;
+  return (
+    <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-readiness">
+      <div className="flex items-center gap-2"><FileCheck2 size={17} className="text-primary" aria-hidden /><h2 className="type-section text-foreground">Prontidão para licitar</h2></div>
+      <p className="mt-2 type-ui font-semibold text-foreground">{progress ? `${progress.ready} de ${progress.total} documentos em dia` : documents.isError ? 'Não foi possível carregar o checklist' : 'Carregando checklist…'}</p>
+      <p className="mt-1 type-meta text-muted-foreground">Evite perder uma disputa por certidão vencida ou documento faltando.</p>
+      <Link href="/readiness" data-testid="link-dashboard-readiness" className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring">Revisar documentos <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" /></Link>
     </div>
   );
 }
@@ -287,6 +303,7 @@ export default function DashboardPage() {
         {personal && metrics}
         </div>
         <aside className="space-y-6">
+          <BidReadinessCard />
           <MonitoringCard />
           <OpportunitiesCard />
         </aside>

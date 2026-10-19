@@ -8,6 +8,7 @@ import {
   betaAccessGrantsTable,
   couponCodesTable,
   couponRedemptionsTable,
+  companyDocumentsTable,
   companyProfilesTable,
   companyTenderFitsTable,
   db,
@@ -45,6 +46,7 @@ export const ACCOUNT_EXPORT_TABLES = {
   ai_ask_requests: "aiQuestions",
   company_profiles: "companyProfile",
   company_tender_fits: "companyFits",
+  company_documents: "companyDocuments",
   ai_fit_daily_usage: "fitUsage",
   recommendation_events: "recommendationEvents",
   recommendation_dismissals: "recommendationDismissals",
@@ -54,7 +56,7 @@ export const ACCOUNT_EXPORT_TABLES = {
 } as const;
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyDocuments, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
     await Promise.all([
       db
         .select({
@@ -218,6 +220,16 @@ export async function exportAccountData(userId: string, now = new Date()) {
         .where(eq(aiJobsTable.userId, userId)),
       db.select().from(companyProfilesTable).where(eq(companyProfilesTable.userId, userId)).limit(1),
       db.select({
+        id: companyDocumentsTable.id,
+        kind: companyDocumentsTable.kind,
+        status: companyDocumentsTable.status,
+        issuedAt: companyDocumentsTable.issuedAt,
+        expiresAt: companyDocumentsTable.expiresAt,
+        reference: companyDocumentsTable.reference,
+        createdAt: companyDocumentsTable.createdAt,
+        updatedAt: companyDocumentsTable.updatedAt,
+      }).from(companyDocumentsTable).where(eq(companyDocumentsTable.userId, userId)),
+      db.select({
         tenderId: companyTenderFitsTable.tenderId,
         profileVersion: companyTenderFitsTable.profileVersion,
         status: companyTenderFitsTable.status,
@@ -250,6 +262,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
     aiDailyTenders,
     aiJobs,
     companyProfile: companyProfiles[0] ?? null,
+    companyDocuments,
     companyFits,
     fitUsage,
     recommendationEvents,
@@ -328,6 +341,7 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx.delete(aiDailyTendersTable).where(eq(aiDailyTendersTable.userId, userId));
       await tx.delete(aiJobsTable).where(eq(aiJobsTable.userId, userId));
       await tx.delete(companyTenderFitsTable).where(eq(companyTenderFitsTable.userId, userId));
+      await tx.delete(companyDocumentsTable).where(eq(companyDocumentsTable.userId, userId));
       await tx.delete(aiFitDailyUsageTable).where(eq(aiFitDailyUsageTable.userId, userId));
       await tx.delete(companyProfilesTable).where(eq(companyProfilesTable.userId, userId));
       await tx.delete(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId));

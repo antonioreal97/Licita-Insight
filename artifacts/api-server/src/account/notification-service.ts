@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   gt,
+  inArray,
   isNull,
   lt,
   lte,
@@ -14,6 +15,7 @@ import {
 } from "drizzle-orm";
 import {
   db,
+  companyDocumentsTable,
   emailDeliveryNotificationsTable,
   notificationsTable,
   savedSearchesTable,
@@ -144,6 +146,46 @@ export const createTrialEndingNotifications = async (
         },
       })),
     )
+    .onConflictDoNothing()
+    .returning({ id: notificationsTable.id });
+  return inserted.length;
+};
+
+export const COMPANY_DOCUMENT_NOTICE_DAYS = [15, 7, 1] as const;
+
+/** Creates each expiry milestone once. The unique (user_id, dedupe_key) index makes retries/concurrent jobs safe. */
+export const createCompanyDocumentExpiryNotifications = async (
+  now = new Date(),
+): Promise<number> => {
+  const today = dateInSaoPaulo(now);
+  const targetDates = COMPANY_DOCUMENT_NOTICE_DAYS.map((days) => {
+    const date = new Date(`${today}T12:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  });
+  const documents = await db
+    .select({
+      id: companyDocumentsTable.id,
+      userId: companyDocumentsTable.userId,
+      kind: companyDocumentsTable.kind,
+      expiresAt: companyDocumentsTable.expiresAt,
+    })
+    .from(companyDocumentsTable)
+    .where(and(eq(companyDocumentsTable.status, "have"), inArray(companyDocumentsTable.expiresAt, targetDates)));
+  if (documents.length === 0) return 0;
+  const inserted = await db
+    .insert(notificationsTable)
+    .values(documents.map((document) => {
+      const milestone = COMPANY_DOCUMENT_NOTICE_DAYS[targetDates.indexOf(document.expiresAt!)]!;
+      return {
+        id: randomUUID(),
+        userId: document.userId,
+        type: "company_document_expiring",
+        dedupeKey: `company-document:${document.id}:${milestone}:${document.expiresAt}`,
+        createdAt: now,
+        change: { field: `companyDocument:${document.kind}`, from: milestone, to: document.expiresAt },
+      };
+    }))
     .onConflictDoNothing()
     .returning({ id: notificationsTable.id });
   return inserted.length;

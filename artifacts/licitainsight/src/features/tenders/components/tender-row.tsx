@@ -17,6 +17,7 @@ import { SaveButton } from './save-button';
 import { StatusBadge } from './status-badge';
 import { TenderHighlights } from './tender-highlights';
 import { ValueDisplay } from './value-display';
+import { ReadinessBadge } from '@/features/bid-readiness/components/readiness-badge';
 
 type Props = {
   tender: TenderSummary;
@@ -117,6 +118,7 @@ export function TenderRow({ tender, saved, onSave, compact = false, relevanceVar
         )}
 
         <TenderHighlights highlights={highlights} fit={fit} />
+        <ReadinessBadge highlights={highlights} />
 
         {!compact && tender.categories.length > 0 && (
           <ul aria-label="Categorias" className="relative z-raised mt-2.5 flex w-fit max-w-full flex-wrap gap-1.5">
