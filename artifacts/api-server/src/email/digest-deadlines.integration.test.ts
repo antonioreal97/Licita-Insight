@@ -19,6 +19,8 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
 
   const {
     betaAccessGrantsTable,
+    couponCodesTable,
+    couponRedemptionsTable,
     db,
     emailDeliveriesTable,
     emailDeliveryNotificationsTable,
@@ -130,6 +132,14 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   await createUser("deadline-beta");
   await createUser("deadline-no-access");
   await createUser("deadline-digest-off", { subscribed: true, digest: "off" });
+  // Access through a redeemed coupon (trial already over, no subscription) must also receive the digest.
+  await createUser("deadline-coupon");
+  await db.insert(couponCodesTable).values({ id: "coupon-digest", codeHash: "hash", codeLast4: "2542", durationDays: 30 });
+  await db.insert(couponRedemptionsTable).values({
+    couponId: "coupon-digest",
+    userId: "deadline-coupon",
+    accessUntil: new Date("2026-10-20T00:00:00.000Z"),
+  });
   await db.insert(betaAccessGrantsTable).values({
     email: "deadline-beta@example.test",
     accessUntil: new Date("2099-01-01T00:00:00.000Z"),
@@ -174,7 +184,7 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
       nextAction: "Enviar proposta",
       nextActionDeadline: new Date("2026-09-30T14:00:00.000Z"),
     },
-    ...["deadline-beta", "deadline-no-access", "deadline-digest-off"].map((userId) => ({
+    ...["deadline-beta", "deadline-no-access", "deadline-digest-off", "deadline-coupon"].map((userId) => ({
       userId,
       tenderId: tenderId(tenders.proposal.sequence),
       stage: "analyzing" as const,
@@ -199,14 +209,15 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
   };
 
   assert.deepEqual(await runDailyEmailDigest(now, send), {
-    queued: 2,
-    sent: 2,
+    queued: 3,
+    sent: 3,
     failed: 0,
     skipped: 0,
   });
   const byRecipient = new Map(messages.map((message) => [message.to, message]));
   assert.deepEqual([...byRecipient.keys()].sort(), [
     "deadline-beta@example.test",
+    "deadline-coupon@example.test",
     "deadline-owner@example.test",
   ]);
 
@@ -251,6 +262,6 @@ test("Daily digest deadlines with PostgreSQL", { skip: !process.env.PNCP_TEST_DA
     await runDailyEmailDigest(new Date("2026-09-30T02:00:00.000Z"), send),
     { queued: 0, sent: 0, failed: 0, skipped: 0 },
   );
-  assert.equal(messages.length, 2);
-  assert.equal((await db.select().from(emailDeliveriesTable)).length, 2);
+  assert.equal(messages.length, 3);
+  assert.equal((await db.select().from(emailDeliveriesTable)).length, 3);
 });
