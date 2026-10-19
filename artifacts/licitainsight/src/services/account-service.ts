@@ -10,6 +10,8 @@ import {
   type UpdateNotificationPreferencesBody,
   type User,
   type AccountUsageProfilePatch,
+  type CompanyDocumentKind,
+  type CompanyDocumentPut,
 } from '@/api';
 import { searchParamsToUrl } from './search-service';
 
@@ -51,6 +53,8 @@ export const accountService = {
   googleSignInUrl: (returnTo: string) => accountAdapter.googleStartUrl(returnTo),
   getUsageProfile: (signal?: AbortSignal) => accountAdapter.getUsageProfile(signal),
   updateUsageProfile: (body: AccountUsageProfilePatch) => accountAdapter.updateUsageProfile(body),
+  listCompanyDocuments: (signal?: AbortSignal) => accountAdapter.listCompanyDocuments(signal),
+  putCompanyDocument: (kind: CompanyDocumentKind, body: CompanyDocumentPut) => accountAdapter.putCompanyDocument(kind, body),
   logout: () => accountAdapter.logout(),
   exportAccountData: () => accountAdapter.exportAccountData(),
   deleteAccount: () => accountAdapter.deleteAccount(),

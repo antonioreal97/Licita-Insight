@@ -17,4 +17,5 @@ export const NotificationType = {
   saved_search_new_matches: 'saved_search_new_matches',
   profile_new_matches: 'profile_new_matches',
   trial_ending: 'trial_ending',
+  company_document_expiring: 'company_document_expiring',
 } as const;

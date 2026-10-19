@@ -1,6 +1,10 @@
 import type {
   AccountUsageProfile,
   AccountUsageProfilePatch,
+  CompanyDocument,
+  CompanyDocumentKind,
+  CompanyDocumentPut,
+  CompanyDocumentsResponse,
   BillingCheckoutResponse,
   BillingResponse,
   CouponRedemptionResponse,
@@ -39,6 +43,8 @@ export interface AccountAdapter {
   getSession(signal?: AbortSignal): Promise<SessionResponse>;
   getUsageProfile(signal?: AbortSignal): Promise<AccountUsageProfile>;
   updateUsageProfile(body: AccountUsageProfilePatch): Promise<AccountUsageProfile>;
+  listCompanyDocuments(signal?: AbortSignal): Promise<CompanyDocumentsResponse>;
+  putCompanyDocument(kind: CompanyDocumentKind, body: CompanyDocumentPut): Promise<CompanyDocument>;
   /** Full-page URL that starts the Google OAuth flow; the API redirects back to `returnTo`. */
   googleStartUrl(returnTo: string): string;
   logout(): Promise<void>;

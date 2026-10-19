@@ -22,6 +22,7 @@ import OpportunitiesPage from '@/features/opportunities/opportunities-page';
 import OpportunityDetailPage from '@/features/opportunities/opportunity-detail-page';
 import SearchPage from '@/features/search/search-page';
 import SettingsPage from '@/features/settings/settings-page';
+import BidReadinessPage from '@/features/bid-readiness/bid-readiness-page';
 import TenderDetailPage from '@/features/tenders/tender-detail-page';
 import TransparencyPage from '@/features/transparency/transparency-page';
 import UnsubscribePage from '@/features/unsubscribe/unsubscribe-page';
@@ -72,6 +73,7 @@ const routeTitles: Record<string, string> = {
   '/saved-tenders': 'Editais salvos · Pardal Digital',
   '/monitoring': 'Monitoramento · Pardal Digital',
   '/settings': 'Configurações · Pardal Digital',
+  '/readiness': 'Prontidão para licitar · Pardal Digital',
   '/design-system': 'Design system · Pardal Digital',
 };
 
@@ -201,6 +203,15 @@ function Router() {
             <AppShell>
               <RequireAuth>
                 <SettingsPage />
+              </RequireAuth>
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/readiness">
+          {() => (
+            <AppShell>
+              <RequireAuth>
+                <BidReadinessPage />
               </RequireAuth>
             </AppShell>
           )}

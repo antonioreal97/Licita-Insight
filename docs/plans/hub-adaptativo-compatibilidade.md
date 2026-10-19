@@ -191,3 +191,13 @@ Billing permanece por conta. O limite de criação e o `accessMode` consultam en
 
 - valores finais da janela de corte (duração máxima e ponto de não retorno), depois do ensaio com volume real;
 - política de transferência/exclusão de Espaço com mais de um membro, adiada para a Fase 6.
+
+## Compatibilidade da prontidão para licitar
+
+Na primeira fase, `company_documents` permanece por `user_id`: o checklist descreve a empresa da
+conta atual e mantém o contrato v1 simples. Na próxima sincronização com Espaços, essas linhas entram
+no Espaço padrão de domínio `procurement`; a tabela ganha `workspace_id`, a unicidade passa a
+`(workspace_id, kind)` e o backfill preserva status, datas, referência e timestamps. O adaptador v1
+resolve explicitamente o Espaço `procurement` padrão, sem escolher o primeiro Espaço e sem escrita
+dupla. Avisos, dedupes, exportação LGPD, cache React Query e cálculo do selo passam a carregar o
+mesmo `workspace_id`, impedindo que documentos de uma empresa apareçam em outro Espaço.

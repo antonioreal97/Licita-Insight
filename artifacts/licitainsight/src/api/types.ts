@@ -524,7 +524,8 @@ export type NotificationType =
   | 'tender_value_changed'
   | 'saved_search_new_matches'
   | 'profile_new_matches'
-  | 'trial_ending';
+  | 'trial_ending'
+  | 'company_document_expiring';
 
 export type ProfileMatchNotification = {
   id: string;
@@ -568,6 +569,50 @@ export type NotificationPreferences = { email: EmailPreferences; profileAlerts: 
 
 /** Partial PUT body: only the fields sent change. */
 export type UpdateNotificationPreferencesBody = { email?: Partial<EmailPreferences>; profileAlerts?: boolean };
+
+export type CompanyDocumentKind =
+  | 'sicaf'
+  | 'cnd_federal'
+  | 'crf_fgts'
+  | 'cndt'
+  | 'state_tax_clearance'
+  | 'municipal_tax_clearance'
+  | 'bankruptcy_clearance'
+  | 'balance_sheet'
+  | 'articles_of_association'
+  | 'technical_capacity_certificate'
+  | 'professional_council_registration'
+  | 'platform_registration';
+export type CompanyDocumentStatus = 'have' | 'missing' | 'not_applicable';
+export type CompanyDocument = {
+  id: string;
+  kind: CompanyDocumentKind;
+  status: CompanyDocumentStatus;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  reference: string | null;
+  updatedAt: string;
+};
+export type CompanyDocumentCatalogItem = {
+  kind: CompanyDocumentKind;
+  label: string;
+  description: string;
+  glossaryId: string;
+  officialUrl: string;
+  suggestedValidityDays: number | null;
+};
+export type CompanyDocumentsResponse = {
+  items: CompanyDocumentChecklistItem[];
+  progress: { ready: number; total: number };
+  asOf: string;
+};
+export type CompanyDocumentChecklistItem = { catalog: CompanyDocumentCatalogItem; document: CompanyDocument | null };
+export type CompanyDocumentPut = {
+  status: CompanyDocumentStatus;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  reference?: string | null;
+};
 
 export type RecommendationPreferences = {
   personalizationEnabled: boolean;

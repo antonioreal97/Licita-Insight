@@ -808,6 +808,45 @@ paths:
         "400": { $ref: "#/components/responses/InvalidParameter" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/me/company-documents:
+    get:
+      operationId: listCompanyDocuments
+      tags: [account]
+      summary: Read the authenticated company's bid-readiness checklist and fixed catalog
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Company document catalog, saved metadata and progress
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyDocumentsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /v1/me/company-documents/{kind}:
+    put:
+      operationId: putCompanyDocument
+      tags: [account]
+      summary: Create or replace one company document metadata record
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/CompanyDocumentKind" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyDocumentPut" }
+      responses:
+        "200":
+          description: Saved company document metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyDocument" }
+        "400": { $ref: "#/components/responses/InvalidParameter" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "402": { $ref: "#/components/responses/SubscriptionRequired" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/me/billing:
     get:
       operationId: getBilling
@@ -2498,6 +2537,70 @@ components:
         accessUntil: { type: string, format: date-time }
         durationDays: { type: integer, enum: [7, 30] }
       required: [couponId, redeemedAt, accessUntil, durationDays]
+    CompanyDocumentKind:
+      type: string
+      enum: [sicaf, cnd_federal, crf_fgts, cndt, state_tax_clearance, municipal_tax_clearance, bankruptcy_clearance, balance_sheet, articles_of_association, technical_capacity_certificate, professional_council_registration, platform_registration]
+    CompanyDocumentStatus:
+      type: string
+      enum: [have, missing, not_applicable]
+    CompanyDocumentCatalogItem:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: { $ref: "#/components/schemas/CompanyDocumentKind" }
+        label: { type: string }
+        description: { type: string }
+        glossaryId: { type: string }
+        officialUrl: { type: string, format: uri }
+        suggestedValidityDays: { type: [integer, "null"], minimum: 1 }
+      required: [kind, label, description, glossaryId, officialUrl, suggestedValidityDays]
+    CompanyDocument:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/CompanyDocumentKind" }
+        status: { $ref: "#/components/schemas/CompanyDocumentStatus" }
+        issuedAt: { type: [string, "null"], format: date }
+        expiresAt: { type: [string, "null"], format: date }
+        reference: { type: [string, "null"], maxLength: 160 }
+        updatedAt: { type: string, format: date-time }
+      required: [id, kind, status, issuedAt, expiresAt, reference, updatedAt]
+    CompanyDocumentPut:
+      type: object
+      additionalProperties: false
+      properties:
+        status: { $ref: "#/components/schemas/CompanyDocumentStatus" }
+        issuedAt: { type: [string, "null"], format: date }
+        expiresAt: { type: [string, "null"], format: date }
+        reference: { type: [string, "null"], maxLength: 160 }
+      required: [status]
+    CompanyDocumentChecklistItem:
+      type: object
+      additionalProperties: false
+      properties:
+        catalog: { $ref: "#/components/schemas/CompanyDocumentCatalogItem" }
+        document:
+          anyOf:
+            - { $ref: "#/components/schemas/CompanyDocument" }
+            - { type: "null" }
+      required: [catalog, document]
+    CompanyDocumentsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CompanyDocumentChecklistItem" }
+        progress:
+          type: object
+          additionalProperties: false
+          properties:
+            ready: { type: integer, minimum: 0 }
+            total: { type: integer, minimum: 0 }
+          required: [ready, total]
+        asOf: { type: string, format: date }
+      required: [items, progress, asOf]
     AccountExport:
       type: object
       properties:
@@ -2544,6 +2647,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/CompanyProfile"
             - type: "null"
+        companyDocuments:
+          type: array
+          items: { $ref: "#/components/schemas/CompanyDocument" }
         companyFits:
           type: array
           items:
@@ -2591,6 +2697,7 @@ components:
           aiDailyTenders,
           aiJobs,
           companyProfile,
+          companyDocuments,
           companyFits,
           fitUsage,
           recommendationEvents,
@@ -4099,6 +4206,7 @@ components:
           saved_search_new_matches,
           profile_new_matches,
           trial_ending,
+          company_document_expiring,
         ]
     ProfileMatchNotification:
       type: object

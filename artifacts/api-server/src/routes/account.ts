@@ -39,6 +39,12 @@ import { InvalidParameterError } from "../lib/api-error";
 import { parseParticipationPatch, parseStage } from '../account/participation';
 import { scheduleRecommendationRebuild } from "../recommendations/recommendation-service";
 import { getUsageProfile, updateUsageProfile } from "../account/usage-profile-service";
+import {
+  listCompanyDocuments,
+  parseCompanyDocumentKind,
+  parseCompanyDocumentPut,
+  putCompanyDocument,
+} from "../account/company-documents-service";
 
 const router: IRouter = Router();
 
@@ -47,6 +53,10 @@ router.get("/v1/me/usage-profile", requireAuth, asyncHandler(async (_req, res) =
 }));
 router.patch("/v1/me/usage-profile", requireAuth, requireCsrf, asyncHandler(async (req, res) => {
   res.json(await updateUsageProfile(authContext(res).user.id, req.body));
+}));
+
+router.get("/v1/me/company-documents", requireAuth, asyncHandler(async (_req, res) => {
+  res.json(await listCompanyDocuments(authContext(res).user.id));
 }));
 
 const recordBody = (value: unknown): Record<string, unknown> => {
@@ -229,6 +239,15 @@ router.post(
 );
 
 router.use("/v1/me", requireAuth, requireSubscription);
+
+router.put(
+  "/v1/me/company-documents/:kind",
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const kind = parseCompanyDocumentKind(pathParam(req.params.kind, "kind"));
+    res.json(await putCompanyDocument(authContext(res).user.id, kind, parseCompanyDocumentPut(req.body)));
+  }),
+);
 
 router.get(
   "/v1/me/saved-tenders",

@@ -120,6 +120,10 @@ const changeDescription = (
       ? `Seu teste termina em ${dateTime(new Date(String(change.to)))}.`
       : "Seu período de teste está próximo do fim.";
   }
+  if (type === "company_document_expiring") {
+    const days = Number(change?.from);
+    return `${days === 1 ? "Vence amanhã" : `Vence em ${days} dias`}. Validade: ${change?.to ?? "não informada"}.`;
+  }
   return "Há uma nova atualização.";
 };
 
@@ -145,6 +149,7 @@ const notificationLink = (
   notification: EmailNotificationSnapshot,
   origin: string,
 ): string => {
+  if (notification.type === "company_document_expiring") return `${origin}/readiness`;
   if (notification.type === "saved_search_new_matches") {
     return `${origin}${notificationSearchHref(notification.id)}`;
   }
@@ -233,6 +238,9 @@ const itemText = (
       changeDescription(notification.type, notification.change),
       notificationLink(notification, origin),
     ].join("\n");
+  }
+  if (notification.type === "company_document_expiring") {
+    return ["Documento da empresa", changeDescription(notification.type, notification.change), notificationLink(notification, origin)].join("\n");
   }
   const details = [
     truncate(notification.tenderTitle ?? "Edital monitorado"),
@@ -414,6 +422,15 @@ const itemHtml = (
       title: "Seu teste está terminando",
       body: metaHtml(escapeHtml(changeDescription(notification.type, notification.change))),
       cta: linkHtml(link, "Ver assinatura"),
+    });
+  }
+  if (notification.type === "company_document_expiring") {
+    return itemBlock({
+      tag: "Prontidão para licitar",
+      tone: "urgent",
+      title: "Documento perto do vencimento",
+      body: metaHtml(escapeHtml(changeDescription(notification.type, notification.change))),
+      cta: linkHtml(link, "Revisar documentos"),
     });
   }
   const tag = tenderTags[notification.type] ?? { label: "Edital monitorado", tone: "default" as Tone };

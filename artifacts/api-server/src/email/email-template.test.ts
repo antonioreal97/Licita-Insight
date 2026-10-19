@@ -9,6 +9,29 @@ import {
 } from "./email-template";
 
 describe("notification email template", () => {
+  it("renders company document expiry only as a digest-ready readiness card", () => {
+    const rendered = renderNotificationEmail({
+      mode: "digest",
+      origin: "https://pardal.example",
+      unsubscribeToken: "signed-token",
+      notifications: [{
+        id: "document-expiry",
+        type: "company_document_expiring",
+        createdAt: new Date("2026-10-16T12:00:00Z"),
+        tenderId: null,
+        tenderTitle: null,
+        tenderOrganizationName: null,
+        tenderProposalDeadline: null,
+        change: { field: "companyDocument:cndt", from: 7, to: "2026-10-23" },
+        savedSearchName: null,
+        savedSearchQuery: null,
+        matchCount: null,
+      }],
+    });
+    assert.match(rendered.text, /Documento da empresa/);
+    assert.match(rendered.text, /Vence em 7 dias/);
+    assert.match(rendered.text, /https:\/\/pardal\.example\/readiness/);
+  });
   it("renders a deadline change without repeating the current deadline", () => {
     const rendered = renderNotificationEmail({
       mode: "immediate",

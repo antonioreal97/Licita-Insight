@@ -55,6 +55,7 @@ import { formatPlace, isMostlyUppercase, shortTenderNumber, sumItems } from './l
 import { useRecommendationPreferences } from '@/features/recommendations/hooks/use-recommendations';
 import { useRegisteredPlatforms } from '@/features/company-profile/hooks/use-company-profile';
 import { accountService } from '@/services/account-service';
+import { TenderReadinessPanel } from '@/features/bid-readiness/components/tender-readiness-panel';
 
 function DetailSkeleton() {
   return (
@@ -381,6 +382,7 @@ export default function TenderDetailPage() {
             )}
           </Panel>
 
+          <TenderReadinessPanel tenderId={tender.id} />
           <TenderSheetPanel tenderId={tender.id} />
           <AskTenderPanel tenderId={tender.id} />
         </div>
