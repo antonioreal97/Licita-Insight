@@ -142,6 +142,7 @@ export * from './invalidParameterResponse';
 export * from './listNotificationsParams';
 export * from './listProfileMunicipalitiesParams';
 export * from './listRecommendationsParams';
+export * from './listRecommendationsScope';
 export * from './listSavedTendersParams';
 export * from './listSavedTendersSort';
 export * from './location';

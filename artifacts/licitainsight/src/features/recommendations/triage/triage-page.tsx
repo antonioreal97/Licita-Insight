@@ -15,7 +15,8 @@ import { useTriageProgress } from './use-triage-progress';
 import { TriageCard } from './triage-card';
 
 export default function TriagePage() {
-  const recommendations = useRecommendations(50, { stable: true });
+  // Only tenders that match the registered profile and region enter the deck.
+  const recommendations = useRecommendations(50, { stable: true, scope: 'profile' });
   const profile = useCompanyProfile();
   const saveProfile = useSaveCompanyProfile();
   const client = useQueryClient();
@@ -107,7 +108,11 @@ export default function TriagePage() {
         <TriageCard key={current.tender.id} recommendation={current} registeredPlatforms={profile.data?.profile?.registeredPlatforms ?? []} highlights={highlights.data?.results[current.tender.id]} busy={busy} onAction={(action, reason) => void act(action, reason)} onOpen={() => { void accountService.recordRecommendationClick(current.tender.id).catch((clickError) => console.error('[triage] Não foi possível registrar o clique no edital.', clickError)); }} />
         : <section className="rounded-2xl border border-border bg-card p-6 sm:p-8" aria-label="Resumo da triagem">
           <h2 className="type-section">{progress.reviewed.length >= TRIAGE_GOAL ? 'Sua triagem de hoje está pronta' : progress.reviewed.length ? 'Você chegou ao fim desta seleção' : 'Ainda não há editais para triar'}</h2>
-          <p className="my-3 type-body">{progress.interested ? `Você marcou ${progress.interested} de interesse — estão em Editais salvos.` : 'Nenhum interesse marcado por aqui hoje. Tudo bem: a próxima oportunidade pode combinar melhor.'}</p>
+          {progress.reviewed.length === 0
+            ? <p className="my-3 type-body">{profile.data?.profile
+              ? 'A triagem só mostra editais abertos que combinam com o que você cadastrou no perfil (ofertas, palavras-chave ou categorias) e estão dentro da sua região de atuação. Quando surgir um assim, ele aparece aqui.'
+              : 'A triagem mostra editais que combinam com o perfil da sua empresa. Cadastre o que você oferece e onde atua para começar.'}</p>
+            : <p className="my-3 type-body">{progress.interested ? `Você marcou ${progress.interested} de interesse — estão em Editais salvos.` : 'Nenhum interesse marcado por aqui hoje. Tudo bem: a próxima oportunidade pode combinar melhor.'}</p>}
           {progress.skipped > 0 && <p className="mb-4 type-ui text-muted-foreground">{progress.skipped} pulados por agora. Eles podem voltar em outra seleção.</p>}
           <div className="mt-5 flex flex-wrap gap-3"><Link href="/saved-tenders" className={buttonClass('primary', 'lg')}>Ver Editais salvos</Link><Link href="/settings#perfil-empresa" className={buttonClass('outline', 'lg')}>Ajustar meu perfil</Link></div>
         </section>}
