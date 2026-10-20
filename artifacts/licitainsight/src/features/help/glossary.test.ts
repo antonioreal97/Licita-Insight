@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CATEGORY_LABELS, CATEGORY_ORDER, FIRST_STEPS, GLOSSARY, GLOSSARY_DISCLAIMER } from './glossary';
-import { GLOSSARY_LEARNING_NOTES, GLOSSARY_TOPICS, learningNoteFor, simpleGlossaryDefinition } from './glossary-learning';
+import {
+  GLOSSARY_LEARNING_NOTES,
+  GLOSSARY_TOPICS,
+  glossaryQuizFor,
+  learningNoteFor,
+  simpleGlossaryDefinition,
+} from './glossary-learning';
 import { fold } from './lib/term-detection';
 
 const OFFICIAL_HOSTS = /(^|\.)(gov\.br|jus\.br|finep\.gov\.br|worldbank\.org|iadb\.org|europa\.eu)$/;
@@ -68,5 +74,18 @@ test('every glossary term has a concrete learning example and a memorable idea',
     assert.ok(note.example.length >= 45, `${entry.id}: example`);
     assert.ok(note.remember.length >= 25, `${entry.id}: remember`);
     assert.doesNotMatch(`${note.example} ${note.remember}`, /[—–]/, `${entry.id}: dash`);
+  }
+});
+
+test('every learning challenge has three stable and unique answers with one correct option', () => {
+  assert.equal(new Set(CATEGORY_ORDER.map((category) => GLOSSARY_TOPICS[category].badge)).size, CATEGORY_ORDER.length);
+  for (const entry of GLOSSARY) {
+    const topicEntries = GLOSSARY.filter((candidate) => candidate.category === entry.category);
+    const challenge = glossaryQuizFor(entry, topicEntries);
+    assert.equal(challenge.options.length, 3, entry.id);
+    assert.equal(new Set(challenge.options).size, 3, entry.id);
+    assert.equal(challenge.options.filter((option) => option === challenge.correctAnswer).length, 1, entry.id);
+    assert.deepEqual(challenge, glossaryQuizFor(entry, topicEntries), `${entry.id}: unstable challenge`);
+    assert.match(challenge.prompt, new RegExp(entry.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
