@@ -76,7 +76,7 @@ export function FilterSidebar({ collapsed, onCollapsedChange, activeCount, onCle
                 type="button"
                 onClick={onClear}
                 data-testid={testId('button-sidebar-clear')}
-                className="rounded-lg px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
+                className="min-h-8 rounded-lg px-1.5 py-1 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
               >
                 Limpar ({activeCount})
               </button>
@@ -95,6 +95,9 @@ export function FilterSidebar({ collapsed, onCollapsedChange, activeCount, onCle
             </button>
           </div>
         </div>
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid={testId('text-sidebar-filter-count')}>
+          {activeCount === 0 ? 'Nenhum filtro ativo.' : `${activeCount} ${activeCount === 1 ? 'filtro ativo' : 'filtros ativos'}.`}
+        </p>
         <div id={panelId} hidden={collapsed}>
           {children}
         </div>
