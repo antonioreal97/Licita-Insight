@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { TENDER_CATEGORIES } from "../catalog/tender-categories";
 import { classifyTenderCategory, JevUnavailableError } from "./jev-client";
+import { jevRequestBody } from "./jev-test-support";
 
 test("o professor Jev escolhe uma categoria da lista oficial com Choice", async () => {
   process.env.JEV_API_KEY = "test-key";
   const slugs = TENDER_CATEGORIES.map(({ slug }) => slug);
   const mockedFetch: typeof fetch = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       state: { objeto_da_licitacao: string };
       questions: Record<string, { type: string; criteria: Record<string, string> }>;
     };

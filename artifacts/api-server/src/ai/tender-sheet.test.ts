@@ -9,6 +9,7 @@ import {
   SHEET_PROMPT_VERSION,
   sheetCacheKey,
 } from "./tender-sheet-policy";
+import { jevRequestBody } from "./jev-test-support";
 
 const originalEnv = { ...process.env };
 afterEach(() => {
@@ -150,7 +151,7 @@ test("Jev sheet scoring fans out one Noul per candidate field in one request", a
   let calls = 0;
   const mockedFetch: typeof fetch = async (_input, init) => {
     calls += 1;
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       state: Record<string, unknown>;
       questions: Record<string, { type: string }>;
     };
@@ -184,7 +185,7 @@ test("Jev sheet scoring fans out one Noul per candidate field in one request", a
 test("Jev Choice uses the exact enum only after a best categorical passage exists", async () => {
   process.env.JEV_API_KEY = "test-key";
   const mockedFetch: typeof fetch = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       questions: { answer: { type: string; criteria: Record<string, string> } };
     };
     assert.equal(body.questions.answer.type, "choice");
@@ -239,7 +240,7 @@ test("Jev Choice classifies both guarantees without inferring not_required from 
     ],
   ] as const) {
     const mockedFetch: typeof fetch = async (_input, init) => {
-      const body = JSON.parse(String(init?.body)) as {
+      const body = jevRequestBody(init) as {
         state: Record<string, string>;
         questions: {
           answer: { type: string; criteria: Record<string, string> };

@@ -70,7 +70,11 @@ export type JevTenderCategory = {
   inputTokens: number;
 };
 
-const clientFor = (lane: JevLane, requestFetch?: typeof fetch) => {
+// The SDK reports null when the API omits usage; count it as 0 so cost math never sees NaN.
+const inputTokensOf = (usage: { readonly input_tokens: number | null }) =>
+  usage.input_tokens ?? 0;
+
+const clientFor =(lane: JevLane, requestFetch?: typeof fetch) => {
   const config = aiConfig();
   if (!config.apiKey)
     throw new JevUnavailableError("JEV_API_KEY is not configured");
@@ -150,7 +154,7 @@ export async function scoreCompanyFit(
         probability: answers[`exclusao_${index}`]?.noul ?? 0,
       })),
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError("Jev company-fit request failed", error);
@@ -183,7 +187,7 @@ export async function scoreSizeRestriction(
       restriction: result.answers.restricao.choice,
       confidence: result.answers.restricao.confidence,
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError("Jev size-restriction request failed", error);
@@ -214,7 +218,7 @@ export async function scoreTenderPassage(
     return {
       relevance: result.answers.responde.noul,
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError("Jev request failed", error);
@@ -255,7 +259,7 @@ export async function scoreSheetPassage(
         fieldIds.map((id) => [id, answers[id]?.noul ?? 0]),
       ),
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError(
@@ -290,7 +294,7 @@ export async function classifySheetField(
       answer: result.answers.answer.choice,
       confidence: result.answers.answer.confidence,
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError(
@@ -334,7 +338,7 @@ export async function classifyQualificationCandidate(
     const type = initial.answers.tipo.choice as QualificationClassification;
     const typeConfidence = initial.answers.tipo.confidence;
     let mentionsLaborInAdditionToFiscal: number | null = null;
-    let inputTokens = initial.usage.input_tokens;
+    let inputTokens = inputTokensOf(initial.usage);
     let model = initial.model;
 
     if (typeConfidence < QUALIFICATION_TYPE_CONFIDENCE_THRESHOLD) {
@@ -357,7 +361,7 @@ export async function classifyQualificationCandidate(
       );
       mentionsLaborInAdditionToFiscal =
         combination.answers.trabalhista_alem_fiscal.noul;
-      inputTokens += combination.usage.input_tokens;
+      inputTokens += inputTokensOf(combination.usage);
       model = combination.model;
     }
 
@@ -409,7 +413,7 @@ export async function classifyTenderCategory(
       confidence: answer.confidence,
       probabilities: answer.probabilities as Partial<Record<TenderCategorySlug, number>>,
       model: result.model,
-      inputTokens: result.usage.input_tokens,
+      inputTokens: inputTokensOf(result.usage),
     };
   } catch (error) {
     throw new JevUnavailableError("Jev tender-category request failed", error);
