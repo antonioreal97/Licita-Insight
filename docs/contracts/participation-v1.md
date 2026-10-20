@@ -25,6 +25,8 @@ GET lista aceita `stage?` (uma etapa), `sort?: saved_at | deadline` e `upcoming?
 
 E-mail: o resumo diário (07:00, Brasília) inclui a seção "Seus prazos" com os editais em `analyzing` ou `participating` cujo `nextActionDeadline` ou prazo oficial de proposta cai até o fim do 3º dia seguinte. O prazo pessoal aparece como "informado por você" e a etapa como "Sua etapa", nunca como status oficial. Regras completas em `account-v1.md` §5.
 
+Vistas na UI (`/saved-tenders`, sem mudança de API): a lista paginada continua o padrão; `?view=board` mostra o quadro por etapa e `?view=calendar` o calendário de prazos. As duas vistas leem todas as páginas de `GET /me/saved-tenders` (`pageSize` 100, no máximo 5 pedidos). Mover um cartão usa o mesmo PUT com `stage` do menu de etapa, com a mesma regra de monitoramento acima. O calendário só usa datas que existem: `proposalDeadline` ("Envio da proposta"), `openingAt` ("Início das propostas") e `nextActionDeadline` com o texto de `nextAction` ("Prazo pessoal", informado pelo usuário), em `America/Sao_Paulo`; editais em `dismissed` ficam fora. Atrasado = prazo pessoal vencido fora de `completed`, ou prazo de proposta vencido em `analyzing`/`participating`.
+
 Os mesmos campos são incluídos na exportação de dados pessoais. Remover o edital salvo ou a conta apaga também as declarações e o histórico correspondente.
 
 Rótulos: Analisando; Preparando documentos; Participação enviada; Aguardando resultado; Concluída; Não vou participar. "Analisando" distingue a etapa pessoal do status oficial "Em análise". Checklist: Tenho; Não tenho; Não sei. Protocolo: Protocolo informado por você. Todas as mudanças são atômicas e isoladas por usuário.

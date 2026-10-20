@@ -199,6 +199,11 @@ export const HELP_FAQ = [
     answer: 'Não. Em geral, você apresenta um projeto ou plano de trabalho, que é avaliado pelos critérios da chamada. Não há disputa de lances.',
   },
   {
+    question: 'Como acompanho vários editais e prazos ao mesmo tempo?',
+    answer:
+      'Em Editais salvos, troque a lista por Quadro ou Calendário. O Quadro tem uma coluna para cada etapa que você marcou; use “Mover para…” no cartão (ou arraste, no computador) e a etapa muda como no menu da lista. O Calendário junta o envio da proposta e o início das propostas, publicados no edital, e o prazo pessoal da sua próxima ação, em horário de Brasília. Prazos atrasados ficam destacados, e editais em “Não vou participar” ficam de fora.',
+  },
+  {
     question: 'O resultado do Pardal substitui a página oficial?',
     answer: 'Não. O Pardal ajuda a encontrar e organizar oportunidades. Prazos, documentos, retificações e regras válidas são os publicados pela fonte oficial.',
   },
