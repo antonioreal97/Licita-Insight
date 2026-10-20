@@ -186,7 +186,7 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
     const card = document.getElementById(`board-card-${target.id}`);
     // Never a plain focus(): it would scroll every ancestor. Only the region moves sideways, the window only vertically.
     if (card && region.current && (!active || active === document.body)) {
-      focusInRegion(region.current, card, card, window, { align: 'nearest', inset: REGION_INSET, topInset: headerHeight() });
+      focusInRegion(region.current, card, card, window, { align: 'nearest', inset: REGION_INSET, topInset: headerHeight(), column: card.closest('section') ?? undefined });
     }
     if ((sawPending.current && !isPending) || Date.now() > target.until) {
       follow.current = null;

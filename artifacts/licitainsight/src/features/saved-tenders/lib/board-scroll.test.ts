@@ -54,6 +54,22 @@ test('revelar rola só a região na horizontal e a janela só na vertical', () =
   assert.deepEqual(idle.calls, []);
 });
 
+test('ao seguir um cartão, a coluna inteira entra na região; o cartão decide a rolagem vertical', () => {
+  const { region, calls } = fakeRegion(1196);
+  const vertical: { top: number }[] = [];
+  // Card 12 px inside its column, which starts 8 px left of the region's visible area.
+  const column = { getBoundingClientRect: () => box(280, 568, 354, 1300) };
+  const card = { getBoundingClientRect: () => box(292, 556, 1100, 1290) };
+  revealInRegion(region, card, { innerHeight: 900, scrollBy: (options) => vertical.push(options) }, { align: 'nearest', inset: 4, topInset: 76, column });
+  assert.deepEqual(calls, [{ left: 1184, behavior: 'auto' }], 'a coluna aparece inteira, com o respiro');
+  assert.deepEqual(vertical, [{ top: 390, behavior: 'auto' }], 'a janela rola até o cartão, não até o topo da coluna');
+  // A column wider than the region falls back to the card.
+  const narrow = fakeRegion(0);
+  narrow.region.clientWidth = 200;
+  revealInRegion(narrow.region, { getBoundingClientRect: () => box(300, 420) }, null, { align: 'nearest', inset: 4, column: { getBoundingClientRect: () => box(290, 700) } });
+  assert.deepEqual(narrow.calls, []);
+});
+
 test('o foco é sempre dado com preventScroll, antes de mover a região', () => {
   const { region, calls } = fakeRegion();
   const order: string[] = [];

@@ -28,6 +28,8 @@ export type RevealOptions = {
   inset?: number;
   /** Height covered at the top of the window (sticky header). */
   topInset?: number;
+  /** What must fit sideways, when it differs from the target (a card's whole column). Falls back to the target if wider than the region. */
+  column?: RevealTarget;
 };
 
 /** `scrollLeft` that brings `target` into the region; the region's current value when it is already in view (`nearest`). */
@@ -48,9 +50,11 @@ export function windowScrollTop(target: { top: number; bottom: number }, viewpor
 }
 
 /** Scrolls the region (horizontally) and the window (vertically) so `target` shows. No other element is touched. */
-export function revealInRegion(region: ScrollRegion, target: RevealTarget, viewport: VerticalViewport | null, { align, behavior = 'auto', inset = 0, topInset = 0 }: RevealOptions) {
+export function revealInRegion(region: ScrollRegion, target: RevealTarget, viewport: VerticalViewport | null, { align, behavior = 'auto', inset = 0, topInset = 0, column }: RevealOptions) {
   const box = region.getBoundingClientRect();
-  const left = regionScrollLeft({ scrollLeft: region.scrollLeft, clientWidth: region.clientWidth, left: box.left }, target.getBoundingClientRect(), align, inset);
+  const wide = column?.getBoundingClientRect();
+  const sideways = wide && wide.right - wide.left + 2 * inset <= region.clientWidth ? wide : target.getBoundingClientRect();
+  const left = regionScrollLeft({ scrollLeft: region.scrollLeft, clientWidth: region.clientWidth, left: box.left }, sideways, align, inset);
   if (left !== region.scrollLeft) region.scrollTo({ left, behavior });
   if (!viewport) return;
   const top = windowScrollTop(target.getBoundingClientRect(), viewport.innerHeight, topInset);
