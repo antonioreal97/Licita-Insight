@@ -1,5 +1,15 @@
 import React, { useEffect, useId, useState } from 'react';
-import { ArrowUpRight, BookOpen, Info, Search } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  Info,
+  Lightbulb,
+  RotateCcw,
+  Search,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   CATEGORY_LABELS,
@@ -13,6 +23,11 @@ import {
 } from './glossary';
 import { glossaryAnchor } from './components/glossary-term';
 import { GlossaryScope, GlossaryText } from './components/glossary-text';
+import {
+  GLOSSARY_TOPICS,
+  learningNoteFor,
+  simpleGlossaryDefinition,
+} from './glossary-learning';
 import { searchGlossary } from './lib/glossary-search';
 import { HELP_FAQ, HELP_PATHS, PROCESS_TRACKS, SOURCE_GUIDES, type SourceGuide } from './guide-data';
 
@@ -75,6 +90,7 @@ function OfficialLinks({ sources, label }: { sources: GlossaryEntry['sources']; 
 
 function EntryArticle({ entry, headingLevel, expanded }: { entry: GlossaryEntry; headingLevel: 'h3' | 'h4'; expanded: boolean }) {
   const Heading = headingLevel;
+  const note = learningNoteFor(entry);
   return (
     <details
       id={glossaryAnchor(entry.id)}
@@ -83,22 +99,171 @@ function EntryArticle({ entry, headingLevel, expanded }: { entry: GlossaryEntry;
       data-testid="glossary-entry"
       data-id={entry.id}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-2 py-3.5 text-left hover:bg-muted focus-visible:focus-ring [&::-webkit-details-marker]:hidden">
-        <Heading className="type-ui font-semibold text-foreground">{entry.term}</Heading>
-        <span aria-hidden="true" className="shrink-0 type-ui text-muted-foreground group-open:hidden">+</span>
-        <span aria-hidden="true" className="hidden shrink-0 type-ui text-muted-foreground group-open:inline">▴</span>
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 rounded-lg px-2 py-3.5 text-left hover:bg-muted focus-visible:focus-ring [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <Heading className="type-ui font-semibold text-foreground">{entry.term}</Heading>
+          <span className="mt-1 block type-meta font-normal text-muted-foreground">{simpleGlossaryDefinition(entry)}</span>
+        </span>
+        <span aria-hidden="true" className="mt-0.5 shrink-0 type-ui text-muted-foreground group-open:hidden">+</span>
+        <span aria-hidden="true" className="mt-0.5 hidden shrink-0 type-ui text-muted-foreground group-open:inline">▴</span>
       </summary>
       <div className="max-w-3xl px-2 pb-5">
-        <p className="type-body text-foreground/90">{entry.definition}</p>
-        <p className="mt-2 type-body text-foreground/90">
-          <span className="font-semibold text-foreground">O que fazer: </span>
-          {entry.whatToDo}
-        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground">
+            <p className="flex items-center gap-2 type-ui font-semibold">
+              <Lightbulb size={16} aria-hidden="true" /> Na prática
+            </p>
+            <p className="mt-2 type-meta">{note.example}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted p-4 text-foreground">
+            <p className="flex items-center gap-2 type-ui font-semibold">
+              <Check size={16} aria-hidden="true" /> Guarde esta ideia
+            </p>
+            <p className="mt-2 type-meta">{note.remember}</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <p className="type-ui font-semibold text-foreground">Entenda melhor</p>
+          <p className="mt-1 type-body text-foreground/90">{entry.definition}</p>
+        </div>
+        <div className="mt-4 border-l-4 border-primary pl-4">
+          <p className="type-ui font-semibold text-foreground">Agora faça assim</p>
+          <p className="mt-1 type-body text-foreground/90">{entry.whatToDo}</p>
+        </div>
         <div className="mt-3">
           <OfficialLinks sources={entry.sources} label={`Fontes oficiais sobre ${entry.term}`} />
         </div>
       </div>
     </details>
+  );
+}
+
+function GlossaryLearningStudio() {
+  const [topic, setTopic] = useState<GlossaryCategory>('basics');
+  const [cardIndex, setCardIndex] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [understood, setUnderstood] = useState<Set<string>>(() => new Set());
+  const entries = GLOSSARY.filter((entry) => entry.category === topic);
+  const entry = entries[cardIndex] ?? entries[0]!;
+  const topicCopy = GLOSSARY_TOPICS[topic];
+  const note = learningNoteFor(entry);
+  const understoodInTopic = entries.filter((item) => understood.has(item.id)).length;
+
+  const chooseTopic = (nextTopic: GlossaryCategory) => {
+    setTopic(nextTopic);
+    setCardIndex(0);
+    setRevealed(false);
+  };
+
+  const move = (direction: -1 | 1) => {
+    setCardIndex((current) => (current + direction + entries.length) % entries.length);
+    setRevealed(false);
+  };
+
+  const markUnderstood = () => {
+    setUnderstood((current) => new Set(current).add(entry.id));
+    move(1);
+  };
+
+  return (
+    <div className="mt-6" data-testid="glossary-learning-studio">
+      <div className="flex snap-x gap-2 overflow-x-auto pb-2" aria-label="Escolha um assunto para estudar">
+        {CATEGORY_ORDER.map((item) => {
+          const count = GLOSSARY.filter((entryItem) => entryItem.category === item).length;
+          return (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={topic === item}
+              onClick={() => chooseTopic(item)}
+              className={`shrink-0 snap-start rounded-pill border px-4 py-2 text-left type-meta font-semibold focus-visible:focus-ring active:translate-y-px ${
+                topic === item
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card text-foreground hover:bg-muted'
+              }`}
+            >
+              {CATEGORY_LABELS[item]} <span className="font-normal opacity-80">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="border-b border-border bg-muted p-5 sm:p-6 lg:border-r lg:border-b-0">
+          <BookOpen size={22} aria-hidden="true" className="text-primary" />
+          <h3 className="mt-4 type-title text-foreground">{topicCopy.title}</h3>
+          <p className="mt-2 type-body text-foreground/90">{topicCopy.description}</p>
+          <div className="mt-5 rounded-xl border border-border bg-card p-4">
+            <p className="type-ui font-semibold text-foreground">Imagine assim</p>
+            <p className="mt-2 type-meta text-foreground/90">{topicCopy.analogy}</p>
+          </div>
+          <p className="mt-4 type-meta text-muted-foreground" aria-live="polite">
+            {understoodInTopic} de {entries.length} {entries.length === 1 ? 'termo compreendido' : 'termos compreendidos'} neste assunto.
+          </p>
+        </div>
+
+        <div className="flex min-h-96 flex-col p-5 sm:p-7" aria-live="polite">
+          <div className="flex items-center justify-between gap-4 type-meta text-muted-foreground">
+            <span>Cartão {cardIndex + 1} de {entries.length}</span>
+            {understood.has(entry.id) && (
+              <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                <Check size={14} aria-hidden="true" /> Já entendi
+              </span>
+            )}
+          </div>
+          <p className="mt-8 type-meta font-semibold text-primary">Você sabe o que isso quer dizer?</p>
+          <h4 className="mt-2 type-titulo-3 text-foreground">{entry.term}</h4>
+
+          <div hidden={!revealed} className="mt-6">
+            <p className="type-body font-semibold text-foreground">{simpleGlossaryDefinition(entry)}</p>
+            <div className="mt-4 rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground">
+              <p className="type-ui font-semibold">Veja em uma situação real</p>
+              <p className="mt-2 type-meta">{note.example}</p>
+            </div>
+            <p className="mt-4 type-meta text-foreground/90">
+              <span className="font-semibold text-foreground">Ideia-chave: </span>{note.remember}
+            </p>
+          </div>
+
+          <div className="mt-auto pt-7">
+            {!revealed ? (
+              <button
+                type="button"
+                onClick={() => setRevealed(true)}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-action px-5 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
+              >
+                Mostrar explicação
+              </button>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={markUnderstood}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-action px-4 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
+                >
+                  <Check size={16} aria-hidden="true" /> Entendi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(1)}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground hover:bg-muted focus-visible:focus-ring active:translate-y-px"
+                >
+                  <RotateCcw size={15} aria-hidden="true" /> Rever depois
+                </button>
+              </div>
+            )}
+            <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+              <button type="button" onClick={() => move(-1)} className="inline-flex items-center gap-1.5 type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">
+                <ArrowLeft size={15} aria-hidden="true" /> Anterior
+              </button>
+              <button type="button" onClick={() => move(1)} className="inline-flex items-center gap-1.5 type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">
+                Próximo <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -355,8 +520,18 @@ export default function HelpPage() {
       </section>
 
       <section id="glossario" aria-labelledby="glossario-titulo" className="scroll-mt-24" data-testid="section-glossary">
-        <h2 id="glossario-titulo" className="type-section text-foreground">Glossário</h2>
-        <p className="mt-2 max-w-3xl type-body text-muted-foreground">Busque uma sigla, uma palavra do edital ou o nome de uma fonte. Abra só os termos que quiser consultar.</p>
+        <h2 id="glossario-titulo" className="type-section text-foreground">Glossário para aprender, não decorar</h2>
+        <p className="mt-2 max-w-3xl type-body text-muted-foreground">
+          Escolha um assunto e estude no seu ritmo. Cada cartão explica uma palavra com uma situação concreta e uma ideia fácil de lembrar.
+        </p>
+        <GlossaryLearningStudio />
+
+        <div className="mt-10 border-t border-border pt-8">
+          <h3 className="type-title text-foreground">Consulte todos os termos</h3>
+          <p className="mt-2 max-w-3xl type-body text-muted-foreground">
+            Encontrou uma palavra no edital? Pesquise aqui. Cada termo começa com a resposta curta e abre para mostrar exemplo, explicação completa e próximo passo.
+          </p>
+        </div>
         <form role="search" onSubmit={(event) => event.preventDefault()} className="mt-5 grid max-w-4xl gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(14rem,1fr)]">
           <div>
             <label htmlFor={inputId} className="mb-1.5 block type-meta font-semibold text-foreground">Buscar termo</label>

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CATEGORY_LABELS, CATEGORY_ORDER, FIRST_STEPS, GLOSSARY, GLOSSARY_DISCLAIMER } from './glossary';
+import { GLOSSARY_LEARNING_NOTES, GLOSSARY_TOPICS, learningNoteFor, simpleGlossaryDefinition } from './glossary-learning';
 import { fold } from './lib/term-detection';
 
 const OFFICIAL_HOSTS = /(^|\.)(gov\.br|jus\.br|finep\.gov\.br|worldbank\.org|iadb\.org|europa\.eu)$/;
@@ -56,4 +57,16 @@ test('the disclaimer says it is informative and not legal or tax advice', () => 
 test('first steps have 5 to 7 items', () => {
   assert.ok(FIRST_STEPS.length >= 5 && FIRST_STEPS.length <= 7);
   for (const step of FIRST_STEPS) assert.ok(step.title && step.text);
+});
+
+test('every glossary term has a concrete learning example and a memorable idea', () => {
+  assert.deepEqual(Object.keys(GLOSSARY_TOPICS).sort(), [...CATEGORY_ORDER].sort());
+  assert.deepEqual(Object.keys(GLOSSARY_LEARNING_NOTES).sort(), GLOSSARY.map((entry) => entry.id).sort());
+  for (const entry of GLOSSARY) {
+    const note = learningNoteFor(entry);
+    assert.ok(simpleGlossaryDefinition(entry).length >= 25, `${entry.id}: simple definition`);
+    assert.ok(note.example.length >= 45, `${entry.id}: example`);
+    assert.ok(note.remember.length >= 25, `${entry.id}: remember`);
+    assert.doesNotMatch(`${note.example} ${note.remember}`, /[—–]/, `${entry.id}: dash`);
+  }
 });
