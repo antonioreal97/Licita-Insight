@@ -5,11 +5,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router } from 'wouter';
 import { savedTender } from '../lib/test-fixtures';
-import { parseView, viewHref } from '../lib/view';
+import { CALENDAR_HREF, legacyViewRedirect, MURAL_HREF } from '../lib/view';
 import { DeadlineBadge } from './deadline-badge';
 import { DeadlineCalendar } from './deadline-calendar';
 import { MoveStageMenu } from './move-stage-menu';
-import { PipelineBoard } from './pipeline-board';
+import { documentsLine, PipelineBoard } from './pipeline-board';
 
 const render = (node: ReactNode) =>
   renderToStaticMarkup(h(QueryClientProvider, { client: new QueryClient() }, h(Router, { ssrPath: '/saved-tenders' }, node)));
@@ -71,11 +71,24 @@ test('o calendário lista atrasados e marca o dia de hoje', () => {
   assert.match(html, /<th scope="col" abbr="domingo"/);
 });
 
-test('a vista vai na URL e a lista continua sendo o padrão', () => {
-  assert.equal(parseView(null), 'list');
-  assert.equal(parseView('board'), 'board');
-  assert.equal(parseView('calendar'), 'calendar');
-  assert.equal(parseView('kanban'), 'list');
-  assert.equal(viewHref('list'), '/saved-tenders');
-  assert.equal(viewHref('calendar'), '/saved-tenders?view=calendar');
+test('links antigos de quadro e calendário levam ao mural e ao calendário', () => {
+  assert.equal(MURAL_HREF, '/dashboard?aba=mural');
+  assert.equal(CALENDAR_HREF, '/calendario');
+  assert.equal(legacyViewRedirect('board'), MURAL_HREF);
+  assert.equal(legacyViewRedirect('calendar'), CALENDAR_HREF);
+  assert.equal(legacyViewRedirect(null), null);
+  assert.equal(legacyViewRedirect('kanban'), null);
+});
+
+test('o cartão do mural resume os documentos marcados e leva à ficha', () => {
+  const mark = (key: string, state: 'have' | 'missing' | 'unknown') => ({ key, state, note: null, updatedAt: inDays(0) }) as never;
+  assert.equal(documentsLine({ checklist: [] }), 'Documentos: nada marcado ainda');
+  assert.equal(documentsLine({ checklist: [mark('unknown_doc', 'unknown')] }), 'Documentos: nada marcado ainda');
+  assert.equal(
+    documentsLine({ checklist: [mark('regularidade_fiscal', 'have'), mark('qualificacao_tecnica', 'have'), mark('bid_guarantee', 'missing')] }),
+    'Documentos (você marcou): 2 prontos, 1 faltando',
+  );
+  const html = render(h(PipelineBoard, { items: [savedTender({ id: 'demo-1', stage: 'participating' })] }));
+  assert.match(html, /href="\/tenders\/[^"#]+#documentos"/);
+  assert.match(html, /Organizar documentos/);
 });

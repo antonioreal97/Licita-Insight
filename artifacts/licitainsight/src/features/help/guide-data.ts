@@ -201,7 +201,7 @@ export const HELP_FAQ = [
   {
     question: 'Como acompanho vários editais e prazos ao mesmo tempo?',
     answer:
-      'Em Editais salvos, troque a lista por Quadro ou Calendário. O Quadro tem uma coluna para cada etapa que você marcou; use “Mover para…” no cartão (ou arraste, no computador) e a etapa muda como no menu da lista. O Calendário junta o envio da proposta e o início das propostas, publicados no edital, e o prazo pessoal da sua próxima ação, em horário de Brasília. Prazos atrasados ficam destacados, e editais em “Não vou participar” ficam de fora.',
+      'Na Visão geral, abra a aba Mural de processos: ela tem uma coluna para cada etapa que você marcou; use “Mover para…” no cartão (ou arraste, no computador) e a etapa muda como no menu da lista. Cada cartão mostra os documentos que você marcou e o atalho “Organizar documentos”, que leva à lista do que preparar daquele edital. No menu lateral, o Calendário junta o envio da proposta e o início das propostas, publicados no edital, e o prazo pessoal da sua próxima ação, em horário de Brasília. Prazos atrasados ficam destacados, e editais em “Não vou participar” ficam de fora.',
   },
   {
     question: 'O resultado do Pardal substitui a página oficial?',

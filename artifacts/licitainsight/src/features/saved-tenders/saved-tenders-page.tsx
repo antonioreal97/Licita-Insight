@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
-import { Bookmark, CalendarDays, ChevronDown, Download, List, SquareKanban, Target, type LucideIcon } from 'lucide-react';
+import { Bookmark, CalendarDays, ChevronDown, Download, SquareKanban, Target } from 'lucide-react';
 import type { ParticipationStage, SavedTender } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { EmptyState } from '@/components/common/empty-state';
@@ -24,13 +24,12 @@ import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlig
 import { formatCurrencyPrecise, formatDateTime } from '@/lib/format';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
-import { DeadlineCalendar } from './components/deadline-calendar';
-import { PipelineBoard } from './components/pipeline-board';
+import { EmptySaved } from './components/saved-pipeline-views';
 import { SavedTenderDecisionActions } from './components/saved-tender-decision-actions';
 import { useSavedTenders } from './hooks/use-saved-tenders';
-import { fetchAllSavedTenders, useAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
+import { fetchAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
 import { csvCell } from './lib/csv-cell';
-import { parseView, SAVED_TENDERS_VIEWS, viewHref, type SavedTendersView } from './lib/view';
+import { CALENDAR_HREF, legacyViewRedirect, MURAL_HREF } from './lib/view';
 
 const PAGE_SIZE = 50;
 const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-lg';
@@ -190,46 +189,11 @@ function ParticipationBar({ item, monitored, onMonitor }: { item: SavedTender; m
   );
 }
 
-const VIEW_ICONS: Record<SavedTendersView, LucideIcon> = { list: List, board: SquareKanban, calendar: CalendarDays };
-
 const segmentClass = (active: boolean) =>
   cn(
     'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-7',
     active && 'bg-surface text-foreground ',
   );
-
-function EmptySaved() {
-  return (
-    <EmptyState icon={Bookmark} title="Nenhum edital salvo ainda" testId="empty-saved">
-      Salve um edital na busca ou no detalhe para acompanhar prazo e preparo aqui.{' '}
-      <Link href="/search" className={linkClass}>
-        Explorar editais
-      </Link>
-    </EmptyState>
-  );
-}
-
-/** Board and calendar need every saved tender at once (≤ 500, fetched page by page). */
-function PipelineViews({ view }: { view: 'board' | 'calendar' }) {
-  const all = useAllSavedTenders();
-  const { isSaved, status } = useSavedTenders();
-  // Removed tenders disappear at once (optimistic ids), as in the list.
-  const items = (all.data ?? []).filter((item) => status !== 'ready' || isSaved(item.tender.id));
-
-  if (all.isPending) return <RowsSkeleton />;
-  if (all.isError) return <ErrorState error={all.error} onRetry={() => all.refetch()} />;
-  if (items.length === 0) return <EmptySaved />;
-  return (
-    <>
-      <p aria-live="polite" className="mb-3 type-meta text-muted-foreground" data-testid="text-saved-count">
-        {items.length} {items.length === 1 ? 'edital salvo' : 'editais salvos'}
-        {view === 'calendar' && ' · sem os marcados como “Não vou participar”'}
-        {all.isFetching && ' · atualizando…'}
-      </p>
-      {view === 'board' ? <PipelineBoard items={items} /> : <DeadlineCalendar items={items} />}
-    </>
-  );
-}
 
 function SavedTendersList() {
   const search = useSearch();
@@ -339,9 +303,13 @@ function SavedTendersList() {
 export default function SavedTendersPage() {
   const search = useSearch();
   const [, navigate] = useLocation();
-  const view = parseView(new URLSearchParams(search).get('view'));
+  const redirect = legacyViewRedirect(new URLSearchParams(search).get('view'));
   const { saved, status } = useSavedTenders();
   const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (redirect) navigate(redirect, { replace: true });
+  }, [redirect, navigate]);
 
   const exportList = async () => {
     setExporting(true);
@@ -375,27 +343,18 @@ export default function SavedTendersPage() {
           </Button>
         }
       />
-      <div className="-mx-1 mb-3 overflow-x-auto px-1 pb-1">
-        <div role="group" aria-label="Modo de exibição" className="inline-flex gap-1 rounded-lg bg-muted p-1">
-          {SAVED_TENDERS_VIEWS.map((option) => {
-            const Icon = VIEW_ICONS[option.value];
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={view === option.value}
-                onClick={() => view !== option.value && navigate(viewHref(option.value))}
-                className={segmentClass(view === option.value)}
-                data-testid={`view-${option.value}`}
-              >
-                <Icon size={14} aria-hidden="true" />
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      {view === 'list' ? <SavedTendersList /> : <PipelineViews view={view} />}
+      <p className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 type-meta text-muted-foreground">
+        Organize por etapa no{' '}
+        <Link href={MURAL_HREF} className={cn(linkClass, 'inline-flex items-center gap-1')} data-testid="link-saved-mural">
+          <SquareKanban size={14} aria-hidden="true" />
+          Mural da Visão geral
+        </Link>
+        <Link href={CALENDAR_HREF} className={cn(linkClass, 'inline-flex items-center gap-1')} data-testid="link-saved-calendar">
+          <CalendarDays size={14} aria-hidden="true" />
+          Ver prazos no calendário
+        </Link>
+      </p>
+      {redirect ? <RowsSkeleton /> : <SavedTendersList />}
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Link } from 'wouter';
-import { ArrowRight, Bell, FileCheck2, Search, Target } from 'lucide-react';
+import { Link, useSearch } from 'wouter';
+import { ArrowRight, Bell, FileCheck2, LayoutDashboard, Search, SquareKanban, Target } from 'lucide-react';
 import { Button, buttonClass } from '@/components/common/action-button';
 import { PageTitle } from '@/components/common/page-title';
 import { ErrorState, RowsSkeleton } from '@/components/common/query-states';
@@ -21,6 +21,10 @@ import { matchingCandidates, nearestSavedDeadlines } from './lib/priorities';
 import { RecommendationsSection } from '@/features/recommendations/components/recommendations-section';
 import { TriageEntry } from '@/features/recommendations/triage/triage-entry';
 import { useCompanyDocuments } from '@/features/bid-readiness/hooks/use-company-documents';
+import { SavedBoardView } from '@/features/saved-tenders/components/saved-pipeline-views';
+import { MURAL_HREF } from '@/features/saved-tenders/lib/view';
+import { parseDashboardTab, type DashboardTab } from './lib/tabs';
+import { cn } from '@/lib/utils';
 
 function saoPauloDate(offsetDays = 0): string {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -160,6 +164,71 @@ function BidReadinessCard() {
   );
 }
 
+/** Entry to the Mural tab from the summary. */
+function MuralCard() {
+  const { saved, status } = useSavedTenders();
+  return (
+    <Link
+      href={MURAL_HREF}
+      data-testid="card-dashboard-mural"
+      className="group block rounded-xl border border-border bg-card p-5 transition-colors duration-fast ease-standard hover:border-border-strong focus-visible:focus-ring"
+    >
+      <div className="flex items-center gap-2">
+        <SquareKanban size={17} className="text-primary" aria-hidden />
+        <h2 className="type-section text-foreground">Mural de processos</h2>
+      </div>
+      <p className="mt-2 type-ui font-semibold text-foreground">
+        {status !== 'ready' ? 'Carregando seus editais…' : saved.length === 0 ? 'Nenhum edital salvo ainda' : `${formatNumber(saved.length)} ${saved.length === 1 ? 'edital salvo' : 'editais salvos'} para organizar`}
+      </p>
+      <p className="mt-1 type-meta text-muted-foreground">Mova cada processo entre as etapas e acompanhe os documentos de cada um.</p>
+      <span className="mt-4 inline-flex items-center rounded-lg text-xs font-semibold text-primary underline-offset-4 group-hover:underline">
+        Abrir mural <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" />
+      </span>
+    </Link>
+  );
+}
+
+const TABS: { value: DashboardTab; label: string; href: string; icon: typeof LayoutDashboard }[] = [
+  { value: 'resumo', label: 'Resumo', href: '/dashboard', icon: LayoutDashboard },
+  { value: 'mural', label: 'Mural de processos', href: MURAL_HREF, icon: SquareKanban },
+];
+
+function DashboardTabs({ active }: { active: DashboardTab }) {
+  return (
+    <nav aria-label="Seções da visão geral" className="-mx-1 mb-6 overflow-x-auto px-1 pb-1">
+      <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+        {TABS.map(({ value, label, href, icon: Icon }) => (
+          <Link
+            key={value}
+            href={href}
+            aria-current={active === value ? 'page' : undefined}
+            data-testid={`tab-dashboard-${value}`}
+            className={cn(
+              'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-8',
+              active === value && 'bg-surface text-foreground',
+            )}
+          >
+            <Icon size={14} aria-hidden="true" />
+            {label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function MuralTab() {
+  return (
+    <section aria-labelledby="dashboard-mural-title" data-testid="dashboard-mural">
+      <h2 id="dashboard-mural-title" className="type-section text-foreground">Mural de processos</h2>
+      <p className="mt-1 mb-4 max-w-3xl type-meta text-muted-foreground">
+        Os editais que você está gerenciando e participando, por etapa. Mova um cartão com “Mover para…” (ou arraste, no computador) e use “Organizar documentos” para marcar o que já tem e o que falta em cada edital.
+      </p>
+      <SavedBoardView />
+    </section>
+  );
+}
+
 function PersonalDeadlines() {
   const analyzing = useSavedTendersList({ page: 1, pageSize: 4, stage: 'analyzing', sort: 'deadline', upcoming: true });
   const preparing = useSavedTendersList({ page: 1, pageSize: 4, stage: 'participating', sort: 'deadline', upcoming: true });
@@ -190,11 +259,14 @@ function PersonalDeadlines() {
 }
 
 export default function DashboardPage() {
+  const search = useSearch();
   const { isSaved, toggle } = useSavedTenders();
   const { user } = useSession();
   const billing = useBilling();
   const profile = useCompanyProfile();
   const personal = Boolean(user && billing.data?.entitled);
+  // The mural needs saved tenders, so only subscribers see the tabs; others always get the summary.
+  const tab = personal ? parseDashboardTab(new URLSearchParams(search).get('aba')) : 'resumo';
   const firstName = user?.name?.trim().split(/\s+/)[0];
   const today = useMemo(() => saoPauloDate(0), []);
   const weekAgo = useMemo(() => saoPauloDate(-6), []);
@@ -258,6 +330,8 @@ export default function DashboardPage() {
           </Link>
         }
       />
+      {personal && <DashboardTabs active={tab} />}
+      {tab === 'mural' ? <MuralTab /> : <>
       {user && <ProfileInviteCard />}
       {!personal && <div className="mb-8">{metrics}</div>}
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -303,11 +377,13 @@ export default function DashboardPage() {
         {personal && metrics}
         </div>
         <aside className="space-y-6">
+          {personal && <MuralCard />}
           <BidReadinessCard />
           <MonitoringCard />
           <OpportunitiesCard />
         </aside>
       </div>
+      </>}
     </>
   );
 }
