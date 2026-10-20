@@ -1,57 +1,20 @@
 import { useCallback } from 'react';
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { isApiError, type SavedTender, type SavedTenderIdsResponse, type SaveTenderBody } from '@/api';
+import { isApiError, type SavedTender } from '@/api';
 import { ToastAction } from '@/components/ui/toast';
 import { toast } from '@/hooks/use-toast';
 import { useRequireEntitled } from '@/features/billing/hooks/use-billing';
 import { errorDescription, useSavedTenders } from '@/features/saved-tenders/hooks/use-saved-tenders';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
-import { MONITORED_STAGES, STAGE_LABELS } from '../lib/stages';
+import { applyOptimistic, commitParticipation, rollbackOptimistic, type ParticipationChange } from '../lib/optimistic';
+import { STAGE_LABELS } from '../lib/stages';
 
 const MUTATION_KEY = ['saved-tenders', 'participation'];
 /** Prefix of this hook's mutations and of the save/monitor toggles in `useSavedTenders`. */
 const SAVED_TENDERS_MUTATIONS = ['saved-tenders'];
 
-/**
- * `previous` is the saved tender before the change, `null` when it is not saved yet: it drives the optimistic state,
- * the toasts and Undo. `remove` only exists to undo a first save.
- */
-export type ParticipationChange = { tenderId: string; previous: SavedTender | null; restoreMonitoring?: boolean } & ({ body: SaveTenderBody } | { remove: true });
-
-/** Mirrors the server rule (participation-v1): entering an active stage turns monitoring on, `dismissed` turns it off. */
-function expectedMonitored(saved: SavedTender | null, body: SaveTenderBody) {
-  const stage = body.stage ?? saved?.stage ?? 'analyzing';
-  const changed = !saved || stage !== saved.stage;
-  if (changed && MONITORED_STAGES.includes(stage)) return true;
-  if (changed && stage === 'dismissed') return false;
-  return body.monitored ?? saved?.monitored ?? false;
-}
-
-function applyBody(saved: SavedTender, body: SaveTenderBody): SavedTender {
-  const now = new Date().toISOString();
-  const checklist = new Map(saved.checklist.map((item) => [item.key, item]));
-  for (const item of body.checklist ?? []) {
-    const note = item.note === undefined ? (checklist.get(item.key)?.note ?? null) : item.note;
-    checklist.set(item.key, { key: item.key, state: item.state, note, updatedAt: now });
-  }
-  const stage = body.stage ?? saved.stage;
-  return {
-    ...saved,
-    // Keep form values stable until success, so a failed request does not remount/erase the draft.
-    stage,
-    stageAt: stage === saved.stage ? saved.stageAt : now,
-    monitored: expectedMonitored(saved, body),
-    checklist: [...checklist.values()],
-  };
-}
-
-function applyIds(ids: SavedTenderIdsResponse, change: ParticipationChange): SavedTenderIdsResponse {
-  const without = (list: string[]) => list.filter((id) => id !== change.tenderId);
-  if ('remove' in change) return { saved: without(ids.saved), monitored: without(ids.monitored) };
-  const saved = ids.saved.includes(change.tenderId) ? ids.saved : [change.tenderId, ...ids.saved];
-  return { saved, monitored: expectedMonitored(change.previous, change.body) ? [...without(ids.monitored), change.tenderId] : without(ids.monitored) };
-}
+export type { ParticipationChange };
 
 function errorTitle(change: ParticipationChange) {
   if ('remove' in change) return 'Não foi possível desfazer';
@@ -96,18 +59,9 @@ export function useUpdateParticipation() {
         ? accountService.updateParticipation(change.tenderId, { monitored: change.restoreMonitoring })
         : saved;
     },
-    onMutate: async (change) => {
-      const detailKey = queryKeys.me.savedTenders.detail(change.tenderId);
-      await Promise.all([queryClient.cancelQueries({ queryKey: detailKey }), queryClient.cancelQueries({ queryKey: queryKeys.me.savedTenders.ids })]);
-      const detail = queryClient.getQueryData<SavedTender>(detailKey);
-      const ids = queryClient.getQueryData<SavedTenderIdsResponse>(queryKeys.me.savedTenders.ids);
-      if (detail && !('remove' in change)) queryClient.setQueryData(detailKey, applyBody(detail, change.body));
-      if (ids) queryClient.setQueryData(queryKeys.me.savedTenders.ids, applyIds(ids, change));
-      return { detail, ids };
-    },
+    onMutate: (change) => applyOptimistic(queryClient, change),
     onError: (error, change, context) => {
-      if (context?.detail) queryClient.setQueryData(queryKeys.me.savedTenders.detail(change.tenderId), context.detail);
-      if (context?.ids) queryClient.setQueryData(queryKeys.me.savedTenders.ids, context.ids);
+      if (context) rollbackOptimistic(queryClient, change, context);
       console.error('[participation] Falha ao atualizar a participação.', error);
       // 401 is announced once, globally ("Sua sessão expirou").
       if (isApiError(error) && error.status === 401) return;
@@ -115,7 +69,7 @@ export function useUpdateParticipation() {
     },
     onSuccess: (data, change) => {
       if (!data || 'remove' in change) return;
-      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) queryClient.setQueryData(queryKeys.me.savedTenders.detail(change.tenderId), data);
+      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) === 1) commitParticipation(queryClient, data);
 
       const { previous } = change;
       const undo = previous ? (

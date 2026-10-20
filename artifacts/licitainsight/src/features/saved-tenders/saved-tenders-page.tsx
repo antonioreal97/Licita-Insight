@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
-import { Bookmark, ChevronDown, Download, Target } from 'lucide-react';
+import { Bookmark, CalendarDays, ChevronDown, Download, List, SquareKanban, Target, type LucideIcon } from 'lucide-react';
 import type { ParticipationStage, SavedTender } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { EmptyState } from '@/components/common/empty-state';
@@ -24,10 +24,13 @@ import { useTenderHighlights } from '@/features/tenders/hooks/use-tender-highlig
 import { formatCurrencyPrecise, formatDateTime } from '@/lib/format';
 import { modalityLabels, statusLabels } from '@/lib/tender-labels';
 import { cn } from '@/lib/utils';
+import { DeadlineCalendar } from './components/deadline-calendar';
+import { PipelineBoard } from './components/pipeline-board';
 import { SavedTenderDecisionActions } from './components/saved-tender-decision-actions';
 import { useSavedTenders } from './hooks/use-saved-tenders';
-import { fetchAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
+import { fetchAllSavedTenders, useAllSavedTenders, useSavedTendersList } from './hooks/use-saved-tenders-list';
 import { csvCell } from './lib/csv-cell';
+import { parseView, SAVED_TENDERS_VIEWS, viewHref, type SavedTendersView } from './lib/view';
 
 const PAGE_SIZE = 50;
 const linkClass = 'type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring rounded-lg';
@@ -187,7 +190,48 @@ function ParticipationBar({ item, monitored, onMonitor }: { item: SavedTender; m
   );
 }
 
-export default function SavedTendersPage() {
+const VIEW_ICONS: Record<SavedTendersView, LucideIcon> = { list: List, board: SquareKanban, calendar: CalendarDays };
+
+const segmentClass = (active: boolean) =>
+  cn(
+    'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-7',
+    active && 'bg-surface text-foreground ',
+  );
+
+function EmptySaved() {
+  return (
+    <EmptyState icon={Bookmark} title="Nenhum edital salvo ainda" testId="empty-saved">
+      Salve um edital na busca ou no detalhe para acompanhar prazo e preparo aqui.{' '}
+      <Link href="/search" className={linkClass}>
+        Explorar editais
+      </Link>
+    </EmptyState>
+  );
+}
+
+/** Board and calendar need every saved tender at once (≤ 500, fetched page by page). */
+function PipelineViews({ view }: { view: 'board' | 'calendar' }) {
+  const all = useAllSavedTenders();
+  const { isSaved, status } = useSavedTenders();
+  // Removed tenders disappear at once (optimistic ids), as in the list.
+  const items = (all.data ?? []).filter((item) => status !== 'ready' || isSaved(item.tender.id));
+
+  if (all.isPending) return <RowsSkeleton />;
+  if (all.isError) return <ErrorState error={all.error} onRetry={() => all.refetch()} />;
+  if (items.length === 0) return <EmptySaved />;
+  return (
+    <>
+      <p aria-live="polite" className="mb-3 type-meta text-muted-foreground" data-testid="text-saved-count">
+        {items.length} {items.length === 1 ? 'edital salvo' : 'editais salvos'}
+        {view === 'calendar' && ' · sem os marcados como “Não vou participar”'}
+        {all.isFetching && ' · atualizando…'}
+      </p>
+      {view === 'board' ? <PipelineBoard items={items} /> : <DeadlineCalendar items={items} />}
+    </>
+  );
+}
+
+function SavedTendersList() {
   const search = useSearch();
   const [, navigate] = useLocation();
   const stageParam = new URLSearchParams(search).get('etapa');
@@ -195,7 +239,6 @@ export default function SavedTendersPage() {
   const [page, setPage] = useState(1);
   const list = useSavedTendersList({ page, pageSize: PAGE_SIZE, stage, sort: stage && BY_DEADLINE.includes(stage) ? 'deadline' : undefined });
   const { isSaved, isMonitored, toggle, toggleMonitor, status } = useSavedTenders();
-  const [exporting, setExporting] = useState(false);
 
   const total = list.data?.pagination.total ?? 0;
   // Removed rows disappear at once (optimistic ids); the list refetches when the change settles.
@@ -226,20 +269,6 @@ export default function SavedTendersPage() {
     toggle(id);
   };
 
-  const exportList = async () => {
-    setExporting(true);
-    try {
-      const all = await fetchAllSavedTenders();
-      downloadCsv(all);
-      toast({ title: `${all.length} ${all.length === 1 ? 'edital exportado' : 'editais exportados'}` });
-    } catch (error) {
-      console.error('[saved-tenders] Falha ao exportar CSV.', error);
-      toast({ variant: 'destructive', title: 'Não foi possível exportar os editais salvos', description: 'Verifique a conexão e tente novamente.' });
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const segments: { value: ParticipationStage | undefined; label: string }[] = [
     { value: undefined, label: 'Todos' },
     ...STAGE_ORDER.map((value) => ({ value, label: STAGE_LABELS[value] })),
@@ -247,22 +276,6 @@ export default function SavedTendersPage() {
 
   return (
     <>
-      <PageTitle
-        title="Editais salvos"
-        description="Salvos na sua conta, por etapa. Os dados de cada edital vêm do banco; a etapa, as marcações e o protocolo são informados por você."
-        action={
-          <Button
-            variant="outline"
-            data-testid="button-export-saved"
-            disabled={exporting || list.isPending || (total === 0 && !stage)}
-            title={exporting ? 'Gerando o arquivo…' : 'Baixar CSV de todos os editais salvos'}
-            onClick={exportList}
-          >
-            <Download size={14} aria-hidden="true" />
-            {exporting ? 'Exportando…' : 'Exportar CSV'}
-          </Button>
-        }
-      />
       {/* Below sm the control scrolls on its own; the page never scrolls sideways. */}
       <div className="-mx-1 mb-4 overflow-x-auto px-1 pb-1">
         <div role="group" aria-label="Filtrar por etapa (você marcou)" className="inline-flex gap-1 rounded-lg bg-muted p-1">
@@ -272,10 +285,7 @@ export default function SavedTendersPage() {
               type="button"
               aria-pressed={stage === segment.value}
               onClick={() => filter(segment.value)}
-              className={cn(
-                'h-11 whitespace-nowrap rounded-lg px-3 type-ui font-medium text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring sm:h-7',
-                stage === segment.value && 'bg-surface text-foreground ',
-              )}
+              className={segmentClass(stage === segment.value)}
               data-testid={`filter-stage-${segment.value ?? 'all'}`}
             >
               {segment.label}
@@ -293,12 +303,7 @@ export default function SavedTendersPage() {
             {EMPTY[stage].text}
           </EmptyState>
         ) : (
-          <EmptyState icon={Bookmark} title="Nenhum edital salvo ainda" testId="empty-saved">
-            Salve um edital na busca ou no detalhe para acompanhar prazo e preparo aqui.{' '}
-            <Link href="/search" className={linkClass}>
-              Explorar editais
-            </Link>
-          </EmptyState>
+          <EmptySaved />
         )
       ) : (
         <div className="@container/results">
@@ -327,6 +332,70 @@ export default function SavedTendersPage() {
           )}
         </div>
       )}
+    </>
+  );
+}
+
+export default function SavedTendersPage() {
+  const search = useSearch();
+  const [, navigate] = useLocation();
+  const view = parseView(new URLSearchParams(search).get('view'));
+  const { saved, status } = useSavedTenders();
+  const [exporting, setExporting] = useState(false);
+
+  const exportList = async () => {
+    setExporting(true);
+    try {
+      const all = await fetchAllSavedTenders();
+      downloadCsv(all);
+      toast({ title: `${all.length} ${all.length === 1 ? 'edital exportado' : 'editais exportados'}` });
+    } catch (error) {
+      console.error('[saved-tenders] Falha ao exportar CSV.', error);
+      toast({ variant: 'destructive', title: 'Não foi possível exportar os editais salvos', description: 'Verifique a conexão e tente novamente.' });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <>
+      <PageTitle
+        title="Editais salvos"
+        description="Salvos na sua conta, por etapa. Os dados de cada edital vêm do banco; a etapa, as marcações e o protocolo são informados por você."
+        action={
+          <Button
+            variant="outline"
+            data-testid="button-export-saved"
+            disabled={exporting || status !== 'ready' || saved.length === 0}
+            title={exporting ? 'Gerando o arquivo…' : 'Baixar CSV de todos os editais salvos'}
+            onClick={exportList}
+          >
+            <Download size={14} aria-hidden="true" />
+            {exporting ? 'Exportando…' : 'Exportar CSV'}
+          </Button>
+        }
+      />
+      <div className="-mx-1 mb-3 overflow-x-auto px-1 pb-1">
+        <div role="group" aria-label="Modo de exibição" className="inline-flex gap-1 rounded-lg bg-muted p-1">
+          {SAVED_TENDERS_VIEWS.map((option) => {
+            const Icon = VIEW_ICONS[option.value];
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={view === option.value}
+                onClick={() => view !== option.value && navigate(viewHref(option.value))}
+                className={segmentClass(view === option.value)}
+                data-testid={`view-${option.value}`}
+              >
+                <Icon size={14} aria-hidden="true" />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {view === 'list' ? <SavedTendersList /> : <PipelineViews view={view} />}
     </>
   );
 }

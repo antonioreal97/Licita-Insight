@@ -56,7 +56,10 @@ export const queryKeys = {
     savedTenders: {
       all: ['me', 'saved-tenders'] as const,
       ids: ['me', 'saved-tenders', 'ids'] as const,
+      lists: ['me', 'saved-tenders', 'list'] as const,
       list: (params: SavedTendersParams) => ['me', 'saved-tenders', 'list', params] as const,
+      /** Every page at once, for the board and the calendar. */
+      everything: ['me', 'saved-tenders', 'everything'] as const,
       detail: (tenderId: string) => ['me', 'saved-tenders', 'detail', tenderId] as const,
     },
     savedSearches: ['me', 'saved-searches'] as const,
