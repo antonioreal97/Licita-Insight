@@ -61,6 +61,8 @@ const MIN_SAVED_VALUES_FOR_INFERENCE = 5;
 const MAX_DISMISSAL_PENALTY = 12;
 /** After this many interest events share an expression, it can qualify new candidates alone. */
 const LEARNED_INTEREST_THRESHOLD = 2;
+/** Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version. */
+export const RECOMMENDATION_ALGORITHM_VERSION = 2;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
 const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
@@ -698,6 +700,7 @@ export async function rebuildInterestProfile(
       : null,
     registeredPlatforms: profile?.registeredPlatforms ?? [],
     signalCount,
+    algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
   };
   await db
     .insert(recommendationInterestProfilesTable)
@@ -742,6 +745,103 @@ const weightFor = (
 const cappedRatio = (value: number, max: number) =>
   max <= 0 ? 0 : Math.min(1, value / max);
 
+/** null without a company profile: then only interest-history UFs weigh, never as a filter. */
+const coverageFromProfile = (
+  profile: RecommendationInterestProfile,
+): ServiceRegionCoverage | null => {
+  if (!profile.coverageScope) return null;
+  if (profile.coverageScope === "national")
+    return {
+      scope: "national",
+      mode: profile.coverageMode ?? "strict",
+      acceptsRemote: profile.acceptsRemote ?? false,
+    };
+  const legacyCustom = profile.coverageScope === "states";
+  const center = profile.headquartersMunicipalityIbge
+    ? municipalityReference(profile.headquartersMunicipalityIbge)
+    : null;
+  return {
+    scope: "custom",
+    mode: profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict"),
+    acceptsRemote: profile.acceptsRemote ?? false,
+    regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+    states: profile.coverageStates,
+    municipalities: (profile.coverageMunicipalities ?? []).flatMap((code) => {
+      const city = municipalityReference(code);
+      return city ? [city] : [];
+    }),
+    radius:
+      center && profile.coverageRadiusKm
+        ? {
+            center,
+            km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+          }
+        : null,
+  };
+};
+
+/** Matches with what the client declared: offerings/selected keywords and selected categories. */
+const directProfileMatches = (
+  normalizedText: string,
+  categories: TenderCategory[],
+  profile: RecommendationInterestProfile,
+) => ({
+  terms: profile.terms
+    .filter(
+      (term) =>
+        hasAnySource(term, PROFILE_TERM_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
+    )
+    .slice(0, 3),
+  categories: categories
+    .map((category) => {
+      const entry = profile.categories.find(
+        (item) =>
+          item.value === normalizeText(category.slug) &&
+          isProfileCategory(item),
+      );
+      return entry
+        ? { category, weight: entry.weight, label: entry.label }
+        : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((a, b) => b.weight - a.weight),
+});
+
+/**
+ * Triage gate, stricter than scoring: the tender must match a declared offering, keyword or category
+ * and fall inside the declared region whatever the coverage mode ("prioritize" still scores outsiders).
+ * Learned interest, history and the description never qualify here.
+ */
+export function alignsWithRegisteredProfile(
+  candidate: Pick<
+    ScoreCandidate,
+    "searchText" | "categories" | "state" | "municipalityIbge"
+  >,
+  profile: RecommendationInterestProfile,
+): boolean {
+  const normalizedText = normalizeText(candidate.searchText);
+  if (
+    profile.exclusions.some((term) =>
+      matchesRecommendationTerm(normalizedText, term),
+    )
+  )
+    return false;
+  const direct = directProfileMatches(
+    normalizedText,
+    candidate.categories,
+    profile,
+  );
+  if (!direct.terms.length && !direct.categories.length) return false;
+  const coverage = coverageFromProfile(profile);
+  if (!coverage) return false;
+  return matchServiceRegion(coverage, {
+    state: candidate.state?.toUpperCase() ?? null,
+    municipalityIbge: candidate.municipalityIbge ?? null,
+    categories: candidate.categories,
+  }).matches;
+}
+
 export function scoreRecommendation(
   candidate: ScoreCandidate,
   profile: RecommendationInterestProfile,
@@ -760,13 +860,8 @@ export function scoreRecommendation(
 
   // Whole-expression match (same rule as company-fit / opportunity scoring): profile offerings and
   // selected keywords stay as phrases; only free-text description was tokenized into signal terms.
-  const profileTermMatches = profile.terms
-    .filter(
-      (term) =>
-        hasAnySource(term, PROFILE_TERM_SOURCES) &&
-        matchesRecommendationTerm(normalizedText, term.value),
-    )
-    .slice(0, 3);
+  const { terms: profileTermMatches, categories: profileCategoryMatches } =
+    directProfileMatches(normalizedText, candidate.categories, profile);
   const learnedInterestMatches = profile.terms
     .filter(
       (term) =>
@@ -781,19 +876,6 @@ export function scoreRecommendation(
         matchesRecommendationTerm(normalizedText, term.value),
     )
     .slice(0, 3);
-  const profileCategoryMatches = candidate.categories
-    .map((category) => {
-      const entry = profile.categories.find(
-        (item) =>
-          item.value === normalizeText(category.slug) &&
-          isProfileCategory(item),
-      );
-      return entry
-        ? { category, weight: entry.weight, label: entry.label }
-        : null;
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    .sort((a, b) => b.weight - a.weight);
   const directProfileMatch =
     profileTermMatches.length > 0 || profileCategoryMatches.length > 0;
   const learnedInterestMatch = learnedInterestMatches.length > 0;
@@ -938,39 +1020,8 @@ export function scoreRecommendation(
   }
 
   const state = candidate.state?.toUpperCase() ?? null;
-  if (profile.coverageScope) {
-    const legacyCustom = profile.coverageScope === "states";
-    const center = profile.headquartersMunicipalityIbge
-      ? municipalityReference(profile.headquartersMunicipalityIbge)
-      : null;
-    const coverage: ServiceRegionCoverage =
-      profile.coverageScope === "national"
-        ? {
-            scope: "national",
-            mode: profile.coverageMode ?? "strict",
-            acceptsRemote: profile.acceptsRemote ?? false,
-          }
-        : {
-            scope: "custom",
-            mode:
-              profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict"),
-            acceptsRemote: profile.acceptsRemote ?? false,
-            regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
-            states: profile.coverageStates,
-            municipalities: (profile.coverageMunicipalities ?? []).flatMap(
-              (code) => {
-                const city = municipalityReference(code);
-                return city ? [city] : [];
-              },
-            ),
-            radius:
-              center && profile.coverageRadiusKm
-                ? {
-                    center,
-                    km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
-                  }
-                : null,
-          };
+  const coverage = coverageFromProfile(profile);
+  if (coverage) {
     const region = matchServiceRegion(coverage, {
       state,
       municipalityIbge: candidate.municipalityIbge ?? null,
@@ -1316,10 +1367,14 @@ const incrementMetric = async (
     });
 };
 
+export type RecommendationScope = "all" | "profile";
+
 export async function listRecommendations(
   userId: string,
   page: number,
   pageSize: number,
+  /** "profile" (triage) keeps only rows that match the registered profile and region. */
+  scope: RecommendationScope = "all",
 ) {
   const [[usage], [companyProfile]] = await Promise.all([
     db
@@ -1339,16 +1394,42 @@ export async function listRecommendations(
   ]);
   const purposes = usage?.purposes ?? [];
   const hasDeclaredPurpose = purposes.length > 0;
+  // The 3-tender cap keeps tenders from crowding declared opportunities; triage lists tenders only.
   const tenderLimit =
-    hasDeclaredPurpose && !purposes.includes("procurement")
+    scope === "all" && hasDeclaredPurpose && !purposes.includes("procurement")
       ? Math.min(pageSize, 3)
       : pageSize;
-  let [{ total: storedTotal }] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(userRecommendationsTable)
-    .where(eq(userRecommendationsTable.userId, userId));
-  if (Number(storedTotal) === 0) {
+  const [[{ total: storedTotal }], [stored]] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(userRecommendationsTable)
+      .where(eq(userRecommendationsTable.userId, userId)),
+    db
+      .select({
+        profile: recommendationInterestProfilesTable.profile,
+        updatedAt: recommendationInterestProfilesTable.updatedAt,
+      })
+      .from(recommendationInterestProfilesTable)
+      .where(eq(recommendationInterestProfilesTable.userId, userId))
+      .limit(1),
+  ]);
+  // Rows built by older rules or before the last profile edit must not be served: the debounced
+  // rebuild may still be pending (or have failed), and the deploy leaves old rows behind.
+  const stale =
+    Number(storedTotal) === 0 ||
+    !stored ||
+    stored.profile.algorithmVersion !== RECOMMENDATION_ALGORITHM_VERSION ||
+    (companyProfile !== undefined &&
+      companyProfile.updatedAt > stored.updatedAt);
+  let interest = stored?.profile;
+  if (stale) {
     await rebuildRecommendationsForUser(userId);
+    const [fresh] = await db
+      .select({ profile: recommendationInterestProfilesTable.profile })
+      .from(recommendationInterestProfilesTable)
+      .where(eq(recommendationInterestProfilesTable.userId, userId))
+      .limit(1);
+    interest = fresh?.profile;
   }
   const now = new Date();
   const valid = and(
@@ -1357,7 +1438,7 @@ export async function listRecommendations(
     gt(tendersTable.proposalDeadline, now),
     isNull(savedTendersTable.tenderId),
   );
-  const [rows, [{ total }]] = await Promise.all([
+  const validRows = () =>
     db
       .select({
         recommendation: userRecommendationsTable,
@@ -1376,25 +1457,52 @@ export async function listRecommendations(
         ),
       )
       .where(valid)
-      .orderBy(asc(userRecommendationsTable.rank))
-      .limit(tenderLimit)
-      .offset((page - 1) * pageSize),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(userRecommendationsTable)
-      .innerJoin(
-        tendersTable,
-        eq(tendersTable.id, userRecommendationsTable.tenderId),
-      )
-      .leftJoin(
-        savedTendersTable,
-        and(
-          eq(savedTendersTable.tenderId, tendersTable.id),
-          eq(savedTendersTable.userId, userId),
-        ),
-      )
-      .where(valid),
-  ]);
+      .orderBy(asc(userRecommendationsTable.rank));
+  let rows: Awaited<ReturnType<typeof validRows>>;
+  let count: number;
+  if (scope === "profile") {
+    // At most RESULT_LIMIT rows exist per user, so the strict profile check runs in memory.
+    const profile = interest;
+    const aligned = profile
+      ? (await validRows()).filter(({ tender }) =>
+          alignsWithRegisteredProfile(
+            {
+              searchText: tender.searchText,
+              categories: tender.categories,
+              state: tender.state,
+              municipalityIbge: tender.cityIbgeCode,
+            },
+            profile,
+          ),
+        )
+      : [];
+    const start = (page - 1) * pageSize;
+    rows = aligned.slice(start, start + tenderLimit);
+    count = aligned.length;
+  } else {
+    const [pageRows, [{ total }]] = await Promise.all([
+      validRows()
+        .limit(tenderLimit)
+        .offset((page - 1) * pageSize),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(userRecommendationsTable)
+        .innerJoin(
+          tendersTable,
+          eq(tendersTable.id, userRecommendationsTable.tenderId),
+        )
+        .leftJoin(
+          savedTendersTable,
+          and(
+            eq(savedTendersTable.tenderId, tendersTable.id),
+            eq(savedTendersTable.userId, userId),
+          ),
+        )
+        .where(valid),
+    ]);
+    rows = pageRows;
+    count = Number(total);
+  }
   await incrementMetric("impressions", rows.length);
   const data = rows.map(({ recommendation, tender }) => {
     const detail = tenderRowToDetail(tender);
@@ -1415,8 +1523,8 @@ export async function listRecommendations(
       generatedAt: recommendation.generatedAt,
     };
   });
-  const count = Number(total);
-  if (hasDeclaredPurpose) {
+  // Triage only shows tenders; it never renders declared-purpose opportunities.
+  if (hasDeclaredPurpose && scope === "all") {
     const relevant = purposes.filter(
       (purpose) =>
         purpose === "culture" ||

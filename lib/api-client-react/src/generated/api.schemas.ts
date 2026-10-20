@@ -3251,7 +3251,19 @@ page?: PageParameter;
  * @maximum 50
  */
 pageSize?: number;
+/**
+ * `profile` (triage) keeps only tenders that match a declared offering, keyword or category and fall inside the declared region whatever the coverage mode; it omits `opportunities`.
+ */
+scope?: ListRecommendationsScope;
 };
+
+export type ListRecommendationsScope = typeof ListRecommendationsScope[keyof typeof ListRecommendationsScope];
+
+
+export const ListRecommendationsScope = {
+  all: 'all',
+  profile: 'profile',
+} as const;
 
 export type RecordRecommendationEvent202 = {
   recorded: boolean;

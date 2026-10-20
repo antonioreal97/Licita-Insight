@@ -110,7 +110,7 @@ export const accountService = {
       ...(showInternationalOpportunities === undefined ? {} : { showInternationalOpportunities }),
     }),
   deleteRecommendationHistory: () => accountAdapter.deleteRecommendationHistory(),
-  listRecommendations: (params: { page?: number; pageSize?: number }, signal?: AbortSignal) => accountAdapter.listRecommendations(params, signal),
+  listRecommendations: (params: { page?: number; pageSize?: number; scope?: 'all' | 'profile' }, signal?: AbortSignal) => accountAdapter.listRecommendations(params, signal),
   dismissRecommendation: (tenderId: string, reason?: RecommendationDismissReason) => accountAdapter.dismissRecommendation(tenderId, reason),
   recordRecommendationSearch: (query: string) => accountAdapter.recordRecommendationEvent({ type: 'search', query }),
   recordRecommendationView: (tenderId: string) => accountAdapter.recordRecommendationEvent({ type: 'tender_view', tenderId }),

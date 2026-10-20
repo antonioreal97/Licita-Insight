@@ -1052,3 +1052,45 @@ test("finalidades aplicam exclusão, região estrita e bônus do perfil", () => 
     ),
   );
 });
+
+test("triagem: só entra edital com oferta, palavra-chave ou categoria do perfil e dentro da região", async () => {
+  const { alignsWithRegisteredProfile } = await import("./recommendation-service");
+  const base = {
+    terms: [
+      { value: "drone", label: "profile:drone", sources: ["profile"], weight: 6 },
+      { value: "manutencao", label: "profile_description:manutencao", sources: ["profile_description"], weight: 2 },
+      { value: "vistoria", label: "interest_learned:vistoria", sources: ["interest_learned"], weight: 28 },
+    ],
+    categories: [{ value: "audiovisual", label: "profile_category:audiovisual", sources: ["profile_category"], weight: 12 }],
+    states: [],
+    organizations: [],
+    modalities: [],
+    valueMin: null,
+    valueMax: null,
+    coverageScope: "custom" as const,
+    coverageStates: ["MG"],
+    coverageMode: "prioritize" as const,
+    acceptsRemote: false,
+    exclusions: ["agricola"],
+    companySize: "me_epp" as const,
+    signalCount: 3,
+  };
+  const tender = (searchText: string, state: string | null, categories: { slug: string; label: string }[] = []) => ({ searchText, state, categories, municipalityIbge: null });
+  assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drones", "MG"), base), true);
+  assert.equal(alignsWithRegisteredProfile(tender("producao de video", "MG", [{ slug: "audiovisual", label: "Audiovisual" }]), base), true);
+  // "Priorizar" pontua quem está fora da região, mas a triagem não mostra.
+  assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", "SP"), base), false);
+  assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", null), base), false);
+  // Descrição livre e expressão aprendida não bastam.
+  assert.equal(alignsWithRegisteredProfile(tender("manutencao predial", "MG"), base), false);
+  assert.equal(alignsWithRegisteredProfile(tender("vistoria de imoveis", "MG"), base), false);
+  // Exclusão vence a oferta.
+  assert.equal(alignsWithRegisteredProfile(tender("drone agricola", "MG"), base), false);
+  // Aceito remoto: categoria compatível passa fora da região; sem a opção, não.
+  const remote = tender("drone com software", "SP", [{ slug: "ti-telecom", label: "TI" }]);
+  assert.equal(alignsWithRegisteredProfile(remote, base), false);
+  assert.equal(alignsWithRegisteredProfile(remote, { ...base, acceptsRemote: true }), true);
+  // Nacional aceita qualquer UF; sem perfil de empresa, nada entra.
+  assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", "SP"), { ...base, coverageScope: "national" }), true);
+  assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", "MG"), { ...base, coverageScope: null }), false);
+});

@@ -102,6 +102,8 @@ export function useSaveCompanyProfile() {
       queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, response);
       void queryClient.invalidateQueries({ queryKey: queryKeys.me.companyRegionPreview });
       void queryClient.invalidateQueries({ queryKey: queryKeys.me.fit.all });
+      // Recommendations (and the triage deck, cached with staleTime Infinity) follow the profile.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me.recommendations });
     },
     onError: (error) => console.error('[perfil] Falha ao salvar o perfil da empresa.', error),
   });
@@ -115,6 +117,7 @@ export function useDeleteCompanyProfile() {
       queryClient.setQueryData<CompanyProfileResponse>(queryKeys.me.companyProfile, { profile: null });
       queryClient.removeQueries({ queryKey: queryKeys.me.companyRegionPreview });
       queryClient.removeQueries({ queryKey: queryKeys.me.fit.all });
+      queryClient.removeQueries({ queryKey: queryKeys.me.recommendations });
     },
     onError: (error) => console.error('[perfil] Falha ao apagar o perfil da empresa.', error),
   });
