@@ -3,13 +3,18 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Award,
   BookOpen,
   Check,
   Info,
   Lightbulb,
   RotateCcw,
   Search,
+  Star,
+  Target,
+  Trophy,
 } from 'lucide-react';
+import { BrandLogo } from '@/components/brand-icon';
 import { Input } from '@/components/ui/input';
 import {
   CATEGORY_LABELS,
@@ -25,6 +30,7 @@ import { glossaryAnchor } from './components/glossary-term';
 import { GlossaryScope, GlossaryText } from './components/glossary-text';
 import {
   GLOSSARY_TOPICS,
+  glossaryQuizFor,
   learningNoteFor,
   simpleGlossaryDefinition,
 } from './glossary-learning';
@@ -142,31 +148,94 @@ function GlossaryLearningStudio() {
   const [topic, setTopic] = useState<GlossaryCategory>('basics');
   const [cardIndex, setCardIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [understood, setUnderstood] = useState<Set<string>>(() => new Set());
+  const [completed, setCompleted] = useState<Set<string>>(() => new Set());
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [newlyCompletedId, setNewlyCompletedId] = useState<string | null>(null);
   const entries = GLOSSARY.filter((entry) => entry.category === topic);
   const entry = entries[cardIndex] ?? entries[0]!;
   const topicCopy = GLOSSARY_TOPICS[topic];
   const note = learningNoteFor(entry);
-  const understoodInTopic = entries.filter((item) => understood.has(item.id)).length;
+  const quiz = glossaryQuizFor(entry, entries);
+  const completedInTopic = entries.filter((item) => completed.has(item.id)).length;
+  const completedTopics = CATEGORY_ORDER.filter((item) => {
+    const topicEntries = GLOSSARY.filter((entryItem) => entryItem.category === item);
+    return topicEntries.every((entryItem) => completed.has(entryItem.id));
+  });
+  const achievementCount = Number(completed.size >= 1) + Number(completed.size >= 10) + completedTopics.length;
+  const answerIsCorrect = selectedAnswer === quiz.correctAnswer;
+  const achievementsUnlockedNow = newlyCompletedId === entry.id
+    ? [
+        ...(completed.size === 1 ? ['Primeiro acerto'] : []),
+        ...(completed.size === 10 ? ['Em ritmo de estudo'] : []),
+        ...(completedInTopic === entries.length ? [topicCopy.badge] : []),
+      ]
+    : [];
+  const mascotMessage = !revealed
+    ? `Sua missão: descubra o que “${entry.term}” quer dizer.`
+    : selectedAnswer === null
+      ? 'Leia o exemplo, encontre a ideia-chave e escolha uma resposta.'
+      : answerIsCorrect
+        ? achievementsUnlockedNow.length > 0
+          ? `Mandou bem! Você liberou ${achievementsUnlockedNow.join(' e ')}.`
+          : 'Mandou bem! Mais um desafio concluído. Vamos para o próximo?'
+        : 'Quase! Volte à ideia-chave e tente outra resposta.';
+
+  const resetChallenge = () => {
+    setRevealed(false);
+    setSelectedAnswer(null);
+    setNewlyCompletedId(null);
+  };
 
   const chooseTopic = (nextTopic: GlossaryCategory) => {
     setTopic(nextTopic);
     setCardIndex(0);
-    setRevealed(false);
+    resetChallenge();
   };
 
   const move = (direction: -1 | 1) => {
     setCardIndex((current) => (current + direction + entries.length) % entries.length);
-    setRevealed(false);
+    resetChallenge();
   };
 
-  const markUnderstood = () => {
-    setUnderstood((current) => new Set(current).add(entry.id));
-    move(1);
+  const answerChallenge = (answer: string) => {
+    setSelectedAnswer(answer);
+    if (answer !== quiz.correctAnswer) {
+      setNewlyCompletedId(null);
+      return;
+    }
+    if (completed.has(entry.id)) {
+      setNewlyCompletedId(null);
+      return;
+    }
+    setCompleted((current) => new Set(current).add(entry.id));
+    setNewlyCompletedId(entry.id);
   };
 
   return (
     <div className="mt-6" data-testid="glossary-learning-studio">
+      <div className="mb-5 grid gap-4 border-y border-border py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <div>
+          <p className="flex items-center gap-2 type-ui font-semibold text-foreground">
+            <Target size={17} aria-hidden="true" className="text-primary" /> Sua jornada de aprendizagem
+          </p>
+          <p className="mt-1 type-meta text-muted-foreground">Acerte um desafio para concluir o termo e ganhar 10 pontos. Seu placar fica apenas nesta tela.</p>
+        </div>
+        <dl className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Placar do glossário">
+          <div>
+            <dt className="type-meta text-muted-foreground">Pontos</dt>
+            <dd className="type-title text-foreground" data-testid="glossary-score">{completed.size * 10}</dd>
+          </div>
+          <div>
+            <dt className="type-meta text-muted-foreground">Concluídos</dt>
+            <dd className="type-title text-foreground">{completed.size}/{GLOSSARY.length}</dd>
+          </div>
+          <div>
+            <dt className="type-meta text-muted-foreground">Conquistas</dt>
+            <dd className="type-title text-foreground">{achievementCount}</dd>
+          </div>
+        </dl>
+      </div>
+
       <div className="flex snap-x gap-2 overflow-x-auto pb-2" aria-label="Escolha um assunto para estudar">
         {CATEGORY_ORDER.map((item) => {
           const count = GLOSSARY.filter((entryItem) => entryItem.category === item).length;
@@ -197,17 +266,32 @@ function GlossaryLearningStudio() {
             <p className="type-ui font-semibold text-foreground">Imagine assim</p>
             <p className="mt-2 type-meta text-foreground/90">{topicCopy.analogy}</p>
           </div>
-          <p className="mt-4 type-meta text-muted-foreground" aria-live="polite">
-            {understoodInTopic} de {entries.length} {entries.length === 1 ? 'termo compreendido' : 'termos compreendidos'} neste assunto.
-          </p>
+          <div className="mt-4 rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground" aria-live="polite">
+            <p className="flex items-center gap-2 type-ui font-semibold">
+              {completedInTopic === entries.length ? <Trophy size={17} aria-hidden="true" /> : <Award size={17} aria-hidden="true" />}
+              {completedInTopic === entries.length ? 'Conquista liberada' : 'Missão do assunto'}
+            </p>
+            <p className="mt-1 type-meta">
+              {completedInTopic === entries.length
+                ? `Você conquistou “${topicCopy.badge}”.`
+                : `Conclua mais ${entries.length - completedInTopic} ${entries.length - completedInTopic === 1 ? 'desafio' : 'desafios'} para liberar “${topicCopy.badge}”.`}
+            </p>
+          </div>
         </div>
 
-        <div className="flex min-h-96 flex-col p-5 sm:p-7" aria-live="polite">
+        <div className="flex min-h-96 flex-col p-5 sm:p-7">
+          <div className="mb-5 flex items-center gap-3 border-b border-border pb-4" data-testid="glossary-mascot" role="note">
+            <BrandLogo symbol className="h-12 sm:h-14" />
+            <div className="min-w-0">
+              <p className="type-meta font-semibold text-primary">Pardal, seu guia</p>
+              <p className="mt-1 type-meta text-foreground">{mascotMessage}</p>
+            </div>
+          </div>
           <div className="flex items-center justify-between gap-4 type-meta text-muted-foreground">
-            <span>Cartão {cardIndex + 1} de {entries.length}</span>
-            {understood.has(entry.id) && (
+            <span>Desafio {cardIndex + 1} de {entries.length}</span>
+            {completed.has(entry.id) && (
               <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                <Check size={14} aria-hidden="true" /> Já entendi
+                <Check size={14} aria-hidden="true" /> Concluído
               </span>
             )}
           </div>
@@ -223,6 +307,62 @@ function GlossaryLearningStudio() {
             <p className="mt-4 type-meta text-foreground/90">
               <span className="font-semibold text-foreground">Ideia-chave: </span>{note.remember}
             </p>
+            <fieldset className="mt-6">
+              <legend className="type-ui font-semibold text-foreground">{quiz.prompt}</legend>
+              <div className="mt-3 grid gap-2">
+                {quiz.options.map((option, optionIndex) => {
+                  const selected = selectedAnswer === option;
+                  const correct = option === quiz.correctAnswer;
+                  const stateClass = selected
+                    ? correct
+                      ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
+                      : 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
+                    : 'border-border bg-card text-foreground hover:bg-muted';
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={selected}
+                      disabled={answerIsCorrect}
+                      onClick={() => answerChallenge(option)}
+                      className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left type-meta focus-visible:focus-ring active:translate-y-px disabled:cursor-default ${stateClass}`}
+                    >
+                      <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-pill border border-current font-semibold">
+                        {String.fromCharCode(65 + optionIndex)}
+                      </span>
+                      <span className="pt-0.5">{option}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {selectedAnswer && (
+              <div
+                role="status"
+                data-testid="glossary-answer-feedback"
+                className={`mt-4 rounded-xl border p-4 type-meta ${
+                  answerIsCorrect
+                    ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
+                    : 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
+                }`}
+              >
+                <p className="flex items-center gap-2 font-semibold">
+                  {answerIsCorrect ? <Star size={16} aria-hidden="true" /> : <RotateCcw size={16} aria-hidden="true" />}
+                  {answerIsCorrect
+                    ? newlyCompletedId === entry.id
+                      ? 'Resposta certa. Você ganhou 10 pontos.'
+                      : 'Resposta certa. Este desafio já estava no seu placar.'
+                    : 'Quase. Releia a ideia-chave e tente outra resposta.'}
+                </p>
+                {achievementsUnlockedNow.length > 0 && (
+                  <p className="mt-1">
+                    {achievementsUnlockedNow.length === 1 ? 'Conquista liberada: ' : 'Conquistas liberadas: '}
+                    {achievementsUnlockedNow.join(', ')}.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mt-auto pt-7">
@@ -234,23 +374,24 @@ function GlossaryLearningStudio() {
               >
                 Mostrar explicação
               </button>
-            ) : (
+            ) : answerIsCorrect ? (
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={markUnderstood}
+                  onClick={() => move(1)}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-action px-4 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
                 >
-                  <Check size={16} aria-hidden="true" /> Entendi
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(1)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground hover:bg-muted focus-visible:focus-ring active:translate-y-px"
-                >
-                  <RotateCcw size={15} aria-hidden="true" /> Rever depois
+                  Próximo desafio <ArrowRight size={15} aria-hidden="true" />
                 </button>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => move(1)}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground hover:bg-muted focus-visible:focus-ring active:translate-y-px"
+              >
+                Pular por enquanto
+              </button>
             )}
             <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
               <button type="button" onClick={() => move(-1)} className="inline-flex items-center gap-1.5 type-meta font-semibold text-primary hover:underline focus-visible:focus-ring">

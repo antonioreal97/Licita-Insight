@@ -4,6 +4,7 @@ export type GlossaryTopic = {
   title: string;
   description: string;
   analogy: string;
+  badge: string;
 };
 
 export type GlossaryLearningNote = {
@@ -16,51 +17,61 @@ export const GLOSSARY_TOPICS: Record<GlossaryCategory, GlossaryTopic> = {
     title: CATEGORY_LABELS.basics,
     description: 'Aprenda quem cria as regras, onde os avisos aparecem e quais documentos explicam a compra.',
     analogy: 'Pense em um jogo: a lei cria as regras gerais, o edital explica a partida e o termo de referência mostra o que precisa ser entregue.',
+    badge: 'Leitor das regras',
   },
   modalities: {
     title: CATEGORY_LABELS.modalities,
     description: 'Descubra os diferentes caminhos que o governo pode usar para comprar, contratar ou vender bens.',
     analogy: 'São portas diferentes para chegar a uma contratação. Cada porta tem uma regra, um prazo e um tipo de disputa.',
+    badge: 'Explorador de caminhos',
   },
   registration: {
     title: CATEGORY_LABELS.registration,
     description: 'Entenda os cadastros, sistemas e chaves digitais necessários para entrar em uma disputa.',
     analogy: 'É como preparar a entrada em um campeonato: você faz a inscrição, confirma sua identidade e aprende onde a partida acontece.',
+    badge: 'Pronto para entrar',
   },
   documents: {
     title: CATEGORY_LABELS.documents,
     description: 'Veja quais provas mostram que sua empresa existe, está regular e consegue fazer o trabalho.',
     analogy: 'É a mochila de documentos da empresa. Cada comprovante responde a uma pergunta diferente do órgão público.',
+    badge: 'Pasta organizada',
   },
   dispute: {
     title: CATEGORY_LABELS.dispute,
     description: 'Aprenda como preços, lances e critérios são usados para escolher a melhor proposta.',
     analogy: 'É a parte do placar: as empresas apresentam ofertas e o edital diz qual regra será usada para escolher a vencedora.',
+    badge: 'Olho no placar',
   },
   contest: {
     title: CATEGORY_LABELS.contest,
     description: 'Saiba como perguntar, apontar um problema e pedir que uma decisão seja revista.',
     analogy: 'É o direito de levantar a mão: primeiro para tirar uma dúvida, depois para corrigir uma regra ou contestar uma decisão.',
+    badge: 'Voz ativa',
   },
   contract: {
     title: CATEGORY_LABELS.contract,
     description: 'Entenda o que acontece depois da vitória, do compromisso assinado ao pagamento.',
     analogy: 'Ganhar a disputa é só o começo. O contrato transforma a promessa em tarefas, prazos e responsabilidades reais.',
+    badge: 'Compromisso entendido',
   },
   'small-business': {
     title: CATEGORY_LABELS['small-business'],
     description: 'Conheça as regras que ajudam micro e pequenas empresas a competir nas compras públicas.',
     analogy: 'É como uma rampa de acesso: a disputa continua séria, mas algumas regras reduzem desvantagens das empresas menores.',
+    badge: 'Pequeno gigante',
   },
   'national-opportunities': {
     title: CATEGORY_LABELS['national-opportunities'],
     description: 'Aprenda a linguagem usada em editais de cultura, pesquisa, inovação e parcerias públicas.',
     analogy: 'Aqui você não vende apenas um produto. Muitas vezes apresenta uma ideia, um projeto e um plano para usar o recurso.',
+    badge: 'Criador de projetos',
   },
   'international-opportunities': {
     title: CATEGORY_LABELS['international-opportunities'],
     description: 'Traduza as siglas mais comuns de bancos internacionais e chamadas da União Europeia.',
     analogy: 'O processo é parecido, mas as placas estão em outro idioma. Saber as siglas ajuda a encontrar a porta certa.',
+    badge: 'Sem fronteiras',
   },
 };
 
@@ -367,5 +378,35 @@ export function learningNoteFor(entry: GlossaryEntry): GlossaryLearningNote {
   return GLOSSARY_LEARNING_NOTES[entry.id] ?? {
     example: `Imagine encontrar “${entry.term}” em uma oportunidade. A explicação completa abaixo mostra como interpretar o termo.`,
     remember: entry.whatToDo,
+  };
+}
+
+export type GlossaryQuiz = {
+  prompt: string;
+  options: string[];
+  correctAnswer: string;
+};
+
+/** Builds stable options so server and browser render the same challenge. */
+export function glossaryQuizFor(entry: GlossaryEntry, topicEntries: GlossaryEntry[]): GlossaryQuiz {
+  const correctAnswer = learningNoteFor(entry).remember;
+  const entryIndex = Math.max(0, topicEntries.findIndex((candidate) => candidate.id === entry.id));
+  const distractors: string[] = [];
+
+  for (let offset = 1; offset < topicEntries.length && distractors.length < 2; offset += 1) {
+    const candidate = topicEntries[(entryIndex + offset) % topicEntries.length];
+    if (!candidate) continue;
+    const answer = learningNoteFor(candidate).remember;
+    if (answer !== correctAnswer && !distractors.includes(answer)) distractors.push(answer);
+  }
+
+  const answers = [correctAnswer, ...distractors];
+  const rotation = entryIndex % answers.length;
+  const options = [...answers.slice(rotation), ...answers.slice(0, rotation)];
+
+  return {
+    prompt: `Qual ideia combina com “${entry.term}”?`,
+    options,
+    correctAnswer,
   };
 }

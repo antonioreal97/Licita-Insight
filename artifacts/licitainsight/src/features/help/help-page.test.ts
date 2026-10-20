@@ -63,7 +63,16 @@ test('/ajuda renders the learning paths, process guides, sources and every gloss
   assert.match(html, /<h2[^>]*>Glossário para aprender, não decorar<\/h2>/);
   assert.match(html, /data-testid="glossary-learning-studio"/);
   assert.match(html, /Mostrar explicação/);
-  assert.match(html, /Cartão 1 de 6/);
+  assert.match(html, /Desafio 1 de 6/);
+  assert.match(html, /Sua jornada de aprendizagem/);
+  assert.match(html, /data-testid="glossary-score">0/);
+  assert.match(html, /Missão do assunto/);
+  assert.match(html, /data-testid="glossary-mascot"/);
+  assert.match(html, /Pardal, seu guia/);
+  assert.match(html, /Sua missão: descubra o que/);
+  assert.match(html, /pardal-simbolo-petroleo\.svg/);
+  assert.match(html, /pardal-simbolo-lima\.svg/);
+  assert.match(html, /Qual ideia combina com/);
   assert.match(html, /Consulte todos os termos/);
   assert.match(html, /Na prática/);
   assert.match(html, /Guarde esta ideia/);
