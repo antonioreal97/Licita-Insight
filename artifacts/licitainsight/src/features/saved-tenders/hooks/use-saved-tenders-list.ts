@@ -21,12 +21,23 @@ export function useSavedTendersList({ page, pageSize, monitored, stage, sort, up
   });
 }
 
-/** Every saved tender, page by page (the account holds ≤ 500, so ≤ 5 requests). For the CSV export. */
-export async function fetchAllSavedTenders(): Promise<SavedTender[]> {
+/** Every saved tender, page by page (the account holds ≤ 500, so ≤ 5 requests). For the CSV export, the board and the calendar. */
+export async function fetchAllSavedTenders(signal?: AbortSignal): Promise<SavedTender[]> {
   const all: SavedTender[] = [];
   for (let page = 1; ; page++) {
-    const response = await accountService.listSavedTenders({ page, pageSize: MAX_SAVED_TENDERS_PAGE_SIZE });
+    const response = await accountService.listSavedTenders({ page, pageSize: MAX_SAVED_TENDERS_PAGE_SIZE }, signal);
     all.push(...response.data);
     if (page >= response.pagination.totalPages) return all;
   }
+}
+
+/** All saved tenders in one list (board and calendar group them on the client). Same gate as the paginated list. */
+export function useAllSavedTenders() {
+  const { status } = useSession();
+  const billing = useBilling();
+  return useQuery({
+    queryKey: queryKeys.me.savedTenders.everything,
+    queryFn: ({ signal }) => fetchAllSavedTenders(signal),
+    enabled: status === 'authenticated' && billing.data?.entitled === true,
+  });
 }
