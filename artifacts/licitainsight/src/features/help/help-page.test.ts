@@ -60,7 +60,13 @@ test('/ajuda renders the learning paths, process guides, sources and every gloss
   for (const source of ['PNCP e Compras.gov.br', 'Mapas Culturais', 'FINEP, CNPq e CAPES', 'Transferegov.br', 'Banco Mundial e BID', 'União Europeia (Funding &amp; Tenders)']) {
     assert.ok(html.includes(source), `missing source ${source}`);
   }
-  assert.match(html, /<h2[^>]*>Glossário<\/h2>/);
+  assert.match(html, /<h2[^>]*>Glossário para aprender, não decorar<\/h2>/);
+  assert.match(html, /data-testid="glossary-learning-studio"/);
+  assert.match(html, /Mostrar explicação/);
+  assert.match(html, /Cartão 1 de 6/);
+  assert.match(html, /Consulte todos os termos/);
+  assert.match(html, /Na prática/);
+  assert.match(html, /Guarde esta ideia/);
   assert.match(html, /não é orientação jurídica/i);
   const steps = html.match(/<ol[^>]*>[\s\S]*?<\/ol>/)![0];
   assert.equal((steps.match(/<li/g) ?? []).length, 6);
