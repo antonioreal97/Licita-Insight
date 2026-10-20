@@ -8,6 +8,7 @@ import {
   stitchIndexedPage,
 } from "./qualification-checklist-policy";
 import { classifyQualificationCandidate } from "./jev-client";
+import { jevRequestBody } from "./jev-test-support";
 
 test("segments real extracted-page shapes on numbered and lettered edital items", () => {
   const page = [
@@ -187,7 +188,7 @@ test("Jev rejects habilitação outside document-requirement context in the real
   let calls = 0;
   const mockedFetch: typeof fetch = async (_input, init) => {
     calls += 1;
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       state: Record<string, string>;
       questions: Record<string, { type: string; criteria?: Record<string, string> }>;
     };
@@ -232,7 +233,7 @@ test("low-confidence fiscal plus CNDT runs the second Noul with the real respons
   process.env.JEV_API_KEY = "test-key";
   const bodies: unknown[] = [];
   const mockedFetch: typeof fetch = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       questions: Record<string, { type: string }>;
     };
     bodies.push(body);
@@ -285,7 +286,7 @@ test("low-confidence fiscal plus CNDT runs the second Noul with the real respons
 test("Jev receives parent context as a separate official state value", async () => {
   process.env.JEV_API_KEY = "test-key";
   const mockedFetch: typeof fetch = async (_input, init) => {
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       state: Record<string, string>;
     };
     assert.deepEqual(body.state, {
