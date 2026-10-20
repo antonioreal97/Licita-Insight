@@ -387,6 +387,25 @@ export type GlossaryQuiz = {
   correctAnswer: string;
 };
 
+export const GLOSSARY_ROUND_GOAL = 5;
+
+export type GlossaryReward = {
+  points: number;
+  nextStreak: number;
+  streakBonus: number;
+};
+
+/** Rewards first-try answers with a small, capped sequence bonus. */
+export function glossaryReward(currentStreak: number, correctOnFirstTry: boolean): GlossaryReward {
+  const nextStreak = correctOnFirstTry ? currentStreak + 1 : 0;
+  const streakBonus = correctOnFirstTry ? Math.min(Math.max(nextStreak - 1, 0) * 2, 10) : 0;
+  return {
+    points: 10 + streakBonus,
+    nextStreak,
+    streakBonus,
+  };
+}
+
 /** Builds stable options so server and browser render the same challenge. */
 export function glossaryQuizFor(entry: GlossaryEntry, topicEntries: GlossaryEntry[]): GlossaryQuiz {
   const correctAnswer = learningNoteFor(entry).remember;
