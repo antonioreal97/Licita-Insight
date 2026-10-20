@@ -254,7 +254,7 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
         {announcement}
       </p>
       {/* Below sm the control scrolls on its own; the page never scrolls sideways. */}
-      <div className="-mx-1 mb-3 overflow-x-auto px-1 pb-1">
+      <div className="relative -mx-1 mb-3 overflow-x-auto px-1 pb-1">
         <nav aria-label="Ir para a etapa no quadro" className="inline-flex gap-1 rounded-lg bg-muted p-1">
           {columns.map((column) => (
             <button
@@ -273,12 +273,13 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
           ))}
         </nav>
       </div>
-      {/* The board scrolls sideways inside its own region (keyboard-focusable), never the page. */}
+      {/* The board scrolls sideways inside its own region (keyboard-focusable), never the page. `relative` keeps the
+          absolutely positioned `sr-only` texts of off-screen columns inside the clip, or they widen the page. */}
       <div
         role="region"
         aria-label="Quadro por etapa"
         tabIndex={0}
-        className="-mx-1 snap-x snap-mandatory overflow-x-auto px-1 pb-3 focus-visible:focus-ring md:snap-none"
+        className="relative -mx-1 snap-x snap-mandatory overflow-x-auto px-1 pb-3 focus-visible:focus-ring md:snap-none"
         data-testid="board-scroll"
       >
         <div className="flex w-max items-start gap-3">
