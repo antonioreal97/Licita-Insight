@@ -25,6 +25,7 @@ export const ReadinessCheckResponse = zod.object({
 
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search tenders
  */
 export const searchTendersQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');
@@ -400,6 +401,7 @@ export const GetTenderByIdResponse = zod.object({
 
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search PNCP contracts in collected publication and update windows
  */
 export const searchTransparencyContractsQueryQMax = 160;
@@ -1514,6 +1516,12 @@ export const LogoutResponse = zod.void()
 
 
 /**
+ * @summary Revoke every session of the signed-in user, including the current one
+ */
+export const LogoutAllResponse = zod.void()
+
+
+/**
  * @summary Create a development-only session
  */
 export const devLoginBodyNameMax = 120;
@@ -2085,6 +2093,7 @@ export const ApplyAsaasBillingWebhookResponse = zod.object({
 
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search culture, funding and innovation opportunities
  */
 export const searchOpportunitiesQueryStateItemRegExp = new RegExp('^[A-Za-z]{2}$');

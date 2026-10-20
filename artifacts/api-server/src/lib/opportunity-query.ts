@@ -14,6 +14,7 @@ import {
   type InternationalRegion,
 } from "../ingest/international-countries";
 import { InvalidParameterError } from "./api-error";
+import { assertWithinResultWindow } from "./result-window";
 import { parseDateParameter } from "./sao-paulo-date";
 import type {
   BrazilEligibility,
@@ -254,6 +255,7 @@ export const parseOpportunityQuery = (raw: unknown): OpportunityCriteria => {
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
     invalid("pageSize", "out_of_range", "pageSize must be between 1 and 100");
   }
+  assertWithinResultWindow(page, pageSize);
 
   const facets = parseFlag("facets", query.facets, true);
   const includeIndividual = parseFlag(

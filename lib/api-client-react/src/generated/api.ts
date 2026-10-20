@@ -322,6 +322,7 @@ export const getSearchTendersUrl = (params?: SearchTendersParams,) => {
 }
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search tenders
  */
 export const searchTenders = async (params?: SearchTendersParams, options?: Parameters<typeof customFetch>[1]): Promise<SearchResponse> => {
@@ -561,6 +562,7 @@ export const getSearchTransparencyContractsUrl = (params?: SearchTransparencyCon
 }
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search PNCP contracts in collected publication and update windows
  */
 export const searchTransparencyContracts = async (params?: SearchTransparencyContractsParams, options?: Parameters<typeof customFetch>[1]): Promise<TransparencyContractsResponse> => {
@@ -2496,6 +2498,80 @@ export const useLogout = <TError = ErrorType<ForbiddenResponse>,
       return useMutation(getLogoutMutationOptions(options));
     }
 
+export const getLogoutAllUrl = () => {
+
+
+
+
+  return `/api/v1/auth/logout-all`
+}
+
+/**
+ * @summary Revoke every session of the signed-in user, including the current one
+ */
+export const logoutAll = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutAllUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutAllMutationKey = () => ['logoutAll'] as const;
+
+export const getLogoutAllMutationOptions = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutAllMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutAll>>, void> = () => {
+
+
+          return  logoutAll(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutAllMutationResult = NonNullable<Awaited<ReturnType<typeof logoutAll>>>
+
+    export type LogoutAllMutationError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>
+
+
+    /**
+ * @summary Revoke every session of the signed-in user, including the current one
+ */
+export const useLogoutAll = <TError = ErrorType<UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutAll>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutAll>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutAllMutationOptions(options));
+    }
+
 export const getDevLoginUrl = () => {
 
 
@@ -3656,6 +3732,7 @@ export const getSearchOpportunitiesUrl = (params?: SearchOpportunitiesParams,) =
 }
 
 /**
+ * Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
  * @summary Search culture, funding and innovation opportunities
  */
 export const searchOpportunities = async (params?: SearchOpportunitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<OpportunitySearchResponse> => {

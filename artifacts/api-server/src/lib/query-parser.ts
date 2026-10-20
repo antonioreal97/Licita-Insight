@@ -4,6 +4,7 @@ import {
 } from "@workspace/api-zod";
 import type { SearchCriteria } from "../domain/search";
 import { InvalidParameterError } from "./api-error";
+import { assertWithinResultWindow } from "./result-window";
 import { parseDateParameter } from "./sao-paulo-date";
 
 const arrayFields = [
@@ -95,6 +96,7 @@ export const parseSearchQuery = (raw: unknown): SearchCriteria => {
     result.data.deadlineFrom,
     result.data.deadlineTo,
   );
+  assertWithinResultWindow(result.data.page, result.data.pageSize);
 
   const query = result.data.q?.trim() || null;
   return {

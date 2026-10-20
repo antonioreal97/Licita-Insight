@@ -63,6 +63,7 @@ paths:
       operationId: searchTenders
       tags: [search]
       summary: Search tenders
+      description: Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
       parameters:
         - $ref: "#/components/parameters/Query"
         - $ref: "#/components/parameters/SearchMode"
@@ -159,6 +160,7 @@ paths:
       operationId: searchTransparencyContracts
       tags: [transparency]
       summary: Search PNCP contracts in collected publication and update windows
+      description: Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
       parameters:
         - { name: q, in: query, schema: { type: string, maxLength: 160 } }
         - {
@@ -713,6 +715,19 @@ paths:
           description: Session revoked or already absent
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/auth/logout-all:
+    post:
+      operationId: logoutAll
+      tags: [account]
+      summary: Revoke every session of the signed-in user, including the current one
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204":
+          description: All sessions revoked
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/auth/dev-login:
     post:
       operationId: devLogin
@@ -992,6 +1007,7 @@ paths:
       operationId: searchOpportunities
       tags: [opportunities]
       summary: Search culture, funding and innovation opportunities
+      description: Serves only the first 1000 results (page × pageSize ≤ 1000); deeper pages return 400 with issue `beyond_result_window`, and `pagination.totalPages` is capped to the last reachable page while `total` stays the real count.
       security: [{ sessionCookie: [] }]
       parameters:
         - name: q

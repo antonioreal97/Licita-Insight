@@ -1,4 +1,5 @@
 import { InvalidParameterError } from "./api-error";
+import { assertWithinResultWindow } from "./result-window";
 import { parseDateParameter } from "./sao-paulo-date";
 
 const SORTS = ["published_desc", "published_asc", "value_desc", "value_asc"] as const;
@@ -64,6 +65,7 @@ export function parseTransparencyQuery(raw: unknown): TransparencyCriteria {
   if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50) {
     invalid("pageSize", "out_of_range", "pageSize must be between 1 and 50");
   }
+  assertWithinResultWindow(page, pageSize);
   const sort = scalar(query.sort, "sort") ?? "published_desc";
   if (!SORTS.includes(sort as TransparencyCriteria["sort"])) {
     invalid("sort", "invalid_enum", "sort is not supported");
