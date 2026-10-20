@@ -50,15 +50,62 @@ test("normaliza termos de busca e remove palavras genéricas", () => {
   );
 });
 
-test("casa palavra ou expressão inteira e tolera plural simples", () => {
-  assert.equal(matchesRecommendationTerm("aquisição de drones", "drone"), true);
-  assert.equal(matchesRecommendationTerm("aquisição de drone", "drones"), true);
+test("casa palavras inteiras nas flexões plurais comuns do português", () => {
+  const pairs = [
+    ["trator", "tratores"],
+    ["computador", "computadores"],
+    ["motor", "motores"],
+    ["luz", "luzes"],
+    ["gas", "gases"],
+    ["material", "materiais"],
+    ["locacao", "locacoes"],
+    ["impressao", "impressoes"],
+    ["pao", "paes"],
+    ["mao", "maos"],
+    ["item", "itens"],
+    ["papel", "papeis"],
+    ["lei", "leis"],
+    ["farol", "farois"],
+    ["azul", "azuis"],
+    ["notebook", "notebooks"],
+    ["drone", "drones"],
+    ["pneu", "pneus"],
+  ] as const;
+  for (const [singular, plural] of pairs) {
+    assert.equal(
+      matchesRecommendationTerm(`aquisição de ${plural}`, singular),
+      true,
+      `${singular} deve casar com ${plural}`,
+    );
+    assert.equal(
+      matchesRecommendationTerm(`aquisição de ${singular}`, plural),
+      true,
+      `${plural} deve casar com ${singular}`,
+    );
+  }
+});
+
+test("não casa pedaços de outras palavras", () => {
+  assert.equal(matchesRecommendationTerm("Cartões de parte", "arte"), false);
+  assert.equal(matchesRecommendationTerm("Manobra", "obra"), false);
+  assert.equal(matchesRecommendationTerm("Messias", "mes"), false);
+});
+
+test("casa expressões flexionadas somente quando contíguas", () => {
   assert.equal(
-    matchesRecommendationTerm("cartões para participantes", "arte"),
-    false,
+    matchesRecommendationTerm(
+      "serviço de locações de veículos",
+      "locação de veículos",
+    ),
+    true,
   );
-  assert.equal(matchesRecommendationTerm("parte do serviço", "arte"), false);
-  assert.equal(matchesRecommendationTerm("manobra de veículos", "obra"), false);
+  assert.equal(
+    matchesRecommendationTerm(
+      "serviço de locação de veículo",
+      "locações de veículos",
+    ),
+    true,
+  );
   assert.equal(
     matchesRecommendationTerm(
       "serviço de transmissão ao vivo do evento",
@@ -639,6 +686,20 @@ test("Interessa extrai por campo e preserva o termo concreto comum", () => {
   assert.ok(first.filter((term) => second.includes(term)).includes("drone"));
   assert.ok(!first.some((term) => term.includes("gabinete")));
   assert.ok(!second.some((term) => term.includes("secretaria")));
+});
+
+test("Interessa compartilha formas canônicas entre singular e plural", () => {
+  const singular = extractInterestExpressions({
+    title: "Locação veículos gás para apoio operacional",
+  });
+  const plural = extractInterestExpressions({
+    title: "Locações veículos gases para apoios operacionais",
+  });
+  const common = singular.filter((term) => plural.includes(term));
+  assert.ok(common.includes("locacao"));
+  assert.ok(common.includes("veiculo"));
+  assert.ok(common.includes("gas"));
+  assert.ok(common.includes("locacao veiculo"));
 });
 
 test("após 2 Interessa parecidos, expressões aprendidas qualificam em DF e não fora (strict)", () => {

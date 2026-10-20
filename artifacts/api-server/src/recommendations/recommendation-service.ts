@@ -74,15 +74,66 @@ const HISTORY_TERM_SOURCES = new Set([
   "saved_search",
 ]);
 
-const canonicalSimplePlural = (word: string): string =>
-  /[aeiou]s$/u.test(word) &&
-  !/(?:ais|eis|ois|uis|aes|oes)$/u.test(word) &&
-  word.length >= 4
-    ? word.slice(0, -1)
-    : word;
+/**
+ * Candidate singular forms for a normalized Portuguese word.
+ *
+ * Some endings are ambiguous (`papeis` -> `papel`, `leis` -> `lei`), so matching
+ * must compare sets rather than force every word through one lossy canonical form.
+ */
+const singularWordCandidates = (word: string): string[] => {
+  const candidates = new Set<string>();
+  const add = (candidate: string) => {
+    if (candidate.length >= 2) candidates.add(candidate);
+  };
+  let hasSpecificEnding = false;
 
-const canonicalSimplePluralExpression = (value: string): string =>
-  value.split(" ").map(canonicalSimplePlural).join(" ");
+  if (/(?:oes|aes|aos)$/u.test(word)) {
+    add(`${word.slice(0, -3)}ao`);
+    hasSpecificEnding = true;
+  } else if (word.endsWith("ais")) {
+    add(`${word.slice(0, -3)}al`);
+    hasSpecificEnding = true;
+  } else if (word.endsWith("eis")) {
+    add(`${word.slice(0, -3)}el`);
+    add(word.slice(0, -1));
+    hasSpecificEnding = true;
+  } else if (word.endsWith("ois")) {
+    add(`${word.slice(0, -3)}ol`);
+    hasSpecificEnding = true;
+  } else if (word.endsWith("uis")) {
+    add(`${word.slice(0, -3)}ul`);
+    hasSpecificEnding = true;
+  } else if (word.endsWith("ns")) {
+    add(`${word.slice(0, -2)}m`);
+    hasSpecificEnding = true;
+  } else if (/[rzs]es$/u.test(word)) {
+    add(word.slice(0, -2));
+    hasSpecificEnding = true;
+  }
+
+  if (!hasSpecificEnding && word.endsWith("s") && word.length >= 4) {
+    add(word.slice(0, -1));
+  }
+  candidates.add(word);
+  return [...candidates];
+};
+
+const singularExpressionCandidates = (value: string): string[] => {
+  let expressions = [""];
+  for (const word of value.split(" ").filter(Boolean)) {
+    const wordCandidates = singularWordCandidates(word);
+    const canonicalCandidates = wordCandidates.filter(
+      (candidate) => candidate !== word,
+    );
+    expressions = expressions.flatMap((expression) =>
+      (canonicalCandidates.length ? canonicalCandidates : [word]).map(
+        (candidate) =>
+          expression.length ? `${expression} ${candidate}` : candidate,
+      ),
+    );
+  }
+  return [...new Set(expressions)];
+};
 
 /** History/profile free-text tokens: drop stopwords and the shared #142 generic vocabulary. */
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
@@ -129,12 +180,11 @@ export function extractInterestExpressions(
             left.fieldIndex - right.fieldIndex ||
             left.normalizedTerm.localeCompare(right.normalizedTerm),
         )
-        .map((term) => {
-          const normalized = canonicalSimplePluralExpression(
-            term.normalizedTerm,
-          );
-          return [normalized, normalized] as const;
-        }),
+        .flatMap((term) =>
+          singularExpressionCandidates(term.normalizedTerm).map(
+            (normalized) => [normalized, normalized] as const,
+          ),
+        ),
     ).values(),
   ].slice(0, limit);
 }
@@ -164,10 +214,14 @@ const normalizedWords = (value: string): string[] =>
     .split(/\s+/)
     .filter(Boolean);
 
-const simplePluralMatch = (term: string, word: string): boolean =>
-  canonicalSimplePlural(term) === canonicalSimplePlural(word);
+const simplePluralMatch = (term: string, word: string): boolean => {
+  const wordCandidates = new Set(singularWordCandidates(word));
+  return singularWordCandidates(term).some((candidate) =>
+    wordCandidates.has(candidate),
+  );
+};
 
-/** Whole-word/whole-expression matching with the common simple Portuguese plural (`drone`/`drones`). */
+/** Whole-word/whole-expression matching with common Portuguese plural forms. */
 export function matchesRecommendationTerm(text: string, term: string): boolean {
   const haystack = normalizedWords(text);
   const needle = normalizedWords(term);
