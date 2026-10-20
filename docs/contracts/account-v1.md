@@ -15,9 +15,11 @@ forma pública consumida pelo frontend. Mesmas convenções de [`search-v1.md`](
 - O frontend chama a API pela **mesma origem**: o Vite (dev) faz proxy de `/api` → `http://localhost:3001`.
   `VITE_API_BASE_URL=/api`. Em produção, mesmo esquema (reverse proxy). Assim o cookie é first-party.
 - Sessão em cookie `licita_session`: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` fora de dev,
-  validade de 10 minutos sem atividade, renovada a cada requisição autenticada (no máximo uma escrita por minuto). Sessões guardadas no PostgreSQL (revogáveis).
-- **CSRF:** toda requisição que muda estado (`POST|PUT|PATCH|DELETE` sob `/api/v1/me`, `/auth/logout`
-  e `/auth/dev-login`)
+  validade de 10 minutos sem atividade, renovada a cada requisição autenticada (no máximo uma escrita por minuto), e
+  teto absoluto de 12 horas desde o login: depois disso a sessão é revogada mesmo com atividade. Sessões guardadas no
+  PostgreSQL (revogáveis).
+- **CSRF:** toda requisição que muda estado (`POST|PUT|PATCH|DELETE` sob `/api/v1/me`, `/auth/logout`,
+  `/auth/logout-all` e `/auth/dev-login`)
   exige o header `X-Requested-With: licita-insight` **e** `Origin` igual à origem pública configurada.
   Sem isso → 403 `FORBIDDEN`.
 - Rotas de busca/detalhe (`search-v1`) continuam **públicas**. Tudo sob `/api/v1/me/*` exige sessão.
@@ -71,6 +73,11 @@ type User = {
 ### `POST /api/v1/auth/logout`
 
 204. Revoga a sessão no banco e limpa o cookie. Idempotente.
+
+### `POST /api/v1/auth/logout-all`
+
+204. Exige sessão (401 sem ela) e CSRF. Revoga **todas** as sessões do usuário, inclusive a atual, e limpa o cookie.
+Na UI: "Sair de todos os dispositivos", em Configurações → Perfil e conta.
 
 ### (Somente desenvolvimento) `POST /api/v1/auth/dev-login` `{ email: string, name?: string }`
 
@@ -671,7 +678,7 @@ Push, compartilhamento de buscas, times/organizações e papéis.
 ## Decisões do backend
 
 - Os oito esclarecimentos do frontend foram aceitos sem contraproposta e estão cobertos pelo OpenAPI e pelos testes HTTP/integrados.
-- Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 10 minutos sem atividade, com renovação deslizante. O token não vai para o `localStorage`.
+- Sessões usam tokens aleatórios; somente o hash SHA-256 é persistido. A validade é de 10 minutos sem atividade, com renovação deslizante, e nunca passa de 12 horas desde o login. O token não vai para o `localStorage`.
 - Limites de salvos são serializados por usuário com advisory lock transacional, além das constraints de unicidade do PostgreSQL.
 - Alertas de edital são criados na mesma transação do upsert/revisão e deduplicados por usuário + mudança. Alertas de busca são avaliados por job próprio, desacoplado da coleta PNCP.
 - Notificações mantêm snapshots mínimos de edital/busca para permanecerem legíveis mesmo após mudanças posteriores; notificações lidas e conteúdo de entregas de e-mail têm retenção operacional padrão de 180 dias, conforme [`../compliance/retencao-dados-pessoais.md`](../compliance/retencao-dados-pessoais.md).

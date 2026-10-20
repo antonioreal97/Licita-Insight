@@ -100,6 +100,23 @@ export function useSignOut() {
   });
 }
 
+export function useSignOutEverywhere() {
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  return useMutation({
+    mutationFn: () => accountService.logoutAll(),
+    onSuccess: () => {
+      forgetSession(queryClient);
+      navigate('/');
+      toast({ title: 'Você saiu de todos os dispositivos', description: 'Entre de novo com o Google para continuar.' });
+    },
+    onError: (error) => {
+      console.error('[auth] Falha ao sair de todos os dispositivos.', error);
+      toast({ variant: 'destructive', title: 'Não foi possível sair dos dispositivos', description: 'Verifique a conexão e tente novamente.' });
+    },
+  });
+}
+
 /** Logs the open session out after 10 minutes without a click, key, or scroll. Other tabs share the clock. */
 export function useIdleSession(): void {
   const { status, user } = useSession();

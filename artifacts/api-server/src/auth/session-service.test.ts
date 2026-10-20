@@ -14,6 +14,23 @@ describe("session idle window", () => {
     assert.equal(renewed?.getTime(), now.getTime() + SESSION_IDLE_MS);
     assert.equal(SESSION_IDLE_MS, 10 * 60 * 1000);
   });
+
+  it("never slides past twelve hours from login", async () => {
+    const { renewedExpiry, SESSION_IDLE_MS, SESSION_MAX_AGE_MS } = await import("./session-service");
+    const createdAt = new Date("2026-09-23T06:00:00.000Z");
+    const early = new Date(createdAt.getTime() + 60 * 60 * 1000);
+    assert.equal(
+      renewedExpiry(new Date(early.getTime() - 60_000), early, createdAt)?.getTime(),
+      early.getTime() + SESSION_IDLE_MS,
+    );
+
+    const late = new Date(createdAt.getTime() + SESSION_MAX_AGE_MS - 3 * 60_000);
+    assert.equal(
+      renewedExpiry(new Date(late.getTime() - 60_000), late, createdAt)?.getTime(),
+      createdAt.getTime() + SESSION_MAX_AGE_MS,
+    );
+    assert.equal(SESSION_MAX_AGE_MS, 12 * 60 * 60 * 1000);
+  });
 });
 
 after(async () => {

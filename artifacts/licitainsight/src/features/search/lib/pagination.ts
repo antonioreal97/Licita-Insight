@@ -1,5 +1,12 @@
 export type PageItem = number | 'ellipsis-start' | 'ellipsis-end';
 
+/** Mirrors the API's MAX_RESULT_WINDOW: lists page through the first 1000 results only (`totalPages` comes capped). */
+export const RESULT_WINDOW = 1_000;
+
+/** On the last reachable page of a list cut by the window, there are more results than the pager offers. */
+export const reachedResultWindow = (page: number, totalPages: number, pageSize: number, total: number): boolean =>
+  page >= totalPages && totalPages * pageSize >= RESULT_WINDOW && total > totalPages * pageSize;
+
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, index) => from + index);
 
 /**

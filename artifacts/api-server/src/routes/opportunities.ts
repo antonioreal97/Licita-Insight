@@ -5,6 +5,7 @@ import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
 import { parseOpportunityQuery } from "../lib/opportunity-query";
 import { pgErrorCode } from "../lib/pg-error";
+import { withinResultWindow } from "../lib/result-window";
 import { publicHttpCache } from "../middlewares/request-protection";
 import { authContext } from "../auth/http";
 
@@ -48,7 +49,7 @@ router.get("/v1/opportunities", async (req, res, next) => {
     const criteria = parseOpportunityQuery(req.query);
     const { searchOpportunities } =
       await import("../repositories/postgres-opportunity-repository");
-    res.json(await searchOpportunities(criteria, authContext(res).user.id));
+    res.json(withinResultWindow(await searchOpportunities(criteria, authContext(res).user.id)));
   } catch (error) {
     next(exposeOpportunityError(error));
   }

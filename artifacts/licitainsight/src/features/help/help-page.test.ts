@@ -7,6 +7,7 @@ import { Router } from 'wouter';
 import { Popover } from '@/components/ui/popover';
 import { GlossaryDefinition, GlossaryTerm } from './components/glossary-term';
 import { GLOSSARY, GLOSSARY_DISCLAIMER_SHORT, glossaryById } from './glossary';
+import { PROCESS_TRACKS, SOURCE_GUIDES } from './guide-data';
 import HelpPage, { HELP_DESCRIPTION, HELP_TITLE } from './help-page';
 import { searchGlossary } from './lib/glossary-search';
 
@@ -48,16 +49,42 @@ test('popover content respects reduced motion', () => {
   assert.match(source, /motion-reduce:animate-none/);
 });
 
-test('/ajuda renders the title, disclaimer, first steps and every glossary entry with headings', () => {
+test('/ajuda renders the learning paths, process guides, sources and every glossary entry', () => {
   const html = at('/ajuda', h(HelpPage));
-  assert.match(html, /<h1[^>]*>Ajuda e glossário de licitações<\/h1>/);
-  assert.match(html, /<h2[^>]*>Primeiros passos para vender ao governo<\/h2>/);
-  assert.match(html, /<h2[^>]*>Glossário<\/h2>/);
+  assert.match(html, /<h1[^>]*>Ajuda para participar de oportunidades públicas<\/h1>/);
+  assert.match(html, /<h2[^>]*>Por onde você quer começar\?<\/h2>/);
+  assert.match(html, /<h2[^>]*>Como vender ao governo<\/h2>/);
+  assert.match(html, /role="tab"[^>]*>Pregão eletrônico<\/button>/);
+  assert.match(html, /Termos das fontes nacionais/);
+  assert.match(html, /Termos das fontes internacionais/);
+  for (const source of ['PNCP e Compras.gov.br', 'Mapas Culturais', 'FINEP, CNPq e CAPES', 'Transferegov.br', 'Banco Mundial e BID', 'União Europeia (Funding &amp; Tenders)']) {
+    assert.ok(html.includes(source), `missing source ${source}`);
+  }
+  assert.match(html, /<h2[^>]*>Glossário para aprender, não decorar<\/h2>/);
+  assert.match(html, /data-testid="glossary-learning-studio"/);
+  assert.match(html, /Quero uma pista/);
+  assert.match(html, /Desafio 1 de 6/);
+  assert.match(html, /Rodada rápida/);
+  assert.match(html, /Acerte 5 termos de qualquer assunto/);
+  assert.match(html, /data-testid="glossary-score">0/);
+  assert.match(html, /data-testid="glossary-streak">0/);
+  assert.match(html, /Missão do assunto/);
+  assert.match(html, /data-testid="glossary-mascot"/);
+  assert.match(html, /Pardal, seu guia/);
+  assert.match(html, /Sua missão: escolha a ideia/);
+  assert.match(html, /pardal-simbolo-petroleo\.svg/);
+  assert.match(html, /pardal-simbolo-lima\.svg/);
+  assert.match(html, /Qual ideia combina com/);
+  assert.match(html, /Consulte todos os termos/);
+  assert.match(html, /Na prática/);
+  assert.match(html, /Guarde esta ideia/);
   assert.match(html, /não é orientação jurídica/i);
   const steps = html.match(/<ol[^>]*>[\s\S]*?<\/ol>/)![0];
   assert.equal((steps.match(/<li/g) ?? []).length, 6);
   assert.equal((html.match(/data-testid="glossary-entry"/g) ?? []).length, GLOSSARY.length);
-  assert.match(html, /<label for="[^"]+" class="sr-only">Buscar no glossário<\/label>/);
+  assert.match(html, /<label for="[^"]+"[^>]*>Buscar termo<\/label>/);
+  assert.match(html, /<label for="[^"]+"[^>]*>Filtrar por assunto<\/label>/);
+  assert.match(html, /data-testid="select-glossary-category"/);
   assert.match(html, /role="search"/);
   assert.match(html, /id="termo-sicaf"/);
   // The steps mark glossary terms (popovers) once each.
@@ -71,8 +98,21 @@ test('glossary search ignores accents and case, ranks name matches first and ret
   assert.equal(searchGlossary('CERTIDAO NEGATIVA')[0].id, 'cnd');
   assert.equal(searchGlossary('impugnacao')[0].id, 'impugnacao');
   assert.ok(searchGlossary('simples nacional').some((entry) => entry.id === 'regularizacao-me-epp'), 'searches the text too');
+  assert.ok(searchGlossary('Mapas Culturais').some((entry) => entry.id === 'agente-cultural'));
+  assert.ok(searchGlossary('FINEP').some((entry) => entry.id === 'subvencao-economica'));
+  assert.equal(searchGlossary('EOI')[0].id, 'expressao-interesse');
+  assert.ok(searchGlossary('Funding Tenders').some((entry) => entry.id === 'call-topic'));
   assert.deepEqual(searchGlossary('xyzw'), []);
   assert.equal(searchGlossary('  ').length, GLOSSARY.length);
+});
+
+test('guides cover every opportunity source displayed by the product', () => {
+  const guideNames = SOURCE_GUIDES.map((guide) => guide.sources).join(' ');
+  for (const source of ['PNCP', 'Mapas Culturais', 'FINEP', 'CNPq', 'CAPES', 'Transferegov.br', 'Funarte', 'Ministério da Cultura', 'Lei Rouanet (Salic)', 'Banco Mundial', 'União Europeia (Funding & Tenders)', 'BID']) {
+    assert.ok(guideNames.includes(source), `missing ${source}`);
+  }
+  assert.deepEqual(PROCESS_TRACKS.map((track) => track.id), ['pregao', 'dispensa', 'fomento']);
+  assert.ok(PROCESS_TRACKS.every((track) => track.stages.length >= 5));
 });
 
 test('/ajuda is routed, titled and linked from the menu and the landing footer', () => {

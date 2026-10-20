@@ -780,6 +780,24 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const renewedCookie = await login("user-a@example.test");
     assert.equal((await request("/v1/auth/logout", { method: "POST", headers: csrf }, renewedCookie)).status, 204);
     assert.equal((await request("/v1/auth/session", {}, renewedCookie)).status, 401);
+
+    // Activity cannot keep a session past twelve hours from login.
+    const agedCookie = await login("user-a@example.test");
+    await db
+      .update(sessionsTable)
+      .set({ createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000 - 1000), lastSeenAt: new Date() })
+      .where(eq(sessionsTable.id, sha256(agedCookie.split("=", 2)[1]!)));
+    assert.equal((await request("/v1/auth/session", {}, agedCookie)).status, 401);
+
+    const laptop = await login("user-a@example.test");
+    const phone = await login("user-a@example.test");
+    const otherUser = await login("user-b@example.test");
+    assert.equal((await request("/v1/auth/logout-all", { method: "POST" }, laptop)).status, 403);
+    assert.equal((await request("/v1/auth/logout-all", { method: "POST", headers: csrf })).status, 401);
+    assert.equal((await request("/v1/auth/logout-all", { method: "POST", headers: csrf }, laptop)).status, 204);
+    assert.equal((await request("/v1/auth/session", {}, laptop)).status, 401);
+    assert.equal((await request("/v1/auth/session", {}, phone)).status, 401);
+    assert.equal((await request("/v1/auth/session", {}, otherUser)).status, 200);
   });
 
   const authenticatedCookie = await login("user-a@example.test");

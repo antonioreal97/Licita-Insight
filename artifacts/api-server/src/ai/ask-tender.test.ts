@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 import { aiDailyLimit, aiQuotaResetsAt, askSearchQueries, completedIndexStatus, mergeAskShortlists, selectEvidencePassages } from "./policy";
 import { scoreCompanyFit, scoreSizeRestriction, scoreTenderPassage } from "./jev-client";
 import { generateAskSummary } from "./openai-summary";
+import { jevRequestBody } from "./jev-test-support";
 
 const originalEnv = { ...process.env };
 afterEach(() => {
@@ -127,7 +128,7 @@ test("company fit uses one Jev request for score and optional exclusion", async 
   let calls = 0;
   const mockedFetch: typeof fetch = async (_input, init) => {
     calls += 1;
-    const body = JSON.parse(String(init?.body)) as {
+    const body = jevRequestBody(init) as {
       questions: Record<string, { type: string; instructions: string; criteria?: Record<string, string> }>;
     };
     assert.equal(body.questions.aderencia?.type, "score");
@@ -173,7 +174,7 @@ test("classifica exclusividade, cota, benefício e trecho misto com Choice", asy
   ] as const;
   for (const [passage, expected] of cases) {
     const mockedFetch: typeof fetch = async (_input, init) => {
-      const body = JSON.parse(String(init?.body)) as { questions: Record<string, { type: string; criteria: Record<string, string> }> };
+      const body = jevRequestBody(init) as { questions: Record<string, { type: string; criteria: Record<string, string> }> };
       assert.equal(body.questions.restricao?.type, "choice");
       assert.deepEqual(Object.keys(body.questions.restricao?.criteria ?? {}), ["exclusive", "quota", "none"]);
       return new Response(JSON.stringify({

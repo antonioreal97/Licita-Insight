@@ -38,6 +38,7 @@ export const httpAccountAdapter: AccountAdapter = {
   putCompanyDocument: (kind: CompanyDocumentKind, body: CompanyDocumentPut) => sendJson<CompanyDocument>('PUT', `/v1/me/company-documents/${enc(kind)}`, body),
   googleStartUrl: (returnTo) => `${apiBaseUrl}/v1/auth/google/start${toQueryString({ returnTo })}`,
   logout: () => sendJson<void>('POST', '/v1/auth/logout'),
+  logoutAll: () => sendJson<void>('POST', '/v1/auth/logout-all'),
 
   exportAccountData: () => getFile('/v1/me/export'),
   deleteAccount: () => sendJson<void>('DELETE', '/v1/me', { confirm: 'EXCLUIR' }),

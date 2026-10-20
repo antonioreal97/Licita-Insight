@@ -14,7 +14,7 @@ A área pública `/transparencia` consulta dados normalizados do PNCP armazenado
 
 Base `/api`:
 
-- `GET /v1/transparency/contracts`: filtros `q`, `state`, `publishedFrom`, `publishedTo`, `valueMin`, `valueMax`, `sort`, `page`, `pageSize`. `sort` aceita `published_desc` (padrão), `published_asc`, `value_desc` e `value_asc`. `pageSize` vai de 1 a 50. Resposta `{ data, pagination, meta }`.
+- `GET /v1/transparency/contracts`: filtros `q`, `state`, `publishedFrom`, `publishedTo`, `valueMin`, `valueMax`, `sort`, `page`, `pageSize`. `sort` aceita `published_desc` (padrão), `published_asc`, `value_desc` e `value_asc`. `pageSize` vai de 1 a 50, com `page × pageSize ≤ 1000` (janela de resultados de [search-v1](search-v1.md)). Resposta `{ data, pagination, meta }`.
 - `GET /v1/tenders/{id}/transparency/contracts`: contratos ligados à chave PNCP da compra. Resposta `{ data, meta }`.
 - `GET /v1/tenders/{id}/transparency/results`: resultados por item ligados à compra, inclusive cancelados. Resposta `{ data, meta }`.
 

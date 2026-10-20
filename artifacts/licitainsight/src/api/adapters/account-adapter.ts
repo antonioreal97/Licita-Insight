@@ -48,6 +48,8 @@ export interface AccountAdapter {
   /** Full-page URL that starts the Google OAuth flow; the API redirects back to `returnTo`. */
   googleStartUrl(returnTo: string): string;
   logout(): Promise<void>;
+  /** Revokes every session of the user, this one included. */
+  logoutAll(): Promise<void>;
 
   /** LGPD: JSON with the user's personal data (no 402 gate). */
   exportAccountData(): Promise<DownloadedFile>;

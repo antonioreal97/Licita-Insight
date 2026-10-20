@@ -1,12 +1,22 @@
 /**
  * Glossary for companies that never sold to the government. Plain definitions, what to do next and the official source.
  * Informative only: no legal or tax advice. When a rule varies by edital, say so and point to the official text.
- * Definitions are 2–3 sentences; avoid abbreviations ending in a period ("art.") so the sentence count stays honest.
+ * Definitions have two to three sentences; avoid abbreviations ending in a period ("art.") so the sentence count stays honest.
  */
 
 export type GlossarySource = { label: string; url: string };
 
-export type GlossaryCategory = 'basics' | 'modalities' | 'registration' | 'documents' | 'dispute' | 'contest' | 'contract' | 'small-business';
+export type GlossaryCategory =
+  | 'basics'
+  | 'modalities'
+  | 'registration'
+  | 'documents'
+  | 'dispute'
+  | 'contest'
+  | 'contract'
+  | 'small-business'
+  | 'national-opportunities'
+  | 'international-opportunities';
 
 export type GlossaryEntry = {
   id: string;
@@ -35,9 +45,22 @@ export const CATEGORY_LABELS: Record<GlossaryCategory, string> = {
   contest: 'Dúvidas, contestação e resultado',
   contract: 'Contrato e execução',
   'small-business': 'Pequenas empresas (ME/EPP)',
+  'national-opportunities': 'Cultura, ciência, inovação e parcerias',
+  'international-opportunities': 'Oportunidades internacionais',
 };
 
-export const CATEGORY_ORDER: GlossaryCategory[] = ['basics', 'modalities', 'registration', 'documents', 'dispute', 'contest', 'contract', 'small-business'];
+export const CATEGORY_ORDER: GlossaryCategory[] = [
+  'basics',
+  'modalities',
+  'registration',
+  'documents',
+  'dispute',
+  'contest',
+  'contract',
+  'small-business',
+  'national-opportunities',
+  'international-opportunities',
+];
 
 const LEI_14133 = 'https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm';
 const LC_123 = 'https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp123.htm';
@@ -62,6 +85,40 @@ const CRF: GlossarySource = { label: 'Consulta de regularidade do FGTS (Caixa)',
 const SIMPLES: GlossarySource = { label: 'Portal do Simples Nacional', url: 'https://www8.receita.fazenda.gov.br/simplesnacional/' };
 const ITI: GlossarySource = { label: 'Certificado digital (ITI)', url: 'https://www.gov.br/iti/pt-br/assuntos/certificado-digital' };
 const LEI_4320: GlossarySource = { label: 'Lei 4.320/1964 (empenho)', url: 'https://www.planalto.gov.br/ccivil_03/leis/l4320.htm' };
+const MAPAS_CULTURAIS: GlossarySource = {
+  label: 'Perguntas frequentes do Mapa da Cultura',
+  url: 'https://www.gov.br/cultura/pt-br/acesso-a-informacao/perguntas-frequentes/mapas-culturais/',
+};
+const TRANSFEREGOV: GlossarySource = {
+  label: 'Glossário do Transferegov.br',
+  url: 'https://www.gov.br/transferegov/pt-br/capacitacao/transferegov/glossario/transferencias-e-parcerias-da-uniao',
+};
+const CNPQ: GlossarySource = { label: 'Chamadas abertas do CNPq', url: 'https://www.gov.br/cnpq/pt-br/chamadas/abertas-para-submissao' };
+const FINEP: GlossarySource = { label: 'Chamadas públicas da FINEP', url: 'https://www.finep.gov.br/chamadas-publicas' };
+const ROUANET: GlossarySource = {
+  label: 'Lei Rouanet no Ministério da Cultura',
+  url: 'https://www.gov.br/cultura/pt-br/assuntos/acoes-programas-e-politicas/lei-rouanet-1',
+};
+const WORLD_BANK: GlossarySource = {
+  label: 'Regulamento de aquisições do Banco Mundial',
+  url: 'https://thedocs.worldbank.org/en/doc/415861533066041404-0290022016/render/ProcurementRegulations2016.pdf',
+};
+const WORLD_BANK_NOTICES: GlossarySource = {
+  label: 'Avisos de aquisições do Banco Mundial',
+  url: 'https://projects.worldbank.org/en/projects-operations/procurement',
+};
+const IDB: GlossarySource = {
+  label: 'Marco de aquisições do BID',
+  url: 'https://www.iadb.org/en/how-we-can-work-together/procurement/procurement-projects/procurement-framework',
+};
+const EU_GLOSSARY: GlossarySource = {
+  label: 'Glossário do Funding & Tenders',
+  url: 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/glossary',
+};
+const EU_MANUAL: GlossarySource = {
+  label: 'Manual do Funding & Tenders',
+  url: 'https://ec.europa.eu/info/funding-tenders/opportunities/docs/2021-2027/common/guidance/om_en.pdf',
+};
 
 export const GLOSSARY: GlossaryEntry[] = [
   // Conceitos básicos
@@ -105,6 +162,26 @@ export const GLOSSARY: GlossaryEntry[] = [
       'É o Portal Nacional de Contratações Públicas, site oficial onde órgãos de todo o país divulgam editais, atas e contratos, como determina a Lei 14.133. O Pardal Digital lê os dados publicados ali. O PNCP divulga as compras, mas a disputa acontece na plataforma indicada no edital.',
     whatToDo: 'Use o PNCP para conferir a publicação oficial e baixar os documentos. Para enviar proposta, entre na plataforma de disputa que o edital indicar.',
     sources: [PNCP_APP, PNCP_INFO, lei('art. 174')],
+  },
+  {
+    id: 'uasg',
+    term: 'UASG',
+    aliases: ['Unidade Administrativa de Serviços Gerais', 'unidade compradora', 'unidade de compra'],
+    category: 'basics',
+    definition:
+      'É a sigla de Unidade Administrativa de Serviços Gerais, usada no sistema federal para identificar a unidade que realiza a compra. Um mesmo órgão pode ter várias UASGs, com locais e responsáveis diferentes.',
+    whatToDo: 'Use o código e o nome da UASG para confirmar quem conduz o processo e para localizar a compra na plataforma indicada.',
+    sources: [COMPRAS, SICAF],
+  },
+  {
+    id: 'retificacao',
+    term: 'Retificação do edital',
+    aliases: ['retificação', 'edital retificado', 'alteração do edital', 'aviso de retificação', 'errata'],
+    category: 'basics',
+    definition:
+      'É uma correção ou mudança publicada depois do edital original. Se a alteração afetar a preparação das propostas, a administração deve divulgar novamente e respeitar os prazos previstos na lei.',
+    whatToDo: 'Antes de enviar qualquer documento, confira a página oficial, o histórico e os anexos mais recentes para não seguir uma versão antiga.',
+    sources: [lei('arts. 54 e 55')],
   },
 
   // Modalidades e formas de contratação
@@ -587,6 +664,241 @@ export const GLOSSARY: GlossaryEntry[] = [
       'A ME/EPP pode participar mesmo com alguma restrição na regularidade fiscal ou trabalhista, mas precisa apresentar os documentos exigidos. Se vencer, tem 5 dias úteis, prorrogáveis por igual período, para regularizar. Se não regularizar, perde o direito à contratação e pode sofrer sanção.',
     whatToDo: 'Não conte com o prazo extra como rotina: verifique as certidões antes de disputar e procure seu contador se houver dívida, inclusive no Simples Nacional.',
     sources: [lc123('arts. 42 e 43'), SIMPLES],
+  },
+
+  // Cultura, ciência, inovação e parcerias
+  {
+    id: 'chamada-publica',
+    term: 'Chamada pública',
+    aliases: ['chamada', 'edital de fomento', 'seleção pública', 'oportunidade de fomento', 'CNPq', 'CAPES', 'FINEP', 'MinC', 'Funarte'],
+    category: 'national-opportunities',
+    definition:
+      'É um convite para pessoas ou organizações apresentarem projetos, propostas ou manifestações de interesse conforme regras publicadas. Em fomento, a seleção costuma considerar elegibilidade e mérito; não há disputa de lances como em um pregão.',
+    whatToDo: 'Confira quem pode participar, o que recebe apoio, as despesas permitidas, os critérios de avaliação e o sistema de submissão.',
+    sources: [CNPQ, TRANSFEREGOV],
+    detect: false,
+  },
+  {
+    id: 'proponente',
+    term: 'Proponente',
+    aliases: ['propositor', 'responsável pela proposta', 'coordenador da proposta', 'coordenador do projeto'],
+    category: 'national-opportunities',
+    definition:
+      'É a pessoa ou organização que apresenta a proposta e responde por ela. Cada fonte define quem pode ser proponente: pessoa física, empresa, instituição científica, organização da sociedade civil ou órgão público.',
+    whatToDo: 'Confirme a elegibilidade antes de preparar o projeto e use o cadastro da pessoa ou organização que realmente assumirá as obrigações.',
+    sources: [MAPAS_CULTURAIS, ROUANET, CNPQ],
+    detect: false,
+  },
+  {
+    id: 'agente-cultural',
+    term: 'Agente cultural',
+    aliases: ['agente individual', 'agente coletivo', 'perfil de agente', 'Mapas Culturais', 'Mapa da Cultura'],
+    category: 'national-opportunities',
+    definition:
+      'É o perfil usado no Mapas Culturais para representar uma pessoa ou um coletivo. O agente reúne dados e portfólio e é selecionado no momento da inscrição em uma oportunidade.',
+    whatToDo: 'Crie ou atualize o agente adequado antes de se inscrever e confira se o edital aceita agente individual, coletivo ou ambos.',
+    sources: [MAPAS_CULTURAIS],
+    detect: false,
+  },
+  {
+    id: 'inscricao-mapas',
+    term: 'Inscrição e categoria (Mapas Culturais)',
+    aliases: ['número de inscrição', 'categoria de inscrição', 'oportunidade', 'formulário de inscrição', 'Mapas Culturais'],
+    category: 'national-opportunities',
+    definition:
+      'Inscrição é o formulário enviado para uma oportunidade no Mapas Culturais. A categoria separa linhas, perfis ou tipos de apoio dentro do mesmo edital e pode mudar campos, documentos e critérios.',
+    whatToDo: 'Escolha a categoria correta antes de preencher, revise os anexos e guarde o número ou comprovante gerado após o envio.',
+    sources: [MAPAS_CULTURAIS],
+    detect: false,
+  },
+  {
+    id: 'bolsa-auxilio',
+    term: 'Bolsa e auxílio',
+    aliases: ['bolsista', 'auxílio à pesquisa', 'auxílio financeiro', 'CNPq', 'CAPES'],
+    category: 'national-opportunities',
+    definition:
+      'Bolsa costuma apoiar a formação ou atuação de uma pessoa por determinado período. Auxílio financia despesas de um projeto, evento, pesquisa ou missão; modalidades, beneficiários e itens permitidos mudam em cada chamada.',
+    whatToDo: 'Confira quem recebe o recurso, quais despesas são aceitas e se a chamada exige currículo Lattes, vínculo institucional ou indicação de coordenador.',
+    sources: [CNPQ],
+    detect: false,
+  },
+  {
+    id: 'subvencao-economica',
+    term: 'Subvenção econômica',
+    aliases: ['subvenção', 'subvenção para inovação', 'recurso não reembolsável para empresa', 'FINEP'],
+    category: 'national-opportunities',
+    definition:
+      'É apoio público não reembolsável destinado a empresas para atividades de inovação previstas na chamada. Não é dinheiro livre: há plano aprovado, despesas permitidas, acompanhamento, prestação de contas e possível contrapartida.',
+    whatToDo: 'Valide o porte e o tipo de empresa elegível, a tecnologia apoiada, a contrapartida mínima e os gastos financiáveis.',
+    sources: [FINEP],
+    detect: false,
+  },
+  {
+    id: 'recursos-reembolsaveis',
+    term: 'Recursos reembolsáveis e não reembolsáveis',
+    aliases: ['financiamento reembolsável', 'financiamento não reembolsável', 'crédito', 'recursos não reembolsáveis', 'FINEP'],
+    category: 'national-opportunities',
+    definition:
+      'Reembolsável é financiamento que deve ser pago nas condições contratadas. Não reembolsável não exige devolução normal do valor, mas depende do cumprimento do projeto, das despesas autorizadas e da prestação de contas.',
+    whatToDo: 'Não compare apenas o valor anunciado. Confira juros, garantias e prazo no crédito, ou contrapartida, itens financiáveis e obrigações no apoio não reembolsável.',
+    sources: [FINEP],
+    detect: false,
+  },
+  {
+    id: 'contrapartida',
+    term: 'Contrapartida',
+    aliases: ['contrapartida financeira', 'contrapartida econômica', 'aporte próprio'],
+    category: 'national-opportunities',
+    definition:
+      'É a contribuição que o beneficiário precisa colocar no projeto além do recurso recebido. Conforme a chamada, pode ser dinheiro ou bens e serviços economicamente mensuráveis.',
+    whatToDo: 'Calcule a contrapartida antes de se inscrever e confirme percentual, forma aceita, período de gasto e documentos para comprová-la.',
+    sources: [TRANSFEREGOV, FINEP],
+    detect: false,
+  },
+  {
+    id: 'plano-trabalho',
+    term: 'Plano de trabalho',
+    aliases: ['plano de execução', 'metas', 'etapas', 'cronograma físico-financeiro'],
+    category: 'national-opportunities',
+    definition:
+      'É o documento que organiza o que será feito, as metas, etapas, prazos, orçamento e resultados esperados. Depois da aprovação, ele orienta a execução e a prestação de contas.',
+    whatToDo: 'Faça atividades, prazos e custos conversarem entre si. Não prometa uma entrega que o orçamento ou a equipe não conseguem sustentar.',
+    sources: [TRANSFEREGOV],
+    detect: false,
+  },
+  {
+    id: 'termo-fomento-colaboracao',
+    term: 'Termo de fomento e termo de colaboração',
+    aliases: ['termo de fomento', 'termo de colaboração', 'MROSC', 'organização da sociedade civil', 'OSC', 'Transferegov'],
+    category: 'national-opportunities',
+    definition:
+      'São instrumentos de parceria com organizações da sociedade civil. No termo de fomento, a iniciativa da proposta é da organização; no termo de colaboração, a política ou proposta parte da administração pública.',
+    whatToDo: 'Confirme se sua organização é elegível e leia as regras do chamamento sobre plano de trabalho, seleção, execução e prestação de contas.',
+    sources: [TRANSFEREGOV],
+    detect: false,
+  },
+  {
+    id: 'concedente-convenente',
+    term: 'Concedente e convenente',
+    aliases: ['concedente', 'convenente', 'órgão concedente', 'Transferegov'],
+    category: 'national-opportunities',
+    definition:
+      'Concedente é o órgão ou entidade federal responsável por transferir os recursos. Convenente é o ente ou organização que celebra o instrumento e assume a execução do programa, projeto, atividade, obra ou serviço.',
+    whatToDo: 'Confirme em qual papel sua organização aparece e quais responsabilidades de cadastro, execução e prestação de contas cabem a ela.',
+    sources: [TRANSFEREGOV],
+    detect: false,
+  },
+  {
+    id: 'captacao-rouanet',
+    term: 'Captação na Lei Rouanet',
+    aliases: ['captação de recursos', 'Salic', 'Pronac', 'projeto incentivado', 'mecenato', 'incentivo fiscal'],
+    category: 'national-opportunities',
+    definition:
+      'Depois da aprovação técnica, o proponente autorizado busca patrocinadores ou doadores para financiar o projeto por incentivo fiscal. Aprovação não é repasse automático e o valor precisa ser captado nas condições do mecanismo.',
+    whatToDo: 'Cadastre e acompanhe a proposta no Salic, confira a autorização para captar e planeje a abordagem a incentivadores antes da execução.',
+    sources: [ROUANET],
+    detect: false,
+  },
+
+  // Oportunidades internacionais
+  {
+    id: 'expressao-interesse',
+    term: 'EOI ou REOI (expressão de interesse)',
+    aliases: ['EOI', 'REOI', 'expression of interest', 'request for expressions of interest', 'manifestação de interesse', 'Banco Mundial', 'BID'],
+    category: 'international-opportunities',
+    definition:
+      'É uma etapa usada principalmente para selecionar consultores ou empresas que demonstram experiência e capacidade. Em geral, não é a proposta técnica e comercial final; serve para formar uma lista de candidatos qualificados.',
+    whatToDo: 'Responda exatamente às qualificações pedidas, com experiências relevantes e comprováveis. Confira se o aviso aceita empresa, consultor individual ou associação.',
+    sources: [WORLD_BANK, IDB],
+    detect: false,
+  },
+  {
+    id: 'ifb-rfb-rfp-rfq',
+    term: 'IFB, RFB, RFP e RFQ',
+    aliases: ['invitation for bids', 'request for bids', 'request for proposals', 'request for quotations', 'convite para licitar', 'pedido de propostas', 'pedido de cotação'],
+    category: 'international-opportunities',
+    definition:
+      'São siglas de documentos de disputa internacional. IFB ou RFB convidam a enviar oferta; RFP pede proposta, muitas vezes técnica e financeira; RFQ solicita cotações em processos mais simples.',
+    whatToDo: 'Identifique qual documento foi publicado e siga suas instruções de idioma, moeda, garantia, formato e canal de entrega.',
+    sources: [WORLD_BANK, WORLD_BANK_NOTICES, IDB],
+    detect: false,
+  },
+  {
+    id: 'lista-curta',
+    term: 'Shortlist (lista curta)',
+    aliases: ['short list', 'lista curta', 'pré-seleção', 'preselection'],
+    category: 'international-opportunities',
+    definition:
+      'É a lista de consultores ou empresas pré-selecionados depois da análise das expressões de interesse. Apenas os integrantes da lista recebem o convite para apresentar a proposta na etapa seguinte, quando o procedimento prevê essa seleção.',
+    whatToDo: 'Trate a expressão de interesse como uma etapa própria. Ser incluído na shortlist habilita a continuar, mas ainda não significa vencer o contrato.',
+    sources: [WORLD_BANK, IDB],
+    detect: false,
+  },
+  {
+    id: 'mutuario-agencia-executora',
+    term: 'Borrower e executing agency',
+    aliases: ['borrower', 'mutuário', 'executing agency', 'agência executora', 'entidade executora', 'implementing agency'],
+    category: 'international-opportunities',
+    definition:
+      'Borrower é o país ou entidade que recebe o financiamento. Executing agency é a instituição que executa o projeto e normalmente conduz a compra, publica contatos e recebe manifestações, propostas ou dúvidas.',
+    whatToDo: 'Use os contatos e o canal indicados no aviso da entidade executora. O banco financiador nem sempre recebe a sua documentação.',
+    sources: [WORLD_BANK_NOTICES, IDB],
+    detect: false,
+  },
+  {
+    id: 'contract-award',
+    term: 'Contract award',
+    aliases: ['contract award notice', 'notice of contract award', 'aviso de adjudicação', 'contrato adjudicado'],
+    category: 'international-opportunities',
+    definition:
+      'É o aviso de que um contrato internacional já foi atribuído a um fornecedor ou consultor. Ele informa o resultado de uma seleção anterior e, por isso, não é uma oportunidade aberta para enviar proposta.',
+    whatToDo: 'Use o aviso para conhecer compradores, vencedores e preços praticados, e procure os novos procurement notices do mesmo projeto.',
+    sources: [WORLD_BANK_NOTICES, IDB],
+    detect: false,
+  },
+  {
+    id: 'call-topic',
+    term: 'Call e topic (União Europeia)',
+    aliases: ['call for proposals', 'topic', 'tópico', 'chamada europeia', 'Funding & Tenders', 'União Europeia'],
+    category: 'international-opportunities',
+    definition:
+      'Call é a chamada ampla de financiamento. Topic é o recorte específico dentro dela, com objetivos, orçamento, condições, documentos e prazo próprios para a proposta.',
+    whatToDo: 'Leia a página do topic e seus documentos. É ali que ficam as condições efetivas, inclusive países elegíveis, composição do consórcio e taxa de financiamento.',
+    sources: [EU_GLOSSARY, EU_MANUAL],
+    detect: false,
+  },
+  {
+    id: 'applicant-beneficiary',
+    term: 'Applicant e beneficiary',
+    aliases: ['applicant', 'candidato', 'beneficiary', 'beneficiário', 'participant', 'coordinator', 'partner', 'coordenador', 'parceiro'],
+    category: 'international-opportunities',
+    definition:
+      'Applicant é a organização que prepara ou envia a proposta. Depois da aprovação e da assinatura do acordo, a organização que recebe o apoio e assume obrigações passa a ser beneficiary; o coordinator representa o consórcio perante a União Europeia.',
+    whatToDo: 'Defina cedo quem será o coordenador e quais organizações serão parceiras. Cada papel traz tarefas e documentos diferentes.',
+    sources: [EU_GLOSSARY, EU_MANUAL],
+    detect: false,
+  },
+  {
+    id: 'consorcio-pic',
+    term: 'Consortium e PIC',
+    aliases: ['consortium', 'consórcio europeu', 'PIC', 'participant identification code', 'Participant Register'],
+    category: 'international-opportunities',
+    definition:
+      'Consortium é o grupo de organizações que apresenta e executa a proposta em conjunto. PIC é o código de nove dígitos obtido ao registrar uma organização no Participant Register da Comissão Europeia.',
+    whatToDo: 'Confira quantos parceiros e países o topic exige e registre cada organização com antecedência para obter ou validar o PIC.',
+    sources: [EU_GLOSSARY, EU_MANUAL],
+    detect: false,
+  },
+  {
+    id: 'grant-agreement',
+    term: 'Grant agreement',
+    aliases: ['acordo de subvenção', 'contrato de subvenção', 'GA', 'grant preparation'],
+    category: 'international-opportunities',
+    definition:
+      'É o acordo que formaliza uma subvenção da União Europeia depois da seleção. Ele define atividades, orçamento, contribuição europeia, prazos, direitos, obrigações, relatórios e condições de pagamento.',
+    whatToDo: 'Antes de assinar, alinhe responsabilidades, orçamento e entregas entre coordenador e parceiros e confira o acordo do consórcio, quando exigido.',
+    sources: [EU_GLOSSARY, EU_MANUAL],
+    detect: false,
   },
 ];
 
