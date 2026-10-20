@@ -7,6 +7,7 @@ import { STAGE_LABELS } from '@/features/participation/lib/stages';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { COLLAPSED_COLUMN, groupByStage, type BoardColumn } from '../lib/board';
+import { focusInRegion } from '../lib/board-scroll';
 import { cardDeadline } from '../lib/deadline-events';
 import { DeadlineBadge } from './deadline-badge';
 import { MoveStageMenu } from './move-stage-menu';
@@ -15,10 +16,18 @@ const DRAG_TYPE = 'application/x-pardal-saved-tender';
 /** How long focus keeps following a moved card (optimistic move, server answer, possible rollback). */
 const FOLLOW_MS = 15_000;
 
+/** The region's horizontal padding (`px-1`): keeps focus rings inside its clip. */
+const REGION_INSET = 4;
+
 const count = (n: number) => `${n} ${n === 1 ? 'edital' : 'editais'}`;
 
 /** Drag and drop only where there is a fine pointer: on touch, a long press would fight the horizontal scroll. */
 const canDrag = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches === true;
+
+const scrollBehavior = (): ScrollBehavior => (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+
+/** Height of the sticky app header, so a revealed card does not end up under it. */
+const headerHeight = () => document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
 
 type CardProps = {
   item: SavedTender;
@@ -166,6 +175,7 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
   const [draggable] = useState(canDrag);
   const follow = useRef<{ id: string; until: number } | null>(null);
   const sawPending = useRef(false);
+  const region = useRef<HTMLDivElement>(null);
 
   // A moved card unmounts from one column and mounts in another: focus would fall back to <body>. Put it back on the card.
   useEffect(() => {
@@ -173,7 +183,11 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
     if (!target) return;
     if (isPending) sawPending.current = true;
     const active = document.activeElement;
-    if (!active || active === document.body) document.getElementById(`board-card-${target.id}`)?.focus();
+    const card = document.getElementById(`board-card-${target.id}`);
+    // Never a plain focus(): it would scroll every ancestor. Only the region moves sideways, the window only vertically.
+    if (card && region.current && (!active || active === document.body)) {
+      focusInRegion(region.current, card, card, window, { align: 'nearest', inset: REGION_INSET, topInset: headerHeight() });
+    }
     if ((sawPending.current && !isPending) || Date.now() > target.until) {
       follow.current = null;
       sawPending.current = false;
@@ -220,8 +234,9 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
     // After the dismissed column expands.
     requestAnimationFrame(() => {
       const heading = document.getElementById(`board-column-${stage}`);
-      heading?.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-      heading?.focus({ preventScroll: true });
+      const column = heading?.closest('section');
+      if (!heading || !column || !region.current) return;
+      focusInRegion(region.current, column, heading, window, { align: 'start', behavior: scrollBehavior(), inset: REGION_INSET, topInset: headerHeight() });
     });
   };
 
@@ -276,6 +291,7 @@ export function PipelineBoard({ items }: { items: SavedTender[] }) {
       {/* The board scrolls sideways inside its own region (keyboard-focusable), never the page. `relative` keeps the
           absolutely positioned `sr-only` texts of off-screen columns inside the clip, or they widen the page. */}
       <div
+        ref={region}
         role="region"
         aria-label="Quadro por etapa"
         tabIndex={0}
