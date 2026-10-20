@@ -5,6 +5,11 @@ Handoff: [`docs/handoffs/CODEX_HANDOFF-001-search.md`](../handoffs/CODEX_HANDOFF
 
 Nota de implementação: com `total = 0` a API retorna `totalPages = 0`; o frontend trata ambos (0 ou 1).
 
+Janela de resultados: a busca pagina só os 1.000 primeiros resultados (`page × pageSize ≤ 1000`). Uma página além
+disso devolve 400 `INVALID_PARAMETER` com `{ field: "page", issue: "beyond_result_window" }`, e `totalPages` vem
+limitado à última página alcançável; `total` continua sendo a contagem real. O mesmo vale para
+`/v1/transparency/contracts` e `/v1/opportunities`. Para ir além, refinar os filtros.
+
 O Codex é autoridade sobre a implementação backend (schema, índice, ranking). Este documento
 fixa apenas a **forma pública** que o frontend consome. Mudanças de forma devem voltar como
 `CLAUDE_HANDOFF` antes de serem implementadas.
@@ -110,7 +115,7 @@ Pregão e outras modalidades sem prazo não são promovidos a `direct` (são pou
 | `publishedFrom` / `publishedTo` | date                    | —           | sobre `publishedAt`, inclusivo, horário de Brasília                                                         |
 | `deadlineFrom` / `deadlineTo`   | date                    | —           | sobre `proposalDeadline`, inclusivo, horário de Brasília                                                    |
 | `sort`                          | SortOption              | `relevance` |                                                                                                             |
-| `page`                          | int ≥ 1                 | 1           |                                                                                                             |
+| `page`                          | int ≥ 1                 | 1           | `page × pageSize ≤ 1000` (janela de resultados)                                                             |
 | `pageSize`                      | int 1–100               | 20          |                                                                                                             |
 | `facets`                        | boolean                 | `true`      | `false` pula o cálculo de facets                                                                            |
 

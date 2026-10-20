@@ -16,6 +16,7 @@ import { publicHttpCache } from "../middlewares/request-protection";
 import { scheduleTitleRewrites } from "../titles/title-rewrite";
 import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
 import { pgErrorCode } from "../lib/pg-error";
+import { withinResultWindow } from "../lib/result-window";
 import { authContext } from "../auth/http";
 import { getCompanyProfile } from "../ai/company-fit-service";
 import { notificationSearchScope } from "../account/notification-service";
@@ -68,7 +69,7 @@ router.get("/v1/tenders/search", publicHttpCache, async (req, res, next) => {
       res.locals.publicCachePolicy = "no-store";
     }
     const backend = await getSearchBackend();
-    const result = await backend.search(criteria);
+    const result = withinResultWindow(await backend.search(criteria));
     res.json(
       SearchTendersResponse.parse({
         ...result,

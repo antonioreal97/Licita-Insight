@@ -11,7 +11,7 @@ import { UserAvatar } from '@/components/app-shell';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { daysLabel, trialEndPhrase, trialState, type TrialState } from '@/features/billing/lib/trial';
-import { useSession, useSignOut } from '@/features/auth/hooks/use-session';
+import { useSession, useSignOut, useSignOutEverywhere } from '@/features/auth/hooks/use-session';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrencyPrecise, formatDate } from '@/lib/format';
 import { accountService } from '@/services/account-service';
@@ -41,6 +41,7 @@ export default function SettingsPage() {
   // Rendered inside <RequireAuth>, so the session is known here.
   const { user } = useSession();
   const signOut = useSignOut();
+  const signOutEverywhere = useSignOutEverywhere();
   // Links like "/settings#assinatura" (shell badge, trial banner, notifications): wouter doesn't scroll to the hash on pushState.
   // Scroll again once the sections above settle: "Carregando…" placeholders grow and would push the anchor down.
   const hash = useLocationProperty(() => window.location.hash);
@@ -112,6 +113,20 @@ export default function SettingsPage() {
                 <Button variant="outline" data-testid="button-settings-sign-out" loading={signOut.isPending} onClick={() => signOut.mutate()}>
                   <LogOut size={14} aria-hidden />
                   Sair
+                </Button>
+              </div>
+            )}
+            {user && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 type-meta text-muted-foreground">
+                <span>Por segurança, cada acesso dura no máximo 12 horas. Usou um computador compartilhado?</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="button-settings-sign-out-everywhere"
+                  loading={signOutEverywhere.isPending}
+                  onClick={() => signOutEverywhere.mutate()}
+                >
+                  Sair de todos os dispositivos
                 </Button>
               </div>
             )}

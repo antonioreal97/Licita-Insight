@@ -23,6 +23,7 @@ import {
 import {
   createSession,
   revokeSession,
+  revokeUserSessions,
   upsertDevUser,
   upsertGoogleUser,
 } from "../auth/session-service";
@@ -140,6 +141,17 @@ router.post(
   requireCsrf,
   asyncHandler(async (req, res) => {
     await revokeSession(sessionToken(req));
+    clearSessionCookie(res);
+    res.status(204).end();
+  }),
+);
+
+router.post(
+  "/v1/auth/logout-all",
+  requireCsrf,
+  requireAuth,
+  asyncHandler(async (_req, res) => {
+    await revokeUserSessions(authContext(res).user.id);
     clearSessionCookie(res);
     res.status(204).end();
   }),

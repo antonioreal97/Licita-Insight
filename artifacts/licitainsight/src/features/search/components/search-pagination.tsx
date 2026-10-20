@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Pagination } from '@/api';
 import { formatNumber } from '@/lib/format';
-import { pageItems } from '../lib/pagination';
+import { pageItems, reachedResultWindow } from '../lib/pagination';
 
 type Props = {
   pagination: Pagination;
@@ -38,6 +38,9 @@ export function SearchPagination({ pagination, page: requested, onPageChange, pa
           Mostrando {formatNumber(first)}–{formatNumber(last)} de {totalIsEstimate ? 'aprox. ' : ''}
           {formatNumber(total)} {total === 1 ? noun[0] : noun[1]}
         </span>
+        {reachedResultWindow(page, totalPages, pageSize, total) && (
+          <span data-testid="text-result-window">Para ver além destes resultados, refine os filtros.</span>
+        )}
       </div>
       {totalPages > 1 && (
         <ul className="flex items-center gap-1">

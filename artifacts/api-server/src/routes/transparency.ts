@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import type { AuthContext } from "../auth/session-service";
 import { ApiError, NotFoundError } from "../lib/api-error";
 import { logger } from "../lib/logger";
+import { withinResultWindow } from "../lib/result-window";
 import { parseTransparencyQuery } from "../lib/transparency-query";
 import { publicHttpCache } from "../middlewares/request-protection";
 
@@ -31,7 +32,7 @@ router.get("/v1/transparency/contracts", publicHttpCache, async (req, res, next)
   try {
     if (!process.env.DATABASE_URL) throw new ApiError(503, "SEARCH_UNAVAILABLE", "DATABASE_URL is not set");
     const { searchTransparencyContracts } = await import("../repositories/postgres-transparency-repository");
-    res.json(await searchTransparencyContracts(parseTransparencyQuery(req.query)));
+    res.json(withinResultWindow(await searchTransparencyContracts(parseTransparencyQuery(req.query))));
   } catch (error) { serve(error, next); }
 });
 

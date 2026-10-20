@@ -56,6 +56,7 @@ export const accountService = {
   listCompanyDocuments: (signal?: AbortSignal) => accountAdapter.listCompanyDocuments(signal),
   putCompanyDocument: (kind: CompanyDocumentKind, body: CompanyDocumentPut) => accountAdapter.putCompanyDocument(kind, body),
   logout: () => accountAdapter.logout(),
+  logoutAll: () => accountAdapter.logoutAll(),
   exportAccountData: () => accountAdapter.exportAccountData(),
   deleteAccount: () => accountAdapter.deleteAccount(),
 

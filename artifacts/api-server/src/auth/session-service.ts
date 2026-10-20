@@ -12,12 +12,15 @@ import { sessionSecret } from "./config";
 import { randomToken, sha256, type GoogleIdentity } from "./tokens";
 
 export const SESSION_IDLE_MS = 10 * 60 * 1000;
+/** Hard cap from login: activity keeps a session alive only until then, so a stolen cookie cannot be kept warm forever. */
+export const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 const SESSION_TOUCH_AFTER_MS = 60 * 1000;
 
-/** Extends the session by one idle window, at most once a minute. */
-export const renewedExpiry = (lastSeenAt: Date, now: Date): Date | null => {
+/** Extends the session by one idle window, at most once a minute, never past the absolute cap. */
+export const renewedExpiry = (lastSeenAt: Date, now: Date, createdAt?: Date): Date | null => {
   if (now.getTime() - lastSeenAt.getTime() < SESSION_TOUCH_AFTER_MS) return null;
-  return new Date(now.getTime() + SESSION_IDLE_MS);
+  const idleEnd = now.getTime() + SESSION_IDLE_MS;
+  return new Date(createdAt ? Math.min(idleEnd, createdAt.getTime() + SESSION_MAX_AGE_MS) : idleEnd);
 };
 
 type UserRow = typeof usersTable.$inferSelect;
@@ -189,7 +192,10 @@ export const readSession = async (
     .limit(1);
   if (!row) return null;
 
-  if (now.getTime() - row.session.lastSeenAt.getTime() >= SESSION_IDLE_MS) {
+  if (
+    now.getTime() - row.session.lastSeenAt.getTime() >= SESSION_IDLE_MS ||
+    now.getTime() - row.session.createdAt.getTime() >= SESSION_MAX_AGE_MS
+  ) {
     await db
       .update(sessionsTable)
       .set({ revokedAt: now })
@@ -197,7 +203,7 @@ export const readSession = async (
     return null;
   }
 
-  const renewedUntil = renewedExpiry(row.session.lastSeenAt, now);
+  const renewedUntil = renewedExpiry(row.session.lastSeenAt, now, row.session.createdAt);
   if (renewedUntil) {
     await db
       .update(sessionsTable)
@@ -220,4 +226,15 @@ export const revokeSession = async (
     .update(sessionsTable)
     .set({ revokedAt: now })
     .where(and(eq(sessionsTable.id, sha256(token)), isNull(sessionsTable.revokedAt)));
+};
+
+/** Signs the user out everywhere, including the session making the request. */
+export const revokeUserSessions = async (
+  userId: string,
+  now = new Date(),
+): Promise<void> => {
+  await db
+    .update(sessionsTable)
+    .set({ revokedAt: now })
+    .where(and(eq(sessionsTable.userId, userId), isNull(sessionsTable.revokedAt)));
 };
