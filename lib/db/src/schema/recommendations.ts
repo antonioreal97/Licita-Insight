@@ -33,6 +33,8 @@ export type RecommendationReason = {
 export type WeightedRecommendationValue = {
   value: string;
   label?: string;
+  /** Signal origins are independent from the accumulated weight. Absent on legacy materialized profiles. */
+  sources?: string[];
   weight: number;
 };
 export type RecommendationInterestProfile = {

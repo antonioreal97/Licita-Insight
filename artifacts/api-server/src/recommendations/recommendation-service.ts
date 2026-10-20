@@ -47,9 +47,7 @@ import {
 } from "./triage-feedback";
 import {
   extractProfileTerms,
-  GENERIC_WORDS,
   isSuggestableProfileTerm,
-  normalizeProfileKeyword,
 } from "../profile/keyword-vocabulary";
 
 const RETENTION_DAYS = 180;
@@ -59,10 +57,13 @@ const INTEREST_HALF_LIFE_DAYS = 60;
 const CANDIDATE_LIMIT = 500;
 const RESULT_LIMIT = 50;
 const TOP_TERMS = 30;
+const MIN_SAVED_VALUES_FOR_INFERENCE = 5;
+const MAX_DISMISSAL_PENALTY = 12;
 /** After this many interest events share an expression, it can qualify new candidates alone. */
 const LEARNED_INTEREST_THRESHOLD = 2;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
+const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
 const INTEREST_LEARNED_SOURCES = new Set(["interest_learned"]);
 const INTEREST_BOOST_SOURCES = new Set(["interest"]);
 const HISTORY_TERM_SOURCES = new Set([
@@ -73,22 +74,29 @@ const HISTORY_TERM_SOURCES = new Set([
   "saved_search",
 ]);
 
+const canonicalSimplePlural = (word: string): string =>
+  /[aeiou]s$/u.test(word) &&
+  !/(?:ais|eis|ois|uis|aes|oes)$/u.test(word) &&
+  word.length >= 4
+    ? word.slice(0, -1)
+    : word;
+
+const canonicalSimplePluralExpression = (value: string): string =>
+  value.split(" ").map(canonicalSimplePlural).join(" ");
+
 /** History/profile free-text tokens: drop stopwords and the shared #142 generic vocabulary. */
 export const normalizeSignalTerms = (value: string, limit = 30): string[] =>
   [
     ...new Set(
       queryTokens(value)
         .map((term) => term.replace(/[^\p{L}\p{N}]+/gu, ""))
-        .filter(
-          (term) => term.length >= 3 && isSuggestableProfileTerm(term),
-        ),
+        .filter((term) => term.length >= 3 && isSuggestableProfileTerm(term)),
     ),
   ].slice(0, limit);
 
 /**
- * Phrases/unigrams from a triage "Interessa" tender, filtered with the #142 vocabulary rules.
- * Prefer longer expressions. Unlike profile suggestions, mid-phrase generics are kept when both
- * ends are concrete ("locacao de equipamentos audiovisuais").
+ * Concrete unigrams/bigrams from each content field of a triage tender.
+ * Field boundaries are never crossed and organization/category labels are deliberately absent.
  */
 export function extractInterestExpressions(
   tender: {
@@ -101,56 +109,83 @@ export function extractInterestExpressions(
   },
   limit = 20,
 ): string[] {
-  const text = [
+  const fields = [
     tender.title,
     tender.objectSummary ?? "",
     tender.description ?? "",
     ...(tender.items ?? []).map((item) => item.description),
-    tender.organizationName ?? "",
-    ...(tender.categories ?? []).map((category) => category.label),
-  ].join("\n");
-  const fromVocabulary = extractProfileTerms(text, 80).map(
-    (term) => term.normalizedTerm,
+  ].filter(Boolean);
+  const expressions = fields.flatMap((field, fieldIndex) =>
+    extractProfileTerms(field, 80)
+      .filter((term) => term.ngramSize <= 2)
+      .map((term) => ({ ...term, fieldIndex })),
   );
-  const tokens = text
-    .normalize("NFKC")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => normalizeProfileKeyword(word))
-    .filter((word) => word.length >= 2)
-    .slice(0, 80);
-  const withGenericMiddles: string[] = [];
-  for (let size = 2; size <= 4; size += 1) {
-    for (let index = 0; index + size <= tokens.length; index += 1) {
-      const window = tokens.slice(index, index + size);
-      const first = window[0]!;
-      const last = window[window.length - 1]!;
-      if (
-        GENERIC_WORDS.has(first) ||
-        GENERIC_WORDS.has(last) ||
-        first.length < 3 ||
-        last.length < 3
-      )
-        continue;
-      withGenericMiddles.push(window.join(" "));
-    }
-  }
   return [
-    ...new Set(
-      [...withGenericMiddles, ...fromVocabulary].sort(
-        (a, b) => b.split(" ").length - a.split(" ").length || b.length - a.length,
-      ),
-    ),
+    ...new Map(
+      expressions
+        .sort(
+          (left, right) =>
+            left.ngramSize - right.ngramSize ||
+            left.fieldIndex - right.fieldIndex ||
+            left.normalizedTerm.localeCompare(right.normalizedTerm),
+        )
+        .map((term) => {
+          const normalized = canonicalSimplePluralExpression(
+            term.normalizedTerm,
+          );
+          return [normalized, normalized] as const;
+        }),
+    ).values(),
   ].slice(0, limit);
 }
 
 const termSource = (label: string | undefined): string | undefined =>
-  label?.split(":", 1)[0];
+  label?.includes(":") ? label.split(":", 1)[0] : undefined;
 
-const isProfileCategoryLabel = (label: string | undefined): boolean =>
-  Boolean(label?.startsWith("profile_category:"));
+/** Reads both the current multi-origin JSON and profiles materialized before `sources` existed. */
+const valueSources = (value: WeightedRecommendationValue): Set<string> =>
+  new Set(
+    value.sources?.length
+      ? value.sources
+      : termSource(value.label)
+        ? [termSource(value.label)!]
+        : [],
+  );
+
+const hasAnySource = (
+  value: WeightedRecommendationValue,
+  sources: ReadonlySet<string>,
+): boolean => [...valueSources(value)].some((source) => sources.has(source));
+
+const normalizedWords = (value: string): string[] =>
+  normalizeText(value)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+const simplePluralMatch = (term: string, word: string): boolean =>
+  canonicalSimplePlural(term) === canonicalSimplePlural(word);
+
+/** Whole-word/whole-expression matching with the common simple Portuguese plural (`drone`/`drones`). */
+export function matchesRecommendationTerm(text: string, term: string): boolean {
+  const haystack = normalizedWords(text);
+  const needle = normalizedWords(term);
+  if (!needle.length || needle.length > haystack.length) return false;
+  for (let start = 0; start + needle.length <= haystack.length; start += 1) {
+    if (
+      needle.every((word, offset) =>
+        simplePluralMatch(word, haystack[start + offset]!),
+      )
+    )
+      return true;
+  }
+  return false;
+}
+
+const PROFILE_CATEGORY_SOURCES = new Set(["profile_category"]);
+const isProfileCategory = (value: WeightedRecommendationValue): boolean =>
+  hasAnySource(value, PROFILE_CATEGORY_SOURCES);
 
 export const temporalWeight = (
   occurredAt: Date,
@@ -175,7 +210,18 @@ type OpportunityProfileInput = Pick<
   | "coverageStates"
   | "valueMin"
   | "valueMax"
->;
+> &
+  Partial<
+    Pick<
+      typeof companyProfilesTable.$inferSelect,
+      | "coverageRegions"
+      | "coverageMunicipalities"
+      | "headquartersMunicipalityIbge"
+      | "coverageRadiusKm"
+      | "coverageMode"
+      | "acceptsRemote"
+    >
+  >;
 
 /** Lightweight, deterministic opportunity matching reusing the recommendation/profile signals. */
 export const scoreOpportunityForProfile = (
@@ -184,6 +230,8 @@ export const scoreOpportunityForProfile = (
     state: string | null;
     amount: number | null;
     audience: string | null;
+    municipalityIbge?: string | null;
+    categories?: Array<{ slug: string }>;
   },
   profile: OpportunityProfileInput,
 ): { score: number; reasons: string[] } | null => {
@@ -196,36 +244,65 @@ export const scoreOpportunityForProfile = (
       ...normalizeSignalTerms(value),
     ])
     .filter(Boolean);
-  if (exclusions.some((term) => haystack.includes(term))) return null;
+  if (exclusions.some((term) => matchesRecommendationTerm(haystack, term)))
+    return null;
 
-  // Profile terms match as whole expressions; only the free-text description is split into words.
-  const terms = [
-    ...[...profile.selectedKeywords, ...profile.offerings].map((value) =>
-      normalizeText(value),
-    ),
-    ...normalizeSignalTerms(profile.description),
-  ].filter(Boolean);
+  const terms = [...profile.selectedKeywords, ...profile.offerings]
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
   const matched = [
-    ...new Set(terms.filter((term) => haystack.includes(term))),
+    ...new Set(
+      terms.filter((term) => matchesRecommendationTerm(haystack, term)),
+    ),
   ].slice(0, 4);
   let score = Math.min(60, matched.length * 15);
   const reasons: string[] = [];
   if (matched.length > 0)
     reasons.push(`Combina com seu perfil: ${matched.join(", ")}`);
 
+  const descriptionMatches = normalizeSignalTerms(profile.description).filter(
+    (term) => matchesRecommendationTerm(haystack, term),
+  );
+  if (matched.length && descriptionMatches.length)
+    score += Math.min(8, descriptionMatches.length * 2);
+  // Geography and value only refine a segment match; they never create the badge alone.
+  if (!matched.length) return null;
+
   const state = opportunity.state?.toUpperCase() ?? null;
-  if (profile.coverageScope === "states") {
-    if (
-      !state ||
-      !profile.coverageStates
-        .map((value) => value.toUpperCase())
-        .includes(state)
-    ) {
-      score -= 30;
-    } else {
-      score += 25;
-      reasons.push(`Na sua área de atuação: ${state}`);
-    }
+  // Calls without a UF are national/federal and are not considered outside the region.
+  if (state && profile.coverageScope !== "national") {
+    const legacyCustom = profile.coverageScope === "states";
+    const center = profile.headquartersMunicipalityIbge
+      ? municipalityReference(profile.headquartersMunicipalityIbge)
+      : null;
+    const coverage: ServiceRegionCoverage = {
+      scope: "custom",
+      mode: profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict"),
+      acceptsRemote: profile.acceptsRemote ?? false,
+      regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+      states: profile.coverageStates.map((value) => value.toUpperCase()),
+      municipalities: (profile.coverageMunicipalities ?? []).flatMap((code) => {
+        const city = municipalityReference(code);
+        return city ? [city] : [];
+      }),
+      radius:
+        center && profile.coverageRadiusKm
+          ? {
+              center,
+              km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+            }
+          : null,
+    };
+    const region = matchServiceRegion(coverage, {
+      state,
+      municipalityIbge: opportunity.municipalityIbge ?? null,
+      categories: opportunity.categories ?? [],
+    });
+    if (!region.matches && coverage.mode === "strict") return null;
+    if (region.matches) {
+      score += region.remote ? 18 : 25;
+      reasons.push(region.reason);
+    } else score -= 8;
   }
 
   if (
@@ -248,7 +325,10 @@ export const scoreOpportunityForProfile = (
     : null;
 };
 
-type WeightMap = Map<string, { label?: string; weight: number }>;
+type WeightMap = Map<
+  string,
+  { label?: string; sources: Set<string>; weight: number }
+>;
 const addWeight = (
   map: WeightMap,
   value: string | null | undefined,
@@ -258,23 +338,39 @@ const addWeight = (
   const normalized = normalizeText(value ?? "").trim();
   if (!normalized || !Number.isFinite(weight) || weight <= 0) return;
   const previous = map.get(normalized);
+  const sources = new Set(previous?.sources ?? []);
+  const source = termSource(label);
+  if (source) sources.add(source);
   map.set(normalized, {
     label: label && weight >= (previous?.weight ?? 0) ? label : previous?.label,
+    sources,
     weight: (previous?.weight ?? 0) + weight,
   });
 };
 const weighted = (
   map: WeightMap,
   limit: number,
+  pinnedSources: ReadonlySet<string> = new Set(),
 ): WeightedRecommendationValue[] =>
   [...map.entries()]
     .map(([value, entry]) => ({
       value,
       ...(entry.label ? { label: entry.label } : {}),
+      ...(entry.sources.size ? { sources: [...entry.sources].sort() } : {}),
       weight: Number(entry.weight.toFixed(4)),
     }))
     .sort((a, b) => b.weight - a.weight || a.value.localeCompare(b.value))
-    .slice(0, limit);
+    .reduce<WeightedRecommendationValue[]>((selected, entry) => {
+      const pinned = [...valueSources(entry)].some((source) =>
+        pinnedSources.has(source),
+      );
+      const nonPinnedCount = selected.filter(
+        (item) =>
+          ![...valueSources(item)].some((source) => pinnedSources.has(source)),
+      ).length;
+      if (pinned || nonPinnedCount < limit) selected.push(entry);
+      return selected;
+    }, []);
 
 type SignalTender = Pick<
   typeof tendersTable.$inferSelect,
@@ -392,7 +488,7 @@ export async function rebuildInterestProfile(
       addWeight(maps.terms, offering, 6, `profile:${normalizeText(offering)}`),
     );
     normalizeSignalTerms(profile.description).forEach((term) =>
-      addWeight(maps.terms, term, 2, `profile:${term}`),
+      addWeight(maps.terms, term, 2, `profile_description:${term}`),
     );
     profile.coverageStates.forEach((state) => addWeight(maps.states, state, 5));
     signalCount +=
@@ -476,15 +572,12 @@ export async function rebuildInterestProfile(
           learned ? `interest_learned:${term}` : `interest:${term}`,
         );
       }
-      const tender = event.tenderId ? viewedById.get(event.tenderId) : undefined;
+      const tender = event.tenderId
+        ? viewedById.get(event.tenderId)
+        : undefined;
       if (tender) {
         tender.categories.forEach((category) =>
-          addWeight(
-            maps.categories,
-            category.slug,
-            8 * decay,
-            category.label,
-          ),
+          addWeight(maps.categories, category.slug, 8 * decay, category.label),
         );
         addWeight(
           maps.organizations,
@@ -508,19 +601,24 @@ export async function rebuildInterestProfile(
     }
   }
   values.sort((a, b) => a - b);
+  const inferSavedValueRange = values.length >= MIN_SAVED_VALUES_FOR_INFERENCE;
   const interest: RecommendationInterestProfile = {
-    terms: weighted(maps.terms, TOP_TERMS),
-    categories: weighted(maps.categories, 20),
+    terms: weighted(maps.terms, TOP_TERMS, PROFILE_TERM_SOURCES),
+    categories: weighted(maps.categories, 20, PROFILE_CATEGORY_SOURCES),
     states: weighted(maps.states, 27),
     organizations: weighted(maps.organizations, 20),
     modalities: weighted(maps.modalities, 12),
     valueMin:
       profile?.valueMin === null || profile?.valueMin === undefined
-        ? (values.at(Math.floor(values.length * 0.1)) ?? null)
+        ? inferSavedValueRange
+          ? (values.at(Math.floor(values.length * 0.1)) ?? null)
+          : null
         : Number(profile.valueMin),
     valueMax:
       profile?.valueMax === null || profile?.valueMax === undefined
-        ? (values.at(Math.floor(values.length * 0.9)) ?? null)
+        ? inferSavedValueRange
+          ? (values.at(Math.floor(values.length * 0.9)) ?? null)
+          : null
         : Number(profile.valueMax),
     coverageScope: profile
       ? (profile.coverageScope as "national" | "states" | "custom")
@@ -575,7 +673,11 @@ type ScoreCandidate = {
   publishedAt: Date | null;
   textRank: number;
 };
-type DismissedSignal = { terms: string[]; categories: TenderCategory[] };
+type DismissedSignal = {
+  terms: string[];
+  categories: TenderCategory[];
+  dismissedAt?: Date;
+};
 
 const weightFor = (
   values: WeightedRecommendationValue[],
@@ -593,7 +695,11 @@ export function scoreRecommendation(
   now = new Date(),
 ): { score: number; reasons: RecommendationReason[] } | null {
   const normalizedText = normalizeText(candidate.searchText);
-  if (profile.exclusions.some((term) => normalizedText.includes(term)))
+  if (
+    profile.exclusions.some((term) =>
+      matchesRecommendationTerm(normalizedText, term),
+    )
+  )
     return null;
   const reasons: RecommendationReason[] = [];
   let score = 0;
@@ -603,22 +709,22 @@ export function scoreRecommendation(
   const profileTermMatches = profile.terms
     .filter(
       (term) =>
-        PROFILE_TERM_SOURCES.has(termSource(term.label) ?? "") &&
-        normalizedText.includes(term.value),
+        hasAnySource(term, PROFILE_TERM_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
     )
     .slice(0, 3);
   const learnedInterestMatches = profile.terms
     .filter(
       (term) =>
-        INTEREST_LEARNED_SOURCES.has(termSource(term.label) ?? "") &&
-        normalizedText.includes(term.value),
+        hasAnySource(term, INTEREST_LEARNED_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
     )
     .slice(0, 3);
   const interestBoostMatches = profile.terms
     .filter(
       (term) =>
-        INTEREST_BOOST_SOURCES.has(termSource(term.label) ?? "") &&
-        normalizedText.includes(term.value),
+        hasAnySource(term, INTEREST_BOOST_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
     )
     .slice(0, 3);
   const profileCategoryMatches = candidate.categories
@@ -626,7 +732,7 @@ export function scoreRecommendation(
       const entry = profile.categories.find(
         (item) =>
           item.value === normalizeText(category.slug) &&
-          isProfileCategoryLabel(item.label),
+          isProfileCategory(item),
       );
       return entry
         ? { category, weight: entry.weight, label: entry.label }
@@ -641,12 +747,12 @@ export function scoreRecommendation(
   if (!adherenceMatch) return null;
 
   const maxProfileCategory =
-    profile.categories.find((item) => isProfileCategoryLabel(item.label))
-      ?.weight ??
+    profile.categories.find((item) => isProfileCategory(item))?.weight ??
     profileCategoryMatches[0]?.weight ??
     0;
   if (profileCategoryMatches[0]) {
-    score += 25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory);
+    score +=
+      25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory);
     reasons.push({
       kind: "profile",
       text: `Categoria do seu perfil: ${profileCategoryMatches[0].category.label}`,
@@ -657,7 +763,7 @@ export function scoreRecommendation(
     0,
   );
   const maxProfileTerms = profile.terms
-    .filter((term) => PROFILE_TERM_SOURCES.has(termSource(term.label) ?? ""))
+    .filter((term) => hasAnySource(term, PROFILE_TERM_SOURCES))
     .slice(0, 3)
     .reduce((sum, term) => sum + term.weight, 0);
   score += Math.min(
@@ -671,20 +777,39 @@ export function scoreRecommendation(
       text: `No seu perfil de atividade: ${profileTermMatches.map((term) => term.value).join(", ")}`,
     });
   }
+  const descriptionMatches = profile.terms
+    .filter(
+      (term) =>
+        hasAnySource(term, PROFILE_DESCRIPTION_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
+    )
+    .slice(0, 3);
+  if (descriptionMatches.length) {
+    const strength = descriptionMatches.reduce(
+      (sum, term) => sum + term.weight,
+      0,
+    );
+    const maximum = profile.terms
+      .filter((term) => hasAnySource(term, PROFILE_DESCRIPTION_SOURCES))
+      .slice(0, 3)
+      .reduce((sum, term) => sum + term.weight, 0);
+    score += 6 * cappedRatio(strength, maximum);
+  }
 
-  const interestMatches = [...learnedInterestMatches, ...interestBoostMatches].slice(
-    0,
-    3,
-  );
+  const interestMatches = [
+    ...learnedInterestMatches,
+    ...interestBoostMatches,
+  ].slice(0, 3);
   if (interestMatches.length) {
     const interestStrength = interestMatches.reduce(
       (sum, term) => sum + term.weight,
       0,
     );
     const maxInterest = profile.terms
-      .filter((term) =>
-        INTEREST_LEARNED_SOURCES.has(termSource(term.label) ?? "") ||
-        INTEREST_BOOST_SOURCES.has(termSource(term.label) ?? ""),
+      .filter(
+        (term) =>
+          hasAnySource(term, INTEREST_LEARNED_SOURCES) ||
+          hasAnySource(term, INTEREST_BOOST_SOURCES),
       )
       .slice(0, 3)
       .reduce((sum, term) => sum + term.weight, 0);
@@ -699,8 +824,8 @@ export function scoreRecommendation(
   const historyTermMatches = profile.terms
     .filter(
       (term) =>
-        HISTORY_TERM_SOURCES.has(termSource(term.label) ?? "") &&
-        normalizedText.includes(term.value),
+        hasAnySource(term, HISTORY_TERM_SOURCES) &&
+        matchesRecommendationTerm(normalizedText, term.value),
     )
     .slice(0, 3);
   if (historyTermMatches.length) {
@@ -709,11 +834,13 @@ export function scoreRecommendation(
       0,
     );
     const maxHistory = profile.terms
-      .filter((term) => HISTORY_TERM_SOURCES.has(termSource(term.label) ?? ""))
+      .filter((term) => hasAnySource(term, HISTORY_TERM_SOURCES))
       .slice(0, 3)
       .reduce((sum, term) => sum + term.weight, 0);
     score += 10 * cappedRatio(historyStrength, maxHistory);
-    const source = termSource(historyTermMatches[0]!.label);
+    const source = [...valueSources(historyTermMatches[0]!)].find((item) =>
+      HISTORY_TERM_SOURCES.has(item),
+    );
     const terms = historyTermMatches.map((term) => term.value).join(", ");
     if (source === "search")
       reasons.push({ kind: "search", text: `Você buscou: ${terms}` });
@@ -738,7 +865,7 @@ export function scoreRecommendation(
       const entry = profile.categories.find(
         (item) =>
           item.value === normalizeText(category.slug) &&
-          !isProfileCategoryLabel(item.label),
+          !isProfileCategory(item),
       );
       return entry ? { category, weight: entry.weight } : null;
     })
@@ -746,8 +873,8 @@ export function scoreRecommendation(
     .sort((a, b) => b.weight - a.weight);
   if (historyCategoryMatches[0] && !profileCategoryMatches[0]) {
     const maxHistoryCategory =
-      profile.categories.find((item) => !isProfileCategoryLabel(item.label))
-        ?.weight ?? historyCategoryMatches[0].weight;
+      profile.categories.find((item) => !isProfileCategory(item))?.weight ??
+      historyCategoryMatches[0].weight;
     score +=
       12 * cappedRatio(historyCategoryMatches[0].weight, maxHistoryCategory);
     reasons.push({
@@ -878,7 +1005,11 @@ export function scoreRecommendation(
   const candidateSlugs = new Set(
     candidate.categories.map((category) => category.slug),
   );
+  let dismissalPenalty = 0;
   for (const negative of dismissed) {
+    const decay = negative.dismissedAt
+      ? temporalWeight(negative.dismissedAt, now)
+      : 1;
     const contextual = contextualDismissalPenalty(
       negative.terms,
       {
@@ -891,18 +1022,20 @@ export function scoreRecommendation(
       now,
     );
     if (contextual !== null) {
-      score -= contextual;
+      dismissalPenalty += contextual * decay;
       continue;
     }
-    const categoryOverlap = negative.categories.some((category) =>
-      candidateSlugs.has(category.slug),
+    const categoryOverlap = negative.categories.some(
+      (category) =>
+        category.slug !== "outros" && candidateSlugs.has(category.slug),
     );
     const termOverlap = negative.terms.filter((term) =>
-      normalizedText.includes(term),
+      matchesRecommendationTerm(normalizedText, term),
     ).length;
-    if (categoryOverlap) score -= 3;
-    score -= Math.min(4, termOverlap);
+    if (categoryOverlap) dismissalPenalty += 3 * decay;
+    dismissalPenalty += Math.min(4, termOverlap) * decay;
   }
+  score -= Math.min(MAX_DISMISSAL_PENALTY, dismissalPenalty);
   return score > 0 && reasons.length > 0
     ? { score: Number(score.toFixed(5)), reasons: reasons.slice(0, 3) }
     : null;
@@ -913,9 +1046,13 @@ const queryCandidates = async (
   userId: string,
   now: Date,
 ): Promise<ScoreCandidate[]> => {
-  // Quoted, so a multi-word profile term ("transmissao ao vivo") matches as a phrase, not as loose words.
+  // Explicit profile terms and learned expressions are never displaced by heavier history.
+  const qualifyingSources = new Set([
+    ...PROFILE_TERM_SOURCES,
+    ...INTEREST_LEARNED_SOURCES,
+  ]);
   const terms = profile.terms
-    .slice(0, 12)
+    .filter((term) => hasAnySource(term, qualifyingSources))
     .map((term) => term.value.replace(/"/g, " ").trim())
     .filter(Boolean);
   const query = terms.map((term) => `"${term}"`).join(" OR ");
@@ -923,83 +1060,90 @@ const queryCandidates = async (
     ? sql<number>`ts_rank_cd(${tendersTable.recommendationSearchVector}, websearch_to_tsquery('portuguese', ${query}))`
     : sql<number>`0`;
   const categories = profile.categories
-    .slice(0, 10)
+    .filter((category) => isProfileCategory(category))
     .map((category) => category.value);
-  const states = profile.states
-    .slice(0, 10)
-    .map((state) => state.value.toUpperCase());
-  // Terms are the selective path and use the expression GIN index. Categories/UFs are the fallback
-  // for profiles without usable text; OR-ing all three would make a broad UF scan dominate at scale.
-  const signalFilter = query
+  const textFilter = query
     ? sql`${tendersTable.recommendationSearchVector} @@ websearch_to_tsquery('portuguese', ${query})`
-    : or(
-        ...(categories.length
-          ? [
-              sql`${tendersTable.categories} @> any(array[${sql.join(
-                categories.map(
-                  (category) =>
-                    sql`${JSON.stringify([{ slug: category }])}::jsonb`,
-                ),
-                sql`, `,
-              )}])`,
-            ]
-          : []),
-        ...(states.length
-          ? [
-              sql`upper(${tendersTable.state}) in (${sql.join(
-                states.map((state) => sql`${state}`),
-                sql`, `,
-              )})`,
-            ]
-          : []),
-      );
-  const rows = await db
-    .select({
-      id: tendersTable.id,
-      searchText: tendersTable.searchText,
-      categories: tendersTable.categories,
-      state: tendersTable.state,
-      municipalityIbge: tendersTable.cityIbgeCode,
-      organizationId: tendersTable.organizationId,
-      organizationName: tendersTable.organizationName,
-      modality: tendersTable.modality,
-      platform: tendersTable.platform,
-      platformLabel: tendersTable.platformLabel,
-      estimatedValue: tendersTable.estimatedValue,
-      estimatedValueFlag: tendersTable.estimatedValueFlag,
-      proposalDeadline: tendersTable.proposalDeadline,
-      publishedAt: tendersTable.publishedAt,
-      textRank,
-    })
-    .from(tendersTable)
-    .leftJoin(
-      savedTendersTable,
-      and(
-        eq(savedTendersTable.tenderId, tendersTable.id),
-        eq(savedTendersTable.userId, userId),
-      ),
-    )
-    .leftJoin(
-      recommendationDismissalsTable,
-      and(
-        eq(recommendationDismissalsTable.tenderId, tendersTable.id),
-        eq(recommendationDismissalsTable.userId, userId),
-      ),
-    )
-    .where(
-      and(
-        eq(tendersTable.status, "open"),
-        gt(tendersTable.proposalDeadline, now),
-        isNull(savedTendersTable.tenderId),
-        isNull(recommendationDismissalsTable.tenderId),
-        signalFilter,
-      ),
-    )
-    // Candidate retrieval stays cheap: the index filters first and novelty caps the working set.
-    // ts_rank_cd is projected only for these rows, then combined with all signals in TypeScript.
-    .orderBy(desc(tendersTable.publishedAt), asc(tendersTable.id))
-    .limit(CANDIDATE_LIMIT);
-  return rows.map((row) => ({ ...row, textRank: Number(row.textRank) || 0 }));
+    : null;
+  const categoryFilter = categories.length
+    ? sql`${tendersTable.categories} @> any(array[${sql.join(
+        categories.map(
+          (category) => sql`${JSON.stringify([{ slug: category }])}::jsonb`,
+        ),
+        sql`, `,
+      )}])`
+    : null;
+  const pathCount =
+    Number(Boolean(textFilter)) + Number(Boolean(categoryFilter));
+  if (!pathCount) return [];
+  const pathLimit =
+    pathCount === 1 ? CANDIDATE_LIMIT : Math.ceil(CANDIDATE_LIMIT / 2);
+  const selectBy = async (
+    signalFilter: NonNullable<typeof textFilter>,
+  ): Promise<ScoreCandidate[]> => {
+    const rows = await db
+      .select({
+        id: tendersTable.id,
+        searchText: tendersTable.searchText,
+        categories: tendersTable.categories,
+        state: tendersTable.state,
+        municipalityIbge: tendersTable.cityIbgeCode,
+        organizationId: tendersTable.organizationId,
+        organizationName: tendersTable.organizationName,
+        modality: tendersTable.modality,
+        platform: tendersTable.platform,
+        platformLabel: tendersTable.platformLabel,
+        estimatedValue: tendersTable.estimatedValue,
+        estimatedValueFlag: tendersTable.estimatedValueFlag,
+        proposalDeadline: tendersTable.proposalDeadline,
+        publishedAt: tendersTable.publishedAt,
+        textRank,
+      })
+      .from(tendersTable)
+      .leftJoin(
+        savedTendersTable,
+        and(
+          eq(savedTendersTable.tenderId, tendersTable.id),
+          eq(savedTendersTable.userId, userId),
+        ),
+      )
+      .leftJoin(
+        recommendationDismissalsTable,
+        and(
+          eq(recommendationDismissalsTable.tenderId, tendersTable.id),
+          eq(recommendationDismissalsTable.userId, userId),
+        ),
+      )
+      .where(
+        and(
+          eq(tendersTable.status, "open"),
+          gt(tendersTable.proposalDeadline, now),
+          isNull(savedTendersTable.tenderId),
+          isNull(recommendationDismissalsTable.tenderId),
+          signalFilter,
+        ),
+      )
+      .orderBy(desc(tendersTable.publishedAt), asc(tendersTable.id))
+      .limit(pathLimit);
+    return rows.map((row) => ({
+      ...row,
+      textRank: Number(row.textRank) || 0,
+    }));
+  };
+  const [textRows, categoryRows] = await Promise.all([
+    textFilter ? selectBy(textFilter) : Promise.resolve([]),
+    categoryFilter ? selectBy(categoryFilter) : Promise.resolve([]),
+  ]);
+  // Interleave the two indexed paths so neither explicit signal can starve the other.
+  const union = new Map<string, ScoreCandidate>();
+  for (let index = 0; union.size < CANDIDATE_LIMIT; index += 1) {
+    const textRow = textRows[index];
+    const categoryRow = categoryRows[index];
+    if (!textRow && !categoryRow) break;
+    if (textRow) union.set(textRow.id, textRow);
+    if (categoryRow) union.set(categoryRow.id, categoryRow);
+  }
+  return [...union.values()].slice(0, CANDIDATE_LIMIT);
 };
 
 const diversify = <T extends { candidate: ScoreCandidate }>(
@@ -1047,6 +1191,7 @@ export async function rebuildRecommendationsForUser(
       .select({
         terms: recommendationDismissalsTable.terms,
         categories: recommendationDismissalsTable.categories,
+        dismissedAt: recommendationDismissalsTable.dismissedAt,
       })
       .from(recommendationDismissalsTable)
       .where(eq(recommendationDismissalsTable.userId, userId)),
@@ -1122,14 +1267,28 @@ export async function listRecommendations(
   page: number,
   pageSize: number,
 ) {
-  const [usage] = await db.select({
-    purposes: usersTable.usagePurposes,
-    applicants: usersTable.applicantTypes,
-    international: usersTable.showInternationalOpportunities,
-  }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [[usage], [companyProfile]] = await Promise.all([
+    db
+      .select({
+        purposes: usersTable.usagePurposes,
+        applicants: usersTable.applicantTypes,
+        international: usersTable.showInternationalOpportunities,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1),
+    db
+      .select()
+      .from(companyProfilesTable)
+      .where(eq(companyProfilesTable.userId, userId))
+      .limit(1),
+  ]);
   const purposes = usage?.purposes ?? [];
   const hasDeclaredPurpose = purposes.length > 0;
-  const tenderLimit = hasDeclaredPurpose && !purposes.includes("procurement") ? Math.min(pageSize, 3) : pageSize;
+  const tenderLimit =
+    hasDeclaredPurpose && !purposes.includes("procurement")
+      ? Math.min(pageSize, 3)
+      : pageSize;
   let [{ total: storedTotal }] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(userRecommendationsTable)
@@ -1204,26 +1363,72 @@ export async function listRecommendations(
   });
   const count = Number(total);
   if (hasDeclaredPurpose) {
-    const relevant = purposes.filter((purpose) => purpose === "culture" || purpose === "funding" || purpose === "research");
-    const candidates = relevant.length ? await db.select().from(culturalOpportunitiesTable)
-      .where(and(eq(culturalOpportunitiesTable.status, "open"),
-        or(isNull(culturalOpportunitiesTable.registrationTo), gt(culturalOpportunitiesTable.registrationTo, now)),
-        usage?.international ? undefined : eq(culturalOpportunitiesTable.scope, "national")))
-      .orderBy(desc(culturalOpportunitiesTable.updatedAt)).limit(500) : [];
-    const ranked = candidates.flatMap((candidate) => {
-      const scored = scoreDeclaredOpportunity(candidate, relevant, usage?.applicants ?? []);
-      return scored ? [{ id: candidate.id, ...scored }] : [];
-    }).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, Math.min(pageSize, 10));
-    const { findOpportunity } = await import("../repositories/postgres-opportunity-repository");
-    const opportunities = (await Promise.all(ranked.map(async (item) => {
-      const opportunity = await findOpportunity(item.id, userId);
-      return opportunity ? { opportunity, score: item.score, reasons: item.reasons } : null;
-    }))).filter((item): item is NonNullable<typeof item> => item !== null);
-    return { data, opportunities, pagination: {
-      page, pageSize, total: purposes.includes("procurement") ? count : Math.min(count, 3),
-      totalPages: purposes.includes("procurement") ? (count === 0 ? 0 : Math.ceil(count / pageSize)) : (count > 0 ? 1 : 0),
-      totalIsEstimate: false,
-    } };
+    const relevant = purposes.filter(
+      (purpose) =>
+        purpose === "culture" ||
+        purpose === "funding" ||
+        purpose === "research",
+    );
+    const candidates = relevant.length
+      ? await db
+          .select()
+          .from(culturalOpportunitiesTable)
+          .where(
+            and(
+              eq(culturalOpportunitiesTable.status, "open"),
+              or(
+                isNull(culturalOpportunitiesTable.registrationTo),
+                gt(culturalOpportunitiesTable.registrationTo, now),
+              ),
+              usage?.international
+                ? undefined
+                : eq(culturalOpportunitiesTable.scope, "national"),
+            ),
+          )
+          .orderBy(desc(culturalOpportunitiesTable.updatedAt))
+          .limit(500)
+      : [];
+    const ranked = candidates
+      .flatMap((candidate) => {
+        const scored = scoreDeclaredOpportunity(
+          candidate,
+          relevant,
+          usage?.applicants ?? [],
+          companyProfile ?? null,
+        );
+        return scored ? [{ id: candidate.id, ...scored }] : [];
+      })
+      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+      .slice(0, Math.min(pageSize, 10));
+    const { findOpportunity } =
+      await import("../repositories/postgres-opportunity-repository");
+    const opportunities = (
+      await Promise.all(
+        ranked.map(async (item) => {
+          const opportunity = await findOpportunity(item.id, userId);
+          return opportunity
+            ? { opportunity, score: item.score, reasons: item.reasons }
+            : null;
+        }),
+      )
+    ).filter((item): item is NonNullable<typeof item> => item !== null);
+    return {
+      data,
+      opportunities,
+      pagination: {
+        page,
+        pageSize,
+        total: purposes.includes("procurement") ? count : Math.min(count, 3),
+        totalPages: purposes.includes("procurement")
+          ? count === 0
+            ? 0
+            : Math.ceil(count / pageSize)
+          : count > 0
+            ? 1
+            : 0,
+        totalIsEstimate: false,
+      },
+    };
   }
   return {
     data,
@@ -1239,21 +1444,105 @@ export async function listRecommendations(
 
 /** Declared interests rank public calls; unknown applicant eligibility never excludes a call. */
 export function scoreDeclaredOpportunity(
-  opportunity: Pick<typeof culturalOpportunitiesTable.$inferSelect, "kind" | "source" | "areas" | "audience" | "opportunityType" | "title" | "summary">,
+  opportunity: Pick<
+    typeof culturalOpportunitiesTable.$inferSelect,
+    | "kind"
+    | "source"
+    | "areas"
+    | "audience"
+    | "opportunityType"
+    | "title"
+    | "summary"
+  > &
+    Partial<
+      Pick<
+        typeof culturalOpportunitiesTable.$inferSelect,
+        "searchText" | "state"
+      >
+    >,
   purposes: string[],
   applicantTypes: string[],
+  profile: OpportunityProfileInput | null = null,
 ): { score: number; reasons: string[] } | null {
-  const text = normalizeText(`${opportunity.title} ${opportunity.summary ?? ""} ${opportunity.audience ?? ""} ${opportunity.opportunityType ?? ""} ${opportunity.areas.join(" ")}`);
+  const text = normalizeText(
+    `${opportunity.searchText ?? ""} ${opportunity.title} ${opportunity.summary ?? ""} ${opportunity.audience ?? ""} ${opportunity.opportunityType ?? ""} ${opportunity.areas.join(" ")}`,
+  );
+  if (profile) {
+    const exclusions = [...profile.exclusions, ...profile.excludedKeywords]
+      .flatMap((value) => [
+        normalizeText(value),
+        ...normalizeSignalTerms(value),
+      ])
+      .filter(Boolean);
+    if (exclusions.some((term) => matchesRecommendationTerm(text, term)))
+      return null;
+    const state = opportunity.state?.toUpperCase() ?? null;
+    if (
+      state &&
+      profile.coverageScope !== "national" &&
+      (profile.coverageMode ??
+        (profile.coverageScope === "states" ? "prioritize" : "strict")) ===
+        "strict"
+    ) {
+      const legacyCustom = profile.coverageScope === "states";
+      const center = profile.headquartersMunicipalityIbge
+        ? municipalityReference(profile.headquartersMunicipalityIbge)
+        : null;
+      const region = matchServiceRegion(
+        {
+          scope: "custom",
+          mode: "strict",
+          acceptsRemote: profile.acceptsRemote ?? false,
+          regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+          states: profile.coverageStates.map((value) => value.toUpperCase()),
+          municipalities: (profile.coverageMunicipalities ?? []).flatMap(
+            (code) => {
+              const city = municipalityReference(code);
+              return city ? [city] : [];
+            },
+          ),
+          radius:
+            center && profile.coverageRadiusKm
+              ? {
+                  center,
+                  km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+                }
+              : null,
+        },
+        {
+          state,
+          municipalityIbge: null,
+          categories: opportunity.areas.map((slug) => ({ slug })),
+        },
+      );
+      if (!region.matches) return null;
+    }
+  }
   const reasons: string[] = [];
   let score = 0;
-  if (purposes.includes("culture") && (opportunity.kind === "culture" || ["mapas", "funarte", "minc", "salic"].includes(opportunity.source))) {
-    score += 55; reasons.push("Chamada ligada à cultura");
+  if (
+    purposes.includes("culture") &&
+    (opportunity.kind === "culture" ||
+      ["mapas", "funarte", "minc", "salic"].includes(opportunity.source))
+  ) {
+    score += 55;
+    reasons.push("Chamada ligada à cultura");
   }
-  if (purposes.includes("funding") && (opportunity.kind === "funding" || /fomento|financiamento|bolsa|apoio/.test(text))) {
-    score += 55; reasons.push("Oportunidade de fomento");
+  if (
+    purposes.includes("funding") &&
+    (opportunity.kind === "funding" ||
+      /fomento|financiamento|bolsa|apoio/.test(text))
+  ) {
+    score += 55;
+    reasons.push("Oportunidade de fomento");
   }
-  if (purposes.includes("research") && (["cnpq", "capes", "finep"].includes(opportunity.source) || /pesquisa|cientific|inovacao|universidade/.test(text))) {
-    score += 55; reasons.push("Oportunidade ligada à pesquisa");
+  if (
+    purposes.includes("research") &&
+    (["cnpq", "capes", "finep"].includes(opportunity.source) ||
+      /pesquisa|cientific|inovacao|universidade/.test(text))
+  ) {
+    score += 55;
+    reasons.push("Oportunidade ligada à pesquisa");
   }
   if (!score) return null;
   const applicantWords: Record<string, RegExp> = {
@@ -1263,7 +1552,17 @@ export function scoreDeclaredOpportunity(
     nonprofit: /sem fins lucrativos|ong|associacao|organizacao social/,
   };
   if (applicantTypes.some((type) => applicantWords[type]?.test(text))) {
-    score += 12; reasons.push("Público relacionado ao seu tipo de proponente");
+    score += 12;
+    reasons.push("Público relacionado ao seu tipo de proponente");
+  }
+  if (
+    profile &&
+    [...profile.offerings, ...profile.selectedKeywords].some((term) =>
+      matchesRecommendationTerm(text, term),
+    )
+  ) {
+    score += 18;
+    reasons.push("Combina com a atividade da sua empresa");
   }
   return { score, reasons };
 }
@@ -1375,7 +1674,8 @@ export async function updateRecommendationPreferences(
       })
       .where(eq(usersTable.id, userId))
       .returning({
-        showInternationalOpportunities: usersTable.showInternationalOpportunities,
+        showInternationalOpportunities:
+          usersTable.showInternationalOpportunities,
       });
     if (!enabled && deleteHistory)
       await clearLearnedRecommendationSignals(userId, tx);
@@ -1423,7 +1723,9 @@ export async function recordRecommendationEvent(
       .limit(1);
     // Learning from "Interessa" is behavioral profiling: only with personalization on, and once per tender, so a
     // repeated click can neither double the evidence for an expression nor inflate the daily metric.
-    const expressions = owner?.enabled ? extractInterestExpressions(tender) : [];
+    const expressions = owner?.enabled
+      ? extractInterestExpressions(tender)
+      : [];
     const recorded = await db.transaction(async (tx) => {
       const [already] = expressions.length
         ? await tx

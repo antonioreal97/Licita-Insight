@@ -49,6 +49,7 @@ import {
   onOrBeforeSaoPauloDate,
 } from "./postgres-date-filter";
 import { scoreOpportunityForProfile } from "../recommendations/recommendation-service";
+import { searchMunicipalities } from "../service-region/service-region";
 
 const INGEST_SOURCE = "mapas-culturais";
 const INTERNATIONAL_INGEST_SOURCE = "international";
@@ -342,7 +343,10 @@ const whereFor = (
     );
   if (skip !== "eligibility" && criteria.eligibility.length > 0)
     filters.push(
-      inArray(culturalOpportunitiesTable.brazilEligibility, criteria.eligibility),
+      inArray(
+        culturalOpportunitiesTable.brazilEligibility,
+        criteria.eligibility,
+      ),
     );
   if (skip !== "funding" && criteria.funding.length > 0)
     filters.push(
@@ -529,6 +533,11 @@ const toSummary = (
           // An international value is compared in reais, at the PTAX rate stored with the call.
           amount: numberOrNull(row.amountBrlApprox ?? row.amount),
           audience: row.audience,
+          municipalityIbge: row.city
+            ? (searchMunicipalities(row.city, row.state ?? undefined, 1)[0]
+                ?.ibgeCode ?? null)
+            : null,
+          categories: row.areas.map((slug) => ({ slug })),
         },
         profile,
       )
@@ -747,8 +756,7 @@ const internationalIssues = async (): Promise<
     return [
       {
         installationId: source,
-        name:
-          opportunitySourceLabels[source as OpportunitySource] ?? source,
+        name: opportunitySourceLabels[source as OpportunitySource] ?? source,
         message:
           typeof message === "string" && message
             ? message
