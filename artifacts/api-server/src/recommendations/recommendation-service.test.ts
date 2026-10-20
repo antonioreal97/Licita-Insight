@@ -4,6 +4,7 @@ import { test } from "node:test";
 process.env.DATABASE_URL ??= "postgresql://unused:unused@127.0.0.1:1/unused";
 const {
   extractInterestExpressions,
+  matchesRecommendationTerm,
   normalizeSignalTerms,
   scoreOpportunityForProfile,
   scoreRecommendation,
@@ -12,14 +13,32 @@ const {
 } = await import("./recommendation-service");
 
 test("finalidades recomendam fontes correspondentes e proponente só reordena", () => {
-  const call = { kind: "culture" as const, source: "mapas" as const, areas: ["audiovisual"], audience: null, opportunityType: null, title: "Edital de cinema", summary: null };
+  const call = {
+    kind: "culture" as const,
+    source: "mapas" as const,
+    areas: ["audiovisual"],
+    audience: null,
+    opportunityType: null,
+    title: "Edital de cinema",
+    summary: null,
+  };
   assert.equal(scoreDeclaredOpportunity(call, [], ["individual"]), null);
   const unknown = scoreDeclaredOpportunity(call, ["culture"], ["individual"]);
-  const matched = scoreDeclaredOpportunity({ ...call, audience: "Pessoa física" }, ["culture"], ["individual"]);
+  const matched = scoreDeclaredOpportunity(
+    { ...call, audience: "Pessoa física" },
+    ["culture"],
+    ["individual"],
+  );
   assert.ok(unknown && matched);
   assert.ok(matched.score > unknown.score);
   assert.equal(scoreDeclaredOpportunity(call, ["study"], []), null);
-  assert.ok(scoreDeclaredOpportunity({ ...call, kind: "funding", source: "cnpq" }, ["research"], []));
+  assert.ok(
+    scoreDeclaredOpportunity(
+      { ...call, kind: "funding", source: "cnpq" },
+      ["research"],
+      [],
+    ),
+  );
 });
 
 test("normaliza termos de busca e remove palavras genéricas", () => {
@@ -28,6 +47,78 @@ test("normaliza termos de busca e remove palavras genéricas", () => {
       "Contratação de HEMODIÁLISE e medicamentos, medicamentos",
     ),
     ["hemodialise", "medicamentos"],
+  );
+});
+
+test("casa palavras inteiras nas flexões plurais comuns do português", () => {
+  const pairs = [
+    ["trator", "tratores"],
+    ["computador", "computadores"],
+    ["motor", "motores"],
+    ["luz", "luzes"],
+    ["gas", "gases"],
+    ["material", "materiais"],
+    ["locacao", "locacoes"],
+    ["impressao", "impressoes"],
+    ["pao", "paes"],
+    ["mao", "maos"],
+    ["item", "itens"],
+    ["papel", "papeis"],
+    ["lei", "leis"],
+    ["farol", "farois"],
+    ["azul", "azuis"],
+    ["notebook", "notebooks"],
+    ["drone", "drones"],
+    ["pneu", "pneus"],
+  ] as const;
+  for (const [singular, plural] of pairs) {
+    assert.equal(
+      matchesRecommendationTerm(`aquisição de ${plural}`, singular),
+      true,
+      `${singular} deve casar com ${plural}`,
+    );
+    assert.equal(
+      matchesRecommendationTerm(`aquisição de ${singular}`, plural),
+      true,
+      `${plural} deve casar com ${singular}`,
+    );
+  }
+});
+
+test("não casa pedaços de outras palavras", () => {
+  assert.equal(matchesRecommendationTerm("Cartões de parte", "arte"), false);
+  assert.equal(matchesRecommendationTerm("Manobra", "obra"), false);
+  assert.equal(matchesRecommendationTerm("Messias", "mes"), false);
+});
+
+test("casa expressões flexionadas somente quando contíguas", () => {
+  assert.equal(
+    matchesRecommendationTerm(
+      "serviço de locações de veículos",
+      "locação de veículos",
+    ),
+    true,
+  );
+  assert.equal(
+    matchesRecommendationTerm(
+      "serviço de locação de veículo",
+      "locações de veículos",
+    ),
+    true,
+  );
+  assert.equal(
+    matchesRecommendationTerm(
+      "serviço de transmissão ao vivo do evento",
+      "transmissao ao vivo",
+    ),
+    true,
+  );
+  assert.equal(
+    matchesRecommendationTerm(
+      "transmissão de dados com apresentação ao vivo",
+      "transmissao ao vivo",
+    ),
+    false,
   );
 });
 
@@ -42,9 +133,7 @@ test("eventos perdem metade do peso a cada 30 dias", () => {
 
 const profile = {
   terms: [{ value: "hemodialise", weight: 10, label: "profile:hemodialise" }],
-  categories: [
-    { value: "saude", label: "profile_category:saude", weight: 8 },
-  ],
+  categories: [{ value: "saude", label: "profile_category:saude", weight: 8 }],
   states: [{ value: "sp", weight: 5 }],
   organizations: [{ value: "org-1", label: "Hospital", weight: 4 }],
   modalities: [],
@@ -109,11 +198,30 @@ test("valor suspeito não conta a favor nem contra a faixa de valor", () => {
     publishedAt: new Date("2026-10-07T12:00:00Z"),
     textRank: 0.5,
   };
-  const unknown = scoreRecommendation({ ...candidate, estimatedValue: null }, profile, [], now);
-  const inside = scoreRecommendation({ ...candidate, estimatedValue: "100000" }, profile, [], now);
-  const outside = scoreRecommendation({ ...candidate, estimatedValue: "938761000000.00" }, profile, [], now);
+  const unknown = scoreRecommendation(
+    { ...candidate, estimatedValue: null },
+    profile,
+    [],
+    now,
+  );
+  const inside = scoreRecommendation(
+    { ...candidate, estimatedValue: "100000" },
+    profile,
+    [],
+    now,
+  );
+  const outside = scoreRecommendation(
+    { ...candidate, estimatedValue: "938761000000.00" },
+    profile,
+    [],
+    now,
+  );
   const flagged = scoreRecommendation(
-    { ...candidate, estimatedValue: "938761000000.00", estimatedValueFlag: "absolute_ceiling" },
+    {
+      ...candidate,
+      estimatedValue: "938761000000.00",
+      estimatedValueFlag: "absolute_ceiling",
+    },
     profile,
     [],
     now,
@@ -189,6 +297,106 @@ test("exclusões eliminam o candidato", () => {
   assert.equal(result, null);
 });
 
+test("descrição do perfil reforça, mas não qualifica sozinha", () => {
+  const descriptionOnly = {
+    ...profile,
+    terms: [
+      {
+        value: "manutencao",
+        weight: 2,
+        label: "profile_description:manutencao",
+      },
+    ],
+    categories: [],
+  };
+  assert.equal(
+    scoreRecommendation(
+      {
+        ...baseCandidate,
+        searchText: "manutencao predial preventiva",
+        categories: [],
+        state: "SP",
+      },
+      descriptionOnly,
+      [],
+      new Date("2026-10-08T12:00:00Z"),
+    ),
+    null,
+  );
+  const reinforced = scoreRecommendation(
+    {
+      ...baseCandidate,
+      searchText: "drone para manutencao de estruturas",
+      categories: [],
+      state: "SP",
+    },
+    {
+      ...descriptionOnly,
+      terms: [
+        {
+          value: "drone",
+          weight: 12,
+          label: "saved:drone",
+          sources: ["profile", "saved"],
+        },
+        ...descriptionOnly.terms,
+      ],
+    },
+    [],
+    new Date("2026-10-08T12:00:00Z"),
+  );
+  assert.ok(reinforced);
+  assert.match(reinforced.reasons.map(({ text }) => text).join(" "), /drone/);
+});
+
+test("dispensas ignoram categoria genérica, decaem e têm teto total", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const candidate = {
+    ...baseCandidate,
+    state: "SP",
+    categories: [{ slug: "outros", label: "Outros" }],
+  };
+  const baseline = scoreRecommendation(candidate, profile, [], now);
+  const generic = scoreRecommendation(
+    candidate,
+    profile,
+    Array.from({ length: 20 }, () => ({
+      terms: [],
+      categories: [{ slug: "outros", label: "Outros" }],
+      dismissedAt: now,
+    })),
+    now,
+  );
+  assert.ok(baseline && generic);
+  assert.equal(generic.score, baseline.score);
+  const recent = scoreRecommendation(
+    candidate,
+    profile,
+    Array.from({ length: 20 }, () => ({
+      terms: ["hemodialise"],
+      categories: [],
+      dismissedAt: now,
+    })),
+    now,
+  );
+  const old = scoreRecommendation(
+    candidate,
+    profile,
+    [
+      {
+        terms: ["hemodialise"],
+        categories: [],
+        dismissedAt: new Date("2026-07-10T12:00:00Z"),
+      },
+    ],
+    now,
+  );
+  assert.ok(recent && old);
+  assert.equal(Number((baseline.score - recent.score).toFixed(5)), 12);
+  assert.ok(old.score > recent.score);
+  assert.ok(old.score < baseline.score);
+});
+
 test("região rígida filtra e prioridade mantém edital de fora com motivo", () => {
   const candidate = {
     id: "T-region",
@@ -239,7 +447,9 @@ test("região rígida filtra e prioridade mantém edital de fora com motivo", ()
 test("histórico sozinho ou termos genéricos não criam recomendação", () => {
   const now = new Date("2026-10-08T12:00:00Z");
   assert.deepEqual(
-    normalizeSignalTerms("uso solucao destinados centro equipamentos materiais aquisicao"),
+    normalizeSignalTerms(
+      "uso solucao destinados centro equipamentos materiais aquisicao",
+    ),
     [],
   );
   const historyOnly = {
@@ -279,7 +489,11 @@ test("caso do dono: DF+audiovisual strict não recomenda odontologia/medicamento
     ],
     categories: [
       { value: "ti-telecom", label: "Tecnologia da informação", weight: 5 },
-      { value: "eventos-cultura", label: "Eventos, shows e cultura", weight: 4 },
+      {
+        value: "eventos-cultura",
+        label: "Eventos, shows e cultura",
+        weight: 4,
+      },
     ],
     states: [{ value: "df", weight: 5 }],
     organizations: [],
@@ -302,19 +516,25 @@ test("caso do dono: DF+audiovisual strict não recomenda odontologia/medicamento
     {
       id: "odontologia-ap",
       searchText: "materiais de consumo odontologicos",
-      categories: [{ slug: "medicamentos-insumos-saude", label: "Medicamentos" }],
+      categories: [
+        { slug: "medicamentos-insumos-saude", label: "Medicamentos" },
+      ],
       state: "AP",
     },
     {
       id: "milrinona-pe",
       searchText: "medicamentos milrinona",
-      categories: [{ slug: "medicamentos-insumos-saude", label: "Medicamentos" }],
+      categories: [
+        { slug: "medicamentos-insumos-saude", label: "Medicamentos" },
+      ],
       state: "PE",
     },
     {
       id: "diploma-go",
       searchText: "pasta para diploma",
-      categories: [{ slug: "material-escritorio", label: "Material de escritório" }],
+      categories: [
+        { slug: "material-escritorio", label: "Material de escritório" },
+      ],
       state: "GO",
     },
     {
@@ -362,10 +582,15 @@ test("caso do dono: DF+audiovisual strict não recomenda odontologia/medicamento
   );
   assert.ok(remoteAudiovisual);
   assert.ok(
-    remoteAudiovisual.reasons.some(({ text }) => /audiovisual|distância|distancia/i.test(text)),
+    remoteAudiovisual.reasons.some(({ text }) =>
+      /audiovisual|distância|distancia/i.test(text),
+    ),
   );
   assert.ok(
-    !remoteAudiovisual.reasons.some(({ text }) => /cameras|uso|solucao/i.test(text) && !/audiovisual/i.test(text)),
+    !remoteAudiovisual.reasons.some(
+      ({ text }) =>
+        /cameras|uso|solucao/i.test(text) && !/audiovisual/i.test(text),
+    ),
   );
 });
 
@@ -381,7 +606,9 @@ test("remoto sem casamento direto com o perfil é rejeitado em strict", () => {
     },
     {
       ...profile,
-      terms: [{ value: "hemodialise", weight: 10, label: "profile:hemodialise" }],
+      terms: [
+        { value: "hemodialise", weight: 10, label: "profile:hemodialise" },
+      ],
       categories: [],
       coverageScope: "custom",
       coverageMode: "strict",
@@ -429,16 +656,50 @@ test("Interessa extrai expressões úteis e ignora genéricos do vocabulário #1
     title: "Contratação de empresa para locação de equipamentos audiovisuais",
     objectSummary: "Locação de equipamentos audiovisuais para eventos",
     items: [{ description: "Projetor e sistema de som" }],
-    categories: [{ slug: "eventos-cultura", label: "Eventos, shows e cultura" }],
+    categories: [
+      { slug: "eventos-cultura", label: "Eventos, shows e cultura" },
+    ],
     organizationName: "Secretaria de Cultura do DF",
   });
-  assert.ok(
-    expressions.some((term) => term === "locacao de equipamentos audiovisuais"),
-  );
+  assert.ok(expressions.includes("locacao"));
   assert.ok(expressions.some((term) => term.includes("audiovisua")));
   assert.ok(!expressions.includes("empresa"));
   assert.ok(!expressions.includes("contratacao"));
   assert.ok(!expressions.includes("equipamentos"));
+  assert.ok(!expressions.some((term) => term.includes("secretaria")));
+  assert.ok(!expressions.some((term) => term.includes("shows")));
+});
+
+test("Interessa extrai por campo e preserva o termo concreto comum", () => {
+  const first = extractInterestExpressions({
+    title: "Aquisição de drone para inspeção aérea",
+    objectSummary: "Drone com câmera térmica",
+    organizationName: "Gabinete Militar do Governador",
+  });
+  const second = extractInterestExpressions({
+    title: "Serviço com drones para mapeamento",
+    objectSummary: "Operação de drone em levantamento topográfico",
+    organizationName: "Secretaria Municipal de Obras",
+  });
+  assert.ok(first.includes("drone"));
+  assert.ok(second.includes("drone"));
+  assert.ok(first.filter((term) => second.includes(term)).includes("drone"));
+  assert.ok(!first.some((term) => term.includes("gabinete")));
+  assert.ok(!second.some((term) => term.includes("secretaria")));
+});
+
+test("Interessa compartilha formas canônicas entre singular e plural", () => {
+  const singular = extractInterestExpressions({
+    title: "Locação veículos gás para apoio operacional",
+  });
+  const plural = extractInterestExpressions({
+    title: "Locações veículos gases para apoios operacionais",
+  });
+  const common = singular.filter((term) => plural.includes(term));
+  assert.ok(common.includes("locacao"));
+  assert.ok(common.includes("veiculo"));
+  assert.ok(common.includes("gas"));
+  assert.ok(common.includes("locacao veiculo"));
 });
 
 test("após 2 Interessa parecidos, expressões aprendidas qualificam em DF e não fora (strict)", () => {
@@ -475,7 +736,9 @@ test("após 2 Interessa parecidos, expressões aprendidas qualificam em DF e nã
     signalCount: 4,
   };
   const base = {
-    categories: [{ slug: "eventos-cultura", label: "Eventos, shows e cultura" }],
+    categories: [
+      { slug: "eventos-cultura", label: "Eventos, shows e cultura" },
+    ],
     organizationId: "org-df",
     organizationName: "Secretaria",
     modality: "other",
@@ -615,5 +878,177 @@ test("termos do perfil casam como expressão inteira; boilerplate de licitação
   );
   assert.ok(
     phrase?.reasons.includes("Combina com seu perfil: transmissao ao vivo"),
+  );
+});
+
+const opportunityProfile = {
+  description: "Inspeção técnica de estruturas",
+  offerings: ["drone"],
+  exclusions: [] as string[],
+  selectedKeywords: [] as string[],
+  excludedKeywords: [] as string[],
+  coverageScope: "custom" as const,
+  coverageStates: ["MG"],
+  coverageRegions: [] as Array<
+    "north" | "northeast" | "central_west" | "southeast" | "south"
+  >,
+  coverageMunicipalities: [] as string[],
+  headquartersMunicipalityIbge: null as string | null,
+  coverageRadiusKm: null as number | null,
+  coverageMode: "strict" as const,
+  acceptsRemote: false,
+  valueMin: null,
+  valueMax: null,
+};
+
+const opportunity = {
+  searchText: "programa para aquisição de drones",
+  audience: null,
+  amount: null,
+  state: "MG",
+};
+
+test("oportunidades respeitam UF, município, raio, macrorregião, remoto e prioridade", () => {
+  assert.ok(scoreOpportunityForProfile(opportunity, opportunityProfile));
+  assert.equal(
+    scoreOpportunityForProfile(
+      { ...opportunity, state: "SP" },
+      opportunityProfile,
+    ),
+    null,
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      { ...opportunity, state: null },
+      opportunityProfile,
+    ),
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      { ...opportunity, municipalityIbge: "3106200" },
+      {
+        ...opportunityProfile,
+        coverageStates: [],
+        coverageMunicipalities: ["3106200"],
+      },
+    ),
+  );
+  assert.equal(
+    scoreOpportunityForProfile(
+      { ...opportunity, municipalityIbge: "3170206" },
+      {
+        ...opportunityProfile,
+        coverageStates: [],
+        coverageMunicipalities: ["3106200"],
+      },
+    ),
+    null,
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      { ...opportunity, municipalityIbge: "3106200" },
+      {
+        ...opportunityProfile,
+        coverageStates: [],
+        headquartersMunicipalityIbge: "3106200",
+        coverageRadiusKm: 100,
+      },
+    ),
+  );
+  assert.equal(
+    scoreOpportunityForProfile(
+      { ...opportunity, municipalityIbge: "3170206" },
+      {
+        ...opportunityProfile,
+        coverageStates: [],
+        headquartersMunicipalityIbge: "3106200",
+        coverageRadiusKm: 100,
+      },
+    ),
+    null,
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      { ...opportunity, state: "SP" },
+      {
+        ...opportunityProfile,
+        coverageStates: [],
+        coverageRegions: ["southeast"],
+      },
+    ),
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      {
+        ...opportunity,
+        state: "SP",
+        categories: [{ slug: "ti-telecom" }],
+      },
+      { ...opportunityProfile, acceptsRemote: true },
+    ),
+  );
+  assert.ok(
+    scoreOpportunityForProfile(
+      { ...opportunity, state: "SP" },
+      { ...opportunityProfile, coverageMode: "prioritize" },
+    ),
+  );
+  assert.equal(
+    scoreOpportunityForProfile(
+      {
+        ...opportunity,
+        searchText: "manutenção predial preventiva",
+      },
+      opportunityProfile,
+    ),
+    null,
+  );
+});
+
+test("finalidades aplicam exclusão, região estrita e bônus do perfil", () => {
+  const call = {
+    kind: "culture" as const,
+    source: "mapas" as const,
+    areas: ["audiovisual"],
+    audience: null,
+    opportunityType: "Edital",
+    title: "Prêmio para produção com drone",
+    summary: null,
+    searchText: "premio para producao com drone",
+    state: "MG",
+  };
+  const base = scoreDeclaredOpportunity(call, ["culture"], [], null);
+  const boosted = scoreDeclaredOpportunity(
+    call,
+    ["culture"],
+    [],
+    opportunityProfile,
+  );
+  assert.ok(base && boosted && boosted.score > base.score);
+  assert.equal(
+    scoreDeclaredOpportunity(
+      { ...call, state: "SP" },
+      ["culture"],
+      [],
+      opportunityProfile,
+    ),
+    null,
+  );
+  assert.equal(
+    scoreDeclaredOpportunity(
+      { ...call, title: "Prêmio para armas", searchText: "premio para armas" },
+      ["culture"],
+      [],
+      { ...opportunityProfile, exclusions: ["arma"] },
+    ),
+    null,
+  );
+  assert.ok(
+    scoreDeclaredOpportunity(
+      { ...call, state: null },
+      ["culture"],
+      [],
+      opportunityProfile,
+    ),
   );
 });

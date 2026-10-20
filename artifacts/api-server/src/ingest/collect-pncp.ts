@@ -35,7 +35,13 @@ import {
 import { startIngestRunHeartbeat } from "./run-heartbeat";
 import { invalidateTenderFacetCache } from "../lib/tender-facet-cache";
 import { warmDefaultTenderSearch } from "../services/search-backend";
-import { appRoleFromEnv, roleServesApi } from "../app-role";
+import {
+  appRoleFromEnv,
+  roleRunsJobs,
+  roleServesApi,
+  type AppRole,
+} from "../app-role";
+import { tryRunSingletonJob } from "../jobs/job-lock";
 
 const SOURCE = "pncp";
 const DEFAULT_MODALITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -71,6 +77,28 @@ type RunCounters = {
   enrichmentErrors: number;
   enrichmentSkipped: number;
 };
+
+type RecommendationJobLock = (
+  jobName: string,
+  job: () => Promise<unknown>,
+) => Promise<{ acquired: boolean; value?: unknown }>;
+
+/** Runs the post-collect rebuild only in job-capable processes, under the scheduler's shared lock. */
+export async function rebuildRecommendationsAfterPncpCollect(
+  role: AppRole = appRoleFromEnv(),
+  acquire: RecommendationJobLock = tryRunSingletonJob,
+  rebuild?: () => Promise<unknown>,
+): Promise<boolean> {
+  if (!roleRunsJobs(role)) return false;
+  const run =
+    rebuild ??
+    (await import("../recommendations/recommendation-service"))
+      .runDailyRecommendations;
+  const locked = await acquire("daily_recommendations", run);
+  if (locked.acquired)
+    logger.info(locked.value, "Recommendations rebuilt after PNCP ingest");
+  return locked.acquired;
+}
 
 const persistedCounters = (counters: RunCounters) => ({
   pagesRead: counters.pagesRead,
@@ -648,6 +676,16 @@ async function execute(
     );
     const { classifyAfterCollect } = await import("../titles/classify");
     await classifyAfterCollect("pncp_collect");
+    // The collector runs only on job-capable roles. The shared lock also prevents the
+    // 03:00 scheduler (or another worker replica) from rebuilding the same materialization twice.
+    try {
+      await rebuildRecommendationsAfterPncpCollect();
+    } catch (error) {
+      logger.error(
+        { err: error, runId },
+        "Recommendation rebuild after PNCP ingest failed",
+      );
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ err: error, runId }, "PNCP ingest failed");
