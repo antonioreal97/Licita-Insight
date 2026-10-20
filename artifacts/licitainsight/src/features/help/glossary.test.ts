@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CATEGORY_LABELS, CATEGORY_ORDER, FIRST_STEPS, GLOSSARY, GLOSSARY_DISCLAIMER } from './glossary';
 import {
+  GLOSSARY_ROUND_GOAL,
   GLOSSARY_LEARNING_NOTES,
   GLOSSARY_TOPICS,
   glossaryQuizFor,
+  glossaryReward,
   learningNoteFor,
   simpleGlossaryDefinition,
 } from './glossary-learning';
@@ -88,4 +90,12 @@ test('every learning challenge has three stable and unique answers with one corr
     assert.deepEqual(challenge, glossaryQuizFor(entry, topicEntries), `${entry.id}: unstable challenge`);
     assert.match(challenge.prompt, new RegExp(entry.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+});
+
+test('the quick round rewards consecutive first-try answers without unbounded bonuses', () => {
+  assert.equal(GLOSSARY_ROUND_GOAL, 5);
+  assert.deepEqual(glossaryReward(0, true), { points: 10, nextStreak: 1, streakBonus: 0 });
+  assert.deepEqual(glossaryReward(1, true), { points: 12, nextStreak: 2, streakBonus: 2 });
+  assert.deepEqual(glossaryReward(10, true), { points: 20, nextStreak: 11, streakBonus: 10 });
+  assert.deepEqual(glossaryReward(4, false), { points: 10, nextStreak: 0, streakBonus: 0 });
 });

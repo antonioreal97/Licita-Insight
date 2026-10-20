@@ -6,6 +6,7 @@ import {
   Award,
   BookOpen,
   Check,
+  Flame,
   Info,
   Lightbulb,
   RotateCcw,
@@ -29,8 +30,10 @@ import {
 import { glossaryAnchor } from './components/glossary-term';
 import { GlossaryScope, GlossaryText } from './components/glossary-text';
 import {
+  GLOSSARY_ROUND_GOAL,
   GLOSSARY_TOPICS,
   glossaryQuizFor,
+  glossaryReward,
   learningNoteFor,
   simpleGlossaryDefinition,
 } from './glossary-learning';
@@ -151,6 +154,11 @@ function GlossaryLearningStudio() {
   const [completed, setCompleted] = useState<Set<string>>(() => new Set());
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [newlyCompletedId, setNewlyCompletedId] = useState<string | null>(null);
+  const [points, setPoints] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [roundCorrect, setRoundCorrect] = useState(0);
+  const [lastReward, setLastReward] = useState<ReturnType<typeof glossaryReward> | null>(null);
   const entries = GLOSSARY.filter((entry) => entry.category === topic);
   const entry = entries[cardIndex] ?? entries[0]!;
   const topicCopy = GLOSSARY_TOPICS[topic];
@@ -163,6 +171,7 @@ function GlossaryLearningStudio() {
   });
   const achievementCount = Number(completed.size >= 1) + Number(completed.size >= 10) + completedTopics.length;
   const answerIsCorrect = selectedAnswer === quiz.correctAnswer;
+  const roundComplete = roundCorrect >= GLOSSARY_ROUND_GOAL;
   const achievementsUnlockedNow = newlyCompletedId === entry.id
     ? [
         ...(completed.size === 1 ? ['Primeiro acerto'] : []),
@@ -171,24 +180,31 @@ function GlossaryLearningStudio() {
       ]
     : [];
   const mascotMessage = !revealed
-    ? `Sua missão: descubra o que “${entry.term}” quer dizer.`
+    ? `Sua missão: escolha a ideia que melhor explica “${entry.term}”.`
     : selectedAnswer === null
-      ? 'Leia o exemplo, encontre a ideia-chave e escolha uma resposta.'
+      ? 'Aqui vai uma pista. Leia o exemplo e faça sua escolha.'
       : answerIsCorrect
-        ? achievementsUnlockedNow.length > 0
+        ? roundComplete
+          ? 'Rodada completa! Cinco desafios vencidos. Você quer jogar mais uma?'
+          : achievementsUnlockedNow.length > 0
           ? `Mandou bem! Você liberou ${achievementsUnlockedNow.join(' e ')}.`
-          : 'Mandou bem! Mais um desafio concluído. Vamos para o próximo?'
-        : 'Quase! Volte à ideia-chave e tente outra resposta.';
+          : streak > 1
+            ? `Boa! Você chegou a ${streak} acertos seguidos.`
+            : 'Mandou bem! Mais um desafio concluído. Vamos para o próximo?'
+        : 'Boa tentativa! Compare as respostas destacadas e tente mais uma vez.';
 
   const resetChallenge = () => {
     setRevealed(false);
     setSelectedAnswer(null);
     setNewlyCompletedId(null);
+    setLastReward(null);
   };
 
   const chooseTopic = (nextTopic: GlossaryCategory) => {
+    const nextEntries = GLOSSARY.filter((item) => item.category === nextTopic);
+    const firstPending = nextEntries.findIndex((item) => !completed.has(item.id));
     setTopic(nextTopic);
-    setCardIndex(0);
+    setCardIndex(firstPending >= 0 ? firstPending : 0);
     resetChallenge();
   };
 
@@ -197,48 +213,112 @@ function GlossaryLearningStudio() {
     resetChallenge();
   };
 
+  const continueGame = () => {
+    if (roundComplete) setRoundCorrect(0);
+    for (let offset = 1; offset <= entries.length; offset += 1) {
+      const nextIndex = (cardIndex + offset) % entries.length;
+      if (!completed.has(entries[nextIndex]!.id)) {
+        setCardIndex(nextIndex);
+        resetChallenge();
+        return;
+      }
+    }
+    const topicIndex = CATEGORY_ORDER.indexOf(topic);
+    for (let offset = 1; offset <= CATEGORY_ORDER.length; offset += 1) {
+      const nextTopic = CATEGORY_ORDER[(topicIndex + offset) % CATEGORY_ORDER.length]!;
+      const nextEntries = GLOSSARY.filter((item) => item.category === nextTopic);
+      const firstPending = nextEntries.findIndex((item) => !completed.has(item.id));
+      if (firstPending >= 0) {
+        setTopic(nextTopic);
+        setCardIndex(firstPending);
+        resetChallenge();
+        return;
+      }
+    }
+    move(1);
+  };
+
   const answerChallenge = (answer: string) => {
+    const correctOnFirstTry = selectedAnswer === null;
     setSelectedAnswer(answer);
     if (answer !== quiz.correctAnswer) {
       setNewlyCompletedId(null);
+      setLastReward(null);
+      setStreak(0);
+      setRevealed(true);
       return;
     }
     if (completed.has(entry.id)) {
       setNewlyCompletedId(null);
+      setLastReward(null);
       return;
     }
+    const reward = glossaryReward(streak, correctOnFirstTry);
     setCompleted((current) => new Set(current).add(entry.id));
     setNewlyCompletedId(entry.id);
+    setPoints((current) => current + reward.points);
+    setStreak(reward.nextStreak);
+    setBestStreak((current) => Math.max(current, reward.nextStreak));
+    setRoundCorrect((current) => Math.min(GLOSSARY_ROUND_GOAL, current + 1));
+    setLastReward(reward);
+    setRevealed(true);
   };
 
   return (
     <div className="mt-6" data-testid="glossary-learning-studio">
-      <div className="mb-5 grid gap-4 border-y border-border py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div>
-          <p className="flex items-center gap-2 type-ui font-semibold text-foreground">
-            <Target size={17} aria-hidden="true" className="text-primary" /> Sua jornada de aprendizagem
-          </p>
-          <p className="mt-1 type-meta text-muted-foreground">Acerte um desafio para concluir o termo e ganhar 10 pontos. Seu placar fica apenas nesta tela.</p>
+      <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-6">
+          <div>
+            <p className="flex items-center gap-2 type-ui font-semibold text-foreground">
+              <Target size={17} aria-hidden="true" className="text-primary" /> Rodada rápida
+            </p>
+            <p className="mt-1 type-meta text-muted-foreground">Acerte 5 termos de qualquer assunto. Respostas seguidas valem bônus.</p>
+            <ol className="mt-4 flex gap-2" aria-label={`${roundCorrect} de ${GLOSSARY_ROUND_GOAL} acertos nesta rodada`}>
+              {Array.from({ length: GLOSSARY_ROUND_GOAL }, (_, index) => {
+                const finished = index < roundCorrect;
+                return (
+                  <li
+                    key={index}
+                    aria-label={finished ? `Acerto ${index + 1} concluído` : `Acerto ${index + 1} pendente`}
+                    className={`flex size-9 items-center justify-center rounded-lg border type-meta font-semibold ${
+                      finished
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {finished ? <Check size={16} aria-hidden="true" /> : index + 1}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+          <dl className="grid grid-cols-3 gap-x-5 gap-y-2" aria-label="Placar do glossário">
+            <div>
+              <dt className="type-meta text-muted-foreground">Pontos</dt>
+              <dd className="type-title text-foreground" data-testid="glossary-score">{points}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1 type-meta text-muted-foreground"><Flame size={14} aria-hidden="true" /> Sequência</dt>
+              <dd className="type-title text-foreground" data-testid="glossary-streak">{streak}</dd>
+            </div>
+            <div>
+              <dt className="type-meta text-muted-foreground">Conquistas</dt>
+              <dd className="type-title text-foreground">{achievementCount}</dd>
+            </div>
+          </dl>
         </div>
-        <dl className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Placar do glossário">
-          <div>
-            <dt className="type-meta text-muted-foreground">Pontos</dt>
-            <dd className="type-title text-foreground" data-testid="glossary-score">{completed.size * 10}</dd>
-          </div>
-          <div>
-            <dt className="type-meta text-muted-foreground">Concluídos</dt>
-            <dd className="type-title text-foreground">{completed.size}/{GLOSSARY.length}</dd>
-          </div>
-          <div>
-            <dt className="type-meta text-muted-foreground">Conquistas</dt>
-            <dd className="type-title text-foreground">{achievementCount}</dd>
-          </div>
-        </dl>
+        <div className={`border-t px-5 py-3 type-meta sm:px-6 ${roundComplete ? 'border-primary bg-primary-subtle text-primary-subtle-foreground' : 'border-border text-muted-foreground'}`}>
+          {roundComplete
+            ? 'Rodada concluída. Continue para começar outra e manter sua melhor sequência.'
+            : `Melhor sequência: ${bestStreak}. O placar fica apenas nesta tela.`}
+        </div>
       </div>
 
       <div className="flex snap-x gap-2 overflow-x-auto pb-2" aria-label="Escolha um assunto para estudar">
         {CATEGORY_ORDER.map((item) => {
-          const count = GLOSSARY.filter((entryItem) => entryItem.category === item).length;
+          const topicEntries = GLOSSARY.filter((entryItem) => entryItem.category === item);
+          const count = topicEntries.length;
+          const topicCompleted = topicEntries.filter((entryItem) => completed.has(entryItem.id)).length;
           return (
             <button
               key={item}
@@ -251,7 +331,8 @@ function GlossaryLearningStudio() {
                   : 'border-border bg-card text-foreground hover:bg-muted'
               }`}
             >
-              {CATEGORY_LABELS[item]} <span className="font-normal opacity-80">({count})</span>
+              {topicCompleted === count && <Check size={14} aria-hidden="true" className="mr-1 inline" />}
+              {CATEGORY_LABELS[item]} <span className="font-normal opacity-80">({topicCompleted}/{count})</span>
             </button>
           );
         })}
@@ -280,11 +361,11 @@ function GlossaryLearningStudio() {
         </div>
 
         <div className="flex min-h-96 flex-col p-5 sm:p-7">
-          <div className="mb-5 flex items-center gap-3 border-b border-border pb-4" data-testid="glossary-mascot" role="note">
-            <BrandLogo symbol className="h-12 sm:h-14" />
+          <div className="mb-5 flex items-center gap-3 rounded-xl bg-primary-subtle p-3 text-primary-subtle-foreground" data-testid="glossary-mascot" role="note">
+            <BrandLogo symbol className="h-14" />
             <div className="min-w-0">
-              <p className="type-meta font-semibold text-primary">Pardal, seu guia</p>
-              <p className="mt-1 type-meta text-foreground">{mascotMessage}</p>
+              <p className="type-meta font-semibold">Pardal, seu guia</p>
+              <p className="mt-1 type-meta">{mascotMessage}</p>
             </div>
           </div>
           <div className="flex items-center justify-between gap-4 type-meta text-muted-foreground">
@@ -298,92 +379,97 @@ function GlossaryLearningStudio() {
           <p className="mt-8 type-meta font-semibold text-primary">Você sabe o que isso quer dizer?</p>
           <h4 className="mt-2 type-titulo-3 text-foreground">{entry.term}</h4>
 
-          <div hidden={!revealed} className="mt-6">
+          <div hidden={!revealed} className="mt-5 border-l-4 border-primary pl-4">
+            <p className="type-meta font-semibold text-primary">{selectedAnswer === null ? 'Pista do Pardal' : 'Entenda a resposta'}</p>
             <p className="type-body font-semibold text-foreground">{simpleGlossaryDefinition(entry)}</p>
-            <div className="mt-4 rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground">
-              <p className="type-ui font-semibold">Veja em uma situação real</p>
-              <p className="mt-2 type-meta">{note.example}</p>
-            </div>
-            <p className="mt-4 type-meta text-foreground/90">
-              <span className="font-semibold text-foreground">Ideia-chave: </span>{note.remember}
-            </p>
-            <fieldset className="mt-6">
-              <legend className="type-ui font-semibold text-foreground">{quiz.prompt}</legend>
-              <div className="mt-3 grid gap-2">
-                {quiz.options.map((option, optionIndex) => {
-                  const selected = selectedAnswer === option;
-                  const correct = option === quiz.correctAnswer;
-                  const stateClass = selected
-                    ? correct
-                      ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
-                      : 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
-                    : 'border-border bg-card text-foreground hover:bg-muted';
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      aria-pressed={selected}
-                      disabled={answerIsCorrect}
-                      onClick={() => answerChallenge(option)}
-                      className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left type-meta focus-visible:focus-ring active:translate-y-px disabled:cursor-default ${stateClass}`}
-                    >
-                      <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-pill border border-current font-semibold">
-                        {String.fromCharCode(65 + optionIndex)}
-                      </span>
-                      <span className="pt-0.5">{option}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {selectedAnswer && (
-              <div
-                role="status"
-                data-testid="glossary-answer-feedback"
-                className={`mt-4 rounded-xl border p-4 type-meta ${
-                  answerIsCorrect
-                    ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
-                    : 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
-                }`}
-              >
-                <p className="flex items-center gap-2 font-semibold">
-                  {answerIsCorrect ? <Star size={16} aria-hidden="true" /> : <RotateCcw size={16} aria-hidden="true" />}
-                  {answerIsCorrect
-                    ? newlyCompletedId === entry.id
-                      ? 'Resposta certa. Você ganhou 10 pontos.'
-                      : 'Resposta certa. Este desafio já estava no seu placar.'
-                    : 'Quase. Releia a ideia-chave e tente outra resposta.'}
-                </p>
-                {achievementsUnlockedNow.length > 0 && (
-                  <p className="mt-1">
-                    {achievementsUnlockedNow.length === 1 ? 'Conquista liberada: ' : 'Conquistas liberadas: '}
-                    {achievementsUnlockedNow.join(', ')}.
-                  </p>
-                )}
-              </div>
-            )}
+            <p className="mt-2 type-meta text-foreground/90"><span className="font-semibold text-foreground">Exemplo: </span>{note.example}</p>
           </div>
 
+          <fieldset className="mt-6">
+            <legend className="type-ui font-semibold text-foreground">{quiz.prompt}</legend>
+            <div className="mt-3 grid gap-2">
+              {quiz.options.map((option, optionIndex) => {
+                const selected = selectedAnswer === option;
+                const correct = option === quiz.correctAnswer;
+                const showAsCorrect = selectedAnswer !== null && correct;
+                const stateClass = showAsCorrect
+                  ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
+                  : selected
+                    ? 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
+                    : 'border-border bg-card text-foreground hover:border-primary hover:bg-muted';
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={`${String.fromCharCode(65 + optionIndex)}. ${option}${showAsCorrect ? '. Resposta correta.' : ''}`}
+                    disabled={answerIsCorrect || (selected && !correct)}
+                    onClick={() => answerChallenge(option)}
+                    className={`flex min-h-12 w-full items-start gap-3 rounded-xl border p-3 text-left type-meta transition-[border-color,background-color,transform] duration-fast ease-standard focus-visible:focus-ring active:translate-y-px disabled:cursor-default motion-reduce:transition-none ${stateClass}`}
+                  >
+                    <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-pill border border-current font-semibold">
+                      {showAsCorrect ? <Check size={15} /> : String.fromCharCode(65 + optionIndex)}
+                    </span>
+                    <span className="pt-1">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {selectedAnswer && (
+            <div
+              role="status"
+              data-testid="glossary-answer-feedback"
+              className={`mt-4 rounded-xl border p-4 type-meta ${
+                answerIsCorrect
+                  ? 'border-primary bg-primary-subtle text-primary-subtle-foreground'
+                  : 'border-destructive bg-destructive-subtle text-destructive-subtle-foreground'
+              }`}
+            >
+              <p className="flex items-center gap-2 font-semibold">
+                {answerIsCorrect ? <Star size={16} aria-hidden="true" /> : <RotateCcw size={16} aria-hidden="true" />}
+                {answerIsCorrect
+                  ? newlyCompletedId === entry.id && lastReward
+                    ? `Resposta certa. +${lastReward.points} pontos.`
+                    : 'Resposta certa. Este desafio já estava no seu placar.'
+                  : 'Quase. A resposta certa ficou destacada para você comparar.'}
+              </p>
+              {lastReward && lastReward.streakBonus > 0 && (
+                <p className="mt-1">Você ganhou {lastReward.streakBonus} pontos extras pela sequência.</p>
+              )}
+              <p className="mt-2"><span className="font-semibold">Ideia-chave: </span>{note.remember}</p>
+              {achievementsUnlockedNow.length > 0 && (
+                <p className="mt-2 font-semibold">
+                  {achievementsUnlockedNow.length === 1 ? 'Conquista liberada: ' : 'Conquistas liberadas: '}
+                  {achievementsUnlockedNow.join(', ')}.
+                </p>
+              )}
+              {answerIsCorrect && roundComplete && (
+                <p className="mt-3 flex items-center gap-2 border-t border-current/20 pt-3 font-semibold">
+                  <Trophy size={17} aria-hidden="true" /> Rodada completa. Cinco desafios vencidos.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="mt-auto pt-7">
-            {!revealed ? (
+            {answerIsCorrect ? (
+              <button
+                type="button"
+                onClick={continueGame}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-action px-5 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
+              >
+                {roundComplete ? 'Começar nova rodada' : 'Próximo desafio'} <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            ) : !revealed ? (
               <button
                 type="button"
                 onClick={() => setRevealed(true)}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-action px-5 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 type-ui font-semibold text-foreground hover:bg-muted focus-visible:focus-ring active:translate-y-px"
               >
-                Mostrar explicação
+                <Lightbulb size={16} aria-hidden="true" /> Quero uma pista
               </button>
-            ) : answerIsCorrect ? (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => move(1)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-action px-4 type-ui font-semibold text-action-foreground hover:bg-action-hover focus-visible:focus-ring active:translate-y-px"
-                >
-                  Próximo desafio <ArrowRight size={15} aria-hidden="true" />
-                </button>
-              </div>
             ) : (
               <button
                 type="button"
