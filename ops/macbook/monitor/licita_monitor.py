@@ -197,11 +197,12 @@ def collect():
     m["infra"] = infra
 
     # Backup diário (licita-backup.timer escreve last-backup.json ao terminar um dump verificado)
-    backup = {"file": None, "age_h": None, "bytes": None, "copied_off_machine": None}
+    backup = {"file": None, "age_h": None, "bytes": None, "copied_off_machine": None, "copy_configured": None}
     try:
         last = json.loads((Path(CFG["BACKUP_DIR"]) / "last-backup.json").read_text())
         stamp = dt.datetime.strptime(last["at"], "%Y-%m-%dT%H:%M:%S%z")
         backup.update(file=last.get("file"), bytes=last.get("bytes"), copied_off_machine=last.get("copied_off_machine"),
+                      copy_configured=last.get("copy_configured"),
                       age_h=round((dt.datetime.now(dt.timezone.utc) - stamp).total_seconds() / 3600, 1))
     except (OSError, ValueError, KeyError):
         pass
@@ -265,6 +266,8 @@ def anomalies(m, prev):
         add("backup:missing", "alta", f"nenhum backup verificado em {CFG['BACKUP_DIR']} (licita-backup.timer instalado?)")
     elif b["age_h"] > float(CFG["BACKUP_MAX_AGE_HOURS"]):
         add("backup:stale", "alta", f"último backup há {b['age_h']} h ({b['file']})")
+    if b.get("copy_configured") and not b.get("copied_off_machine"):
+        add("backup:offsite", "alta", f"a cópia criptografada de {b['file']} não chegou à VM da Oracle (journalctl --user -u licita-backup)")
     if m["infra"]["disk_used_pct"] >= 85:
         add("disk:85", "alta", f"disco em {m['infra']['disk_used_pct']}%")
     if m["infra"]["mem_available_mb"] < 400:
@@ -701,7 +704,8 @@ def render_digest(m):
     bk = m.get("backup") or {}
     lines.append(
         f"- Backup: {bk['file']} há {bk['age_h']} h ({round((bk['bytes'] or 0) / 1048576)} MB"
-        + (", com cópia fora do servidor)" if bk.get("copied_off_machine") else ", só no servidor)")
+        + (", com cópia criptografada fora do servidor)" if bk.get("copied_off_machine")
+           else ", só no servidor: a cópia falhou)" if bk.get("copy_configured") else ", só no servidor)")
         if bk.get("file") else "- Backup: NENHUM backup verificado"
     )
     active = anomalies(m, {})
