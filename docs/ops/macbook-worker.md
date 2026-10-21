@@ -268,12 +268,38 @@ das 06:00. Ele executa `~/.local/bin/licita-backup` (`ops/macbook/licita-backup.
 - o arquivo só perde o `.partial` depois que `pg_restore --list` encontra dados de tabela; grava `.sha256` e
   `last-backup.json`;
 - retenção de 14 dias (`BACKUP_RETENTION_DAYS`), mantendo sempre os 3 mais novos (`BACKUP_KEEP_MIN`);
-- cópia opcional fora do servidor: `BACKUP_COPY_TARGET=host:/caminho` em `~/licita-monitor/backup.env`
-  (por exemplo a VM `abriu-edge` pela Tailscale). Sem isso o backup fica só no disco do MacBook e **não protege
-  contra falha do hardware**.
+- cópia fora do servidor, sempre criptografada: com `BACKUP_COPY_TARGET=host:/caminho` e
+  `BACKUP_COPY_PUBKEY=<chave pública OpenPGP>` em `~/licita-monitor/backup.env`, o dump é cifrado no servidor
+  (`.dump.gpg`) e vai com o `.sha256` para a VM Oracle pela Tailscale, com a mesma retenção. Sem a chave pública o
+  script recusa copiar. Sem a cópia o backup fica só no disco do MacBook e **não protege contra falha do hardware**.
 
 O monitor lê `last-backup.json` a cada 5 min: sem backup verificado gera `backup:missing`; mais de 26 h
-(`BACKUP_MAX_AGE_HOURS`) gera `backup:stale`. O relatório diário mostra o último backup.
+(`BACKUP_MAX_AGE_HOURS`) gera `backup:stale`; cópia configurada que não chegou à borda gera `backup:offsite` (o dump
+local continua registrado e o serviço termina com falha). O relatório diário mostra o último backup e se a cópia saiu.
+
+### Cópia criptografada na VM Oracle
+
+Ativação, uma vez, pelo owner **no próprio Mac** (depois do merge; o script confere e pode ser rodado de novo):
+
+```sh
+ops/macbook/licita-backup-offsite-setup.sh
+```
+
+Ele instala `licita-backup` e o monitor a partir de `origin/ops/macbook-worker`, cria no servidor a chave SSH
+`~/.ssh/licita-backup_ed25519` e o alias `licita-backup-edge`, cria na borda o usuário `licitabackup` (sem sudo; a
+chave só vale a partir de `100.76.192.116`, com `restrict`), fixa a chave de host da borda já verificada, grava a
+chave pública "Pardal Digital backup" em `~/licita-monitor/backup-pubkey.asc` e o `backup.env`, e roda um backup de
+teste. A chave **privada** fica só no Mac do owner e no gerenciador de senhas: nem o servidor nem a borda conseguem
+ler as cópias. Custo: só o disco que a VM Always Free já tem (cerca de 0,5 GB por dia, 14 dias ≈ 7 GB de 45 GB).
+
+Restaurar a partir da borda (servidor perdido), num Mac com a chave privada:
+
+```sh
+ssh abriu-edge 'sudo tar -C /home/licitabackup/backups/licita -cf - licita-macbook-AAAAMMDD-HHMMSS.dump.gpg licita-macbook-AAAAMMDD-HHMMSS.dump.sha256' | tar -xf -
+gpg --decrypt --output licita-macbook-AAAAMMDD-HHMMSS.dump licita-macbook-AAAAMMDD-HHMMSS.dump.gpg
+shasum -a 256 -c licita-macbook-AAAAMMDD-HHMMSS.dump.sha256
+pg_restore --no-owner --no-privileges -d <banco novo> licita-macbook-AAAAMMDD-HHMMSS.dump
+```
 
 Instalação (uma vez, pelo owner; depois o passo `monitor_ops` do Albert reinstala):
 

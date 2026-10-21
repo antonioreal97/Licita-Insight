@@ -7,8 +7,10 @@ container=${BACKUP_PG_CONTAINER:-licita-macbook-postgres-1}
 backup_dir=${BACKUP_DIR:-$HOME/backups/licita}
 retention_days=${BACKUP_RETENTION_DAYS:-14}
 keep_min=${BACKUP_KEEP_MIN:-3}
-# Optional off-machine copy over SSH, e.g. "abriu-edge:/home/ubuntu/backups/licita". Empty disables it.
+# Optional off-machine copy over SSH, e.g. "licita-backup-edge:/home/licitabackup/backups/licita". Empty disables it.
 copy_target=${BACKUP_COPY_TARGET:-}
+# The copy leaves the server only encrypted to this OpenPGP public key; its private key never lives on the server.
+copy_pubkey=${BACKUP_COPY_PUBKEY:-}
 
 if [[ ! "$backup_dir" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
   printf 'BACKUP_DIR must be a simple absolute path.\n' >&2
@@ -22,6 +24,10 @@ for value in "$retention_days" "$keep_min"; do
 done
 if [[ -n "$copy_target" && ! "$copy_target" =~ ^[A-Za-z0-9._@-]+:/[A-Za-z0-9._/-]+$ ]]; then
   printf 'BACKUP_COPY_TARGET must look like host:/absolute/path.\n' >&2
+  exit 1
+fi
+if [[ -n "$copy_target" && ! -f "$copy_pubkey" ]]; then
+  printf 'BACKUP_COPY_TARGET needs BACKUP_COPY_PUBKEY pointing to the public key file: the copy is never sent unencrypted.\n' >&2
   exit 1
 fi
 docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null | grep -qx true || {
@@ -52,15 +58,28 @@ size=$(wc -c <"$file" | tr -d ' ')
 if command -v sha256sum >/dev/null; then sha=$(sha256sum "$file" | cut -d' ' -f1); else sha=$(shasum -a 256 "$file" | cut -d' ' -f1); fi
 printf '%s  %s\n' "$sha" "$(basename "$file")" >"$file.sha256"
 
+copy_off_machine() {
+  local host=${copy_target%%:*} remote_dir=${copy_target#*:} name gnupg
+  name="$(basename "$file").gpg"
+  gnupg=$(mktemp -d)
+  # A throwaway keyring: the public key is read from the file, nothing is imported into the user's keyring.
+  GNUPGHOME=$gnupg gpg --batch --no-tty --quiet --yes --trust-model always --compress-algo none \
+    --recipient-file "$copy_pubkey" --output "$file.gpg" --encrypt "$file" || { rm -rf "$gnupg" "$file.gpg"; return 1; }
+  rm -rf "$gnupg"
+  ssh -o BatchMode=yes "$host" mkdir -p "$remote_dir" &&
+    scp -q -o BatchMode=yes "$file.gpg" "$copy_target/.$name.partial" &&
+    scp -q -o BatchMode=yes "$file.sha256" "$copy_target/$(basename "$file").sha256" &&
+    ssh -o BatchMode=yes "$host" "mv '$remote_dir/.$name.partial' '$remote_dir/$name' && find '$remote_dir' -maxdepth 1 -name 'licita-macbook-*' -mtime +$retention_days -delete"
+  local status=$?
+  rm -f "$file.gpg"
+  return $status
+}
+
+copied=false
+copy_failed=false
 if [[ -n "$copy_target" ]]; then
-  host=${copy_target%%:*}
-  remote_dir=${copy_target#*:}
-  ssh -o BatchMode=yes "$host" mkdir -p "$remote_dir"
-  scp -q -o BatchMode=yes "$file" "$copy_target/.$(basename "$file").partial"
-  ssh -o BatchMode=yes "$host" "mv '$remote_dir/.$(basename "$file").partial' '$remote_dir/$(basename "$file")' && find '$remote_dir' -maxdepth 1 -name 'licita-macbook-*.dump' -mtime +$retention_days -delete"
-  copied=true
-else
-  copied=false
+  # A failed copy must not hide the local dump from the monitor: record it, then fail the unit at the end.
+  if copy_off_machine; then copied=true; else copy_failed=true; printf 'Off-machine copy to %s failed.\n' "$copy_target" >&2; fi
 fi
 
 # Retention: drop dumps older than the window, but never below the newest $keep_min.
@@ -72,6 +91,7 @@ done
 
 # Read by licita_monitor.py: a missing or stale file raises the backup:stale anomaly.
 cat >"$backup_dir/last-backup.json" <<JSON
-{"file": "$(basename "$file")", "at": "$(date +%Y-%m-%dT%H:%M:%S%z)", "bytes": $size, "sha256": "$sha", "table_data_entries": $entries, "copied_off_machine": $copied}
+{"file": "$(basename "$file")", "at": "$(date +%Y-%m-%dT%H:%M:%S%z)", "bytes": $size, "sha256": "$sha", "table_data_entries": $entries, "copied_off_machine": $copied, "copy_configured": $([[ -n "$copy_target" ]] && echo true || echo false)}
 JSON
-printf 'OK %s (%s bytes, %s tables with data)\n' "$(basename "$file")" "$size" "$entries"
+printf 'OK %s (%s bytes, %s tables with data, off-machine copy: %s)\n' "$(basename "$file")" "$size" "$entries" "$copied"
+if [[ "$copy_failed" == true ]]; then exit 1; fi
