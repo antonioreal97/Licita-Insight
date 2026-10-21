@@ -103,7 +103,7 @@ export function RecommendationsSection() {
         <p className="rounded-xl border border-border bg-card p-5 type-ui text-muted-foreground">Complete o começo guiado acima ou <Link href="/settings#perfil-empresa" className="underline">edite seu perfil</Link> para orientar esta seleção.</p>
       ) : (
         <p className="rounded-xl border border-border bg-card p-5 type-ui text-muted-foreground">
-          Ainda não há recomendações suficientes. Salve ou monitore editais e buscas para melhorar esta seleção.
+          Nenhum edital aberto novo combina com o seu perfil agora. Quando surgir um, ele aparece aqui; para ampliar a seleção, <Link href="/settings#perfil-empresa" className="underline">revise ofertas, categorias e região</Link>.
         </p>
       )}
     </section>

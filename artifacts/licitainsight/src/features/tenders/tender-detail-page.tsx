@@ -342,11 +342,8 @@ export default function TenderDetailPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Decide first (deadline, fit, what happens now, object, documents, questions), then the reference panels. */}
         <div className="min-w-0 space-y-6">
-          <TimelinePanel events={tender.timeline} />
-          <ItemsPanel tender={tender} />
-          {tender.source.id === 'pncp' && <TenderAwardHistory tenderId={tender.id} />}
-          {tender.source.id === 'pncp' && <TenderTransparency tenderId={tender.id} />}
           <DecisionPanel tender={tender} />
           <NextStepsPanel tender={tender} monitored={monitored} />
           <Panel title="Objeto">
@@ -389,6 +386,10 @@ export default function TenderDetailPage() {
           </div>
           <DocumentsAnchor />
           <AskTenderPanel tenderId={tender.id} />
+          <ItemsPanel tender={tender} />
+          {tender.source.id === 'pncp' && <TenderAwardHistory tenderId={tender.id} />}
+          {tender.source.id === 'pncp' && <TenderTransparency tenderId={tender.id} />}
+          <TimelinePanel events={tender.timeline} />
         </div>
 
         <aside className="min-w-0 space-y-6">
