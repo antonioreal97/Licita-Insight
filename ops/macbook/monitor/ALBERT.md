@@ -59,6 +59,8 @@ passagem dentro da janela. Exceções, aplicadas a qualquer hora: deploy só com
    - `monitor_ops`: reinstale com `install -m 755 ops/macbook/monitor/licita_monitor.py ~/licita-monitor/`,
      `install -m 644 ops/macbook/monitor/ALBERT.md ops/macbook/monitor/STEVE.md ~/licita-monitor/`,
      `install -m 755 ops/macbook/ngrok-vercel-sync.sh ~/.local/bin/licita-ngrok-vercel-sync`,
+     `install -m 755 ops/macbook/licita-backup.sh ~/.local/bin/licita-backup`,
+     `install -m 755 ops/macbook/licita-backup-restore-test.sh ~/.local/bin/licita-backup-restore-test`,
      `cp ops/macbook/*.service ops/macbook/*.timer ops/macbook/monitor/*.service ops/macbook/monitor/*.timer ~/.config/systemd/user/`,
      `systemctl --user daemon-reload` e `systemctl --user enable --now` para cada `*.timer` copiado, **exceto** `licita-ngrok-vercel-sync.timer` quando `EDGE_URL` estiver definido (borda Oracle ativa): esse fica parado e desabilitado (`systemctl --user disable --now licita-ngrok-vercel-sync.timer`). Em `~/licita-monitor/config.env`, `EDGE_URL=` fica vazio por padrão. Para monitorar a borda Oracle, defina `EDGE_URL=https://137-131-233-192.sslip.io`; nesse modo, `edge:down` verifica `/api/readyz` e o resultado do sincronizador ngrok->Vercel é ignorado.
    - Se o deploy incluir `licita-proxy-tailscale.service` e `licita-dashboard-tailscale.service`, habilite ambos com `systemctl --user enable --now licita-proxy-tailscale.service licita-dashboard-tailscale.service`; eles esperam até cinco minutos por `tailscale ip -4` igual a `100.76.192.116` antes de publicar o proxy/Grafana. O usuário precisa de linger habilitado.
