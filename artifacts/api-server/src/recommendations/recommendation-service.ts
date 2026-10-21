@@ -1878,16 +1878,10 @@ export async function recordRecommendationEvent(
       .where(eq(tendersTable.id, input.tenderId))
       .limit(1);
     if (!tender) throw new NotFoundError("Tender was not found");
-    const [owner] = await db
-      .select({ enabled: usersTable.recommendationPersonalizationEnabled })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
-    // Learning from "Interessa" is behavioral profiling: only with personalization on, and once per tender, so a
-    // repeated click can neither double the evidence for an expression nor inflate the daily metric.
-    const expressions = owner?.enabled
-      ? extractInterestExpressions(tender)
-      : [];
+    // "Interessa" is explicit feedback, like saving: it teaches the ranking without the browsing opt-in (searches and
+    // views still need it). Once per tender, so a repeated click can neither double the evidence for an expression
+    // nor inflate the daily metric. "Apagar histórico" removes these events.
+    const expressions = extractInterestExpressions(tender);
     const recorded = await db.transaction(async (tx) => {
       const [already] = expressions.length
         ? await tx
