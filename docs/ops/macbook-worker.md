@@ -256,8 +256,41 @@ docker compose -f compose.macbook.yml stop
 
 `restart: unless-stopped` recupera containers depois de reinicio do Docker, desde
 que Docker Desktop inicie no login. `docker compose down` sem `-v` preserva o banco;
-**nunca use `down -v` no MacBook com dados**. Mantenha backups periodicos com
-`pg_dump -Fc` em destino privado fora do clone e teste uma restauracao isolada.
+**nunca use `down -v` no MacBook com dados**.
+
+## Backup diário do banco
+
+`licita-backup.timer` roda todo dia às 02:30 (America/Sao_Paulo), antes das recomendações das 03:00 e da coleta
+das 06:00. Ele executa `~/.local/bin/licita-backup` (`ops/macbook/licita-backup.sh`):
+
+- `pg_dump -Fc` feito **dentro** do container `licita-macbook-postgres-1`, com o usuário e o banco do próprio
+  container (nenhuma senha no script), gravado em `~/backups/licita/licita-macbook-AAAAMMDD-HHMMSS.dump` (`0600`);
+- o arquivo só perde o `.partial` depois que `pg_restore --list` encontra dados de tabela; grava `.sha256` e
+  `last-backup.json`;
+- retenção de 14 dias (`BACKUP_RETENTION_DAYS`), mantendo sempre os 3 mais novos (`BACKUP_KEEP_MIN`);
+- cópia opcional fora do servidor: `BACKUP_COPY_TARGET=host:/caminho` em `~/licita-monitor/backup.env`
+  (por exemplo a VM `abriu-edge` pela Tailscale). Sem isso o backup fica só no disco do MacBook e **não protege
+  contra falha do hardware**.
+
+O monitor lê `last-backup.json` a cada 5 min: sem backup verificado gera `backup:missing`; mais de 26 h
+(`BACKUP_MAX_AGE_HOURS`) gera `backup:stale`. O relatório diário mostra o último backup.
+
+Instalação (uma vez, pelo owner; depois o passo `monitor_ops` do Albert reinstala):
+
+```sh
+cd ~/Documentos/LICITA/Licita-Insight
+install -m 755 ops/macbook/licita-backup.sh ~/.local/bin/licita-backup
+install -m 755 ops/macbook/licita-backup-restore-test.sh ~/.local/bin/licita-backup-restore-test
+cp ops/macbook/licita-backup.service ops/macbook/licita-backup.timer ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now licita-backup.timer
+systemctl --user start licita-backup.service && journalctl --user -u licita-backup.service -n 5 --no-pager
+licita-backup-restore-test   # restaura o último dump num container descartável e compara contagens
+```
+
+O teste de restore sobe um Postgres descartável com a mesma imagem de produção, sem volume e sem porta,
+restaura o dump e compara `tenders`, `pncp_contracts`, `users`, `subscriptions`, `saved_tenders`,
+`company_profiles` e `company_documents` com produção (o restore pode estar até 5% atrás, nunca à frente).
+Rode-o depois da instalação e de vez em quando.
 
 ## Observabilidade com Grafana e Prometheus
 

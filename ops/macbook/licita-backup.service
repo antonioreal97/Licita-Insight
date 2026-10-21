@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup diário do Postgres de produção (pg_dump -Fc em ~/backups/licita)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-%h/licita-monitor/backup.env
+ExecStart=%h/.local/bin/licita-backup
+Nice=10
+IOSchedulingClass=idle

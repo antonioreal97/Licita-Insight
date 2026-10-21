@@ -47,6 +47,8 @@ def load_config():
         "AI_DAILY_BUDGET_USD": "10",
         "MAX_WAKES_PER_DAY": "6",
         "REALERT_HOURS": "6",
+        "BACKUP_DIR": str(HOME / "backups/licita"),
+        "BACKUP_MAX_AGE_HOURS": "26",
     }
     path = BASE / "config.env"
     if path.exists():
@@ -194,6 +196,17 @@ def collect():
     infra["load_1m"] = os.getloadavg()[0]
     m["infra"] = infra
 
+    # Backup diário (licita-backup.timer escreve last-backup.json ao terminar um dump verificado)
+    backup = {"file": None, "age_h": None, "bytes": None, "copied_off_machine": None}
+    try:
+        last = json.loads((Path(CFG["BACKUP_DIR"]) / "last-backup.json").read_text())
+        stamp = dt.datetime.strptime(last["at"], "%Y-%m-%dT%H:%M:%S%z")
+        backup.update(file=last.get("file"), bytes=last.get("bytes"), copied_off_machine=last.get("copied_off_machine"),
+                      age_h=round((dt.datetime.now(dt.timezone.utc) - stamp).total_seconds() / 3600, 1))
+    except (OSError, ValueError, KeyError):
+        pass
+    m["backup"] = backup
+
     # Rede
     net = {}
     net["local_readyz"] = http_ok("http://127.0.0.1:24252/api/readyz")
@@ -247,6 +260,11 @@ def anomalies(m, prev):
         add("readyz:public", "critica", f"{CFG['PUBLIC_URL']}/api/readyz falhou ({m['net']['public_readyz'][1]})")
     if not CFG["EDGE_URL"] and m["net"]["vercel_sync_result"] not in ("success", ""):
         add(f"vercel-sync:{m['net']['vercel_sync_result']}", "alta", f"sincronização ngrok→Vercel com resultado {m['net']['vercel_sync_result']}")
+    b = m.get("backup") or {}
+    if b.get("age_h") is None:
+        add("backup:missing", "alta", f"nenhum backup verificado em {CFG['BACKUP_DIR']} (licita-backup.timer instalado?)")
+    elif b["age_h"] > float(CFG["BACKUP_MAX_AGE_HOURS"]):
+        add("backup:stale", "alta", f"último backup há {b['age_h']} h ({b['file']})")
     if m["infra"]["disk_used_pct"] >= 85:
         add("disk:85", "alta", f"disco em {m['infra']['disk_used_pct']}%")
     if m["infra"]["mem_available_mb"] < 400:
@@ -680,6 +698,12 @@ def render_digest(m):
         f"- readyz local {'ok' if net['local_readyz'][0] else 'FALHOU'}, público {'ok' if net['public_readyz'][0] else 'FALHOU'}; "
         + (f"borda {CFG['EDGE_URL']} {'ok' if net['edge_readyz'][0] else 'FALHOU'}" if CFG["EDGE_URL"] else f"ngrok {net['ngrok_url'] or 'SEM TÚNEL'}"),
     ]
+    bk = m.get("backup") or {}
+    lines.append(
+        f"- Backup: {bk['file']} há {bk['age_h']} h ({round((bk['bytes'] or 0) / 1048576)} MB"
+        + (", com cópia fora do servidor)" if bk.get("copied_off_machine") else ", só no servidor)")
+        if bk.get("file") else "- Backup: NENHUM backup verificado"
+    )
     active = anomalies(m, {})
     lines += ["", "**Anomalias ativas**"] + ([f"- [{a['severity']}] {a['text']}" for a in active] or ["- nenhuma"])
     return "\n".join(lines)

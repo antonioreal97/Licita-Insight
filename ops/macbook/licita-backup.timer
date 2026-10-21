@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup diário do Postgres às 02:30 (antes das recomendações das 03:00 e da coleta das 06:00)
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 America/Sao_Paulo
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
