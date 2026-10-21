@@ -103,7 +103,7 @@ function shortTitle(text: string, max = 60) {
   return `${cut.slice(0, cut.lastIndexOf(' ') > max / 2 ? cut.lastIndexOf(' ') : max).replace(/[\s,;:.–-]+$/, '')}…`;
 }
 
-const MONITOR_HINT = 'Avisaremos aqui no app quando prazo, status, valor ou documentos mudarem.';
+const MONITOR_HINT = 'Avisaremos aqui no app quando prazo, status ou valor mudarem ou sair um anexo novo. Mudanças no texto de um anexo já publicado não são detectadas.';
 
 /** `true` while the facts strip has left its natural position right under the sentinel, i.e. it is stuck (xl only). */
 function useStuck(ready: boolean) {

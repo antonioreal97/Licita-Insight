@@ -99,7 +99,7 @@ export function useUpdateParticipation() {
               : null;
       if (!title) return;
       const description = turnedOn
-        ? 'Monitoramento ligado: avisamos aqui quando prazo, status, valor ou documentos mudarem.'
+        ? 'Monitoramento ligado: avisamos aqui quando prazo, status ou valor mudarem ou sair um anexo novo.'
         : turnedOff
           ? 'O monitoramento deste edital foi desligado.'
           : !previous

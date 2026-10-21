@@ -603,7 +603,8 @@ export type CompanyDocumentCatalogItem = {
 };
 export type CompanyDocumentsResponse = {
   items: CompanyDocumentChecklistItem[];
-  progress: { ready: number; total: number };
+  /** `unknownValidity`: marked "Tenho" for a kind that expires, without a date; never counted as ready. */
+  progress: { ready: number; total: number; unknownValidity: number };
   asOf: string;
 };
 export type CompanyDocumentChecklistItem = { catalog: CompanyDocumentCatalogItem; document: CompanyDocument | null };

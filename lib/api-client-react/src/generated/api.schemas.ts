@@ -811,6 +811,11 @@ export type CompanyDocumentsResponseProgress = {
   ready: number;
   /** @minimum 0 */
   total: number;
+  /**
+     * Marked "have" for a kind that expires but without an expiry date; never counted in `ready`.
+     * @minimum 0
+     */
+  unknownValidity: number;
 };
 
 export interface CompanyDocumentsResponse {

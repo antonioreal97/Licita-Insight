@@ -77,7 +77,7 @@ function MonitoringCard() {
       <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-sign-in">
         <h2 className="type-section text-foreground">Salve e monitore editais</h2>
         <p className="mt-2 text-xs leading-5 text-muted-foreground">
-          Entre com Google para salvar editais e buscas e ser avisado aqui no app quando prazo, status, valor ou documentos mudarem.
+          Entre com Google para salvar editais e buscas e ser avisado aqui no app quando prazo, status ou valor mudarem ou sair um anexo novo.
         </p>
         <Button variant="outline" size="sm" className="mt-4" onClick={() => signInWithGoogle()} data-testid="button-dashboard-sign-in">
           Entrar com Google
@@ -157,7 +157,7 @@ function BidReadinessCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-5" data-testid="card-dashboard-readiness">
       <div className="flex items-center gap-2"><FileCheck2 size={17} className="text-primary" aria-hidden /><h2 className="type-section text-foreground">Prontidão para licitar</h2></div>
-      <p className="mt-2 type-ui font-semibold text-foreground">{progress ? `${progress.ready} de ${progress.total} documentos em dia` : documents.isError ? 'Não foi possível carregar o checklist' : 'Carregando checklist…'}</p>
+      <p className="mt-2 type-ui font-semibold text-foreground">{progress ? `${progress.ready} de ${progress.total} documentos em dia${progress.unknownValidity > 0 ? ` · ${progress.unknownValidity} sem validade informada` : ''}` : documents.isError ? 'Não foi possível carregar o checklist' : 'Carregando checklist…'}</p>
       <p className="mt-1 type-meta text-muted-foreground">Evite perder uma disputa por certidão vencida ou documento faltando.</p>
       <Link href="/readiness" data-testid="link-dashboard-readiness" className="mt-4 inline-flex rounded-lg text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring">Revisar documentos <ArrowRight size={13} strokeWidth={1.75} className="ml-1 inline" /></Link>
     </div>
