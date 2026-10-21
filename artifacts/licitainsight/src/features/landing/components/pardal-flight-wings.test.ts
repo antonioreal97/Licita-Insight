@@ -165,9 +165,9 @@ describe('Pardal flight by scroll progress', () => {
     assert.ok(resolveFlight(APPROACH_END / 2).depth < 0.35);
   });
 
-  it('beats faster at the start and inside the 3–5 Hz range', () => {
+  it('beats faster at the start and inside the slower 2–3.5 Hz range', () => {
     assert.equal(resolveFlight(0).beatHz, BEAT_HZ_START);
-    assert.ok(BEAT_HZ_START <= 5 && BEAT_HZ_NEAR >= 3);
+    assert.ok(BEAT_HZ_START <= 3.5 && BEAT_HZ_NEAR >= 2);
     flights.slice(1).forEach((flight, index) => assert.ok(flight.beatHz <= flights[index].beatHz));
     near(resolveFlight(APPROACH_END).beatHz, BEAT_HZ_NEAR);
   });
