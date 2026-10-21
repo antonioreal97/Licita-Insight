@@ -1,6 +1,6 @@
-import React, { useId, useState, type ReactNode } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
-import { ChevronDown, ExternalLink, Info } from 'lucide-react';
+import { ExternalLink, Info } from 'lucide-react';
 import type {
   BrazilEligibility,
   InternationalRegion,
@@ -11,6 +11,7 @@ import type {
   OpportunitySource,
   OpportunitySummary,
 } from '@/api';
+import { FilterFieldLabel, FilterMoreSection, filterControlClass } from '@/components/filters/filter-primitives';
 import { INTERNATIONAL_REGIONS } from '@/services/opportunity-service';
 import {
   amountLine,
@@ -99,9 +100,6 @@ export function OfficialNoticeBanner({ className = '' }: { className?: string })
   );
 }
 
-const selectClass =
-  'h-10 w-full min-w-0 rounded-lg border border-input bg-card px-3 type-ui text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
-
 function FilterSelect({
   label,
   testId,
@@ -109,6 +107,7 @@ function FilterSelect({
   placeholder,
   options,
   onChange,
+  density = 'compact',
   children,
 }: {
   label: string;
@@ -117,12 +116,13 @@ function FilterSelect({
   placeholder: string;
   options: { value: string; label: string; count: number }[];
   onChange: (value: string) => void;
+  density?: OpportunityFilterDensity;
   children?: ReactNode;
 }) {
   return (
     <label className="block min-w-0">
-      <span className="sr-only">{label}</span>
-      <select data-testid={testId} className={selectClass} value={value} onChange={(event) => onChange(event.target.value)}>
+      <FilterFieldLabel>{label}</FilterFieldLabel>
+      <select data-testid={testId} className={filterControlClass(density)} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -162,7 +162,6 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
   const inBrazil = params.country?.includes('BR') === true;
   const regions = facetOptions(facets?.region, params.region?.[0]).filter((option) => (INTERNATIONAL_REGIONS as string[]).includes(option.value));
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreId = useId();
   const moreCount = countMoreInternationalFilters(params);
   return (
     <div data-testid="international-opportunity-filters">
@@ -173,6 +172,7 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
           value={params.region?.[0] ?? ''}
           placeholder="Todas as regiões"
           options={regions}
+          density={density}
           onChange={(value) => onChange({ region: value ? [value as InternationalRegion] : undefined })}
         />
         <button
@@ -188,10 +188,10 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
 
       <OpportunityQuestion title="O quê?" help="Área de atuação e tipo de oportunidade." termId="edital">
         <label className="block min-w-0">
-          <span className="sr-only">Área da oportunidade</span>
+          <FilterFieldLabel>Área da oportunidade</FilterFieldLabel>
           <select
             data-testid="select-opportunity-kind"
-            className={selectClass}
+            className={filterControlClass(density)}
             value={params.kind?.[0] ?? ''}
             onChange={(event) => onChange({ kind: event.target.value ? [event.target.value as OpportunityKind] : undefined })}
           >
@@ -209,6 +209,7 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
           value={params.opportunityType?.[0] ?? ''}
           placeholder="Bens, obras, consultoria, subvenção…"
           options={facetOptions(facets?.opportunityType, params.opportunityType?.[0])}
+          density={density}
           onChange={(value) => onChange({ opportunityType: value ? [value] : undefined })}
         />
       </OpportunityQuestion>
@@ -222,6 +223,7 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
           value={selectedEligibility(params)}
           placeholder="Aberto ou condicional"
           options={eligibilityOptions(facets)}
+          density={density}
           onChange={(value) => onChange(eligibilityPatch(value))}
         >
           <option value={ELIGIBILITY_ALL}>Qualquer elegibilidade</option>
@@ -232,6 +234,7 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
           value={params.funding?.[0] ?? ''}
           placeholder="Qualquer financiamento"
           options={fundingOptions(facets)}
+          density={density}
           onChange={(value) => onChange({ funding: value ? [value as BrazilEligibility] : undefined })}
         />
         {selectedEligibility(params) === ELIGIBILITY_DEFAULT && (
@@ -239,73 +242,58 @@ export function InternationalFilters({ params, facets, onChange, density = 'comp
         )}
       </OpportunityQuestion>
 
-      <section className="border-t border-border-subtle pt-2">
-        <h3>
-          <button
-            type="button"
-            aria-expanded={moreOpen}
-            aria-controls={moreId}
-            data-testid="button-international-more-filters"
-            onClick={() => setMoreOpen(!moreOpen)}
-            className={`flex items-center gap-2 rounded-lg text-left type-ui font-semibold text-foreground transition-colors duration-fast hover:text-primary focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10 w-full' : 'min-h-8'}`}
-          >
-            <span className={density === 'comfortable' ? 'flex-1' : undefined}>
-              Mais filtros
-              {moreCount > 0 && (
-                <span
-                  data-testid="badge-international-more-filters"
-                  className="ml-1.5 rounded-pill bg-primary px-1.5 py-0.5 type-data text-xs leading-none font-bold text-primary-foreground"
-                >
-                  {moreCount}
-                  <span className="sr-only"> {moreCount === 1 ? 'ativo' : 'ativos'}</span>
-                </span>
-              )}
-            </span>
-            <ChevronDown size={15} aria-hidden className={`transition-transform duration-fast ${moreOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </h3>
-        <div id={moreId} hidden={!moreOpen} data-testid="international-more-filters" className="pt-3">
-          <OpportunityStatusQuestion params={params} onChange={onChange} />
-          <OpportunityQuestion title="Organismo" help="Instituição internacional que publicou a chamada.">
-            <FilterSelect
-              label="Organismo"
-              testId="select-opportunity-agency"
-              value={params.agency?.[0] ?? ''}
-              placeholder="Todos os organismos"
-              options={facetOptions(facets?.agency, params.agency?.[0])}
-              onChange={(value) => onChange({ agency: value ? [value] : undefined })}
-            />
-          </OpportunityQuestion>
-          <OpportunityQuestion title="Fonte" help="Portal oficial de onde a chamada veio.">
-            <label className="block min-w-0">
-              <span className="sr-only">Fonte</span>
-              <select
-                data-testid="select-opportunity-source"
-                className={selectClass}
-                value={params.source?.[0] ?? ''}
-                onChange={(event) => onChange({ source: event.target.value ? [event.target.value as OpportunitySource] : undefined })}
-              >
-                <option value="">Todas as fontes</option>
-                {INTERNATIONAL_SOURCES.map((source) => (
-                  <option key={source} value={source}>
-                    {opportunitySourceLabels[source]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </OpportunityQuestion>
-          <OpportunityQuestion title="Idioma" help="Idioma em que o aviso foi publicado.">
-            <FilterSelect
-              label="Idioma do aviso"
-              testId="select-opportunity-language"
-              value={params.language?.[0] ?? ''}
-              placeholder="Todos os idiomas"
-              options={facetOptions(facets?.language, params.language?.[0])}
-              onChange={(value) => onChange({ language: value ? [value] : undefined })}
-            />
-          </OpportunityQuestion>
-        </div>
-      </section>
+      <FilterMoreSection
+        open={moreOpen}
+        onOpenChange={setMoreOpen}
+        count={moreCount}
+        density={density}
+        buttonTestId="button-international-more-filters"
+        panelTestId="international-more-filters"
+        badgeTestId="badge-international-more-filters"
+        summary="Situação, organismo, fonte e idioma."
+      >
+        <OpportunityStatusQuestion params={params} onChange={onChange} density={density} />
+        <OpportunityQuestion title="Organismo" help="Instituição internacional que publicou a chamada.">
+          <FilterSelect
+            label="Organismo"
+            testId="select-opportunity-agency"
+            value={params.agency?.[0] ?? ''}
+            placeholder="Todos os organismos"
+            options={facetOptions(facets?.agency, params.agency?.[0])}
+            density={density}
+            onChange={(value) => onChange({ agency: value ? [value] : undefined })}
+          />
+        </OpportunityQuestion>
+        <OpportunityQuestion title="Fonte" help="Portal oficial de onde a chamada veio.">
+          <label className="block min-w-0">
+            <FilterFieldLabel>Fonte</FilterFieldLabel>
+            <select
+              data-testid="select-opportunity-source"
+              className={filterControlClass(density)}
+              value={params.source?.[0] ?? ''}
+              onChange={(event) => onChange({ source: event.target.value ? [event.target.value as OpportunitySource] : undefined })}
+            >
+              <option value="">Todas as fontes</option>
+              {INTERNATIONAL_SOURCES.map((source) => (
+                <option key={source} value={source}>
+                  {opportunitySourceLabels[source]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </OpportunityQuestion>
+        <OpportunityQuestion title="Idioma" help="Idioma em que o aviso foi publicado.">
+          <FilterSelect
+            label="Idioma do aviso"
+            testId="select-opportunity-language"
+            value={params.language?.[0] ?? ''}
+            placeholder="Todos os idiomas"
+            options={facetOptions(facets?.language, params.language?.[0])}
+            density={density}
+            onChange={(value) => onChange({ language: value ? [value] : undefined })}
+          />
+        </OpportunityQuestion>
+      </FilterMoreSection>
     </div>
   );
 }

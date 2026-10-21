@@ -16,6 +16,7 @@ test(
       companyProfilesTable,
       db,
       pool,
+      recommendationEventsTable,
       recommendationInterestProfilesTable,
       tendersTable,
       userRecommendationsTable,
@@ -25,6 +26,7 @@ test(
     const {
       listRecommendations,
       rebuildRecommendationsForUser,
+      recordRecommendationEvent,
       RECOMMENDATION_ALGORITHM_VERSION,
     } = await import("./recommendation-service");
 
@@ -165,5 +167,37 @@ test(
       ids(await listRecommendations(userId, 1, 50, "profile")),
       ["video-mg"],
     );
+
+    // "Interessa" teaches without the browsing opt-in (off by default); searches still need it.
+    const [owner] = await db
+      .select({ enabled: usersTable.recommendationPersonalizationEnabled })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId));
+    assert.equal(owner.enabled, false);
+    assert.equal(
+      await recordRecommendationEvent(userId, {
+        type: "interest",
+        tenderId: "drone-mg",
+      }),
+      true,
+    );
+    assert.equal(
+      await recordRecommendationEvent(userId, {
+        type: "interest",
+        tenderId: "drone-mg",
+      }),
+      false,
+    );
+    assert.equal(
+      await recordRecommendationEvent(userId, { type: "search", query: "drone" }),
+      false,
+    );
+    const events = await db
+      .select()
+      .from(recommendationEventsTable)
+      .where(eq(recommendationEventsTable.userId, userId));
+    assert.equal(events.length, 1);
+    assert.equal(events[0]!.type, "interest");
+    assert.ok(events[0]!.normalizedTerms.includes("drone"));
   },
 );

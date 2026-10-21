@@ -1,6 +1,6 @@
-import { X } from 'lucide-react';
 import type { TenderSearchParams, TenderSearchResponse } from '@/api';
-import { buildFilterChips, chipShowsGroup } from '../lib/filter-chips';
+import { ActiveFilterChips } from '@/components/filters/filter-primitives';
+import { buildFilterChips, chipShowsGroup, type FilterChip } from '../lib/filter-chips';
 
 type Props = {
   params: TenderSearchParams;
@@ -16,35 +16,16 @@ type Props = {
  */
 export function ActiveFilters({ params, notification, onRemove, onClearAll, canClear }: Props) {
   const chips = buildFilterChips(params, { statusDefault: true, notification });
-  if (chips.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="region" aria-label="Filtros ativos" data-testid="active-filters">
-      {chips.map((chip) => (
-        <button
-          key={chip.id}
-          type="button"
-          onClick={() => onRemove(chip.remove)}
-          aria-label={`Remover filtro ${chip.group}: ${chip.label}`}
-          data-testid={`chip-${chip.id}`}
-          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-pill border border-border-subtle bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
-        >
-          {chipShowsGroup(chip) && <span className="text-muted-foreground">{chip.group}:</span>}
-          <span className="truncate font-medium">{chip.label}</span>
-          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors duration-fast ease-standard group-hover:text-foreground">
-            <X size={12} aria-hidden />
-          </span>
-        </button>
-      ))}
-      {canClear && (
-        <button
-          type="button"
-          onClick={onClearAll}
-          data-testid="button-clear-all-filters"
-          className="min-h-8 rounded-lg px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
-        >
-          Limpar tudo
-        </button>
-      )}
-    </div>
+    <ActiveFilterChips<FilterChip>
+      chips={chips}
+      showGroup={chipShowsGroup}
+      onRemove={(chip) => onRemove(chip.remove)}
+      onClearAll={onClearAll}
+      canClear={canClear}
+      regionTestId="active-filters"
+      clearTestId="button-clear-all-filters"
+      chipTestId={(chip) => `chip-${chip.id}`}
+    />
   );
 }

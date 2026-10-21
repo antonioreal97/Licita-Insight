@@ -1,11 +1,12 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import type { OpportunitySearchParams, OpportunitySearchResponse } from '@/api';
 import { Button } from '@/components/common/action-button';
+import { ActiveFilterChips } from '@/components/filters/filter-primitives';
 import { FilterSheetShell } from '@/components/filters/filter-sheet-shell';
 import { formatNumber } from '@/lib/format';
 import { useOpportunitySearch } from '../hooks/use-opportunities';
-import { opportunityChipShowsGroup, opportunityFilterChips } from '../lib/opportunity-filters';
+import { opportunityChipShowsGroup, opportunityFilterChips, type OpportunityFilterChip } from '../lib/opportunity-filters';
 import { CLEAR_INTERNATIONAL_FILTERS, InternationalFilters } from './international';
 import { CLEAR_NATIONAL_FILTERS, OpportunityFilters } from './opportunity-filters';
 
@@ -31,34 +32,16 @@ const clearPatch = (params: OpportunitySearchParams) => (params.scope === 'inter
 /** Removable chips above both lists, including old URL parameters and every international filter. */
 export function ActiveOpportunityFilters({ params, facets, onChange }: SharedProps & { onChange: (patch: Partial<OpportunitySearchParams>) => void }) {
   const chips = opportunityFilterChips(params, new Date(), facets);
-  if (chips.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="region" aria-label="Filtros ativos" data-testid="opportunity-active-filters">
-      {chips.map((chip) => (
-        <button
-          key={chip.id}
-          type="button"
-          onClick={() => onChange(chip.remove)}
-          aria-label={`Remover filtro ${chip.group}: ${chip.label}`}
-          data-testid={`chip-opportunity-${chip.id}`}
-          className="group inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-pill border border-border-subtle bg-surface py-1 pr-1.5 pl-2.5 text-xs text-foreground transition-colors duration-fast ease-standard hover:border-border-strong hover:bg-surface-sunken focus-visible:focus-ring"
-        >
-          {opportunityChipShowsGroup(chip) && <span className="text-muted-foreground">{chip.group}:</span>}
-          <span className="truncate font-medium">{chip.label}</span>
-          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors duration-fast group-hover:text-foreground">
-            <X size={12} aria-hidden />
-          </span>
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange(clearPatch(params))}
-        data-testid="button-opportunity-clear-all"
-        className="min-h-8 rounded-lg px-2 text-xs font-semibold text-primary hover:underline focus-visible:focus-ring"
-      >
-        Limpar tudo
-      </button>
-    </div>
+    <ActiveFilterChips<OpportunityFilterChip>
+      chips={chips}
+      showGroup={opportunityChipShowsGroup}
+      onRemove={(chip) => onChange(chip.remove)}
+      onClearAll={() => onChange(clearPatch(params))}
+      regionTestId="opportunity-active-filters"
+      clearTestId="button-opportunity-clear-all"
+      chipTestId={(chip) => `chip-opportunity-${chip.id}`}
+    />
   );
 }
 

@@ -49,18 +49,18 @@ export function FilterSheetShell({
           className="fixed inset-y-0 right-0 z-modal motion-reduce:animate-none flex h-full w-full flex-col border-l border-border bg-background duration-slow ease-emphasized data-[state=closed]:duration-base data-[state=closed]:ease-exit data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-md"
         >
           <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-            <div>
+            <div className="min-w-0 pr-2">
               <DialogPrimitive.Title className="type-section">Filtros</DialogPrimitive.Title>
               <DialogPrimitive.Description className="type-meta text-muted-foreground">{description}</DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
               aria-label="Fechar filtros"
-              className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
+              className="grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-muted hover:text-foreground focus-visible:focus-ring"
             >
               <X size={18} aria-hidden />
             </DialogPrimitive.Close>
           </div>
-          <div className="flex-1 overflow-y-auto overscroll-contain px-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">{children}</div>
           <p role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid={`${testIdPrefix}text-sheet-preview-count`}>
             {statusText}
           </p>
@@ -70,7 +70,7 @@ export function FilterSheetShell({
               data-testid={`${testIdPrefix}button-sheet-clear`}
               disabled={clearDisabled}
               onClick={onClear}
-              className="min-h-11 rounded-lg px-2 type-ui font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 min-w-11 rounded-lg px-3 type-ui font-semibold text-muted-foreground transition-colors duration-fast ease-standard hover:text-foreground focus-visible:focus-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               Limpar
             </button>
