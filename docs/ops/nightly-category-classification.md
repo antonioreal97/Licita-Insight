@@ -28,12 +28,16 @@ Ordem de uma noite:
    `NIGHTLY_CATEGORY_MIN_EXAMPLES` (200) exemplos utilizáveis, a noite inteira vai para eles.
 2. **Concordância.** Classifica até `NIGHTLY_CATEGORY_HOLDOUT_SAMPLE` (500) exemplos do `holdout`
    (20% que o aluno nunca usa como vizinho) e compara com o rótulo do professor. Não chama o Ollama.
-3. **Jev, sobra de noites anteriores.** Editais já avaliados com confiança abaixo de
-   `JEV_TEACHER_CONFIDENCE_THRESHOLD`, os menos confiantes primeiro.
-4. **Aluno.** Editais `open`/`under_review` que não são `teacher` e ainda não têm
+3. **Aluno.** Editais `open`/`under_review` que não são `teacher` e ainda não têm
    `category_confidence`, os mais novos primeiro, em lotes de `NIGHTLY_CATEGORY_BATCH` (64). Depois
-   de gravar cada lote, os duvidosos dele vão ao Jev.
+   de gravar cada lote, os duvidosos dele vão ao Jev: os editais da noite usam o teto diário antes
+   da sobra.
+4. **Jev, sobra de noites anteriores.** Com o que o teto deixou, editais já avaliados com confiança
+   abaixo de `JEV_TEACHER_CONFIDENCE_THRESHOLD`, os mais novos primeiro.
 5. **Sobra de tempo.** Volta aos exemplos que a etapa 1 deixou para trás.
+
+O Jev só recebe editais que ainda aceitam proposta (`proposal_deadline` futuro ou vazio). Os de prazo
+vencido continuam com a categoria do aluno ou das regras e não contam em `jevBacklog`.
 
 O que o aluno grava:
 
@@ -167,13 +171,23 @@ docker logs --since 10h licita-macbook-app-1 2>&1 | grep -E 'Nightly category (b
 O resumo traz `processed`, `reused`, `categorized`, `kept`, `lowConfidence`, `jevSent`, `jevTaught`,
 `jevRejected`, `jevFailed`, `jevCostUsd`, `examplesEmbedded`, `examplesAdded`, `pendingTenders`,
 `pendingExamples`, `jevBacklog`, `jevSkipped`, `stopped`, `durationMs` e `holdout`
-(`agreement`, `coverage`, `agreementCovered`, `belowJevThreshold`, `thresholdForShare`).
+(`agreement`, `coverage`, `agreementCovered`, `belowJevThreshold`, `thresholdForShare`, `bands`).
 `durationMs ÷ processed` dá o tempo por edital da noite.
 
 `holdout.agreement` é a concordância do aluno com o rótulo do professor (OpenAI ou Jev) em exemplos
 que ele nunca usou. `holdout.belowJevThreshold` é a parcela que iria ao Jev com o limiar atual, e
 `holdout.thresholdForShare` diz qual limiar mandaria 10%, 15% ou 20%: para mirar 15%, use o valor de
 `p15` em `JEV_TEACHER_CONFIDENCE_THRESHOLD`.
+
+`holdout.bands` dá a concordância por faixa de confiança (`from` ≤ confiança < `to`; a última inclui
+1), só das faixas com exemplos. É o que mostra onde o aluno passa a errar demais: o limiar do Jev deve
+ficar acima da faixa em que `agreement` cai, e `CATEGORY_STUDENT_MIN_CONFIDENCE` abaixo da qual a
+categoria do aluno é pior que nenhuma.
+
+```sh
+docker logs --since 24h licita-macbook-app-1 2>&1 | grep 'Nightly category classification summary' | tail -n 1 \
+  | jq -c '.holdout.bands[] | {faixa: "\(.from)–\(.to)", n: .total, acerto: .agreement}'
+```
 
 ```sql
 -- Execuções do job
