@@ -1,6 +1,18 @@
 import React, { useEffect, useId, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
-import { ChevronDown, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { FacetBucket, SearchFacets, TenderSearchParams } from '@/api';
+import {
+  FilterDisclosure,
+  FilterFieldLabel,
+  FilterMoreSection,
+  FilterQuestion,
+  FilterSubGroup,
+  filterControlClass,
+  filterLinkButtonClass,
+  filterPresetClass,
+  filterRowClass,
+  type FilterDensity,
+} from '@/components/filters/filter-primitives';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GlossaryTerm } from '@/features/help/components/glossary-term';
 import { entryForLabel } from '@/features/help/lib/term-detection';
@@ -12,59 +24,18 @@ import { activeDeadlinePreset, activeValuePreset, DEADLINE_PRESET_DAYS, deadline
 import { formatBRLInput, parseBRL } from '../lib/money-input';
 import { isDefaultStatus } from '../lib/search-defaults';
 
-export type FacetDensity = 'compact' | 'comfortable';
+export type FacetDensity = FilterDensity;
 
 type PanelProps = {
   params: TenderSearchParams;
   facets: SearchFacets | null | undefined;
   onChange: (patch: Partial<TenderSearchParams>) => void;
-  /** `comfortable` = 40px touch targets (sheet); `compact` = desktop sidebar. */
+  /** `comfortable` = 44px touch targets (sheet); `compact` = desktop sidebar. */
   density?: FacetDensity;
   loading?: boolean;
 };
 
-/** DS input spec: border-strong on hover, ring + 3px halo on focus. `text-base` on phones avoids iOS zoom. */
-const inputBase =
-  'w-full rounded-lg border border-input bg-background text-base transition-[border-color,box-shadow] duration-fast ease-standard placeholder:text-muted-foreground focus:border-ring aria-[invalid=true]:border-destructive sm:type-ui';
-
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
-const linkButton = (density: FacetDensity) =>
-  `rounded-lg px-1.5 text-left text-xs font-semibold text-primary hover:underline focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-7'}`;
-
-/** One of the four questions (Onde? O quê? Até quando? Quanto?): a plain title, one line of help, then the controls. */
-function FilterQuestion({ title, help, termId, children }: { title: string; help: ReactNode; termId?: string; children: ReactNode }) {
-  const titleId = useId();
-  return (
-    <section aria-labelledby={titleId} className="py-4" data-testid="filter-question">
-      <div className="flex items-center gap-1">
-        <h3 id={titleId} className="type-ui font-semibold text-foreground">
-          {title}
-        </h3>
-        {termId && <GlossaryTerm termId={termId} variant="icon" className="-my-1" />}
-      </div>
-      <p className="mt-0.5 mb-2.5 type-meta text-muted-foreground">{help}</p>
-      {children}
-    </section>
-  );
-}
-
-/** A filter inside "Mais filtros": smaller title, same help line. */
-function SubGroup({ title, help, termId, children }: { title: string; help?: string; termId?: string; children: ReactNode }) {
-  const titleId = useId();
-  return (
-    <section aria-labelledby={titleId} className="pt-4">
-      <div className="flex items-center gap-1">
-        <h4 id={titleId} className="type-meta font-semibold text-foreground">
-          {title}
-        </h4>
-        {termId && <GlossaryTerm termId={termId} variant="icon" className="-my-1" />}
-      </div>
-      {help && <p className="mt-0.5 mb-1.5 type-meta text-muted-foreground">{help}</p>}
-      {children}
-    </section>
-  );
-}
 
 /** A one-tap shortcut ("Até 7 dias", "Até R$ 50 mil"). Pressing the active one clears it. */
 function PresetButton({
@@ -83,14 +54,7 @@ function PresetButton({
   label?: string;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      aria-label={label}
-      data-testid={testId}
-      onClick={onClick}
-      className={`rounded-pill border px-3 type-meta font-semibold transition-colors duration-fast ease-standard focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'} ${active ? 'border-primary/40 bg-primary-subtle text-primary-subtle-foreground' : 'border-border bg-transparent text-foreground hover:border-border-strong hover:bg-surface-sunken'}`}
-    >
+    <button type="button" aria-pressed={active} aria-label={label} data-testid={testId} onClick={onClick} className={filterPresetClass(active, density)}>
       {children}
     </button>
   );
@@ -137,7 +101,7 @@ function OptionList({
   const hiddenCount = filtered.length - shown.length;
 
   const toggle = (value: string, checked: boolean) => onChange(checked ? [...selected, value] : selected.filter((item) => item !== value));
-  const row = density === 'comfortable' ? 'min-h-10' : 'min-h-8';
+  const row = filterRowClass(density);
 
   return (
     <div>
@@ -153,7 +117,7 @@ function OptionList({
             // Opened on request ("busque um município"): the person is about to type.
             autoFocus={forceSearch}
             data-testid={`input-facet-filter-${config.param}`}
-            className={`${inputBase} pr-2 pl-8 ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
+            className={`${filterControlClass(density)} pr-2 pl-8`}
           />
         </div>
       )}
@@ -167,10 +131,7 @@ function OptionList({
             const checked = selected.includes(option.value);
             const id = `${groupId}-${option.value}`;
             // Modality (and status "Contratação direta" via the dispensa alias) get a glossário icon.
-            const termId =
-              config.param === 'modality' || config.param === 'status'
-                ? entryForLabel(option.label)
-                : undefined;
+            const termId = config.param === 'modality' || config.param === 'status' ? entryForLabel(option.label) : undefined;
             return (
               <li key={option.value} className={termId ? 'flex items-center gap-0.5' : undefined}>
                 <label
@@ -188,13 +149,13 @@ function OptionList({
                     {option.label}
                   </span>
                   {countsKnown && (
-                    <span className="shrink-0 type-data text-xs text-muted-foreground">
+                    <span className="shrink-0 type-data text-xs text-muted-foreground tabular-nums">
                       {formatNumber(option.count)}
                       <span className="sr-only"> {option.count === 1 ? 'edital' : 'editais'}</span>
                     </span>
                   )}
                 </label>
-                {termId && <GlossaryTerm termId={termId} variant="icon" className={density === 'comfortable' ? 'size-10' : undefined} />}
+                {termId && <GlossaryTerm termId={termId} variant="icon" className={density === 'comfortable' ? 'size-11' : undefined} />}
               </li>
             );
           })}
@@ -207,7 +168,7 @@ function OptionList({
           aria-controls={groupId}
           data-testid={`button-facet-more-${config.param}`}
           onClick={() => setExpanded(!expanded)}
-          className={`mt-1 ${linkButton(density)}`}
+          className={`mt-1 ${filterLinkButtonClass(density)}`}
         >
           {expanded ? 'Ver menos' : `Ver todas (${formatNumber(filtered.length)})`}
         </button>
@@ -241,7 +202,7 @@ function PlaceQuestion(props: GroupProps) {
       <OptionList {...listProps('state', props)} />
       {showCity ? (
         <div className="mt-3" data-testid="facet-city">
-          <p className="mb-1 type-meta font-semibold text-foreground">Município</p>
+          <FilterFieldLabel>Município</FilterFieldLabel>
           <OptionList {...listProps('city', props)} forceSearch={lookUpCity && !hasState} />
         </div>
       ) : (
@@ -296,50 +257,13 @@ function DateInput({
   );
 }
 
-/** "Escolher datas" / "Outro valor": the free fields stay folded until asked for, and always open while they hold a custom range. */
-function Disclosure({
-  label,
-  open,
-  onToggle,
-  density,
-  testId,
-  children,
-}: {
-  label: string;
-  open: boolean;
-  onToggle: () => void;
-  density: FacetDensity;
-  testId: string;
-  children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <div className="mt-1.5">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={id}
-        data-testid={testId}
-        onClick={onToggle}
-        className={`-mx-1.5 inline-flex items-center gap-1 ${linkButton(density)}`}
-      >
-        {label}
-        <ChevronDown size={13} aria-hidden className={`transition-transform duration-fast ease-standard ${open ? 'rotate-180' : ''}`} />
-      </button>
-      <div id={id} hidden={!open} className="pt-1.5">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function DeadlineQuestion({ params, onChange, density }: Pick<GroupProps, 'params' | 'onChange' | 'density'>) {
   const preset = activeDeadlinePreset(params);
   const custom = Boolean((params.deadlineFrom || params.deadlineTo) && !preset);
   const [datesOpen, setDatesOpen] = useState(false);
   const open = datesOpen || custom;
   const invalid = Boolean(params.deadlineFrom && params.deadlineTo && params.deadlineFrom > params.deadlineTo);
-  const input = `${inputBase} px-2 ${density === 'comfortable' ? 'h-10' : 'h-8'}`;
+  const input = filterControlClass(density);
 
   return (
     <FilterQuestion title="Até quando?" help="Último dia para enviar a proposta." termId="proposta">
@@ -357,7 +281,7 @@ function DeadlineQuestion({ params, onChange, density }: Pick<GroupProps, 'param
           </PresetButton>
         ))}
       </div>
-      <Disclosure label="Escolher datas" open={open} onToggle={() => setDatesOpen(!open)} density={density} testId="button-deadline-dates">
+      <FilterDisclosure label="Escolher datas" open={open} onToggle={() => setDatesOpen(!open)} density={density} testId="button-deadline-dates">
         <div className="flex gap-2">
           <label className="min-w-0 flex-1">
             <span className="mb-1 block type-meta text-muted-foreground">De</span>
@@ -387,7 +311,7 @@ function DeadlineQuestion({ params, onChange, density }: Pick<GroupProps, 'param
             A data inicial deve ser anterior à final.
           </p>
         )}
-      </Disclosure>
+      </FilterDisclosure>
     </FilterQuestion>
   );
 }
@@ -441,7 +365,7 @@ function ValueQuestion({ params, facets, onChange, density }: GroupProps) {
           aria-invalid={fieldInvalid}
           aria-describedby={fieldInvalid ? errorId : undefined}
           data-testid={testId}
-          className={`${inputBase} pr-2 pl-8 type-data ${density === 'comfortable' ? 'h-10' : 'h-8'}`}
+          className={`${filterControlClass(density)} pr-2 pl-8 type-data`}
         />
       </span>
     </label>
@@ -469,7 +393,7 @@ function ValueQuestion({ params, facets, onChange, density }: GroupProps) {
           );
         })}
       </div>
-      <Disclosure label="Outro valor" open={open} onToggle={() => setFieldsOpen(!open)} density={density} testId="button-value-custom">
+      <FilterDisclosure label="Outro valor" open={open} onToggle={() => setFieldsOpen(!open)} density={density} testId="button-value-custom">
         <div className="flex gap-2">
           {field('Mínimo', min, setMin, bounds?.min, 'input-value-min', reversed || (minValue ?? 0) > MAX_MONEY)}
           {field('Máximo', max, setMax, bounds?.max, 'input-value-max', reversed || (maxValue ?? 0) > MAX_MONEY)}
@@ -483,7 +407,7 @@ function ValueQuestion({ params, facets, onChange, density }: GroupProps) {
             Nos resultados: de {formatCompactCurrency(bounds.min)} a {formatCompactCurrency(bounds.max)}.
           </p>
         ) : null}
-      </Disclosure>
+      </FilterDisclosure>
     </FilterQuestion>
   );
 }
@@ -499,63 +423,48 @@ export function countMoreFilters(params: TenderSearchParams) {
 
 function MoreFilters(props: GroupProps) {
   const [open, setOpen] = useState(false);
-  const id = useId();
   const newOnlyId = useId();
   const { params, facets, density, onChange } = props;
   const count = countMoreFilters(params);
   // Groups with nothing to pick are hidden; a group with a selection always stays so it can be cleared.
   const groups = MORE_GROUPS.filter((param) => facets?.[facetGroup(param).facet]?.length || selectedValues(params, param).length);
   return (
-    <section className="mt-1 border-t border-border-subtle py-3" data-testid="section-more-filters">
-      <h3>
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={id}
-          data-testid="button-more-filters"
-          onClick={() => setOpen(!open)}
-          className={`flex w-full items-center gap-2 rounded-lg text-left type-ui font-semibold text-foreground transition-colors duration-fast ease-standard hover:text-primary focus-visible:focus-ring ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'}`}
+    <FilterMoreSection
+      open={open}
+      onOpenChange={setOpen}
+      count={count}
+      density={density}
+      sectionTestId="section-more-filters"
+      buttonTestId="button-more-filters"
+      panelTestId="more-filters"
+      badgeTestId="badge-more-filters"
+      summary="Situação, modalidade, plataforma, órgão e novidades."
+    >
+      {groups.map((param) => {
+        const config = facetGroup(param);
+        return (
+          <FilterSubGroup key={param} title={config.title} help={config.help} termId={config.termId}>
+            <OptionList {...listProps(param, props)} />
+          </FilterSubGroup>
+        );
+      })}
+      <FilterSubGroup title="Novidades" help="Editais que o Pardal encontrou desde ontem.">
+        <label
+          htmlFor={newOnlyId}
+          className={`-mx-1.5 flex ${filterRowClass(density)} cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui text-foreground transition-colors duration-fast ease-standard hover:bg-surface-sunken`}
         >
-          <span className="flex-1">
-            Mais filtros
-            {count > 0 && (
-              <span data-testid="badge-more-filters" className="ml-1.5 rounded-pill bg-primary px-1.5 py-0.5 type-data text-xs leading-none font-bold text-primary-foreground">
-                {count}
-                <span className="sr-only"> {count === 1 ? 'ativo' : 'ativos'}</span>
-              </span>
-            )}
-          </span>
-          <ChevronDown size={15} className={`transition-transform duration-fast ease-standard ${open ? 'rotate-180' : ''}`} aria-hidden />
-        </button>
-      </h3>
-      {!open && <p className="type-meta text-muted-foreground">Situação, modalidade, plataforma, órgão e novidades.</p>}
-      <div id={id} hidden={!open} data-testid="more-filters">
-        {groups.map((param) => {
-          const config = facetGroup(param);
-          return (
-            <SubGroup key={param} title={config.title} help={config.help} termId={config.termId}>
-              <OptionList {...listProps(param, props)} />
-            </SubGroup>
-          );
-        })}
-        <SubGroup title="Novidades" help="Editais que o Pardal encontrou desde ontem.">
-          <label
-            htmlFor={newOnlyId}
-            className={`-mx-1.5 flex ${density === 'comfortable' ? 'min-h-10' : 'min-h-8'} cursor-pointer items-center gap-2.5 rounded-lg px-1.5 type-ui text-foreground transition-colors duration-fast ease-standard hover:bg-surface-sunken`}
-          >
-            <Checkbox
-              id={newOnlyId}
-              checked={params.newOnly ?? false}
-              onCheckedChange={(checked) => onChange({ newOnly: checked === true || undefined })}
-              data-testid="checkbox-filter-new-only"
-              className="border-input data-[state=checked]:border-primary"
-            />
-            <span className="min-w-0 flex-1">Só os que entraram nas últimas 24 h</span>
-            {facets && <span className="shrink-0 type-data text-xs text-muted-foreground">{formatNumber(facets.newCount)}</span>}
-          </label>
-        </SubGroup>
-      </div>
-    </section>
+          <Checkbox
+            id={newOnlyId}
+            checked={params.newOnly ?? false}
+            onCheckedChange={(checked) => onChange({ newOnly: checked === true || undefined })}
+            data-testid="checkbox-filter-new-only"
+            className="border-input data-[state=checked]:border-primary"
+          />
+          <span className="min-w-0 flex-1">Só os que entraram nas últimas 24 h</span>
+          {facets && <span className="shrink-0 type-data text-xs text-muted-foreground tabular-nums">{formatNumber(facets.newCount)}</span>}
+        </label>
+      </FilterSubGroup>
+    </FilterMoreSection>
   );
 }
 
