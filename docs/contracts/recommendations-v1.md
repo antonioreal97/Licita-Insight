@@ -8,7 +8,7 @@ Status: implementado. A funcionalidade aparece somente no app do Pardal Digital;
 
 A preferência `recommendationPersonalizationEnabled` nasce `false`. Sem opt-in, a API descarta buscas e visualizações antes de inserir qualquer linha. Ao desligar, o frontend envia `deleteHistory: true` (default da API) e informa que o histórico será apagado. Também existe `DELETE /api/v1/me/recommendation-history`. Eventos são retidos por no máximo 180 dias e a limpeza roda diariamente.
 
-Sinais que não dependem do opt-in: perfil da empresa, editais salvos e monitorados, buscas salvas e feedback de desinteresse. O opt-in acrescenta termos normalizados de busca, ids de editais abertos e o aprendizado explícito de **Interessa**; sem opt-in, Interessa retira o item da fila e conta a decisão, mas não grava expressão comportamental. A exportação `pardal-digital-dados-YYYY-MM-DD.json` inclui preferência, eventos ainda retidos, feedback, perfil calculado e recomendações materializadas. Excluir a conta remove tudo por `ON DELETE CASCADE`.
+Sinais que não dependem do opt-in: perfil da empresa, editais salvos e monitorados, buscas salvas e as respostas da triagem — **Interessa** (expressões do edital, uma vez por edital) e Não interessa. São sinais explícitos, como salvar um edital. O opt-in acrescenta somente termos normalizados de busca e ids de editais abertos. A exportação `pardal-digital-dados-YYYY-MM-DD.json` inclui preferência, eventos ainda retidos, feedback, perfil calculado e recomendações materializadas. Excluir a conta remove tudo por `ON DELETE CASCADE`.
 
 As finalidades e os tipos de proponente do perfil da conta são dados **declarados** pelo usuário. Eles pesam materiais sem depender do opt-in de personalização comportamental. Sem resposta de finalidade, o fluxo, formato e ordenação de recomendações permanecem como antes.
 
@@ -52,7 +52,7 @@ Impressões são somadas na leitura da página; cliques e dismiss são somados e
 O perfil de interesse materializado mantém **todas** as ofertas e palavras-chave escolhidas, **todas** as categorias escolhidas e, separadamente, até 30 termos e 20 categorias do histórico, além de órgãos, modalidades, UFs e faixa de valor. Cada valor guarda `weight` e `sources[]`; o leitor ainda aceita o `label` único do formato antigo até que todas as linhas sejam reconstruídas. Somar peso de salvo, monitorado ou Interessa nunca remove a origem explícita do perfil. Pesos-base:
 
 - perfil da empresa: palavra-chave escolhida `12`, categoria escolhida `12`, oferta livre `6`, descrição inferida `2`, UF de cobertura `5`; a descrição só reforça um candidato já qualificado por oferta, palavra-chave, categoria ou aprendizado de Interessa;
-- **triagem Interessa** (evento `interest`, somente com opt-in de personalização): extrai por campo termos concretos do título, objeto e itens, sem atravessar campos e sem órgão/rótulo de categoria; prioriza unigramas e bigramas do vocabulário #142, peso base `14 ×` meia-vida de **60 dias**; motivo `interest` — “Parecido com editais que você marcou como interesse: …”;
+- **triagem Interessa** (evento `interest`, sem depender do opt-in de navegação): extrai por campo termos concretos do título, objeto e itens, sem atravessar campos e sem órgão/rótulo de categoria; prioriza unigramas e bigramas do vocabulário #142, peso base `14 ×` meia-vida de **60 dias**; motivo `interest` — “Parecido com editais que você marcou como interesse: …”;
 - monitorado: `10`; salvo: `6`;
 - busca salva: `3`;
 - busca opt-in: `1,5 × decaimento`; detalhe opt-in: `2 × decaimento`.

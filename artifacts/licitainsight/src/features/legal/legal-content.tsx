@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
 export const LEGAL_DRAFT_NOTICE = 'Versão preliminar — sujeita a revisão jurídica';
-export const LEGAL_UPDATED_AT = '11 de outubro de 2026';
+export const LEGAL_UPDATED_AT = '20 de outubro de 2026';
 
 export function LegalLinks({ className }: { className?: string }) {
   return (
@@ -73,8 +73,12 @@ export function PrivacyPage() {
           enviado para cálculo de aderência. Base: execução de contrato. Não inclua nomes, CPF, contatos ou outros dados pessoais nas perguntas.
         </li>
         <li>
-          <strong>Recomendações personalizadas:</strong> pesquisas, visualizações, interesses e descartes, somente quando você ativa essa opção. Base:
+          <strong>Recomendações personalizadas:</strong> pesquisas e visualizações de editais, somente quando você ativa essa opção. Base:
           consentimento, que pode ser revogado a qualquer momento.
+        </li>
+        <li>
+          <strong>Respostas da triagem:</strong> os editais que você marca como Interessa ou Não interessa e os termos extraídos deles, usados para
+          ordenar as suas recomendações. Base: execução de contrato. Você pode apagá-los a qualquer momento em Configurações, em “Apagar aprendizado e histórico”.
         </li>
         <li>
           <strong>Assinatura:</strong> estado da assinatura e identificadores do cliente, checkout e cobrança no Asaas. Base: execução de contrato e
