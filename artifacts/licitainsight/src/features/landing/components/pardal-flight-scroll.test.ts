@@ -30,7 +30,7 @@ describe('Pardal scroll moments', () => {
     assert.equal(iaApproach.activeKey, 'ia');
     assert.equal(iaApproach.curtainKey, null);
     assert.equal(iaApproach.restingSide, 0);
-    assert.ok(Math.abs(iaApproach.localProgress - 1 / 7) < 1e-10);
+    assert.ok(Math.abs(iaApproach.localProgress - 5 / 11) < 1e-10);
 
     const iaPeak = resolvePardalScroll({ reducedMotion: false, scrollY: 500, sections: sections(500), viewportHeight: 1000 }, iaApproach.memory);
     assert.equal(iaPeak.activeKey, 'ia');
@@ -44,7 +44,7 @@ describe('Pardal scroll moments', () => {
 
     const planApproach = resolvePardalScroll({ reducedMotion: false, scrollY: 2000, sections: sections(-1000), viewportHeight: 1000 }, between.memory);
     assert.equal(planApproach.activeKey, 'plano');
-    assert.ok(Math.abs(planApproach.localProgress - 1 / 7) < 1e-10);
+    assert.ok(Math.abs(planApproach.localProgress - 5 / 11) < 1e-10);
 
     const planPeak = resolvePardalScroll({ reducedMotion: false, scrollY: 2300, sections: sections(-1300), viewportHeight: 1000 }, planApproach.memory);
     assert.equal(planPeak.activeKey, 'plano');
@@ -71,7 +71,7 @@ describe('Pardal scroll moments', () => {
 
     const planApproach = resolvePardalScroll({ reducedMotion: false, scrollY: 2050, sections: sections(-1050), viewportHeight: 1000 }, planPeak.memory);
     assert.equal(planApproach.curtainKey, null);
-    assert.ok(Math.abs(planApproach.localProgress - 2 / 7) < 1e-10);
+    assert.ok(Math.abs(planApproach.localProgress - 6 / 11) < 1e-10);
     assert.equal(planApproach.restingSide, 1);
 
     const iaCurtain = resolvePardalScroll({ reducedMotion: false, scrollY: 950, sections: sections(50), viewportHeight: 1000 }, planApproach.memory);
@@ -85,7 +85,7 @@ describe('Pardal scroll moments', () => {
 
     const iaApproach = resolvePardalScroll({ reducedMotion: false, scrollY: 250, sections: sections(750), viewportHeight: 1000 }, iaPeak.memory);
     assert.equal(iaApproach.curtainKey, null);
-    assert.ok(Math.abs(iaApproach.localProgress - 2 / 7) < 1e-10);
+    assert.ok(Math.abs(iaApproach.localProgress - 6 / 11) < 1e-10);
     assert.equal(iaApproach.restingSide, 0);
   });
 

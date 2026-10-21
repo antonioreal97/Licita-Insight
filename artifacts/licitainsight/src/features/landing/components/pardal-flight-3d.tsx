@@ -383,7 +383,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
       const dt = Math.min(0.05, last ? (now - last) / 1000 : 1 / 60);
       last = now;
       const goal = target();
-      const follow = 1 - Math.exp(-dt * 7);
+      const follow = 1 - Math.exp(-dt * 5);
 
       // A wheel step jumps a third of a moment at once: the flight eases to the scroll position instead of teleporting,
       // and finishes its way out when the moment ends mid-air.
@@ -393,7 +393,7 @@ export function PardalFlight3D({ reducedMotion, wide }: { reducedMotion: boolean
         state.progress = goal.progress < 1 ? 0 : 2;
       }
       const aim = live ? goal.progress : state.progress < 1 ? 0 : 2;
-      state.progress += (aim - state.progress) * (1 - Math.exp(-dt * 10));
+      state.progress += (aim - state.progress) * (1 - Math.exp(-dt * 6));
       if (!live && Math.abs(aim - state.progress) < 0.002) {
         state.section = null;
         state.progress = 0;
