@@ -175,7 +175,7 @@ function ParticipationBar({ item, monitored, onMonitor }: { item: SavedTender; m
             size="sm"
             aria-pressed={monitored}
             aria-describedby={`tender-title-${id}`}
-            title={monitored ? 'Parar de monitorar este edital' : 'Monitorar mudanças neste edital'}
+            title={monitored ? 'Parar de monitorar este edital' : 'Monitorar prazo, status, valor e novos anexos deste edital'}
             onClick={onMonitor}
             className="h-11 sm:h-8"
             data-testid={`button-monitor-saved-${id}`}

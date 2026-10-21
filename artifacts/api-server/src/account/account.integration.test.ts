@@ -242,8 +242,8 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const saved = await request(`${endpoint}/cndt`, { method: "PUT", headers: csrf, body: JSON.stringify({ status: "have", issuedAt: "2026-10-01", expiresAt: "2026-10-31", reference: "TST 123" }) }, cookie);
     assert.equal(saved.status, 200);
     const list = await request(endpoint, {}, cookie);
-    const body = await list.json() as { progress: { ready: number; total: number }; items: Array<{ document: { reference: string } | null }> };
-    assert.deepEqual(body.progress, { ready: 1, total: 12 });
+    const body = await list.json() as { progress: { ready: number; total: number; unknownValidity: number }; items: Array<{ document: { reference: string } | null }> };
+    assert.deepEqual(body.progress, { ready: 1, total: 12, unknownValidity: 0 });
     assert.ok(body.items.some(({ document }) => document?.reference === "TST 123"));
     const exported = await request("/v1/me/export", {}, cookie);
     assert.ok(((await exported.json()) as { companyDocuments: Array<{ kind: string }> }).companyDocuments.some(({ kind }) => kind === "cndt"));

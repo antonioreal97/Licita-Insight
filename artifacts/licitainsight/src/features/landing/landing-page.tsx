@@ -9,6 +9,7 @@ import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
 import { OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
 import { PardalClip } from '@/features/landing/components/pardal-clip';
+import { LoopVideo } from '@/features/landing/components/loop-video';
 import { PardalTeaser } from '@/features/landing/components/pardal-teaser';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { formatCurrencyPrecise } from '@/lib/format';
@@ -342,6 +343,53 @@ function FindsSection() {
   );
 }
 
+const productVideos = [
+  {
+    name: 'pardal-recomendacao',
+    title: 'Como a recomendação escolhe os editais',
+    label: 'Vídeo: como a recomendação do Pardal Digital funciona',
+    description:
+      'Você conta o que vende e onde atende, vê por que cada edital apareceu para você e faz a triagem do dia. 1 min 37 s, sem som.',
+    subject: 'o vídeo da recomendação',
+    testId: 'video-landing-recomendacao',
+  },
+  {
+    name: 'pardal-funcionalidades',
+    title: 'Do edital encontrado à participação',
+    label: 'Vídeo: funcionalidades do Pardal Digital',
+    description:
+      'Buscas salvas com alertas, perguntas ao edital com a página citada, próxima ação com prazo e o mural de processos. 1 min 52 s, sem som.',
+    subject: 'o vídeo das funcionalidades',
+    testId: 'video-landing-funcionalidades',
+  },
+] as const;
+
+function ProductVideosSection({ reducedMotion }: { reducedMotion: boolean }) {
+  return (
+    <section id="por-dentro" data-testid="section-product-videos" aria-labelledby="por-dentro-titulo" className="pb-20 sm:pb-28">
+      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className={eyebrow}>Por dentro</div>
+          <h2 id="por-dentro-titulo" className={sectionTitle}>
+            Veja o Pardal funcionando.
+          </h2>
+          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
+            Telas reais do produto, da recomendação ao acompanhamento de cada edital.
+          </p>
+        </div>
+        <div className="mt-10 flex flex-col gap-14 lg:mt-12 lg:gap-16">
+          {productVideos.map(({ title, testId, ...video }) => (
+            <div key={video.name}>
+              <h3 className="mb-4 type-titulo-3">{title}</h3>
+              <LoopVideo {...video} testId={testId} toggleTestId={`button-${testId.replace('video-', '')}-toggle`} reducedMotion={reducedMotion} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const planIncludes = [
   'Licitações, editais nacionais e internacionais na mesma busca',
   'Editais salvos e buscas monitoradas, sem limite',
@@ -518,6 +566,7 @@ export default function LandingPage() {
         <HowItWorksSection />
         <OpportunityMapSection />
         <FindsSection />
+        <ProductVideosSection reducedMotion={reducedMotion} />
         <PlanSection />
         <FaqSection />
         <FinalCta reducedMotion={reducedMotion} />

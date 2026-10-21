@@ -49,6 +49,13 @@ The public landing (`artifacts/licitainsight/src/features/landing/`) is a brand 
   Files in `public/motion/pardal-teaser*` (VP9 1080p, H.264 1080p fallback, H.264 720p for phones, AVIF poster). Nothing, poster
   included, downloads before the section nears the screen; it plays only while half visible, pauses off screen, and always has a
   visible Pausar/Reproduzir button. To replace it, re-encode from the source and keep the names.
+- **Product videos in a loop** (section "Por dentro", right after "O que você encontra"): `pardal-recomendacao` (1 min 37 s) and
+  `pardal-funcionalidades` (1 min 52 s), the owner's screen recordings. Same behavior as the teaser through the shared
+  `loop-video.tsx`. Files in `public/motion/`: H.264 1080p (the source video stream copied, audio track removed, `faststart`),
+  H.264 720p for phones and an AVIF poster; no VP9 (a re-encode saved under 10% on these screen recordings).
+- **Flight speed** (owner, 20/10/2026: slower): one approach spans 55% of the viewport height of scrolling
+  (`APPROACH` in `pardal-flight-scroll.ts`), the bird eases to the scroll position more gently, and the wings beat at 3.5 Hz
+  falling to 2.2 Hz near the camera (1.3 Hz at rest).
 
 Still forbidden on the landing: animating live data (index facts, tender preview), new infinite loops (the radar globe and the
 teaser are the only ones), and any motion under reduced motion. With reduced motion there is no transition: the bird is drawn once

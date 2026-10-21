@@ -27,7 +27,8 @@ type ResolvePardalScrollInput = {
   viewportHeight: number;
 };
 
-const APPROACH = 0.35;
+// Share of the viewport scrolled during one approach; larger is a slower flight (owner, 20/10/2026: slower).
+const APPROACH = 0.55;
 const FADE = 0.08;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));

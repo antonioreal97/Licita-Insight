@@ -1,4 +1,5 @@
 import type {
+  CompanyDocumentChecklistItem,
   CompanyDocumentKind,
   CompanyDocumentsResponse,
   QualificationType,
@@ -35,6 +36,14 @@ export function requiredDocumentKinds(input: { highlights?: TenderHighlights; sh
 
 export type TenderReadiness = { state: 'ready'; required: number } | { state: 'missing'; labels: string[] } | null;
 
+/** Same rule as the API: a kind that expires but has no date is "unknown" and never counts as in good standing. */
+export function documentValidity(item: CompanyDocumentChecklistItem | undefined, asOf: string): 'valid' | 'unknown' | 'invalid' {
+  const document = item?.document;
+  if (document?.status !== 'have') return 'invalid';
+  if (document.expiresAt) return document.expiresAt >= asOf ? 'valid' : 'invalid';
+  return item!.catalog.suggestedValidityDays === null ? 'valid' : 'unknown';
+}
+
 export function tenderReadiness(
   documents: CompanyDocumentsResponse | undefined,
   input: { highlights?: TenderHighlights; sheet?: TenderSheet },
@@ -45,9 +54,10 @@ export function tenderReadiness(
   const items = new Map(documents.items.map((item) => [item.catalog.kind, item]));
   const missing = required.flatMap((kind) => {
     const item = items.get(kind);
-    const current = item?.document;
-    const valid = current?.status === 'have' && (!current.expiresAt || current.expiresAt >= documents.asOf);
-    return valid ? [] : [item?.catalog.label ?? kind];
+    const validity = documentValidity(item, documents.asOf);
+    const label = item?.catalog.label ?? kind;
+    if (validity === 'valid') return [];
+    return [validity === 'unknown' ? `${label} (sem validade informada)` : label];
   });
   return missing.length === 0 ? { state: 'ready', required: required.length } : { state: 'missing', labels: missing };
 }

@@ -1914,6 +1914,8 @@ export const listCompanyDocumentsResponseProgressReadyMin = 0;
 
 export const listCompanyDocumentsResponseProgressTotalMin = 0;
 
+export const listCompanyDocumentsResponseProgressUnknownValidityMin = 0;
+
 
 
 export const ListCompanyDocumentsResponse = zod.object({
@@ -1938,7 +1940,8 @@ export const ListCompanyDocumentsResponse = zod.object({
 })),
   "progress": zod.object({
   "ready": zod.number().int().min(listCompanyDocumentsResponseProgressReadyMin),
-  "total": zod.number().int().min(listCompanyDocumentsResponseProgressTotalMin)
+  "total": zod.number().int().min(listCompanyDocumentsResponseProgressTotalMin),
+  "unknownValidity": zod.number().int().min(listCompanyDocumentsResponseProgressUnknownValidityMin).describe('Marked "have" for a kind that expires but without an expiry date; never counted in `ready`.')
 }),
   "asOf": zod.coerce.date()
 })

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type { CompanyDocumentsResponse, TenderHighlights, TenderSheet } from '@/api';
 import { daysUntil } from './bid-readiness-page';
-import { requiredDocumentKinds, tenderReadiness } from './lib/readiness';
+import { documentValidity, requiredDocumentKinds, tenderReadiness } from './lib/readiness';
 
 const catalog = (kind: CompanyDocumentsResponse['items'][number]['catalog']['kind'], label: string) => ({
   kind, label, description: label, glossaryId: 'cnd', officialUrl: 'https://www.gov.br/', suggestedValidityDays: null,
@@ -27,7 +27,7 @@ test('maps ready sheet qualifications and highlights to fixed document kinds', (
 
 test('readiness seal counts absent and expired required documents', () => {
   const documents: CompanyDocumentsResponse = {
-    asOf: '2026-10-16', progress: { ready: 1, total: 2 }, items: [
+    asOf: '2026-10-16', progress: { ready: 1, total: 2, unknownValidity: 0 }, items: [
       { catalog: catalog('technical_capacity_certificate', 'Atestado'), document: { id: '1', kind: 'technical_capacity_certificate', status: 'have', issuedAt: null, expiresAt: null, reference: null, updatedAt: '2026-10-01T00:00:00Z' } },
       { catalog: catalog('professional_council_registration', 'Conselho'), document: { id: '2', kind: 'professional_council_registration', status: 'have', issuedAt: null, expiresAt: '2026-10-15', reference: null, updatedAt: '2026-10-01T00:00:00Z' } },
     ],
@@ -44,4 +44,14 @@ test('tender rows and detail expose the readiness badge with the automatic-readi
   assert.match(row, /ReadinessBadge/);
   assert.match(panel, /pode errar/);
   assert.match(panel, /Revisar documentos da empresa/);
+});
+
+test('certidão que vence sem data informada não deixa o selo verde', () => {
+  const expiring = { ...catalog('cndt', 'CNDT'), suggestedValidityDays: 180 };
+  const item = { catalog: expiring, document: { id: '3', kind: 'cndt' as const, status: 'have' as const, issuedAt: null, expiresAt: null, reference: null, updatedAt: '2026-10-01T00:00:00Z' } };
+  assert.equal(documentValidity(item, '2026-10-16'), 'unknown');
+  assert.equal(documentValidity({ ...item, catalog: catalog('cndt', 'CNDT') }, '2026-10-16'), 'valid', 'kinds without validity do not expire');
+  const documents: CompanyDocumentsResponse = { asOf: '2026-10-16', progress: { ready: 0, total: 1, unknownValidity: 1 }, items: [item] };
+  const sheet = { status: 'ready', qualificationChecklist: [{ type: 'regularidade_trabalhista' }] } as TenderSheet;
+  assert.deepEqual(tenderReadiness(documents, { sheet }), { state: 'missing', labels: ['CNDT (sem validade informada)'] });
 });

@@ -90,6 +90,20 @@ const serialize = (row: typeof companyDocumentsTable.$inferSelect) => ({
   updatedAt: row.updatedAt.toISOString(),
 });
 
+/**
+ * "Tenho" is in good standing only with an expiry date from today on, or for kinds that do not expire (no suggested
+ * validity). A kind that expires but has no date is "unknown": it never counts as in good standing.
+ */
+export const documentValidity = (
+  catalog: Pick<CompanyDocumentCatalogItem, "suggestedValidityDays">,
+  document: { status: string; expiresAt: string | null } | null,
+  today: string,
+): "valid" | "unknown" | "invalid" => {
+  if (document?.status !== "have") return "invalid";
+  if (document.expiresAt) return document.expiresAt >= today ? "valid" : "invalid";
+  return catalog.suggestedValidityDays === null ? "valid" : "unknown";
+};
+
 export const listCompanyDocuments = async (userId: string, now = new Date()) => {
   const rows = await db.select().from(companyDocumentsTable).where(eq(companyDocumentsTable.userId, userId));
   const byKind = new Map(rows.map((row) => [row.kind, row]));
@@ -99,8 +113,16 @@ export const listCompanyDocuments = async (userId: string, now = new Date()) => 
     return { catalog, document: row ? serialize(row) : null };
   });
   const applicable = items.filter(({ document }) => document?.status !== "not_applicable");
-  const ready = applicable.filter(({ document }) => document?.status === "have" && (!document.expiresAt || document.expiresAt >= today)).length;
-  return { items, progress: { ready, total: applicable.length }, asOf: today };
+  const states = applicable.map(({ catalog, document }) => documentValidity(catalog, document, today));
+  return {
+    items,
+    progress: {
+      ready: states.filter((state) => state === "valid").length,
+      total: applicable.length,
+      unknownValidity: states.filter((state) => state === "unknown").length,
+    },
+    asOf: today,
+  };
 };
 
 export const putCompanyDocument = async (userId: string, kind: CompanyDocumentKind, input: CompanyDocumentPut) => {

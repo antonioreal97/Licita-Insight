@@ -27,9 +27,9 @@ const TWIST_UP = rad(18);
 
 /** Share of a moment's progress taken by the approach; the rest is the solid-color hold before the boundary. */
 export const APPROACH_END = 0.9;
-export const BEAT_HZ_START = 5;
-export const BEAT_HZ_NEAR = 3;
-export const REST_BEAT_HZ = 1.8;
+export const BEAT_HZ_START = 3.5;
+export const BEAT_HZ_NEAR = 2.2;
+export const REST_BEAT_HZ = 1.3;
 /** While the page scrolls outside a moment the gutter bird only lifts its folded wing a little, in the logo plane. */
 export const REST_LIFT = rad(9);
 export const REST_SWING = rad(6);

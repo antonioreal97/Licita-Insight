@@ -420,7 +420,10 @@ As rotas desta seção exigem sessão e usam o limite leve geral de leitura aute
 ## 7. Prontidão para licitar
 
 `GET /api/v1/me/company-documents` exige sessão e devolve o catálogo fixo, os metadados salvos e
-`progress: { ready, total }`. `PUT /api/v1/me/company-documents/{kind}` exige sessão, CSRF e acesso
+`progress: { ready, total, unknownValidity }`. `ready` conta os itens `have` com `expiresAt` a partir de hoje e os
+`have` de tipos que não vencem (`suggestedValidityDays: null`); um tipo que vence marcado `have` sem `expiresAt`
+entra em `unknownValidity` e nunca em `ready` (o selo dos editais e os próximos passos pedem a data).
+`total` exclui `not_applicable`. `PUT /api/v1/me/company-documents/{kind}` exige sessão, CSRF e acesso
 ativo; sem acesso responde `402 SUBSCRIPTION_REQUIRED`. O `PUT` é idempotente por `(user_id, kind)`.
 
 Cada item usa `status: 'have' | 'missing' | 'not_applicable'`, `issuedAt`, `expiresAt` e uma
