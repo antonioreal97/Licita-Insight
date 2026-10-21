@@ -100,7 +100,7 @@ export default function AuthPage() {
           </Link>
           <div className="mb-8">
             <h1 className="type-titulo-2">Entre com sua conta Google.</h1>
-            <p className="mt-2 type-body text-muted-foreground">Salve editais, monitore mudanças e receba alertas das suas buscas.</p>
+            <p className="mt-2 type-body text-muted-foreground">Salve editais, acompanhe prazo, status, valor e novos anexos e receba alertas das suas buscas.</p>
           </div>
           {error && (
             <div

@@ -17,7 +17,7 @@ const alertRows = [
   },
   {
     name: 'Mudanças em editais',
-    desc: 'Monitore um edital para ser avisado quando prazo, status, valor ou documentos mudarem.',
+    desc: 'Monitore um edital para ser avisado quando prazo, status ou valor mudarem ou sair um anexo novo.',
     href: '/monitoring',
     cta: 'Monitoramento',
   },

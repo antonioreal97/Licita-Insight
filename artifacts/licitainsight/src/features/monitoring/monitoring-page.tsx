@@ -161,7 +161,7 @@ function MonitoredSection() {
   if (list.data.pagination.total === 0 || rows.length === 0)
     return (
       <EmptyState icon={Target} title="Nenhum edital monitorado">
-        Abra um edital e use “Monitorar” para ser avisado aqui quando prazo, status, valor ou documentos mudarem.{' '}
+        Abra um edital e use “Monitorar” para ser avisado aqui quando prazo, status ou valor mudarem ou sair um anexo novo.{' '}
         <Link href="/search" className={linkClass}>
           Explorar editais
         </Link>
