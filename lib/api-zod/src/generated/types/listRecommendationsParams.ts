@@ -5,6 +5,7 @@
  * API pública do Pardal Digital
  * OpenAPI spec version: 1.3.0
  */
+import type { ListRecommendationsScope } from './listRecommendationsScope';
 import type { PageParameter } from './pageParameter';
 
 export type ListRecommendationsParams = {
@@ -17,4 +18,8 @@ page?: PageParameter;
  * @maximum 50
  */
 pageSize?: number;
+/**
+ * `profile` (triage) keeps only tenders that match a declared offering, keyword or category and fall inside the declared region whatever the coverage mode; it omits `opportunities`.
+ */
+scope?: ListRecommendationsScope;
 };

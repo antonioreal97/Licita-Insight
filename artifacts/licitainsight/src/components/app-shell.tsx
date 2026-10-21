@@ -10,6 +10,7 @@ import {
   FileSearch,
   FileCheck2,
   Globe,
+  CalendarDays,
   LayoutDashboard,
   Landmark,
   LifeBuoy,
@@ -71,6 +72,7 @@ const navGroups: { label: string; title?: string; items: NavItem[] }[] = [
       { href: '/saved-searches', label: 'Buscas salvas', icon: Bookmark, testId: 'link-nav-buscas-salvas' },
       { href: '/saved-tenders', label: 'Editais salvos', icon: FileSearch, testId: 'link-nav-editais-salvos' },
       { href: '/monitoring', label: 'Monitoramento', icon: Target, testId: 'link-nav-monitoramento' },
+      { href: '/calendario', label: 'Calendário', icon: CalendarDays, testId: 'link-nav-calendario' },
     ],
   },
   {

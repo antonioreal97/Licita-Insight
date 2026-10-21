@@ -4,7 +4,8 @@ import { useRecommendations } from '../hooks/use-recommendations';
 import { TRIAGE_GOAL } from './triage-state';
 import { useTriageProgress } from './use-triage-progress';
 export function TriageEntry() {
-  const recommendations = useRecommendations(50);
+  // Same strict deck as /triagem, so the count matches what the page will show.
+  const recommendations = useRecommendations(50, { scope: 'profile' });
   const { progress } = useTriageProgress();
   const count = Math.min(TRIAGE_GOAL - progress.reviewed.length, recommendations.data?.data.filter(item => !progress.reviewed.includes(item.tender.id)).length ?? 0);
   if (!count && progress.reviewed.length === 0) return null;

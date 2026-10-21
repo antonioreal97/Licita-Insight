@@ -1,0 +1,213 @@
+diff --git a/.cursor/hooks/state/continual-learning-index.json b/.cursor/hooks/state/continual-learning-index.json
+index 28bee11..01d7cd8 100644
+--- a/.cursor/hooks/state/continual-learning-index.json
++++ b/.cursor/hooks/state/continual-learning-index.json
+@@ -1,36 +1,141 @@
+ {
+   "version": 1,
+   "transcripts": {
++    "0884ba6a-eb79-413d-a1e9-5118d5c2c7ed/0884ba6a-eb79-413d-a1e9-5118d5c2c7ed.jsonl": {
++      "mtimeMs": 1790370139353.18
++    },
+     "091a71c4-1482-4227-b274-35b2fcbf4947/091a71c4-1482-4227-b274-35b2fcbf4947.jsonl": {
+       "mtimeMs": 1790189419321.3474
+     },
++    "12390d76-c103-4ca8-a448-d715f43e2fce/12390d76-c103-4ca8-a448-d715f43e2fce.jsonl": {
++      "mtimeMs": 1790281089638.204
++    },
++    "13bb8c8f-c8a2-4f40-8ec0-5af54f2814dc/13bb8c8f-c8a2-4f40-8ec0-5af54f2814dc.jsonl": {
++      "mtimeMs": 1790614752167.0444
++    },
++    "14a524ac-a1c9-4a01-9594-82c12f21c4d4/14a524ac-a1c9-4a01-9594-82c12f21c4d4.jsonl": {
++      "mtimeMs": 1791913860661.077
++    },
++    "17b22525-c6e9-44ef-8c5c-66d1ad910c3c/17b22525-c6e9-44ef-8c5c-66d1ad910c3c.jsonl": {
++      "mtimeMs": 1792160187669.1743
++    },
++    "1ae0e7ae-0fbb-4bcc-8ee3-56799fbd4138/1ae0e7ae-0fbb-4bcc-8ee3-56799fbd4138.jsonl": {
++      "mtimeMs": 1791925190895.574
++    },
+     "1e4dc69d-8d85-48bb-b340-c3450d48b95d/1e4dc69d-8d85-48bb-b340-c3450d48b95d.jsonl": {
+       "mtimeMs": 1790106981839.3923
+     },
+     "1e4dc69d-8d85-48bb-b340-c3450d48b95d/subagents/eea361fe-8a97-4d7d-ae5e-6aabba09e5bc.jsonl": {
+       "mtimeMs": 1790106966401.987
+     },
++    "21a1c61d-fd20-430c-863f-a21143fef3ce/21a1c61d-fd20-430c-863f-a21143fef3ce.jsonl": {
++      "mtimeMs": 1791920188403.6917
++    },
++    "22db735a-536c-493c-85e4-4af274bcf6ed/22db735a-536c-493c-85e4-4af274bcf6ed.jsonl": {
++      "mtimeMs": 1791528771876.7708
++    },
++    "28646ccc-f584-4468-9bfa-742f6354cd00/28646ccc-f584-4468-9bfa-742f6354cd00.jsonl": {
++      "mtimeMs": 1790726338792.4907
++    },
++    "323fc1e8-e404-4372-8150-d2421e1f55e4/323fc1e8-e404-4372-8150-d2421e1f55e4.jsonl": {
++      "mtimeMs": 1792207009366.665
++    },
+     "34b1217a-4b11-423b-a847-b05fb6011e03/34b1217a-4b11-423b-a847-b05fb6011e03.jsonl": {
+       "mtimeMs": 1790098486119.679
+     },
++    "357ab3d1-1ff1-45e6-abe3-df8227922bf4/357ab3d1-1ff1-45e6-abe3-df8227922bf4.jsonl": {
++      "mtimeMs": 1790101914644.137
++    },
++    "4c17bc9a-76eb-4304-85c0-d3e16e82b563/4c17bc9a-76eb-4304-85c0-d3e16e82b563.jsonl": {
++      "mtimeMs": 1790574636978.6199
++    },
+     "565b83ef-3ffa-46cc-b609-fe5e4f99a981/565b83ef-3ffa-46cc-b609-fe5e4f99a981.jsonl": {
+       "mtimeMs": 1790188281476.8635
+     },
++    "5e05e7e0-6796-4414-b4fc-9db763640963/5e05e7e0-6796-4414-b4fc-9db763640963.jsonl": {
++      "mtimeMs": 1792092821916.2224
++    },
++    "5e3ea935-cf27-49de-bda8-8dfb43e273e9/5e3ea935-cf27-49de-bda8-8dfb43e273e9.jsonl": {
++      "mtimeMs": 1790573164695.3782
++    },
++    "5ef34687-4cae-4aa2-85cb-5f9d749351b9/5ef34687-4cae-4aa2-85cb-5f9d749351b9.jsonl": {
++      "mtimeMs": 1790578312685.522
++    },
++    "5f36c495-30e8-4f65-9a3b-5aec432ca8c6/5f36c495-30e8-4f65-9a3b-5aec432ca8c6.jsonl": {
++      "mtimeMs": 1790728920368.6533
++    },
++    "69141e0c-9b40-46d0-86cb-e1ea5c7ee5f9/69141e0c-9b40-46d0-86cb-e1ea5c7ee5f9.jsonl": {
++      "mtimeMs": 1792161761085.095
++    },
++    "6ba37899-4249-42c0-bd14-573b4b757035/6ba37899-4249-42c0-bd14-573b4b757035.jsonl": {
++      "mtimeMs": 1792023026589.3298
++    },
++    "6d88f579-144d-4461-b118-f68d3393a698/6d88f579-144d-4461-b118-f68d3393a698.jsonl": {
++      "mtimeMs": 1790367524374.109
++    },
++    "6f3e5be2-2523-4a7d-b083-54e58d0d5cd9/6f3e5be2-2523-4a7d-b083-54e58d0d5cd9.jsonl": {
++      "mtimeMs": 1792088451309.8474
++    },
+     "738a14b8-6bad-4526-b8c5-0b903ef7e73d/738a14b8-6bad-4526-b8c5-0b903ef7e73d.jsonl": {
+-      "mtimeMs": 1790195578338.864
++      "mtimeMs": 1790344779074.4448
+     },
+     "738a14b8-6bad-4526-b8c5-0b903ef7e73d/subagents/a467987f-fa4f-409c-a43e-0733dcea763d.jsonl": {
+-      "mtimeMs": 1790195600210.1106
++      "mtimeMs": 1790195687413.853
++    },
++    "7a8768c4-fb0f-4707-b57f-955e8e1a3c7b/7a8768c4-fb0f-4707-b57f-955e8e1a3c7b.jsonl": {
++      "mtimeMs": 1790576981442.9807
++    },
++    "7dec5618-a9ae-4146-8c78-ea3e1c580c0a/7dec5618-a9ae-4146-8c78-ea3e1c580c0a.jsonl": {
++      "mtimeMs": 1792205966786.3608
++    },
++    "7fc9f96a-00a5-46e4-8737-edf66c00e5bf/7fc9f96a-00a5-46e4-8737-edf66c00e5bf.jsonl": {
++      "mtimeMs": 1792205948348.4624
++    },
++    "85158df6-7983-420d-94b0-58bcebb0d7f3/85158df6-7983-420d-94b0-58bcebb0d7f3.jsonl": {
++      "mtimeMs": 1791504015703.8184
++    },
++    "86e2f27e-c666-45a3-b9c6-2b34407965b1/86e2f27e-c666-45a3-b9c6-2b34407965b1.jsonl": {
++      "mtimeMs": 1790366737810.0664
++    },
++    "9550362a-5de3-463c-88b9-c887d112bb44/9550362a-5de3-463c-88b9-c887d112bb44.jsonl": {
++      "mtimeMs": 1791572331537.266
+     },
+     "9cdaf4b1-289e-4730-9383-ca6e623fe0d1/9cdaf4b1-289e-4730-9383-ca6e623fe0d1.jsonl": {
+       "mtimeMs": 1790183972077.0437
+     },
++    "9dabaa9a-4e21-4f08-8c1c-40d15d78b52a/9dabaa9a-4e21-4f08-8c1c-40d15d78b52a.jsonl": {
++      "mtimeMs": 1792206829820.011
++    },
++    "a374ca79-e219-493f-844c-e719fcac75dd/a374ca79-e219-493f-844c-e719fcac75dd.jsonl": {
++      "mtimeMs": 1790631995755.4983
++    },
++    "a3949449-eb2a-4b81-8285-f65e76c932b3/a3949449-eb2a-4b81-8285-f65e76c932b3.jsonl": {
++      "mtimeMs": 1791923944299.9644
++    },
++    "a6873a71-7ed4-4743-bedc-2a9377d5b128/a6873a71-7ed4-4743-bedc-2a9377d5b128.jsonl": {
++      "mtimeMs": 1792087075200.689
++    },
+     "a7611b03-ad70-4d2e-a1d0-0332e1cb8f45/a7611b03-ad70-4d2e-a1d0-0332e1cb8f45.jsonl": {
+       "mtimeMs": 1790188957536.0107
+     },
++    "aaee51a2-d119-48be-af1f-bfe897271cd5/aaee51a2-d119-48be-af1f-bfe897271cd5.jsonl": {
++      "mtimeMs": 1792087324788.966
++    },
++    "b46fad65-0d2f-41a3-b113-2205189f40fa/b46fad65-0d2f-41a3-b113-2205189f40fa.jsonl": {
++      "mtimeMs": 1790465001570.557
++    },
+     "b93288bc-3231-453a-925c-b52b391a9e79/b93288bc-3231-453a-925c-b52b391a9e79.jsonl": {
+       "mtimeMs": 1790103804360.5266
+     },
++    "bcf67281-9e0c-4298-8c38-637c5de6b7cf/bcf67281-9e0c-4298-8c38-637c5de6b7cf.jsonl": {
++      "mtimeMs": 1791921421397.9492
++    },
++    "be0eb4aa-bcd0-4e8f-9baa-9bfb274e6ed6/be0eb4aa-bcd0-4e8f-9baa-9bfb274e6ed6.jsonl": {
++      "mtimeMs": 1791923920046.3855
++    },
++    "c298aabd-7d09-46e3-890b-5098677704c6/c298aabd-7d09-46e3-890b-5098677704c6.jsonl": {
++      "mtimeMs": 1791945836133.1057
++    },
+     "c82b8b3b-f129-4575-acb3-634a53963929/c82b8b3b-f129-4575-acb3-634a53963929.jsonl": {
+       "mtimeMs": 1790189486549.0625
+     },
+@@ -39,6 +144,18 @@
+     },
+     "dfac020a-8806-4890-9935-a310a9a7a1dd/dfac020a-8806-4890-9935-a310a9a7a1dd.jsonl": {
+       "mtimeMs": 1790108365234.6885
++    },
++    "e3760d30-5c32-4b77-b017-17bc4553d9d4/e3760d30-5c32-4b77-b017-17bc4553d9d4.jsonl": {
++      "mtimeMs": 1791498581155.2402
++    },
++    "ee568123-ea06-40c2-a863-031b3108a141/ee568123-ea06-40c2-a863-031b3108a141.jsonl": {
++      "mtimeMs": 1791528789828.472
++    },
++    "efae7262-d483-44a0-b055-172ecc0b0a49/efae7262-d483-44a0-b055-172ecc0b0a49.jsonl": {
++      "mtimeMs": 1792097031871.3574
++    },
++    "f867d2a1-7042-429e-8dfe-ef0e22fa1d26/f867d2a1-7042-429e-8dfe-ef0e22fa1d26.jsonl": {
++      "mtimeMs": 1790488288867.9824
+     }
+   }
+ }
+diff --git a/.cursor/hooks/state/continual-learning.json b/.cursor/hooks/state/continual-learning.json
+index e35dd06..ba505e2 100644
+--- a/.cursor/hooks/state/continual-learning.json
++++ b/.cursor/hooks/state/continual-learning.json
+@@ -1,8 +1,8 @@
+ {
+   "version": 1,
+-  "lastRunAtMs": 1790195565107,
+-  "turnsSinceLastRun": 9,
+-  "lastTranscriptMtimeMs": 1790195564763.5396,
+-  "lastProcessedGenerationId": "eaee5c55-e43d-4c0e-a8c2-f1b276825ce0",
++  "lastRunAtMs": 1792206452882,
++  "turnsSinceLastRun": 2,
++  "lastTranscriptMtimeMs": 1792206451821.1692,
++  "lastProcessedGenerationId": "2935a045-01cc-44cd-8f17-e5f750861593",
+   "trialStartedAtMs": null
+ }
+diff --git a/AGENTS.md b/AGENTS.md
+index b0fcdfd..80f3641 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -5,18 +5,22 @@
+ - Preferir o comando exato de `dev` do frontend (com `PORT`/`BASE_PATH`) em vez de assumir scripts genéricos na raiz.
+ - Preferir a stack completa via `docker compose up --build` em vez de vários terminais no host.
+ - Nome do produto na UI: Pardal Digital. O logo oficial (SVG de cor fixa) fica em `artifacts/licitainsight/public/brand/` (`pardal-logo-petroleo.svg` no tema Creme, `pardal-logo-lima.svg` no tema Petróleo, `pardal-simbolo-*.svg` para espaços pequenos) e entra pelo componente `BrandLogo`; o favicon `artifacts/licitainsight/public/favicon.svg` é gerado de `pardal-simbolo-petroleo.svg`. Design system em `docs/design-system.md`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
++- Landing: clipes HyperFrames em `artifacts/licitainsight/motion/<nome>/` (HTML); renderizar com `pnpm --filter @workspace/licitainsight run motion:render` para `public/motion/` — editar o HTML e re-renderizar, nunca o vídeo. Pardal 3D na landing via Three.js (`pardal-flight-3d.tsx`). Exceção de movimento em `design-system/motion.md`.
+ - Sessão: manter o cookie HttpOnly `licita_session`; não guardar o token no `localStorage` — só o relógio de inatividade e preferências opcionais.
++- Commits: só com paths explícitos (nunca `git add -A`/`git add .`, `git stash`, `git reset`), mensagem convencional em inglês no estilo do repo (`feat(api): ...`), sem `Co-authored-by` e sem citar Claude, Codex, Cursor ou IA (antes do push, a mensagem do commit não pode conter esses marcadores). PR contra `main` sai de worktree separado a partir de `origin/main`, não do worktree `main`.
++- Recomendações: cobertura `strict` do perfil é filtro duro (fora da região não entra); histórico (salvos/monitorados) só reforça quem já casa com o perfil — não cria recomendação sozinho. Feedback Interessa/Não interessa ensina o ranking (Pular não); reset em `/v1/me/recommendation-preferences`. Contrato: `docs/contracts/recommendations-v1.md`.
+ 
+ ## Learned Workspace Facts
+ 
+ - UI do produto fica em `artifacts/licitainsight` (package `@workspace/licitainsight`). Editais vêm só do PostgreSQL, via API — sem fixtures/mocks na busca.
+ - Subir o frontend no host: `PORT=24252 BASE_PATH=/ pnpm --filter @workspace/licitainsight run dev` — `PORT` e `BASE_PATH` são obrigatórios no Vite.
+-- Usar só pnpm (o `preinstall` recusa npm/yarn). A UI precisa da API e de `DATABASE_URL`.
++- Usar só pnpm (o `preinstall` recusa npm/yarn). A UI precisa da API e de `DATABASE_URL`. Testes da API com Postgres exigem `PNCP_TEST_DATABASE_URL` apontando para um banco temporário próprio (sem ela, são ignorados). Build do frontend: `PORT=4173 BASE_PATH=/ VITE_API_BASE_URL=/api pnpm --filter @workspace/licitainsight run build`.
+ - Stack Docker: `docker compose up --build` sobe Postgres (volume `licita_pg`), `db-setup` (`push-force`), API (`:3001`) e Vite (`:24252`). Coleta PNCP: `docker compose --profile collect run --rm collect`. Serviços da app usam `linux/amd64`. O compose monta `./artifacts` e `./lib` por cima da imagem, então os `node_modules` por pacote vêm do host: após dependência nova (pull/merge), rodar `pnpm install` no host antes do `up`, senão o esbuild falha com `Could not resolve "<pacote>"`. Não subir Postgres/API do host nas mesmas portas ao mesmo tempo.
+ - Licitações: Postgres em `DATABASE_URL`. A API (`PORT=3001`) coleta o PNCP ao subir e todo dia às 06:00 (`America/Sao_Paulo`). `PNCP_DAILY_COLLECT=false` desliga. Sem `PNCP_FROM`/`PNCP_TO`, a coleta usa o calendário `ingest_days` e pula dias selados (`docs/ingest-pncp-calendar.md`). Comando manual: `pnpm --filter @workspace/api-server run collect:pncp`.
+ - Login: só Google OAuth, sessão em cookie `licita_session` emitido pela API, com janela deslizante de 10 minutos de inatividade (toque no máximo 1×/min). O `localStorage` guarda só `licita-last-activity` (relógio) e preferências opcionais. Aviso de cookies (Concordar/Recusar) controla tema, sidebar, buscas recentes e o relógio; o cookie de sessão permanece. Redirect URI de dev: `http://localhost:24252/api/v1/auth/google/callback`. Contrato em `docs/contracts/account-v1.md`. Env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `PUBLIC_APP_ORIGIN`, `SESSION_SECRET`; `AUTH_DEV_LOGIN=true` habilita login de dev fora de produção. Abrir o app em `http://localhost:24252` (não `127.0.0.1`), por causa de CSRF/Origin e da redirect URI.
+ - O frontend chama a API pela mesma origem (proxy do Vite `/api` → `:3001`, `VITE_API_BASE_URL=/api`; no Docker, `API_PROXY_TARGET=http://api:3001`).
+-- Busca semântica (`mode=semantic`) cai para palavra-chave com aviso na UI quando embeddings não estão disponíveis.
++- Busca abre em Abertos: sem `status` na URL aplica `status=open`; "Todos os status" é `status=all` na URL (nunca vai à API) e é usado nos links de buscas salvas sem status e de notificações de perfil. Regra de produto: `dispensa`/`inexigibilidade` sem `proposal_deadline` → status `direct` ("Contratação direta"), fora do padrão Abertos; dispensa com prazo e credenciamento sem prazo continuam `open`. Seletor Palavra-chave/Semântica oculto (`SEARCH_MODE_ENABLED = false` em `features/search/lib/search-defaults.ts`); `?mode=semantic` antigo roda como palavra-chave, sem aviso.
++- Plataforma de disputa em `tenders.platform`/`platform_label`, preenchida na coleta (`src/ingest/pncp-map.ts`). O job `tender_platform_backfill` roda ao subir e às 02:00 só enquanto houver nulos; `PLATFORM_BACKFILL_DAILY=false` desliga.
+ - Chamadas de fomento audiovisual ficam fora de `tenders`: tabela `cultural_opportunities`, UI em `/oportunidades`, coleta Mapas Culturais (`pnpm --filter @workspace/api-server run collect:opportunities`), agenda desligável com `CULTURE_DAILY_COLLECT=false`. Filtro por `@keyword` (não `term:linguagem`). Contrato: `docs/contracts/opportunities-v1.md`.
+ - Assinatura mensal via Asaas: busca, detalhe e oportunidades continuam públicos; salvar, monitorar, buscas salvas e notificações exigem assinatura ativa (`402` / `SUBSCRIPTION_REQUIRED`). Env: `ASAAS_API_KEY`, `ASAAS_API_BASE_URL`, `ASAAS_WEBHOOK_TOKEN`, `BILLING_MONTHLY_BRL`. Webhook: `POST /api/v1/billing/asaas/webhook`.
+ - Em macOS, overrides do `pnpm-workspace.yaml` que removem binários nativos não-linux podem quebrar esbuild/rollup/lightningcss/oxide; se faltar `@*-darwin-arm64`, revisar esses overrides.

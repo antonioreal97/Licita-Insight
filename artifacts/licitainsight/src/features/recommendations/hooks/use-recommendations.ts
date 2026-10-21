@@ -14,12 +14,13 @@ export function useRecommendationPreferences() {
   });
 }
 
-export function useRecommendations(pageSize = 8, options?: { stable?: boolean }) {
+export function useRecommendations(pageSize = 8, options?: { stable?: boolean; scope?: 'all' | 'profile' }) {
   const session = useSession();
   const billing = useBilling();
+  const scope = options?.scope ?? 'all';
   return useQuery({
-    queryKey: [...queryKeys.me.recommendations, pageSize],
-    queryFn: ({ signal }) => accountService.listRecommendations({ page: 1, pageSize }, signal),
+    queryKey: [...queryKeys.me.recommendations, pageSize, scope],
+    queryFn: ({ signal }) => accountService.listRecommendations({ page: 1, pageSize, ...(scope === 'profile' ? { scope } : {}) }, signal),
     enabled: session.status === 'authenticated' && billing.data?.entitled === true,
     // Triage freezes its queue client-side; avoid focus/reconnect refetch swapping the deck mid-session.
     ...(options?.stable

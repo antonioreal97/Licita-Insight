@@ -3123,11 +3123,12 @@ export const listRecommendationsQueryPageDefault = 1;
 export const listRecommendationsQueryPageSizeDefault = 10;
 export const listRecommendationsQueryPageSizeMax = 50;
 
-
+export const listRecommendationsQueryScopeDefault = `all`;
 
 export const ListRecommendationsQueryParams = zod.object({
   "page": zod.coerce.number().int().min(1).default(listRecommendationsQueryPageDefault),
-  "pageSize": zod.coerce.number().int().min(1).max(listRecommendationsQueryPageSizeMax).default(listRecommendationsQueryPageSizeDefault)
+  "pageSize": zod.coerce.number().int().min(1).max(listRecommendationsQueryPageSizeMax).default(listRecommendationsQueryPageSizeDefault),
+  "scope": zod.enum(['all', 'profile']).default(listRecommendationsQueryScopeDefault).describe('`profile` (triage) keeps only tenders that match a declared offering, keyword or category and fall inside the declared region whatever the coverage mode; it omits `opportunities`.')
 })
 
 export const listRecommendationsResponseDataItemTenderRelevanceScoreMin = 0;

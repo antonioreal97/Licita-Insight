@@ -18,6 +18,7 @@ import LandingPage from '@/features/landing/landing-page';
 import MonitoringPage from '@/features/monitoring/monitoring-page';
 import SavedSearchesPage from '@/features/saved-searches/saved-searches-page';
 import SavedTendersPage from '@/features/saved-tenders/saved-tenders-page';
+import CalendarPage from '@/features/calendar/calendar-page';
 import OpportunitiesPage from '@/features/opportunities/opportunities-page';
 import OpportunityDetailPage from '@/features/opportunities/opportunity-detail-page';
 import SearchPage from '@/features/search/search-page';
@@ -182,6 +183,17 @@ function Router() {
               <RequireAuth>
                 <RequireSubscription>
                   <SavedTendersPage />
+                </RequireSubscription>
+              </RequireAuth>
+            </AppShell>
+          )}
+        </Route>
+        <Route path="/calendario">
+          {() => (
+            <AppShell>
+              <RequireAuth>
+                <RequireSubscription>
+                  <CalendarPage />
                 </RequireSubscription>
               </RequireAuth>
             </AppShell>

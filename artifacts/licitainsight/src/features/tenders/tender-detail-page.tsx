@@ -382,8 +382,12 @@ export default function TenderDetailPage() {
             )}
           </Panel>
 
-          <TenderReadinessPanel tenderId={tender.id} />
-          <TenderSheetPanel tenderId={tender.id} />
+          {/* `#documentos`: target of "Organizar documentos" on the Mural; the ficha's "O que preparar" holds the marks. */}
+          <div id="documentos" className="scroll-mt-24 space-y-6">
+            <TenderReadinessPanel tenderId={tender.id} />
+            <TenderSheetPanel tenderId={tender.id} />
+          </div>
+          <DocumentsAnchor />
           <AskTenderPanel tenderId={tender.id} />
         </div>
 
@@ -438,6 +442,24 @@ export default function TenderDetailPage() {
       </div>
     </GlossaryScope>
   );
+}
+
+/**
+ * The SPA renders the panels after the route resolves, so the browser's own hash jump misses `#documentos`.
+ * Jump once on arrival and once more after the ficha has had time to load (it grows the panels above the target).
+ */
+function DocumentsAnchor() {
+  useEffect(() => {
+    if (window.location.hash !== '#documentos') return;
+    const jump = () => document.getElementById('documentos')?.scrollIntoView({ block: 'start' });
+    const frame = requestAnimationFrame(jump);
+    const later = window.setTimeout(jump, 800);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(later);
+    };
+  }, []);
+  return null;
 }
 
 function DateValue({ value, withTime = false }: { value: string | null; withTime?: boolean }) {

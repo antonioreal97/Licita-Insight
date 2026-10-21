@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { Link } from 'wouter';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileCheck2 } from 'lucide-react';
 import type { ParticipationStage, SavedTender } from '@/api';
 import { useUpdateParticipation } from '@/features/participation/hooks/use-participation';
 import { STAGE_LABELS } from '@/features/participation/lib/stages';
@@ -20,6 +20,14 @@ const FOLLOW_MS = 15_000;
 const REGION_INSET = 4;
 
 const count = (n: number) => `${n} ${n === 1 ? 'edital' : 'editais'}`;
+
+/** The user's own checklist marks for this tender; the requirements themselves come from the ficha on the detail page. */
+export const documentsLine = (item: Pick<SavedTender, 'checklist'>): string => {
+  const have = item.checklist.filter((mark) => mark.state === 'have').length;
+  const missing = item.checklist.filter((mark) => mark.state === 'missing').length;
+  if (have + missing === 0) return 'Documentos: nada marcado ainda';
+  return `Documentos (você marcou): ${have} ${have === 1 ? 'pronto' : 'prontos'}, ${missing} faltando`;
+};
 
 /** Drag and drop only where there is a fine pointer: on touch, a long press would fight the horizontal scroll. */
 const canDrag = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches === true;
@@ -83,7 +91,20 @@ function BoardCard({ item, now, moving, busy, draggable, onMove, onDragStart, on
         <p className="line-clamp-3 break-words type-meta text-muted-foreground">
           Próxima ação (você marcou): {item.nextAction ? <span className="text-foreground/90">{item.nextAction}</span> : 'nenhuma'}
         </p>
-        <div>
+        <p className="type-meta text-muted-foreground" data-testid={`board-documents-${id}`}>
+          {documentsLine(item)}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Link
+            href={`/tenders/${id}#documentos`}
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg type-meta font-semibold text-primary underline-offset-4 hover:underline focus-visible:focus-ring sm:min-h-8"
+            draggable={false}
+            aria-describedby={titleId}
+            data-testid={`board-organize-documents-${id}`}
+          >
+            <FileCheck2 size={13} aria-hidden="true" />
+            Organizar documentos
+          </Link>
           <MoveStageMenu
             tenderId={id}
             stage={item.stage}

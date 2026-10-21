@@ -1573,6 +1573,12 @@ paths:
         - name: pageSize
           in: query
           schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - name: scope
+          in: query
+          description: >-
+            `profile` (triage) keeps only tenders that match a declared offering, keyword or category and fall
+            inside the declared region whatever the coverage mode; it omits `opportunities`.
+          schema: { type: string, enum: [all, profile], default: all }
       responses:
         "200":
           description: Explainable recommendation page

@@ -150,11 +150,17 @@ router.get(
   requireAuth,
   requireSubscription,
   asyncHandler(async (req, res) => {
+    const scope = req.query.scope ?? "all";
+    if (scope !== "all" && scope !== "profile")
+      throw new InvalidParameterError("scope is invalid", [
+        { field: "scope", issue: "invalid_enum" },
+      ]);
     res.json(
       await listRecommendations(
         authContext(res).user.id,
         positiveInteger(req.query.page, 1, Number.MAX_SAFE_INTEGER),
         positiveInteger(req.query.pageSize, 10, 50),
+        scope,
       ),
     );
   }),

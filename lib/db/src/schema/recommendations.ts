@@ -60,6 +60,8 @@ export type RecommendationInterestProfile = {
   /** Absent in profiles rebuilt before platforms existed. */
   registeredPlatforms?: string[];
   signalCount: number;
+  /** Rules that produced this profile and its rows; absent before versioning, which forces a rebuild on read. */
+  algorithmVersion?: number;
 };
 
 export const recommendationEventsTable = pgTable(
