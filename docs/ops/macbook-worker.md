@@ -393,6 +393,15 @@ antigo, será necessário atualizar aquele pacote para evitar a volta da UI anti
   no Orca do servidor, via `~/.config/orca/linux-orca-cli-shim/orca terminal send`). Ele segue `ALBERT.md`
   (somente leitura) e comenta a causa provável e a ação sugerida na issue #29.
 - `licita-monitor-digest.timer` (08:00): relatório diário sem LLM na issue #29.
+- A "fila de IA" (relatório e anomalia `ai:queue`) não conta reescritas de título cujo provedor está desligado no
+  app (`TITLE_TEACHER_ENABLED`, `TITLE_TEACHER_OPENAI_ENABLED`, lidos com `docker exec` no container do app): nenhum
+  worker as reivindica. O relatório as mostra à parte, como "reescritas de título paradas". Com os dois provedores desligados, para
+  descartá-las (voltam a ser criadas quando um provedor for ligado, porque o `dedupe_key` sai junto):
+
+  ```sh
+  docker exec licita-macbook-postgres-1 psql -U licita -d licita -c \
+    "delete from ai_jobs where kind = 'title_rewrite' and status = 'queued'"
+  ```
 - Configuração em `~/licita-monitor/config.env` (`MONITOR_ISSUE`, `ALBERT_TERMINAL`, limites). Teste com
   `python3 ~/licita-monitor/licita_monitor.py status`.
 

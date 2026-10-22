@@ -87,6 +87,16 @@ def http_ok(url, headers=()):
     return p.returncode == 0, p.stdout.strip() or p.stderr.strip()[:120]
 
 
+def title_providers_disabled():
+    """Provedores de reescrita de título desligados no app; vazio se o container não responder."""
+    p = run(["docker", "exec", CFG["APP_CONTAINER"], "sh", "-c",
+             'echo "${TITLE_TEACHER_ENABLED:-}|${TITLE_TEACHER_OPENAI_ENABLED:-}"'], timeout=20)
+    if p.returncode != 0 or "|" not in p.stdout:
+        return set()
+    ollama, openai = p.stdout.strip().split("|", 1)
+    return {name for name, flag in (("ollama", ollama), ("openai", openai)) if flag != "true"}
+
+
 # ---------------------------------------------------------------- coleta
 
 def collect():
@@ -112,8 +122,15 @@ def collect():
                 from tender_ai_sheets where generated_at >= date_trunc('day', now())) sheets_cost_today,
              (select count(*) from tender_ai_sheets where generated_at > now() - interval '24 hours') sheets_24h,
              (select count(*) from ai_jobs where status in ('queued', 'pending')) jobs_queued,
+             (select coalesce(json_object_agg(provider, n), '{}') from (
+                select coalesce(payload->>'provider', 'ollama') provider, count(*) n from ai_jobs
+                where kind = 'title_rewrite' and status in ('queued', 'pending') group by 1) q) title_jobs_queued,
              (select count(*) from ai_jobs where status = 'failed' and coalesce(finished_at, created_at) > now() - interval '1 hour') jobs_failed_1h
     """)[0]
+    # Reescrita de título de provedor desligado nunca é reivindicada: fica de fora da fila, contada à parte.
+    disabled = title_providers_disabled()
+    m["ai"]["jobs_stranded"] = sum(n for provider, n in (m["ai"].pop("title_jobs_queued") or {}).items() if provider in disabled)
+    m["ai"]["jobs_queued"] -= m["ai"]["jobs_stranded"]
     m["ai"]["cost_today_usd"] = round(sum(float(m["ai"][k]) for k in ("titles_cost_today", "asks_cost_today", "sheets_cost_today")), 4)
 
     # Classificação noturna de categorias (aluno local + Jev professor); zeros enquanto estiver desligada.
@@ -680,7 +697,8 @@ def render_digest(m):
         f"- OpenAI hoje: US$ {ai['cost_today_usd']:.4f} de US$ {float(CFG['AI_DAILY_BUDGET_USD']):.0f} — títulos {ai['titles_today']}, perguntas {ai['asks_today']}, fichas {ai['sheets_today']}",
         "",
         "**Relatórios gerados**",
-        f"- Fichas de edital (24 h): {ai['sheets_24h']}; perguntas ao edital hoje: {ai['asks_today']}; fila de IA: {ai['jobs_queued']}",
+        f"- Fichas de edital (24 h): {ai['sheets_24h']}; perguntas ao edital hoje: {ai['asks_today']}; fila de IA: {ai['jobs_queued']}"
+        + (f" (+ {ai['jobs_stranded']} reescritas de título paradas: provedor desligado)" if ai.get("jobs_stranded") else ""),
         f"- E-mails enviados (24 h): {m['emails']['sent_24h']} (falhas: {m['emails']['failed_24h']})",
         f"- Alertas do monitor (24 h): {len(alerts_24h)}",
         "",
