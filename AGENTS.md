@@ -4,7 +4,7 @@
 - Preservar o `memory-bank/` local (e docs locais associados como `.cursorrules`) em pulls; não descartar ao alinhar com o remoto.
 - Preferir o comando exato de `dev` do frontend (com `PORT`/`BASE_PATH`) em vez de assumir scripts genéricos na raiz.
 - Preferir a stack completa via `docker compose up --build` em vez de vários terminais no host.
-- Nome do produto na UI: Pardal Digital. O logo oficial (SVG de cor fixa) fica em `artifacts/licitainsight/public/brand/` (`pardal-logo-petroleo.svg` no tema Creme, `pardal-logo-lima.svg` no tema Petróleo, `pardal-simbolo-*.svg` para espaços pequenos) e entra pelo componente `BrandLogo`; o favicon `artifacts/licitainsight/public/favicon.svg` é gerado de `pardal-simbolo-petroleo.svg`. Design system em `docs/design-system.md`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
+- Nome do produto na UI: Pardal Digital. O logo oficial (SVG de cor fixa) fica em `artifacts/licitainsight/public/brand/` (`pardal-logo-petroleo.svg` no tema Gelo (claro), `pardal-logo-lima.svg` no tema Petróleo, `pardal-simbolo-*.svg` para espaços pequenos) e entra pelo componente `BrandLogo`; o favicon `artifacts/licitainsight/public/favicon.svg` é gerado de `pardal-simbolo-petroleo.svg`. Design system em `docs/design-system.md`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
 - Sessão: manter o cookie HttpOnly `licita_session`; não guardar o token no `localStorage` — só o relógio de inatividade e preferências opcionais.
 
 ## Learned Workspace Facts

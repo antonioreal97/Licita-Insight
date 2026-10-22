@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-// Reads the real src/index.css (Creme on :root, Petróleo on .dark), resolves var() and color-mix(in srgb …),
+// Reads the real src/index.css (Gelo on :root, Petróleo on .dark), resolves var() and color-mix(in srgb …),
 // and checks the WCAG contrast of every text/graphic pair the app uses. The test names are the report.
 
-type Theme = 'creme' | 'petroleo';
+type Theme = 'gelo' | 'petroleo';
 type Rgba = { r: number; g: number; b: number; a: number };
 
 const css = readFileSync(new URL('../index.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -106,6 +106,9 @@ const pairs: [string, string[], number][] = [
   ['action-foreground', ['action-hover'], TEXT],
   ['inverse-foreground', ['inverse'], TEXT],
   ['accent-foreground', ['accent'], TEXT],
+  ['secondary-foreground', ['secondary'], TEXT],
+  ['muted-foreground', ['surface'], TEXT],
+  ['primary-foreground', ['primary-hover'], TEXT],
   ['destructive', ['background'], TEXT],
   ['destructive', ['card'], TEXT],
   ['destructive-foreground', ['destructive'], TEXT],
@@ -133,7 +136,7 @@ const pairs: [string, string[], number][] = [
   ['marca', ['sidebar'], GRAPHIC],
 ];
 
-for (const theme of ['creme', 'petroleo'] as const) {
+for (const theme of ['gelo', 'petroleo'] as const) {
   for (const [fg, bg, min] of pairs) {
     const value = ratio(fg, bg, theme);
     test(`${theme}: --${fg} sobre ${bg.map((b) => `--${b}`).join(' + ')} = ${value.toFixed(2)}:1 (mín. ${min}:1)`, () => {
@@ -144,7 +147,7 @@ for (const theme of ['creme', 'petroleo'] as const) {
 
 // The choropleth scale encodes volume by lightness alone, so it must keep one direction from the page to the
 // strongest step. Without that, the top band could look like the empty one in grayscale or to colorblind readers.
-for (const theme of ['creme', 'petroleo'] as const) {
+for (const theme of ['gelo', 'petroleo'] as const) {
   test(`${theme}: escala do mapa (--mapa-1 a --mapa-5) se afasta do fundo a cada degrau`, () => {
     const page = luminance(paint(['fundo'], theme));
     const distance = [1, 2, 3, 4, 5].map((step) => {
@@ -165,8 +168,8 @@ test('paleta do index.css igual a styles/tokens.json', () => {
     color: { tokens: { name: string; value: string | Record<string, string> }[] };
   };
   for (const { name, value } of tokens.color.tokens) {
-    const expected = typeof value === 'string' ? { creme: value, petroleo: value } : { creme: value.light, petroleo: value.dark };
-    for (const theme of ['creme', 'petroleo'] as const) {
+    const expected = typeof value === 'string' ? { gelo: value, petroleo: value } : { gelo: value.light, petroleo: value.dark };
+    for (const theme of ['gelo', 'petroleo'] as const) {
       const css = declared(name, theme);
       const want = expected[theme].replace(/^\{(.*)\}$/, 'var(--$1)');
       assert.equal(css.toLowerCase(), want.toLowerCase(), `--${name} (${theme})`);
