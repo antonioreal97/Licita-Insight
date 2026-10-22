@@ -12,8 +12,10 @@ describe('NewTenderBadge', () => {
     assert.match(html, new RegExp(`aria-label="${NEW_TENDER_LABEL}"`));
     assert.match(html, /\bbg-salvia\b/);
     assert.doesNotMatch(html, /\bbg-destaque\b/);
-    assert.match(html, /\btext-texto\b/);
-    assert.match(html, /\bborder-texto\b/);
+    // Fixed petroleum ink on sage: `text-texto` turns cream in the Petróleo theme (contrast 1.54 on sage).
+    assert.match(html, /\btext-petroleo\b/);
+    assert.match(html, /\bborder-petroleo\b/);
+    assert.doesNotMatch(html, /\btext-texto\b/);
     assert.match(html, /\brounded-pill\b/);
   });
 

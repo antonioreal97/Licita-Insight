@@ -1,5 +1,5 @@
 import { FormEvent, useRef, useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import { ExternalLink, Loader2, SearchX } from 'lucide-react';
 import { isApiError, type OpportunityScope, type OpportunitySummary } from '@/api';
 import { PageTitle } from '@/components/common/page-title';
@@ -91,11 +91,17 @@ function OpportunityRow({ opportunity }: { opportunity: OpportunitySummary }) {
 }
 
 export default function OpportunitiesPage() {
+  // Same names as the sidebar entries that open this page.
+  const international = new URLSearchParams(useSearch()).get('scope') === 'international';
   return (
     <>
       <PageTitle
-        title="Hub de oportunidades"
-        description="Chamadas de cultura, fomento e inovação de fontes oficiais, no Brasil e em organismos internacionais. Licitações do PNCP continuam em Explorar editais."
+        title={international ? 'Editais internacionais' : 'Editais nacionais'}
+        description={
+          international
+            ? 'Chamadas e licitações de organismos internacionais, como Banco Mundial e BID, abertas a participantes do Brasil. Confira sempre a elegibilidade na fonte oficial.'
+            : 'Chamadas de cultura, fomento e inovação de fontes oficiais do Brasil. Licitações do PNCP continuam em Explorar editais.'
+        }
       />
       <OpportunityAccessGate>
         <OpportunitySearch />

@@ -565,12 +565,13 @@ export class PostgresTenderRepository {
       db
         .select({
           value: tendersTable.organizationId,
-          label: tendersTable.organizationName,
+          // One bucket per organization id: the same CNPJ can be published under several spellings.
+          label: sql<string>`mode() within group (order by ${tendersTable.organizationName})`,
           count: sql<number>`count(*)::int`,
         })
         .from(tendersTable)
         .where(like(tendersTable.organizationNorm, normalized))
-        .groupBy(tendersTable.organizationId, tendersTable.organizationName)
+        .groupBy(tendersTable.organizationId)
         .orderBy(desc(sql`count(*)`))
         .limit(limit),
       db.execute<{ value: string; label: string; count: number }>(sql`
@@ -694,11 +695,11 @@ export class PostgresTenderRepository {
       ),
       organization_buckets as (
         select organization_id as value,
-               organization_name as label,
+               mode() within group (order by organization_name) as label,
                count(*)::int as bucket_count
         from matched
-        group by organization_id, organization_name
-        order by count(*) desc, organization_name asc
+        group by organization_id
+        order by count(*) desc, label asc
         limit 20
       ),
       category_buckets as (
@@ -1041,13 +1042,13 @@ export class PostgresTenderRepository {
     const top = await db
       .select({
         value: tendersTable.organizationId,
-        label: tendersTable.organizationName,
+        label: sql<string>`mode() within group (order by ${tendersTable.organizationName})`,
         count: sql<number>`count(*)::int`,
       })
       .from(tendersTable)
       .where(where)
-      .groupBy(tendersTable.organizationId, tendersTable.organizationName)
-      .orderBy(desc(sql`count(*)`), asc(tendersTable.organizationName))
+      .groupBy(tendersTable.organizationId)
+      .orderBy(desc(sql`count(*)`), asc(sql`2`))
       .limit(20);
 
     const result: FacetBucket[] = top.map((row) => ({

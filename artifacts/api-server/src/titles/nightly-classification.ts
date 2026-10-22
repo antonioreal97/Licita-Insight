@@ -88,6 +88,8 @@ export type NightlyHoldout = {
   belowJevThreshold: number;
   /** Confidence below which 10%, 15% and 20% of the sample fall: the threshold for that share. */
   thresholdForShare: { p10: number; p15: number; p20: number };
+  /** Agreement inside each confidence band with at least one example: what a threshold there would keep or send. */
+  bands: { from: number; to: number; total: number; agreement: number }[];
 };
 
 export type NightlyResult = NightlyTotals & NightlyBacklog & {
@@ -112,9 +114,10 @@ type TenderRow = {
   organization_norm: string;
   other_norm: string;
   cursor: string;
+  biddable: boolean;
 };
 
-type TeachCandidate = Omit<TenderRow, "cursor">;
+type TeachCandidate = Omit<TenderRow, "cursor" | "biddable">;
 
 const TENDER_COLUMNS =
   "t.id, t.title, t.display_title_norm, t.title_norm, t.object_norm, t.items_norm, t.organization_norm, t.other_norm";
@@ -125,9 +128,13 @@ const STUDENT_PENDING = `
   and t.category_source is distinct from 'teacher'
   and (t.category_confidence is null or t.categorized_at is null)`;
 
-/** Evaluated with low confidence and not yet shown to Jev since that evaluation. */
+/** Still taking proposals: a teacher's category is worth paying for only where someone can still bid. */
+const BIDDABLE = "(t.proposal_deadline is null or t.proposal_deadline > now())";
+
+/** Evaluated with low confidence, still biddable and not yet shown to Jev since that evaluation. */
 const JEV_PENDING = `
   t.status = any($1::text[])
+  and ${BIDDABLE}
   and t.category_source is distinct from 'teacher'
   and t.categorized_at is not null
   and t.category_confidence < $2
@@ -189,6 +196,8 @@ const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmedi
 
 const share = (part: number, whole: number): number => (whole === 0 ? 0 : Number((part / whole).toFixed(4)));
 
+const HOLDOUT_BAND_EDGES = [0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
+
 export async function evaluateHoldoutSample(options: {
   student: CategoryStudent;
   embedModel: string;
@@ -207,9 +216,13 @@ export async function evaluateHoldoutSample(options: {
   let agreeCovered = 0;
   let below = 0;
   const confidences: number[] = [];
+  const bands = HOLDOUT_BAND_EDGES.slice(1).map((to, index) => ({ from: HOLDOUT_BAND_EDGES[index], to, total: 0, hits: 0 }));
   for (const row of rows) {
     const prediction = options.student.classify(row.embedding);
     const hit = prediction.primary === row.categories[0];
+    const band = bands.find(({ to }) => prediction.confidence < to) ?? bands[bands.length - 1];
+    band.total += 1;
+    if (hit) band.hits += 1;
     if (hit) agree += 1;
     if (prediction.categories.length > 0) {
       covered += 1;
@@ -229,6 +242,8 @@ export async function evaluateHoldoutSample(options: {
     agreementCovered: share(agreeCovered, covered),
     belowJevThreshold: share(below, rows.length),
     thresholdForShare: { p10: quantile(0.1), p15: quantile(0.15), p20: quantile(0.2) },
+    bands: bands.filter(({ total }) => total > 0)
+      .map(({ from, to, total, hits }) => ({ from, to, total, agreement: share(hits, total) })),
   };
 }
 
@@ -425,23 +440,15 @@ export async function runNightlyCategoryClassification(options: {
     });
   }
 
-  // (c) Doubtful tenders left from earlier nights, the least confident first.
-  if (!night.stopped && config.jev.enabled && config.jev.dailyLimit > 0) {
-    await teach((await pool.query<TeachCandidate>(
-      `select ${TENDER_COLUMNS} from tenders t where ${JEV_PENDING}
-       order by t.category_confidence asc, t.id limit $3`,
-      [statuses, config.jev.threshold, config.jev.dailyLimit],
-    )).rows);
-  }
-
-  // (b) The student, newest tenders first, each batch followed by its own doubtful ones.
+  // (b) The student, newest tenders first, each batch followed by its own doubtful ones: tonight's
+  // tenders get the teacher before the backlog does.
   let cursor: { createdAt: string; id: string } | null = null;
   let batchNumber = 0;
   /** Tonight's answers by text hash, so a repeated official title costs one embedding. */
   const predictions = new Map<string, StudentPrediction>();
   while (!night.stopped) {
     const rows: TenderRow[] = (await pool.query<TenderRow>(
-      `select ${TENDER_COLUMNS}, t.created_at::text as cursor from tenders t
+      `select ${TENDER_COLUMNS}, t.created_at::text as cursor, ${BIDDABLE} as biddable from tenders t
        where ${STUDENT_PENDING}
          and ($2::timestamptz is null or (t.created_at, t.id) < ($2::timestamptz, $3))
        order by t.created_at desc, t.id desc limit $4`,
@@ -504,7 +511,7 @@ export async function runNightlyCategoryClassification(options: {
       else totals.kept += 1;
       if (prediction.confidence < config.jev.threshold) {
         totals.lowConfidence += 1;
-        doubtful.push(row);
+        if (row.biddable) doubtful.push(row);
       }
     }
     if (!last) break;
@@ -544,6 +551,15 @@ export async function runNightlyCategoryClassification(options: {
     incrementMetric("licitai_nightly_category_tenders_total", { result: "kept" }, batch.kept);
     incrementMetric("licitai_nightly_category_low_confidence_total", {}, batch.lowConfidence);
     logger.info({ ...batch, jevSkipped, totalProcessed: totals.processed }, "Nightly category batch");
+  }
+
+  // (c) With what the daily limit left, doubtful tenders from earlier nights, the newest first.
+  if (!night.stopped && config.jev.enabled && config.jev.dailyLimit > 0) {
+    await teach((await pool.query<TeachCandidate>(
+      `select ${TENDER_COLUMNS} from tenders t where ${JEV_PENDING}
+       order by t.created_at desc, t.id desc limit $3`,
+      [statuses, config.jev.threshold, config.jev.dailyLimit],
+    )).rows);
   }
 
   // Spare time goes back to the examples the share left behind.
