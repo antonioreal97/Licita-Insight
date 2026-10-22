@@ -36,7 +36,7 @@ export function RelevanceMeter({ score, varies, className }: Props) {
         ))}
       </span>
       <span>
-        {pct}%<span className="sr-only"> de relevância</span>
+        {pct}% <span className="font-normal">relevância</span>
       </span>
     </span>
   );

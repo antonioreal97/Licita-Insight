@@ -42,7 +42,7 @@ function MiniMetric({ label, value, detail, attention = false }: { label: string
     <div className="min-w-0 sm:px-7">
       <div className="type-label text-muted-foreground">{label}</div>
       <div className="mt-2 type-title type-data text-foreground sm:type-titulo-3">{value}</div>
-      <div className={`mt-1 type-meta ${attention ? 'font-medium text-status-under-review-foreground' : 'text-muted-foreground'}`}>{detail}</div>
+      <div className={`mt-1 type-meta ${attention ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{detail}</div>
     </div>
   );
 }
@@ -323,7 +323,8 @@ export default function DashboardPage() {
           <Link
             href="/search"
             data-testid="link-dashboard-search"
-            className={`${buttonClass()} self-start sm:self-auto`}
+            // One lime per screen: signed in, the profile card's call to action keeps it.
+            className={`${buttonClass(user ? 'outline' : 'primary')} self-start sm:self-auto`}
           >
             <Search size={15} strokeWidth={1.75} />
             Explorar editais
@@ -376,7 +377,8 @@ export default function DashboardPage() {
         </section>}
         {personal && metrics}
         </div>
-        <aside className="space-y-6">
+        {/* Summary before detail on phones: the compact cards come before the long lists, two per row from sm. */}
+        <aside className="order-first grid content-start gap-4 sm:grid-cols-2 xl:order-none xl:grid-cols-1 xl:gap-6">
           {personal && <MuralCard />}
           <BidReadinessCard />
           <MonitoringCard />

@@ -11,7 +11,7 @@ export function NewTenderBadge({ isNew, className }: { isNew: boolean; className
       title={NEW_TENDER_LABEL}
       data-testid="badge-new-tender"
       className={cn(
-        'inline-flex shrink-0 items-center rounded-pill border border-texto bg-salvia px-2 py-0.5 type-meta font-bold leading-none text-texto',
+        'inline-flex shrink-0 items-center rounded-pill border border-petroleo bg-salvia px-2 py-0.5 type-meta font-bold leading-none text-petroleo',
         className,
       )}
     >

@@ -84,9 +84,10 @@ export default function TriagePage() {
   }
   return (
     <div className="mx-auto max-w-3xl pb-8">
-      <Link href="/dashboard" className="inline-flex min-h-11 items-center type-ui underline underline-offset-4">← Visão geral</Link>
+      <Link href="/dashboard" className="inline-flex min-h-11 items-center type-meta text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:focus-ring">← Visão geral</Link>
       <header className="mb-6 mt-3">
-        <h1 className="type-title">Encontre o que combina com você</h1>
+        {/* Same heading scale as every other page title (PageTitle). */}
+        <h1 className="type-titulo-3 text-foreground">Encontre o que combina com você</h1>
         <p className="mt-2 type-body text-muted-foreground">Uma seleção curta para decidir com calma. Suas escolhas ajustam as próximas recomendações.</p>
         <div className="mt-5 flex items-center justify-between gap-3"><p id="triage-progress-label" className="font-semibold">Triagem de hoje: {progress.reviewed.length} de {TRIAGE_GOAL}</p><span className="type-meta text-muted-foreground">No seu ritmo</span></div>
         <div role="progressbar" aria-labelledby="triage-progress-label" aria-valuemin={0} aria-valuemax={TRIAGE_GOAL} aria-valuenow={progress.reviewed.length} className="mt-3 h-2 overflow-hidden rounded-pill bg-muted">

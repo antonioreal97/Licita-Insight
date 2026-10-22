@@ -6,6 +6,10 @@
 # Safe to run again: every step checks before it changes anything.
 set -Eeuo pipefail
 
+# Piped into bash ("git show ... | bash"), the script is bash's standard input and the first ssh would read the rest
+# of it as its own input. Inside braces bash reads the whole body before running any of it. Not indented: the
+# remote heredoc below needs its terminator at the start of the line.
+{
 server=${SETUP_SERVER:-licita-worker}
 edge=${SETUP_EDGE:-abriu-edge}
 edge_tailscale_ip=100.100.59.75
@@ -71,3 +75,6 @@ ssh -o BatchMode=yes "$edge" 'sudo ls -la /home/licitabackup/backups/licita'
 say "Pronto. Guarde a chave privada fora do MacBook (gerenciador de senhas):"
 printf '  gpg --armor --export-secret-keys %s > pardal-backup-privada.asc\n' "$fpr"
 printf 'e depois apague esse arquivo exportado. Sem ela as cópias da borda não podem ser lidas.\n'
+
+exit 0
+}

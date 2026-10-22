@@ -981,6 +981,52 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       assert.equal((await jevUsage()).length, 4);
     });
 
+    it("o Jev atende primeiro os editais da noite, depois a sobra mais nova, e nunca os de prazo vencido", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      const expire = (id: string) => pool.query("update tenders set proposal_deadline = now() - interval '1 day' where id = $1", [id]);
+      const [older, newer, expiredEarlier] = await insertTenders([
+        [944001, "Contratação de artista circense"],
+        [944002, "Contratação de trupe de malabaristas"],
+        [944003, "Contratação de coral infantil"],
+      ], NIGHT_STATUS);
+      await pool.query("update tenders set created_at = now() - interval '2 days' where id = $1", [older]);
+      await pool.query("update tenders set created_at = now() - interval '1 day' where id = any($1::text[])", [[newer, expiredEarlier]]);
+      await expire(expiredEarlier);
+      const { client } = createFakeOllama();
+      const { jev, asked } = createFakeJev(() => ({ category: "eventos-cultura", confidence: 0.88 }));
+      const run = (jevConfig: { enabled?: boolean; dailyLimit?: number }, now?: () => Date) => night({ batch: 10, jev: jevConfig })
+        .then((config) => runNightlyCategoryClassification({
+          deadline: new Date((now?.() ?? new Date()).getTime() + 6 * 60 * 60 * 1_000),
+          client, jev, config, statuses: [NIGHT_STATUS], budgetPaused: async () => false, now,
+        }));
+
+      // An earlier night without Jev leaves its doubtful tenders behind; the expired one is not backlog.
+      const earlier = await run({ enabled: false });
+      assert.deepEqual([earlier.processed, earlier.lowConfidence, earlier.jevSent, earlier.jevBacklog], [3, 3, 0, 2]);
+
+      const [tonight, expiredTonight] = await insertTenders([
+        [944004, "Contratação de orquestra sinfônica"],
+        [944005, "Contratação de banda marcial"],
+      ], NIGHT_STATUS);
+      await expire(expiredTonight);
+      const limited = await run({ dailyLimit: 2 });
+      assert.deepEqual([limited.processed, limited.lowConfidence], [2, 2]);
+      assert.deepEqual(asked, ["Contratação de orquestra sinfônica", "Contratação de trupe de malabaristas"],
+        "o edital da noite antes da sobra, e da sobra o mais novo");
+      assert.deepEqual([limited.jevSkipped, limited.jevBacklog], ["daily_limit", 1]);
+
+      const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1_000);
+      const nextDay = await run({ dailyLimit: 2 }, tomorrow);
+      assert.deepEqual([nextDay.jevSent, nextDay.jevBacklog, nextDay.jevSkipped], [1, 0, null]);
+      assert.deepEqual(asked.slice(2), ["Contratação de artista circense"]);
+      const usage = new Set((await jevUsage()).map(({ tender_id }) => tender_id));
+      assert.ok(!usage.has(expiredEarlier) && !usage.has(expiredTonight), "prazo vencido não vai ao Jev");
+      assert.deepEqual([...usage].sort(), [older, newer, tonight].sort());
+    });
+
     it("para no fim da janela e a execução seguinte retoma só o que faltou", async () => {
       const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
         import("@workspace/db"),
@@ -1112,12 +1158,13 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
         deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
       });
       assert.equal(result.trainExamples, 6);
-      const { thresholdForShare, ...holdout } = result.holdout!;
+      const { thresholdForShare, bands, ...holdout } = result.holdout!;
       assert.deepEqual(holdout, {
         total: 3, agreement: 0.6667, coverage: 1, agreementCovered: 0.6667, belowJevThreshold: 0,
       });
       // Every held-out title is confident here, so any share would need a threshold above 0.9.
       assert.ok(thresholdForShare.p10 > 0.9 && thresholdForShare.p10 <= thresholdForShare.p20);
+      assert.deepEqual(bands, [{ from: 0.9, to: 1, total: 3, agreement: 0.6667 }], "só a faixa com exemplos aparece");
     });
 
     it("o lock deixa uma execução só por vez", async () => {

@@ -12,7 +12,7 @@ type Props = {
   className?: string;
 };
 
-/** "Disputa em: <plataforma>", linking to the room when known, plus the amber registration warning. */
+/** "Disputa em: <plataforma>", linking to the room when known, plus the registration warning (amber chip on the detail). */
 export function PlatformBadge({ platform, registeredPlatforms, variant = 'row', className }: Props) {
   if (!platform || (variant === 'row' && platform.kind !== 'platform')) return null;
   const { label, hint } = platformDescription(platform);
@@ -39,15 +39,27 @@ export function PlatformBadge({ platform, registeredPlatforms, variant = 'row', 
         )}
       </span>
       {variant === 'detail' && hint && <span className="type-meta text-muted-foreground">{hint}</span>}
-      {missing && (
-        <span
-          data-testid="badge-platform-not-registered"
-          className={cn('inline-flex items-center gap-1 rounded-lg bg-warning-subtle px-1.5 py-px font-semibold text-warning-subtle-foreground ring-1 ring-inset ring-warning/40', text)}
-        >
-          <TriangleAlert size={variant === 'row' ? 11 : 12} aria-hidden="true" />
-          {NOT_REGISTERED_TEXT}
-        </span>
-      )}
+      {missing &&
+        (variant === 'row' ? (
+          // In lists the warning repeats on almost every row: a quiet hint, the full sentence on hover and for screen readers.
+          <span
+            data-testid="badge-platform-not-registered"
+            title={NOT_REGISTERED_TEXT}
+            className={cn('inline-flex items-center gap-1 text-muted-foreground', text)}
+          >
+            <TriangleAlert size={11} aria-hidden="true" className="text-warning" />
+            <span aria-hidden="true">sem cadastro</span>
+            <span className="sr-only">{NOT_REGISTERED_TEXT}</span>
+          </span>
+        ) : (
+          <span
+            data-testid="badge-platform-not-registered"
+            className={cn('inline-flex items-center gap-1 rounded-lg bg-warning-subtle px-1.5 py-px font-semibold text-warning-subtle-foreground ring-1 ring-inset ring-warning/40', text)}
+          >
+            <TriangleAlert size={12} aria-hidden="true" />
+            {NOT_REGISTERED_TEXT}
+          </span>
+        ))}
     </span>
   );
 }
