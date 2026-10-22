@@ -12,7 +12,8 @@ export function createPardalEasing(readToken: (name: string) => string) {
     return cubicBezier(points[0], points[1], points[2], points[3]);
   };
   return {
-    standard: curve('--ease-standard'),
+    // The flight path was tuned on the earlier standard curve; --ease-voo keeps it while the UI moved to the Claude Design curve.
+    standard: curve('--ease-voo'),
     emphasized: curve('--ease-emphasized'),
     exit: curve('--ease-exit'),
   };

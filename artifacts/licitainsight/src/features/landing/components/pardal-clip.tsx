@@ -9,7 +9,7 @@ const CLIPS = {
 /**
  * Pre-rendered HyperFrames clip (`motion/`, rendered by `motion:render` into `public/motion/`). Plays once when it
  * scrolls into view and stays on its last frame; with reduced motion only that last frame shows. It sits on
- * `bg-superficie-inversa`, so the ink is the opposite of the theme: lima on Creme, petróleo on Petróleo.
+ * `bg-superficie-inversa`, so the ink is the opposite of the theme: lima on Gelo, petróleo on Petróleo.
  */
 export function PardalClip({
   clip,

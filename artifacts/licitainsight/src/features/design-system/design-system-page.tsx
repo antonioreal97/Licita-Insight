@@ -11,15 +11,17 @@ import { StatusBadge } from '@/features/tenders/components/status-badge';
 type Swatch = { name: string; token: string; className: string; ink?: string };
 
 const palette: Swatch[] = [
+  { name: 'Petróleo', token: '--petroleo', className: 'bg-petroleo', ink: 'text-gelo' },
+  { name: 'Petróleo hover', token: '--petroleo-hover', className: 'bg-petroleo-hover', ink: 'text-gelo' },
+  { name: 'Petróleo deep', token: '--petroleo-deep', className: 'bg-petroleo-deep', ink: 'text-gelo' },
   { name: 'Lima', token: '--lima', className: 'bg-lima', ink: 'text-petroleo' },
   { name: 'Aqua', token: '--aqua', className: 'bg-aqua', ink: 'text-petroleo' },
+  { name: 'Gelo', token: '--gelo', className: 'bg-gelo', ink: 'text-petroleo' },
+  { name: 'Surface mist', token: '--surface-mist', className: 'bg-surface-mist', ink: 'text-petroleo' },
+  { name: 'Surface sand', token: '--surface-sand', className: 'bg-surface-sand', ink: 'text-petroleo' },
   { name: 'Sálvia', token: '--salvia', className: 'bg-salvia', ink: 'text-petroleo' },
   { name: 'Oliva', token: '--oliva', className: 'bg-oliva', ink: 'text-petroleo' },
   { name: 'Névoa', token: '--nevoa', className: 'bg-nevoa', ink: 'text-petroleo' },
-  { name: 'Creme', token: '--creme', className: 'bg-creme', ink: 'text-petroleo' },
-  { name: 'Creme claro', token: '--creme-claro', className: 'bg-creme-claro', ink: 'text-petroleo' },
-  { name: 'Petróleo', token: '--petroleo', className: 'bg-petroleo', ink: 'text-creme-claro' },
-  { name: 'Petróleo profundo', token: '--petroleo-profundo', className: 'bg-petroleo-profundo', ink: 'text-creme-claro' },
 ];
 
 const semantic: Swatch[] = [
@@ -53,7 +55,7 @@ const intent: Swatch[] = [
   { name: 'Primary', token: '--primary', className: 'bg-primary', ink: 'text-primary-foreground' },
   { name: 'Primary hover', token: '--primary-hover', className: 'bg-primary-hover', ink: 'text-primary-foreground' },
   { name: 'Primary subtle', token: '--primary-subtle', className: 'bg-primary-subtle', ink: 'text-primary-subtle-foreground' },
-  { name: 'Action = destaque', token: '--action', className: 'bg-action', ink: 'text-action-foreground' },
+  { name: 'Action', token: '--action', className: 'bg-action', ink: 'text-action-foreground' },
   { name: 'Action hover', token: '--action-hover', className: 'bg-action-hover', ink: 'text-action-foreground' },
   { name: 'Inverse', token: '--inverse', className: 'bg-inverse', ink: 'text-inverse-foreground' },
   { name: 'Accent', token: '--accent', className: 'bg-accent', ink: 'text-accent-foreground' },
@@ -62,33 +64,33 @@ const intent: Swatch[] = [
 ];
 
 const statuses: { status: TenderStatus; token: string; className: string; light: string; dark: string }[] = [
-  { status: 'open', token: '--status-open', className: 'bg-status-open text-status-open-foreground', light: '5.7', dark: '5.7' },
+  { status: 'open', token: '--status-open', className: 'bg-status-open text-status-open-foreground', light: '6.2', dark: '6.2' },
   {
     status: 'under_review',
     token: '--status-under-review',
     className: 'bg-status-under-review text-status-under-review-foreground',
-    light: '5.6',
-    dark: '5.6',
+    light: '6.1',
+    dark: '6.1',
   },
-  { status: 'closed', token: '--status-closed', className: 'bg-status-closed text-status-closed-foreground', light: '6.2', dark: '6.2' },
-  { status: 'suspended', token: '--status-suspended', className: 'bg-status-suspended text-status-suspended-foreground', light: '9.6', dark: '8.8' },
-  { status: 'cancelled', token: '--status-cancelled', className: 'bg-status-cancelled text-status-cancelled-foreground', light: '4.9', dark: '4.7' },
-  { status: 'direct', token: '--status-direct', className: 'bg-status-direct text-status-direct-foreground', light: '5.4', dark: '5.4' },
+  { status: 'closed', token: '--status-closed', className: 'bg-status-closed text-status-closed-foreground', light: '6.7', dark: '6.7' },
+  { status: 'suspended', token: '--status-suspended', className: 'bg-status-suspended text-status-suspended-foreground', light: '10.5', dark: '10.5' },
+  { status: 'cancelled', token: '--status-cancelled', className: 'bg-status-cancelled text-status-cancelled-foreground', light: '7.3', dark: '5.0' },
+  { status: 'direct', token: '--status-direct', className: 'bg-status-direct text-status-direct-foreground', light: '6.9', dark: '6.9' },
 ];
 
 const typeRoles: { role: string; spec: string; className: string; sample: string }[] = [
-  { role: 'type-display', spec: 'título · 64 / 68 · 500', className: 'type-display', sample: 'Pardal' },
-  { role: 'type-titulo-1', spec: 'título · 44 / 52 · 500', className: 'type-titulo-1', sample: 'Novos caminhos se abrem' },
-  { role: 'type-titulo-2', spec: 'título · 32 / 40 · 500', className: 'type-titulo-2', sample: 'Pregão eletrônico 042/2024' },
-  { role: 'type-titulo-3', spec: 'título · 24 / 32 · 500', className: 'type-titulo-3', sample: 'Resumo executivo do edital' },
+  { role: 'type-display', spec: 'título · 64 / 0.95 · 500 · −0.04em', className: 'type-display', sample: 'Seu radar de oportunidades' },
+  { role: 'type-titulo-1', spec: 'título · 44 / 1 · 500 · −0.035em', className: 'type-titulo-1', sample: 'Seu próximo passo pode estar aqui.' },
+  { role: 'type-titulo-2', spec: 'título · 32 / 1.08 · 500', className: 'type-titulo-2', sample: 'Pregão eletrônico 042/2024' },
+  { role: 'type-titulo-3', spec: 'título · 24 / 1.2 · 500', className: 'type-titulo-3', sample: 'Resumo executivo do edital' },
   { role: 'type-title', spec: 'título · 20 / 28 · 600', className: 'type-title', sample: 'Editais que exigem atenção' },
   { role: 'type-section', spec: 'título · 16 / 22 · 600', className: 'type-section', sample: 'Documentos e anexos' },
-  { role: 'type-corpo-grande', spec: 'texto · 20 / 30 · 400', className: 'type-corpo-grande', sample: 'Facilitamos processos que costumam parecer complexos.' },
-  { role: 'type-corpo', spec: 'texto · 16 / 26 · 400', className: 'type-corpo', sample: 'Contratação de serviços de manutenção predial preventiva e corretiva.' },
+  { role: 'type-corpo-grande', spec: 'texto · 17 / 1.55 · 400', className: 'type-corpo-grande', sample: 'Encontre licitações, concursos e editais por área, região e prazo.' },
+  { role: 'type-corpo', spec: 'texto · 16 / 1.55 · 400', className: 'type-corpo', sample: 'Contratação de serviços de manutenção predial preventiva e corretiva.' },
   { role: 'type-ui', spec: 'texto · 14 / 22', className: 'type-ui font-medium', sample: 'Filtrar por modalidade, órgão e prazo' },
-  { role: 'type-legenda', spec: 'texto · 14 / 20 · 400', className: 'type-legenda text-muted-foreground', sample: 'Atualizado hoje' },
+  { role: 'type-legenda', spec: 'texto · 14 / 1.4 · 400', className: 'type-legenda text-muted-foreground', sample: 'Atualizado hoje' },
   { role: 'type-meta', spec: 'texto · 12 / 18', className: 'type-meta font-medium text-muted-foreground', sample: 'Publicado há 2 dias · Prefeitura de Campinas' },
-  { role: 'type-rotulo', spec: 'texto · 13 / 16 · caixa alta', className: 'type-rotulo', sample: 'Novidade' },
+  { role: 'type-rotulo', spec: 'texto · 12 · 700 · 0.16em · caixa alta', className: 'type-rotulo', sample: 'Descubra por interesse' },
   { role: 'type-data', spec: 'texto · tabular', className: 'type-data text-sm', sample: 'R$ 1.284.500,00 · PE-042/2024 · 96%' },
 ];
 
@@ -181,7 +183,7 @@ export default function DesignSystemPage() {
           </div>
         </Section>
 
-        <Section title="Tipografia" description="Qurova (Quicksand por enquanto) nos títulos, Nexa (Montserrat por enquanto) no texto. Títulos em caixa normal; só o rótulo em caixa alta.">
+        <Section title="Tipografia" description="Qurova (Quicksand por enquanto) nos títulos, Nexa (Figtree por enquanto) no texto. Títulos em caixa normal e espaçamento justo; só o rótulo em caixa alta.">
           <div className="divide-y divide-border-subtle">
             {typeRoles.map((t) => (
               <div key={t.role} className="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[180px_1fr] sm:items-baseline sm:gap-6">
@@ -195,7 +197,7 @@ export default function DesignSystemPage() {
           </div>
         </Section>
 
-        <Section title="Botões" description="Pílula. No máximo um destaque lima por tela. Use Tab para ver o anel de foco (2px --foco, afastado 2px).">
+        <Section title="Botões" description="Raio de 1rem, peso bold. Um botão principal (petróleo) por área; lima marca o que está selecionado. Use Tab para ver o anel de foco (2px --foco, afastado 3px).">
           <div className="space-y-6">
             {variants.map(({ variant, label }) => (
               <div key={variant} className="grid gap-3 sm:grid-cols-[120px_1fr] sm:items-center">
@@ -290,17 +292,18 @@ export default function DesignSystemPage() {
           </div>
         </Section>
 
-        <Section title="Forma & movimento" description="Raio 8px nos campos, 14px nos cartões, 24px em diálogos e seções, pílula em botões e chips. Sem sombras nem gradientes.">
+        <Section title="Forma & movimento" description="Raio 0.75rem nos campos, 1rem nos botões, 1.35rem nos cartões, 1.75rem em diálogos e painéis, pílula em chips. Sombras suaves em tom petróleo só no que flutua: menus, avisos e diálogos.">
           <div className="grid gap-8 lg:grid-cols-2">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-5 gap-3">
               {[
                 { name: '--raio-sm', className: 'rounded-lg' },
+                { name: '--raio-botao', className: 'rounded-button' },
                 { name: '--raio-md', className: 'rounded-xl' },
                 { name: '--raio-lg', className: 'rounded-2xl' },
                 { name: '--raio-pill', className: 'rounded-pill' },
               ].map((r) => (
                 <div key={r.name}>
-                  <div className={`h-16 border border-border bg-salvia ${r.className}`} />
+                  <div className={`h-16 border border-border bg-aqua ${r.className}`} />
                   <div className="mt-2 font-mono text-xs text-muted-foreground">{r.name}</div>
                 </div>
               ))}
