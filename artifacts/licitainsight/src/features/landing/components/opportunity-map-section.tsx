@@ -94,8 +94,7 @@ export function OpportunityMapSection() {
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="max-w-2xl">
-          <div className="type-eyebrow font-bold uppercase tracking-eyebrow text-primary">Radar por estado</div>
-          <h2 id="mapa-titulo" className="mt-3 type-titulo-2 lg:type-titulo-1">
+          <h2 id="mapa-titulo" className="type-titulo-2 lg:type-titulo-1">
             Onde estão as oportunidades agora
           </h2>
           <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
