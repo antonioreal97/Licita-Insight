@@ -59,7 +59,7 @@ export function OpportunityMap({ data }: { data: OpenTendersByStateResponse }) {
 
         <div className="mt-6 border-t border-border-subtle pt-4">
           <p className="type-label text-muted-foreground">{MAP_LEGEND_TITLE}</p>
-          <ul data-testid="map-legend" className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-foreground">
+          <ul data-testid="map-legend" className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-foreground max-md:text-sm">
             {hasEmptyState && (
               <li className="flex items-center gap-1.5">
                 <span aria-hidden className={cn('size-3.5 rounded-sm border border-border-strong', VOLUME_SWATCHES[0])} />
@@ -106,7 +106,7 @@ export function OpportunityMap({ data }: { data: OpenTendersByStateResponse }) {
                     style={{ width: `${Math.max(4, (state.openTenders / highest) * 100)}%` }}
                   />
                 </span>
-                <span className="mt-2 block text-xs text-muted-foreground">{state.valueText}</span>
+                <span className="mt-2 block text-xs text-muted-foreground max-md:text-sm">{state.valueText}</span>
               </Link>
             </li>
           ))}
@@ -117,7 +117,7 @@ export function OpportunityMap({ data }: { data: OpenTendersByStateResponse }) {
             Ver os 27 estados em tabela
           </summary>
           <div className="overflow-x-auto border-t border-border-subtle px-4 pb-3">
-            <table data-testid="map-table" className="w-full text-left text-xs">
+            <table data-testid="map-table" className="w-full text-left text-xs max-md:text-sm">
               <caption className="sr-only">Editais abertos e valor estimado somado por estado</caption>
               <thead>
                 <tr className="type-label text-muted-foreground">
@@ -135,8 +135,9 @@ export function OpportunityMap({ data }: { data: OpenTendersByStateResponse }) {
               <tbody>
                 {[...ranked, ...states.filter((state) => state.openTenders === 0)].map((state) => (
                   <tr key={state.uf} className="border-t border-border-subtle">
-                    <th scope="row" className="py-2 pr-3 font-medium">
-                      <Link href={state.href} className="text-primary hover:underline">
+                    <th scope="row" className="py-2 pr-3 font-medium max-md:py-0">
+                      {/* On phones the row is the 44 px tap target. */}
+                      <Link href={state.href} className="text-primary hover:underline max-md:flex max-md:min-h-11 max-md:items-center">
                         {state.name} ({state.uf})
                       </Link>
                     </th>
@@ -151,7 +152,7 @@ export function OpportunityMap({ data }: { data: OpenTendersByStateResponse }) {
           </div>
         </details>
 
-        <p className="mt-4 type-meta text-muted-foreground">
+        <p className="mt-4 type-meta text-muted-foreground max-md:text-sm">
           {MAP_SOURCE_NOTE}
           {data.meta.indexUpdatedAt && ` Dados atualizados em ${formatDateTime(data.meta.indexUpdatedAt)}.`}
         </p>
