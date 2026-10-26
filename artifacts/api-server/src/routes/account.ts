@@ -4,6 +4,7 @@ import {
   getSavedTender,
   deleteSavedSearch,
   deleteSavedTender,
+  dismissNotifications,
   importSavedTenders,
   listNotifications,
   listSavedSearches,
@@ -11,6 +12,7 @@ import {
   markNotificationsRead,
   markSavedSearchSeen,
   putSavedTender,
+  restoreNotifications,
   restoreSavedSearch,
   savedTenderIds,
   unreadNotificationCount,
@@ -469,33 +471,82 @@ router.get(
   }),
 );
 
+/** `ids` of a notification bulk action: up to 100 non-empty strings. Requires `ids` unless `hasOtherTarget`. */
+const notificationIds = (
+  body: Record<string, unknown>,
+  hasOtherTarget: boolean,
+  missingMessage: string,
+): string[] | undefined => {
+  const ids = Array.isArray(body.ids) ? body.ids : undefined;
+  if ((ids === undefined || ids.length === 0) && !hasOtherTarget) {
+    throw new InvalidParameterError(missingMessage, [
+      { field: "body", issue: "missing_target" },
+    ]);
+  }
+  if (
+    ids &&
+    (ids.length > 100 || ids.some((id) => typeof id !== "string" || id === ""))
+  ) {
+    throw new InvalidParameterError("Notification ids are invalid", [
+      { field: "ids", issue: "invalid_array" },
+    ]);
+  }
+  return ids?.map(String);
+};
+
 router.post(
   "/v1/me/notifications/read",
   requireCsrf,
   asyncHandler(async (req, res) => {
     const body = recordBody(req.body);
-    const ids = Array.isArray(body.ids) ? body.ids : undefined;
-    if (
-      (ids === undefined || ids.length === 0) &&
-      body.all !== true
-    ) {
-      throw new InvalidParameterError("ids or all=true is required", [
-        { field: "body", issue: "missing_target" },
-      ]);
-    }
-    if (
-      ids &&
-      (ids.length > 100 || ids.some((id) => typeof id !== "string" || id === ""))
-    ) {
-      throw new InvalidParameterError("Notification ids are invalid", [
-        { field: "ids", issue: "invalid_array" },
-      ]);
-    }
+    const ids = notificationIds(body, body.all === true, "ids or all=true is required");
     res.json(
       await markNotificationsRead({
         userId: authContext(res).user.id,
-        ...(ids ? { ids: ids.map(String) } : {}),
+        ...(ids ? { ids } : {}),
         all: body.all === true,
+      }),
+    );
+  }),
+);
+
+router.post(
+  "/v1/me/notifications/dismiss",
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const body = recordBody(req.body);
+    const ids = notificationIds(body, body.allRead === true, "ids or allRead=true is required");
+    res.json(
+      await dismissNotifications({
+        userId: authContext(res).user.id,
+        ...(ids ? { ids } : {}),
+        allRead: body.allRead === true,
+      }),
+    );
+  }),
+);
+
+router.post(
+  "/v1/me/notifications/restore",
+  requireCsrf,
+  asyncHandler(async (req, res) => {
+    const body = recordBody(req.body);
+    const dismissedAt =
+      typeof body.dismissedAt === "string" ? new Date(body.dismissedAt) : undefined;
+    if (
+      body.dismissedAt !== undefined &&
+      (dismissedAt === undefined || Number.isNaN(dismissedAt.getTime()))
+    ) {
+      throw new InvalidParameterError("dismissedAt must be an ISO date-time", [
+        { field: "dismissedAt", issue: "invalid_date" },
+      ]);
+    }
+    const ids = notificationIds(body, dismissedAt !== undefined, "ids or dismissedAt is required");
+    res.json(
+      await restoreNotifications({
+        userId: authContext(res).user.id,
+        ...(ids ? { ids } : {}),
+        ...(dismissedAt ? { dismissedAt } : {}),
       }),
     );
   }),

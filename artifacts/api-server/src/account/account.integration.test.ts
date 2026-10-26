@@ -127,6 +127,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   if (participationColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0019_participation.sql', import.meta.url), 'utf8'),
   );
+  const dismissedColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'notifications' and column_name = 'dismissed_at'", [schema]);
+  if (dismissedColumn.rowCount === 0) await pool.query(
+    readFileSync(new URL('../../../../lib/db/migrations/0051_notification_dismissal.sql', import.meta.url), 'utf8'),
+  );
   const interestsColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'recommendation_metrics_daily' and column_name = 'interests'", [schema]);
   if (interestsColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0032_recommendation_interests.sql', import.meta.url), 'utf8'),
@@ -2599,5 +2603,194 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
 
     await db.update(usersTable).set({ emailDigest: "off", emailImmediateCritical: false }).where(eq(usersTable.id, userId));
     await db.update(savedSearchesTable).set({ alertsEnabled: false }).where(eq(savedSearchesTable.id, savedSearchId));
+  });
+
+  await t.test("removes notifications softly: owner only, CSRF, validation, feed, count, e-mail and producers", async () => {
+    const cookie = await login("dismiss@example.test");
+    const otherCookie = await login("dismiss-other@example.test");
+    const userIdOf = async (sessionCookie: string) =>
+      ((await (await request("/v1/auth/session", {}, sessionCookie)).json()) as { user: { id: string } }).user.id;
+    const userId = await userIdOf(cookie);
+    const otherUserId = await userIdOf(otherCookie);
+    const post = (path: string, body: unknown, sessionCookie = cookie, headers: Record<string, string> = csrf) =>
+      request(`/v1/me/notifications/${path}`, { method: "POST", headers, body: JSON.stringify(body) }, sessionCookie);
+    type Feed = { data: { id: string }[]; pagination: { total: number }; unreadCount: number };
+    const feed = async (query = "", sessionCookie = cookie) => {
+      const response = await request(`/v1/me/notifications?pageSize=50${query}`, {}, sessionCookie);
+      assert.equal(response.status, 200);
+      return (await response.json()) as Feed;
+    };
+    const unreadCount = async (sessionCookie = cookie) =>
+      ((await (await request("/v1/me/notifications/unread-count", {}, sessionCookie)).json()) as { unreadCount: number }).unreadCount;
+    const alert = (id: string, owner: string, minute: number, readAt: Date | null = null) => ({
+      id,
+      userId: owner,
+      type: "tender_status_changed",
+      dedupeKey: `dismiss-test:${id}`,
+      createdAt: new Date(`2026-10-22T10:${String(minute).padStart(2, "0")}:00.000Z`),
+      readAt,
+      tenderId: `dismiss-tender-${id}`,
+      tenderTitle: `Edital ${id} TEST DATA`,
+      tenderNumberShort: "1/2026",
+      tenderOrganizationName: "Órgão de teste",
+      change: { field: "status", from: "open", to: "suspended" },
+    });
+    const readAt = new Date("2026-10-22T11:00:00.000Z");
+    await db.insert(notificationsTable).values([
+      alert("dismiss-unread-1", userId, 1),
+      alert("dismiss-unread-2", userId, 2),
+      alert("dismiss-read-1", userId, 3, readAt),
+      alert("dismiss-read-2", userId, 4, readAt),
+      alert("dismiss-other", otherUserId, 5),
+    ]);
+    assert.deepEqual((await feed()).data.map(({ id }) => id), ["dismiss-read-2", "dismiss-read-1", "dismiss-unread-2", "dismiss-unread-1"]);
+    assert.equal(await unreadCount(), 2);
+
+    // Session, CSRF and the subscription gate, like POST /read.
+    assert.equal((await request("/v1/me/notifications/dismiss", { method: "POST", headers: csrf, body: "{}" })).status, 401);
+    assert.equal((await post("dismiss", { ids: ["dismiss-unread-1"] }, cookie, {})).status, 403);
+    assert.equal((await post("restore", { ids: ["dismiss-unread-1"] }, cookie, {})).status, 403);
+    assert.equal(
+      (await post("dismiss", { ids: ["dismiss-unread-1"] }, cookie, { Origin: "http://evil.example", "X-Requested-With": "licita-insight" })).status,
+      403,
+    );
+    const freeCookie = await login("dismiss-free@example.test", false);
+    await db.update(usersTable).set({ trialEndsAt: new Date("2000-01-01T00:00:00.000Z") }).where(eq(usersTable.id, await userIdOf(freeCookie)));
+    assert.equal((await post("dismiss", { allRead: true }, freeCookie)).status, 402);
+    assert.equal((await post("restore", { ids: ["dismiss-other"] }, freeCookie)).status, 402);
+
+    // Validation: a target is required; at most 100 non-empty string ids; dismissedAt must be a date-time.
+    for (const body of [{}, { ids: [] }, { allRead: false }, { all: true }, { ids: Array.from({ length: 101 }, (_, index) => `id-${index}`) }, { ids: [""] }, { ids: [1] }]) {
+      assert.equal((await post("dismiss", body)).status, 400, JSON.stringify(body));
+    }
+    for (const body of [{}, { ids: [] }, { dismissedAt: "not-a-date" }, { dismissedAt: 1 }, { ids: [""] }]) {
+      assert.equal((await post("restore", body)).status, 400, JSON.stringify(body));
+    }
+    assert.equal(await unreadCount(), 2);
+
+    // Another user's ids are a no-op, both ways.
+    const foreign = await post("dismiss", { ids: ["dismiss-other"] });
+    assert.equal(foreign.status, 200);
+    assert.deepEqual(await foreign.json(), { dismissedCount: 0, dismissedAt: null, unreadCount: 2 });
+    assert.deepEqual((await feed("", otherCookie)).data.map(({ id }) => id), ["dismiss-other"]);
+    const otherDismiss = (await (await post("dismiss", { ids: ["dismiss-other"] }, otherCookie)).json()) as { dismissedAt: string };
+    assert.deepEqual(await (await post("restore", { ids: ["dismiss-other"] })).json(), { restoredCount: 0, unreadCount: 2 });
+    assert.deepEqual(await (await post("restore", { dismissedAt: otherDismiss.dismissedAt })).json(), { restoredCount: 0, unreadCount: 2 });
+    assert.equal((await feed("", otherCookie)).data.length, 0);
+    assert.equal((await post("restore", { dismissedAt: otherDismiss.dismissedAt }, otherCookie)).status, 200);
+    assert.equal((await feed("", otherCookie)).data.length, 1);
+
+    // One unread notification: out of the feed, the unread filter and the badge; undo by dismissedAt.
+    const single = await post("dismiss", { ids: ["dismiss-unread-1", "missing-id"] });
+    assert.equal(single.status, 200);
+    const singleBody = (await single.json()) as { dismissedCount: number; dismissedAt: string; unreadCount: number };
+    assert.equal(singleBody.dismissedCount, 1);
+    assert.equal(singleBody.unreadCount, 1);
+    assert.ok(!Number.isNaN(Date.parse(singleBody.dismissedAt)));
+    let all = await feed();
+    assert.deepEqual(all.data.map(({ id }) => id), ["dismiss-read-2", "dismiss-read-1", "dismiss-unread-2"]);
+    assert.equal(all.pagination.total, 3);
+    assert.equal(all.unreadCount, 1);
+    assert.deepEqual((await feed("&unreadOnly=true")).data.map(({ id }) => id), ["dismiss-unread-2"]);
+    assert.equal(await unreadCount(), 1);
+    // Dismissing again changes nothing; "mark all read" leaves removed rows untouched.
+    assert.equal(((await (await post("dismiss", { ids: ["dismiss-unread-1"] })).json()) as { dismissedCount: number }).dismissedCount, 0);
+    assert.deepEqual(await (await post("restore", { dismissedAt: singleBody.dismissedAt })).json(), { restoredCount: 1, unreadCount: 2 });
+    assert.equal((await feed()).data.length, 4);
+
+    // "Limpar lidas" removes only the read ones, and restores as one call.
+    const clear = (await (await post("dismiss", { allRead: true })).json()) as { dismissedCount: number; dismissedAt: string; unreadCount: number };
+    assert.equal(clear.dismissedCount, 2);
+    assert.equal(clear.unreadCount, 2);
+    all = await feed();
+    assert.deepEqual(all.data.map(({ id }) => id), ["dismiss-unread-2", "dismiss-unread-1"]);
+    assert.equal(all.pagination.total, 2);
+    assert.deepEqual(await (await post("dismiss", { allRead: true })).json(), { dismissedCount: 0, dismissedAt: null, unreadCount: 2 });
+    assert.deepEqual(await (await post("restore", { dismissedAt: clear.dismissedAt })).json(), { restoredCount: 2, unreadCount: 2 });
+    assert.equal((await feed()).pagination.total, 4);
+    assert.equal(((await (await post("dismiss", { allRead: true })).json()) as { dismissedCount: number }).dismissedCount, 2);
+
+    // E-mail: a removed notification never reaches the digest; the rest does.
+    await post("dismiss", { ids: ["dismiss-unread-1"] });
+    await db.update(usersTable).set({ emailDigest: "daily" }).where(eq(usersTable.id, userId));
+    const messages: EmailMessage[] = [];
+    await runDailyEmailDigest(new Date("2026-10-22T12:00:00.000Z"), async (message) => {
+      messages.push(message);
+      return { status: "sent", providerMessageId: `dismiss-digest-${messages.length}` };
+    });
+    const own = messages.filter(({ to }) => to === "dismiss@example.test");
+    assert.equal(own.length, 1);
+    assert.match(own[0]!.text, /Edital dismiss-unread-2 TEST DATA/);
+    assert.doesNotMatch(own[0]!.text, /dismiss-unread-1|dismiss-read-/);
+    const linked = await db
+      .select({ id: emailDeliveryNotificationsTable.notificationId })
+      .from(emailDeliveryNotificationsTable)
+      .where(inArray(emailDeliveryNotificationsTable.notificationId, ["dismiss-unread-1", "dismiss-unread-2", "dismiss-read-1", "dismiss-read-2"]));
+    assert.deepEqual(linked.map(({ id }) => id), ["dismiss-unread-2"]);
+    await db.update(usersTable).set({ emailDigest: "off" }).where(eq(usersTable.id, userId));
+
+    // Producers: the kept row's dedupe key blocks re-creation (trial ending uses one fixed key per user).
+    const trialCookie = await login("dismiss-trial@example.test", false);
+    const trialUserId = await userIdOf(trialCookie);
+    const trialNow = new Date("2030-01-01T12:00:00.000Z");
+    await db.update(usersTable).set({ trialEndsAt: new Date("2030-01-03T12:00:00.000Z") }).where(eq(usersTable.id, trialUserId));
+    assert.equal(await createTrialEndingNotifications(trialNow), 1);
+    const [trialAlert] = (await feed("", trialCookie)).data;
+    assert.ok(trialAlert);
+    assert.equal((await post("dismiss", { ids: [trialAlert.id] }, trialCookie)).status, 200);
+    assert.equal(await createTrialEndingNotifications(trialNow), 0);
+    assert.equal(await createTrialEndingNotifications(new Date("2030-01-02T12:00:00.000Z")), 0);
+    assert.equal((await feed("", trialCookie)).data.length, 0);
+    assert.equal(await unreadCount(trialCookie), 0);
+    assert.equal((await db.select().from(notificationsTable).where(eq(notificationsTable.userId, trialUserId))).length, 1);
+
+    // Saved search: the day's notification, once removed, is frozen; new matches open a continuation.
+    const created = await request(
+      "/v1/me/saved-searches",
+      { method: "POST", headers: csrf, body: JSON.stringify({ name: "dedetização", query: "q=dedetiza%C3%A7%C3%A3o", alertsEnabled: true }) },
+      cookie,
+    );
+    assert.equal(created.status, 201);
+    const savedSearchId = ((await created.json()) as { id: string }).id;
+    await db
+      .update(savedSearchesTable)
+      .set({ lastCheckedAt: new Date("2026-10-23T10:00:00.000Z") })
+      .where(eq(savedSearchesTable.id, savedSearchId));
+    const tenderIdFor = (sequence: number) => `00394460000141-1-${String(sequence).padStart(6, "0")}-2026`;
+    const addTenders = async (sequences: number[], createdAt: string) => {
+      await upsertPublications(
+        sequences.map((sequence) => publication(sequence, { objetoCompra: `Serviços de dedetização TEST DATA ${sequence}` })),
+        new Date(createdAt),
+      );
+      await pool.query("UPDATE tenders SET created_at = $1 WHERE id = ANY($2)", [new Date(createdAt), sequences.map(tenderIdFor)]);
+    };
+    const searchFeed = async () =>
+      ((await feed()).data as unknown as { id: string; savedSearch: { id: string } | null; matchCount: number | null }[])
+        .filter(({ savedSearch }) => savedSearch?.id === savedSearchId)
+        .map(({ id, matchCount }) => ({ id, matchCount }));
+    await addTenders([9101, 9102], "2026-10-23T10:05:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-23T10:15:00.000Z"));
+    const [daily] = await searchFeed();
+    assert.equal(daily?.matchCount, 2);
+    const unreadBefore = await unreadCount();
+    assert.equal((await post("dismiss", { ids: [daily!.id] })).status, 200);
+    assert.equal(await unreadCount(), unreadBefore - 1);
+    await runSavedSearchEvaluationJob(new Date("2026-10-23T10:20:00.000Z"));
+    assert.deepEqual(await searchFeed(), []);
+    await addTenders([9103], "2026-10-23T10:25:00.000Z");
+    await runSavedSearchEvaluationJob(new Date("2026-10-23T10:30:00.000Z"));
+    const continuation = await searchFeed();
+    assert.equal(continuation.length, 1);
+    assert.notEqual(continuation[0]!.id, daily!.id);
+    assert.equal(continuation[0]!.matchCount, 1);
+    const [frozen] = await db.select().from(notificationsTable).where(eq(notificationsTable.id, daily!.id));
+    assert.equal(frozen?.matchCount, 2);
+    assert.ok(frozen?.dismissedAt);
+    await db.update(savedSearchesTable).set({ alertsEnabled: false }).where(eq(savedSearchesTable.id, savedSearchId));
+
+    // The export keeps removed notifications, flagged with dismissedAt.
+    const exported = (await (await request("/v1/me/export", {}, cookie)).json()) as AccountExport;
+    const exportedRemoved = exported.notifications.find(({ id }) => id === "dismiss-unread-1");
+    assert.ok(exportedRemoved?.dismissedAt);
   });
 });

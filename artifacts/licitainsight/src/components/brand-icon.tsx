@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * Pardal logo from public/brand. The SVGs have fixed ink, so both files render and the theme picks one:
- * petroleo on Creme, lima on Petróleo. Size it by height (`h-*`); width follows the artwork. `symbol` drops the name.
+ * petroleo on Gelo, lima on Petróleo. Size it by height (`h-*`); width follows the artwork. `symbol` drops the name.
  */
 export function BrandLogo({ className = '', symbol = false }: { className?: string; symbol?: boolean }) {
   const baseUrl = import.meta.env?.BASE_URL ?? '/';

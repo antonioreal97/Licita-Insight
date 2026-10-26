@@ -11,12 +11,16 @@ import type {
   CreateSavedSearchBody,
   DownloadedFile,
   ImportSavedTendersResponse,
+  DismissNotificationsBody,
+  DismissNotificationsResponse,
   MarkNotificationsReadBody,
   NotificationPreferences,
   RecommendationDismissReason,
   RecommendationEvent,
   RecommendationPreferences,
   RecommendationsResponse,
+  RestoreNotificationsBody,
+  RestoreNotificationsResponse,
   NotificationsParams,
   NotificationsResponse,
   PublicPlan,
@@ -82,6 +86,10 @@ export interface AccountAdapter {
   listNotifications(params: NotificationsParams, signal?: AbortSignal): Promise<NotificationsResponse>;
   getUnreadCount(signal?: AbortSignal): Promise<UnreadCountResponse>;
   markNotificationsRead(body: MarkNotificationsReadBody): Promise<UnreadCountResponse>;
+  /** Removes notifications from the feed, the unread count and e-mail. */
+  dismissNotifications(body: DismissNotificationsBody): Promise<DismissNotificationsResponse>;
+  /** Undoes `dismissNotifications` (its `dismissedAt`, or `ids`). */
+  restoreNotifications(body: RestoreNotificationsBody): Promise<RestoreNotificationsResponse>;
 
   /** E-mail preferences: session only, no 402 gate (turning e-mail off is the user's right). */
   getNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences>;

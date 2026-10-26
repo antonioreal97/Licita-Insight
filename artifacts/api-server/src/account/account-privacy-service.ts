@@ -126,6 +126,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
           type: notificationsTable.type,
           createdAt: notificationsTable.createdAt,
           readAt: notificationsTable.readAt,
+          dismissedAt: notificationsTable.dismissedAt,
           tenderId: notificationsTable.tenderId,
           tenderTitle: notificationsTable.tenderTitle,
           tenderNumberShort: notificationsTable.tenderNumberShort,

@@ -15,6 +15,8 @@ export interface AccountExportNotification {
   /** @nullable */
   readAt: Date | null;
   /** @nullable */
+  dismissedAt: Date | null;
+  /** @nullable */
   tenderId: string | null;
   /** @nullable */
   tenderTitle: string | null;

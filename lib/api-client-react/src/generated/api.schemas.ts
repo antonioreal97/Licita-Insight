@@ -538,6 +538,8 @@ export interface AccountExportNotification {
   /** @nullable */
   readAt: string | null;
   /** @nullable */
+  dismissedAt: string | null;
+  /** @nullable */
   tenderId: string | null;
   /** @nullable */
   tenderTitle: string | null;
@@ -2567,6 +2569,41 @@ export interface MarkNotificationsReadRequest {
      */
   ids?: string[];
   all?: boolean;
+}
+
+export interface DismissNotificationsRequest {
+  /**
+     * @maxItems 100
+     * @items.minLength 1
+     */
+  ids?: string[];
+  /** Removes every read notification. */
+  allRead?: boolean;
+}
+
+export interface DismissNotificationsResult {
+  /** @minimum 0 */
+  dismissedCount: number;
+  /** @nullable */
+  dismissedAt: string | null;
+  /** @minimum 0 */
+  unreadCount: number;
+}
+
+export interface RestoreNotificationsRequest {
+  /**
+     * @maxItems 100
+     * @items.minLength 1
+     */
+  ids?: string[];
+  dismissedAt?: string;
+}
+
+export interface RestoreNotificationsResult {
+  /** @minimum 0 */
+  restoredCount: number;
+  /** @minimum 0 */
+  unreadCount: number;
 }
 
 export type OpportunityScopeFilter = typeof OpportunityScopeFilter[keyof typeof OpportunityScopeFilter];

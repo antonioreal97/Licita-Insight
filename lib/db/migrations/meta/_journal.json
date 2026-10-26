@@ -337,6 +337,13 @@
       "when": 1792206001000,
       "tag": "0050_company_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792206002000,
+      "tag": "0051_notification_dismissal",
+      "breakpoints": true
     }
   ]
 }

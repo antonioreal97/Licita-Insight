@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { BellOff, CheckCheck, Target } from 'lucide-react';
+import { BellOff, CheckCheck, Eraser, Target } from 'lucide-react';
 import { isApiError, type Notification } from '@/api';
 import { Button } from '@/components/common/action-button';
 import { EmptyState } from '@/components/common/empty-state';
@@ -19,7 +19,7 @@ import { TenderRow } from '@/features/tenders/components/tender-row';
 import { formatDate, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { NotificationItem } from './components/notification-item';
-import { useMarkNotificationsRead, useNotifications, useUnreadCount } from './hooks/use-notifications';
+import { useDismissNotifications, useMarkNotificationsRead, useNotifications, useRestoreNotifications, useUnreadCount } from './hooks/use-notifications';
 
 const PAGE_SIZE = 20;
 
@@ -38,10 +38,14 @@ function NotificationsSection() {
   const list = useNotifications({ unreadOnly: unreadOnly || undefined, page, pageSize: PAGE_SIZE });
   const unread = useUnreadCount();
   const markRead = useMarkNotificationsRead();
+  const dismiss = useDismissNotifications();
+  const restore = useRestoreNotifications();
   const markSeen = useMarkSavedSearchSeen();
   useClampPage(page, list.data?.pagination.totalPages, setPage);
 
   const unreadCount = unread.data ?? list.data?.unreadCount ?? 0;
+  // "Todas" lists every notification still in the feed, so the read ones are the rest. The "Não lidas" view cannot tell.
+  const readCount = !unreadOnly && list.data ? Math.max(0, list.data.pagination.total - unreadCount) : undefined;
 
   const reportMarkError = (error: unknown) => {
     console.error('[monitoring] Falha ao marcar notificações como lidas.', error);
@@ -50,6 +54,57 @@ function NotificationsSection() {
       title: 'Não foi possível marcar como lida',
       description: isApiError(error) && error.requestId ? `Tente de novo. ref. ${error.requestId}` : 'Tente de novo.',
     });
+  };
+
+  const reportRemoveError = (title: string) => (error: unknown) => {
+    console.error('[monitoring] Falha ao remover ou restaurar notificações.', error);
+    toast({
+      variant: 'destructive',
+      title,
+      description: isApiError(error) && error.requestId ? `Tente de novo. ref. ${error.requestId}` : 'Tente de novo.',
+    });
+  };
+
+  // An undo toast instead of a confirmation: the row leaves at once and "Desfazer" restores everything the call removed.
+  const undo = (dismissedAt: string, testId: string) => (
+    <ToastAction
+      altText="Desfazer"
+      data-testid={testId}
+      onClick={() => restore.mutate({ dismissedAt }, { onError: reportRemoveError('Não foi possível desfazer') })}
+    >
+      Desfazer
+    </ToastAction>
+  );
+
+  const remove = (n: Notification) => {
+    dismiss.mutate(
+      { ids: [n.id] },
+      {
+        onSuccess: ({ dismissedAt }) => {
+          if (dismissedAt) toast({ title: 'Notificação removida', action: undo(dismissedAt, 'button-undo-remove-notification') });
+        },
+        onError: reportRemoveError('Não foi possível remover a notificação'),
+      },
+    );
+  };
+
+  const clearRead = () => {
+    dismiss.mutate(
+      { allRead: true },
+      {
+        onSuccess: ({ dismissedCount, dismissedAt }) => {
+          toast(
+            dismissedAt
+              ? {
+                  title: dismissedCount === 1 ? '1 notificação lida removida' : `${formatNumber(dismissedCount)} notificações lidas removidas`,
+                  action: undo(dismissedAt, 'button-undo-clear-read'),
+                }
+              : { title: 'Nenhuma notificação lida para limpar' },
+          );
+        },
+        onError: reportRemoveError('Não foi possível limpar as notificações lidas'),
+      },
+    );
   };
 
   const select = (n: Notification) => {
@@ -86,19 +141,32 @@ function NotificationsSection() {
             </button>
           ))}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={unreadCount === 0}
-          loading={markRead.isPending && markRead.variables?.all === true}
-          onClick={() => markRead.mutate({ all: true }, { onError: reportMarkError })}
-          data-testid="button-mark-all-read"
-        >
-          <CheckCheck size={14} aria-hidden />
-          Marcar todas como lidas
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={unreadCount === 0}
+            loading={markRead.isPending && markRead.variables?.all === true}
+            onClick={() => markRead.mutate({ all: true }, { onError: reportMarkError })}
+            data-testid="button-mark-all-read"
+          >
+            <CheckCheck size={14} aria-hidden />
+            Marcar todas como lidas
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={readCount === 0}
+            loading={dismiss.isPending && dismiss.variables?.allRead === true}
+            onClick={clearRead}
+            data-testid="button-clear-read"
+          >
+            <Eraser size={14} aria-hidden />
+            Limpar lidas
+          </Button>
+        </div>
       </div>
-      {list.isPending ? (
+      {list.isPending || (list.data?.data.length === 0 && list.isFetching) ? (
         <RowsSkeleton rows={4} />
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
@@ -121,7 +189,7 @@ function NotificationsSection() {
           <ul aria-label="Notificações" aria-busy={list.isFetching || undefined} className="overflow-hidden rounded-xl border border-border bg-card">
             {list.data.data.map((n) => (
               <li key={n.id} className="border-b border-border-subtle last:border-0">
-                <NotificationItem notification={n} onSelect={select} />
+                <NotificationItem notification={n} onSelect={select} onRemove={remove} />
               </li>
             ))}
           </ul>
