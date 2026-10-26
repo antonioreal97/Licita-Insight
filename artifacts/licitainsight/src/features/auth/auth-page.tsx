@@ -177,13 +177,13 @@ function BrandPanel() {
       </div>
       <div className="relative -mr-12 -mb-12 mt-12 min-h-56 flex-1 overflow-hidden rounded-tl-[4rem] xl:-mr-16 xl:-mb-16 xl:mt-16 2xl:-mr-20 2xl:-mb-20 2xl:rounded-tl-[5rem]">
         <img
-          src={`${import.meta.env.BASE_URL}brand/landing-workshop.jpg`}
+          src={`${import.meta.env.BASE_URL}brand/auth-side.jpg`}
           alt=""
-          width={1152}
-          height={896}
+          width={2048}
+          height={1367}
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 size-full object-cover object-[40%_35%]"
+          className="absolute inset-0 size-full object-cover object-[42%_28%]"
         />
         <p className="absolute bottom-8 left-8 rounded-pill bg-lima px-3.5 py-2 type-ui font-bold text-petroleo">
           Dados públicos do PNCP · {new Date().getFullYear()}

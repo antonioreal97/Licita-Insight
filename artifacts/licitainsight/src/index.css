@@ -89,17 +89,21 @@
   color: var(--lima-marca);
 }
 .landing-hero-title {
-  max-width: 11ch;
+  max-width: 18ch;
   margin-top: 1rem;
   font-family: var(--fonte-titulo);
-  font-size: clamp(3rem, 12vw, 4.25rem);
+  font-size: clamp(2.65rem, 10.5vw, 3.85rem);
   font-weight: 500;
-  line-height: 0.94;
+  line-height: 0.96;
   letter-spacing: -0.045em;
 }
 .landing-hero-title span {
   display: block;
   color: var(--lima-marca);
+  white-space: nowrap;
+}
+.landing-hero-title strong {
+  font-weight: 700;
 }
 .landing-hero-description {
   max-width: 31rem;
@@ -121,10 +125,23 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 42% 32%;
+  object-position: 50% 22%;
+  opacity: 0;
+}
+.landing-hero-photo img.is-ready {
+  opacity: 1;
+}
+.landing-hero-photo-loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--texto-inverso) 14%, transparent);
+  pointer-events: none;
 }
 .landing-hero-wing {
   position: absolute;
+  z-index: 2;
   right: -28%;
   bottom: -25%;
   width: 105%;
@@ -225,6 +242,7 @@
 .landing-interest-card {
   display: flex;
   min-height: 10rem;
+  height: 100%;
   align-items: flex-start;
   gap: 1rem;
   border: 1px solid color-mix(in srgb, var(--petroleo) 18%, transparent);
@@ -391,8 +409,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 38%;
-  filter: saturate(0.7) contrast(1.08) brightness(0.82);
+  object-position: 48% 42%;
+  filter: saturate(0.78) contrast(1.05) brightness(0.88);
   transition: transform 450ms var(--ease-standard);
 }
 .landing-editorial-feature:hover img {
@@ -438,11 +456,15 @@
   display: grid;
   min-height: 17.5rem;
   grid-template-columns: auto 1fr auto;
-  align-items: end;
+  align-items: stretch;
   gap: 1rem;
   border-radius: var(--raio-lg);
   background: var(--surface);
   padding: 1.35rem;
+  text-align: left;
+}
+.landing-editorial-links > a > :not(.landing-editorial-mark) {
+  align-self: center;
 }
 .landing-editorial-links strong {
   display: block;
@@ -591,140 +613,6 @@
   background: var(--surface);
 }
 
-/*
- * Phones: title, search and the Buscar button fit the first screen (above the cookie notice too), copy stays at
- * 14 px or more, taps are 44 px, and the cards lose the height they only need beside a desktop column.
- * Tablets and desktop keep the rules above.
- */
-@media (max-width: 767px) {
-  .landing-hero-stage {
-    padding-top: 1.5rem;
-  }
-  .landing-hero-title {
-    margin-top: 0.75rem;
-    font-size: clamp(2.5rem, 11.2vw, 3.4rem);
-  }
-  .landing-hero-description {
-    margin-top: 0.875rem;
-  }
-  .landing-hero-photo {
-    height: 18rem;
-  }
-  .landing-hero-search {
-    margin-top: 1rem;
-    padding: 0.875rem;
-  }
-  .landing-hero-search > label {
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-  }
-  .landing-hero-search-row input {
-    height: 3rem;
-    /* 16 px: below that, iOS Safari zooms the page when the field takes focus. */
-    font-size: 1rem;
-  }
-  .landing-hero-search-row button {
-    min-height: 3rem;
-    font-size: 0.9375rem;
-  }
-  .landing-hero-search > p {
-    font-size: 0.875rem;
-  }
-  .landing-hero-label,
-  .landing-section-label,
-  .landing-editorial-feature small,
-  .landing-editorial-links small {
-    font-size: 0.75rem;
-  }
-  .landing-interest-grid,
-  .landing-editorial-grid {
-    gap: 0.75rem;
-    margin-top: 2rem;
-  }
-  .landing-interest-card {
-    min-height: 0;
-    padding: 1.15rem;
-  }
-  .landing-interest-card small {
-    font-size: 0.9375rem;
-  }
-  .landing-journey-heading {
-    gap: 1.5rem;
-  }
-  .landing-journey-list {
-    margin-top: 2rem;
-  }
-  .landing-journey-list li {
-    padding: 1.25rem;
-  }
-  .landing-journey-list p {
-    font-size: 0.9375rem;
-  }
-  .landing-editorial-feature {
-    min-height: 25rem;
-  }
-  .landing-editorial-feature::after {
-    inset: 45% 0 0;
-  }
-  .landing-editorial-feature > span {
-    padding: 1.5rem;
-  }
-  .landing-editorial-feature em {
-    font-size: 0.9375rem;
-  }
-  .landing-editorial-links {
-    gap: 0.75rem;
-  }
-  .landing-editorial-links > a {
-    min-height: 0;
-    align-items: center;
-    padding: 1rem;
-  }
-  .landing-editorial-links strong {
-    margin-top: 0.35rem;
-    font-size: 1.2rem;
-  }
-  .landing-editorial-mark {
-    width: 3.5rem;
-    height: 3.5rem;
-    min-height: 0;
-  }
-  .landing-plan-shell {
-    gap: 1.5rem;
-    padding: 1.5rem;
-  }
-  .landing-plan-message > p:not(.landing-section-label) {
-    margin-top: 1rem;
-  }
-  .landing-plan-message ul {
-    margin-top: 1.5rem;
-  }
-  .landing-plan-trial {
-    font-size: 0.875rem;
-  }
-  /* The loading bar is 3.5rem tall and the price line 3rem, so the card keeps its height when the plan arrives. */
-  .landing-plan-price {
-    min-height: 3.5rem;
-    margin-block: 1.25rem;
-  }
-  .landing-plan-secondary,
-  .landing-final-secondary {
-    font-size: 0.9375rem;
-  }
-  .landing-final-cta {
-    gap: 1.5rem;
-    padding: 1.75rem 1.5rem;
-  }
-  .landing-footer-links a {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-  }
-  .landing-footer-links {
-    gap: 0;
-  }
-}
-
 @media (min-width: 640px) {
   .landing-hero-search-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -740,7 +628,8 @@
 
 @media (min-width: 768px) {
   .landing-interest-grid {
-    grid-template-columns: 1.1fr 0.95fr 1.05fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
   }
   .landing-journey-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -775,8 +664,8 @@
     padding: 4rem 0 10rem;
   }
   .landing-hero-title {
-    max-width: 10.5ch;
-    font-size: clamp(4.1rem, 5.35vw, 5.35rem);
+    max-width: 18ch;
+    font-size: clamp(3.55rem, 4.6vw, 4.65rem);
   }
   .landing-hero-photo {
     grid-column: 2;
@@ -786,7 +675,7 @@
     border-radius: 0 0 0 5rem;
   }
   .landing-hero-photo img {
-    object-position: 40% 30%;
+    object-position: 48% 18%;
   }
   .landing-hero-search {
     position: absolute;
@@ -794,16 +683,6 @@
     left: 5rem;
     width: min(48rem, 61%);
     margin: 0;
-  }
-  .landing-interest-card:nth-child(1) {
-    transform: translateY(1.25rem) rotate(-1.2deg);
-  }
-  .landing-interest-card:nth-child(3) {
-    transform: translateY(1.25rem) rotate(1.2deg);
-  }
-  .landing-interest-card:hover,
-  .landing-interest-card:focus-visible {
-    transform: translateY(-3px) rotate(0);
   }
   .landing-journey-heading {
     grid-template-columns: minmax(0, 0.8fr) minmax(30rem, 1.2fr);
@@ -816,8 +695,11 @@
   .landing-hero-copy {
     animation: landing-copy-in 700ms var(--ease-standard) both;
   }
-  .landing-hero-photo img {
-    animation: landing-photo-in 1000ms var(--ease-standard) both;
+  .landing-hero-photo-loading::before {
+    animation: landing-photo-pulse 1.2s var(--ease-standard) infinite alternate;
+  }
+  .landing-hero-photo img.is-ready {
+    animation: landing-photo-in 700ms var(--ease-emphasized) both;
   }
   .landing-hero-wing {
     animation: landing-wing-in 1200ms var(--ease-standard) 120ms both;
@@ -828,8 +710,12 @@
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes landing-photo-pulse {
+  from { opacity: 0.35; }
+  to { opacity: 0.85; }
+}
 @keyframes landing-photo-in {
-  from { opacity: 0; transform: scale(1.04); }
+  from { opacity: 0; transform: scale(1.03); }
   to { opacity: 1; transform: none; }
 }
 @keyframes landing-wing-in {
