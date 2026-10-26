@@ -561,6 +561,16 @@ export type UnreadCountResponse = { unreadCount: number };
 
 export type MarkNotificationsReadBody = { ids?: string[]; all?: boolean };
 
+/** `{ ids }` removes some (1–100); `{ allRead: true }` removes every read one. Soft delete: the producer never re-creates it. */
+export type DismissNotificationsBody = { ids?: string[]; allRead?: boolean };
+
+/** `dismissedAt` is shared by every row of the call: pass it to restore to undo the call. `null` when nothing changed. */
+export type DismissNotificationsResponse = { dismissedCount: number; dismissedAt: string | null; unreadCount: number };
+
+export type RestoreNotificationsBody = { ids?: string[]; dismissedAt?: string };
+
+export type RestoreNotificationsResponse = { restoredCount: number; unreadCount: number };
+
 /** E-mail alerts (CODEX_HANDOFF-009, proposal): daily digest at 07:00 (São Paulo) and immediate mail for critical changes. */
 export type EmailPreferences = { digest: 'daily' | 'off'; immediateCritical: boolean };
 

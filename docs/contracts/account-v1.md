@@ -210,6 +210,24 @@ type Notification = {
 | GET    | `/api/v1/me/notifications`              | `unreadOnly?`, `page`, `pageSize` (1–50, def. 20) | `{ data: Notification[]; pagination; unreadCount: number }` (`createdAt desc`)      |
 | GET    | `/api/v1/me/notifications/unread-count` | —                                                 | `{ unreadCount: number }` — barato; frontend consulta a cada 60 s com a aba visível |
 | POST   | `/api/v1/me/notifications/read`         | `{ ids?: string[]; all?: boolean }`               | `{ unreadCount: number }`                                                           |
+| POST   | `/api/v1/me/notifications/dismiss`      | `{ ids?: string[]; allRead?: boolean }`           | `{ dismissedCount: number; dismissedAt: string \| null; unreadCount: number }`      |
+| POST   | `/api/v1/me/notifications/restore`      | `{ ids?: string[]; dismissedAt?: string }`        | `{ restoredCount: number; unreadCount: number }`                                    |
+
+Remover notificações ("limpar"):
+
+- `dismiss` tira notificações do feed: `{ ids }` (1–100) remove itens; `{ allRead: true }` remove todas as
+  lidas ("Limpar lidas"). Não há "remover todas" com as não lidas, de propósito: um alerta não lido nunca
+  some por acidente. Sem `ids` nem `allRead` → 400 `INVALID_PARAMETER`.
+- É **soft delete** (`notifications.dismissed_at`): a linha fica, então o índice único
+  `(user_id, dedupe_key)` continua impedindo que o produtor (edital monitorado, documentos, busca salva,
+  aderência, fim do teste, vencimento de documento) recrie a mesma notificação. Removidas saem da lista,
+  do `unreadCount` e dos e-mails (digest e imediato), mas continuam na exportação de dados (`dismissedAt`)
+  e seguem as mesmas regras de retenção das demais.
+- A notificação do dia de uma busca salva removida fica congelada como uma já enviada por e-mail: novos
+  resultados no mesmo dia abrem a continuação (`saved-search:<id>:<dia>:2`) em vez de trazê-la de volta.
+- Todas as linhas removidas numa chamada recebem o mesmo `dismissedAt`; `restore` com esse valor (ou com
+  `{ ids }`) desfaz a chamada — é o "Desfazer" do toast. `ids` de outro usuário são ignorados (no-op, como
+  em `read`); as duas rotas exigem CSRF e assinatura, como `read`.
 
 Regras de geração:
 
