@@ -257,6 +257,8 @@ export const notificationsTable = pgTable(
       .notNull()
       .defaultNow(),
     readAt: timestamp("read_at", { withTimezone: true }),
+    /** Removed by the user: hidden from the feed, counts and e-mail, but kept so its dedupe key blocks re-creation. */
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
     tenderId: text("tender_id"),
     tenderTitle: text("tender_title"),
     tenderNumberShort: text("tender_number_short"),
@@ -289,7 +291,7 @@ export const notificationsTable = pgTable(
     ),
     index("notifications_user_unread_idx")
       .on(table.userId, table.createdAt)
-      .where(sql`${table.readAt} is null`),
+      .where(sql`${table.readAt} is null and ${table.dismissedAt} is null`),
   ],
 );
 

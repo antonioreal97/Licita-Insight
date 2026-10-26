@@ -7,6 +7,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
@@ -570,7 +571,11 @@ export const unreadNotificationCount = async (userId: string): Promise<number> =
   const [row] = await db
     .select({ value: count() })
     .from(notificationsTable)
-    .where(and(eq(notificationsTable.userId, userId), isNull(notificationsTable.readAt)));
+    .where(and(
+      eq(notificationsTable.userId, userId),
+      isNull(notificationsTable.readAt),
+      isNull(notificationsTable.dismissedAt),
+    ));
   return Number(row?.value ?? 0);
 };
 
@@ -583,6 +588,7 @@ export const listNotifications = async (input: {
   const now = new Date();
   const filter = and(
     eq(notificationsTable.userId, input.userId),
+    isNull(notificationsTable.dismissedAt),
     input.unreadOnly ? isNull(notificationsTable.readAt) : undefined,
   );
   const [[totalRow], rows, unreadCount] = await Promise.all([
@@ -637,6 +643,7 @@ export const markNotificationsRead = async (input: {
         and(
           eq(notificationsTable.userId, input.userId),
           isNull(notificationsTable.readAt),
+          isNull(notificationsTable.dismissedAt),
         ),
       );
   } else if (input.ids && input.ids.length > 0) {
@@ -652,4 +659,66 @@ export const markNotificationsRead = async (input: {
       );
   }
   return { unreadCount: await unreadNotificationCount(input.userId) };
+};
+
+/**
+ * Removes notifications from the feed (`{ ids }`, or `{ allRead: true }` for every read one). A soft delete: the
+ * row keeps its dedupe key, so producers cannot create the same notification again. Ids of other users are ignored.
+ * Every row of one call shares `dismissedAt`, which `restoreNotifications` accepts to undo the whole call.
+ */
+export const dismissNotifications = async (input: {
+  userId: string;
+  ids?: string[];
+  allRead?: boolean;
+}): Promise<{ dismissedCount: number; dismissedAt: Date | null; unreadCount: number }> => {
+  const now = new Date();
+  const target = input.allRead
+    ? isNotNull(notificationsTable.readAt)
+    : input.ids && input.ids.length > 0
+      ? inArray(notificationsTable.id, input.ids)
+      : undefined;
+  const dismissed = target
+    ? await db
+        .update(notificationsTable)
+        .set({ dismissedAt: now })
+        .where(and(
+          eq(notificationsTable.userId, input.userId),
+          isNull(notificationsTable.dismissedAt),
+          target,
+        ))
+        .returning({ id: notificationsTable.id })
+    : [];
+  return {
+    dismissedCount: dismissed.length,
+    dismissedAt: dismissed.length > 0 ? now : null,
+    unreadCount: await unreadNotificationCount(input.userId),
+  };
+};
+
+/** Undoes `dismissNotifications`: `{ ids }`, or `{ dismissedAt }` from its response. Ids of other users are ignored. */
+export const restoreNotifications = async (input: {
+  userId: string;
+  ids?: string[];
+  dismissedAt?: Date;
+}): Promise<{ restoredCount: number; unreadCount: number }> => {
+  const target = input.dismissedAt
+    ? eq(notificationsTable.dismissedAt, input.dismissedAt)
+    : input.ids && input.ids.length > 0
+      ? inArray(notificationsTable.id, input.ids)
+      : undefined;
+  const restored = target
+    ? await db
+        .update(notificationsTable)
+        .set({ dismissedAt: null })
+        .where(and(
+          eq(notificationsTable.userId, input.userId),
+          isNotNull(notificationsTable.dismissedAt),
+          target,
+        ))
+        .returning({ id: notificationsTable.id })
+    : [];
+  return {
+    restoredCount: restored.length,
+    unreadCount: await unreadNotificationCount(input.userId),
+  };
 };

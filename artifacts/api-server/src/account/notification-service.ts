@@ -304,8 +304,9 @@ const savedSearchDayKey = (savedSearchId: string, at: Date): string =>
  * it (sum `matchCount`, append ids up to the cap, keeping the first ones in arrival order, mark it unread again
  * and move `createdAt` to this cycle). Once the day's notification went out in an e-mail it is frozen, so the
  * rest of the day opens a continuation (`saved-search:<id>:<day>:2`, `:3`…) for the next digest: no match is
- * left out of an e-mail and none is sent twice. Runs under the caller's per-search advisory lock; the row lock
- * also orders this cycle with a digest linking the same notification (the digest locks it before linking).
+ * left out of an e-mail and none is sent twice. A notification the user removed is frozen the same way, so it never
+ * comes back. Runs under the caller's per-search advisory lock; the row lock also orders this cycle with a digest
+ * linking the same notification (the digest locks it before linking).
  */
 const recordSavedSearchMatches = async (
   tx: Transaction,
@@ -323,6 +324,7 @@ const recordSavedSearchMatches = async (
       id: notificationsTable.id,
       matchCount: notificationsTable.matchCount,
       tenderIds: notificationsTable.tenderIds,
+      dismissedAt: notificationsTable.dismissedAt,
     })
     .from(notificationsTable)
     .where(
@@ -344,7 +346,7 @@ const recordSavedSearchMatches = async (
         .where(eq(emailDeliveryNotificationsTable.notificationId, current.id))
         .limit(1)
     : [];
-  if (current && !delivered) {
+  if (current && !delivered && !current.dismissedAt) {
     await tx
       .update(notificationsTable)
       .set({

@@ -1,104 +1,87 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link } from 'wouter';
-import { ArrowRight, Bell, Bookmark, Check, Clapperboard, Globe2, Landmark, Search, type LucideIcon } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
+import { Link, useLocation } from 'wouter';
+import {
+  ArrowRight,
+  Bell,
+  Check,
+  Clapperboard,
+  FileSearch,
+  Globe2,
+  Landmark,
+  Menu,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { BrandLogo } from '@/components/brand-icon';
-import { buttonClass } from '@/components/common/action-button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { usePublicPlan } from '@/features/billing/hooks/use-public-plan';
 import { BILLING_HREF } from '@/features/billing/lib/trial';
+import { LandingMotionPlaylist } from '@/features/landing/components/landing-motion-playlist';
 import { OpportunityMapSection } from '@/features/landing/components/opportunity-map-section';
-import { PardalClip } from '@/features/landing/components/pardal-clip';
-import { LoopVideo } from '@/features/landing/components/loop-video';
-import { PardalTeaser } from '@/features/landing/components/pardal-teaser';
 import { LegalLinks } from '@/features/legal/legal-content';
 import { formatCurrencyPrecise } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-const navLink = 'font-semibold text-primary transition-colors duration-fast hover:underline';
-const primaryCta = buttonClass('dark', 'lg');
-const heroCta = cn(buttonClass('primary', 'lg'), 'h-13 px-7');
-const secondaryCta = cn(buttonClass('outline', 'lg'), 'h-13 px-7');
-const eyebrow = 'type-eyebrow font-bold text-primary tracking-eyebrow uppercase';
-const sectionTitle = 'mt-3 type-titulo-2 lg:type-titulo-1';
+const primaryAction =
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-action px-5 text-sm font-bold text-action-foreground transition-[transform,background-color] duration-fast hover:bg-action-hover active:translate-y-px';
+const inverseAction =
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-superficie-inversa px-5 text-sm font-bold text-texto-inverso transition-[transform,background-color] duration-fast hover:bg-inverse-hover active:translate-y-px';
+// The plan offer card is gelo in both themes, so its button stays petróleo instead of following the inverse tokens.
+const brandAction =
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-petroleo px-5 text-sm font-bold text-gelo transition-[transform,background-color] duration-fast hover:bg-petroleo-hover active:translate-y-px';
 
-// three.js only downloads when the flying pardal is shown.
-const PardalFlight3D = lazy(() =>
-  import('@/features/landing/components/pardal-flight-3d').then((m) => ({ default: m.PardalFlight3D })),
-);
+// The header link beside the menu button on phones: text-sized, but a 44 px tap target.
+const compactLink = 'inline-flex min-h-11 items-center px-1 text-sm font-bold';
 
-// Below this width the side gutters of `max-w-7xl` are too narrow for the bird to rest in without covering text;
-// it then shows only during the cover transition between sections.
-const PARDAL_FLIGHT_MEDIA = '(min-width: 1360px)';
-const REDUCED_MOTION_MEDIA = '(prefers-reduced-motion: reduce)';
-
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-  return matches;
-}
-
-function PardalFlight({ reducedMotion }: { reducedMotion: boolean }) {
-  const wide = useMediaQuery(PARDAL_FLIGHT_MEDIA);
-  // Reduced motion keeps only the perched gutter bird, which needs a wide screen.
-  if (reducedMotion && !wide) return null;
-  return (
-    <Suspense fallback={null}>
-      <PardalFlight3D reducedMotion={reducedMotion} wide={wide} />
-    </Suspense>
-  );
-}
-
-// Owner decision: 7-day trial. The API (`/billing/plan`) wins when it answers; 7 only while it loads or if it fails.
 const useTrialDays = () => usePublicPlan().data?.trialDays ?? 7;
 
 function SessionPlaceholder({ inverse = false }: { inverse?: boolean }) {
-  return <span role="status" aria-label="Carregando conta" className={cn('inline-block h-9 w-28 animate-pulse rounded-lg', inverse ? 'bg-texto-inverso/20' : 'bg-muted')} />;
+  return (
+    <span
+      role="status"
+      aria-label="Carregando conta"
+      className={cn('inline-block h-11 w-28 animate-pulse rounded-lg', inverse ? 'bg-texto-inverso/20' : 'bg-muted')}
+    />
+  );
 }
 
-function LandingNavActions({ mobile = false }: { mobile?: boolean }) {
+function AccountAction({ compact = false }: { compact?: boolean }) {
   const { status } = useSession();
   const trialDays = useTrialDays();
   if (status === 'loading') return <SessionPlaceholder />;
   if (status === 'authenticated') {
     return (
-      <Link
-        href="/dashboard"
-        data-testid={mobile ? 'link-landing-dashboard-mobile' : 'link-landing-dashboard'}
-        className={mobile ? 'text-sm font-semibold text-primary' : primaryCta}
-      >
-        Visão geral
+      <Link href="/dashboard" data-testid="link-landing-dashboard" className={compact ? compactLink : inverseAction}>
+        Visão geral {!compact && <ArrowRight size={16} aria-hidden />}
       </Link>
     );
   }
-  if (mobile) {
+  if (compact) {
     return (
-      <Link href="/login" data-testid="link-landing-login-mobile" className="text-sm font-semibold text-primary">
+      <Link href="/login" data-testid="link-landing-login-mobile" className={compactLink}>
         Entrar
       </Link>
     );
   }
   return (
     <div className="flex items-center gap-4">
-      <Link href="/login" data-testid="link-landing-login" className={navLink}>
+      <Link href="/login" data-testid="link-landing-login" className="text-sm font-bold hover:underline">
         Entrar
       </Link>
-      <Link href="/login" data-testid="link-landing-register" className={primaryCta}>
+      <Link href="/login" data-testid="link-landing-register" className={inverseAction}>
         Testar {trialDays} dias grátis
       </Link>
     </div>
   );
 }
 
-/** Account entry point: sign in (and start the trial) or, when signed in, back to the overview. */
-function AccountCta({ testId, className, label, inversePlaceholder = false }: { testId: string; className: string; label: string; inversePlaceholder?: boolean }) {
+function AccountCta({ className, testId, label }: { className: string; testId: string; label: string }) {
   const { status } = useSession();
-  if (status === 'loading') return <SessionPlaceholder inverse={inversePlaceholder} />;
+  if (status === 'loading') return <SessionPlaceholder inverse />;
   const signedIn = status === 'authenticated';
   return (
     <Link href={signedIn ? '/dashboard' : '/login'} data-testid={testId} className={className}>
@@ -107,147 +90,170 @@ function AccountCta({ testId, className, label, inversePlaceholder = false }: { 
   );
 }
 
-type Kind = {
+function LandingHeader() {
+  const [open, setOpen] = useState(false);
+  const links = [
+    { href: '#descobrir', label: 'Descobrir' },
+    { href: '#como-funciona', label: 'Como funciona' },
+    { href: '#mapa', label: 'Mapa' },
+    { href: '#plano', label: 'Plano' },
+    { href: '#duvidas', label: 'Dúvidas' },
+  ];
+
+  return (
+    <header className="landing-header">
+      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-6 px-5 md:px-8 lg:px-12 xl:px-20">
+        <Link href="/" data-testid="link-logo" aria-label="Pardal Digital, início">
+          <BrandLogo className="h-10 sm:h-11" />
+        </Link>
+        <nav aria-label="Seções" className="hidden items-center gap-6 lg:flex">
+          {links.map((item) => (
+            <a key={item.href} href={item.href} className="landing-nav-link">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div className="hidden lg:block"><AccountAction /></div>
+        <div className="flex items-center gap-4 lg:hidden">
+          <AccountAction compact />
+          <button
+            type="button"
+            aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="grid size-11 place-items-center rounded-lg border border-border-strong"
+          >
+            {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <nav aria-label="Menu móvel" className="landing-mobile-menu lg:hidden">
+          {links.map((item) => (
+            <a key={item.href} href={item.href} onClick={() => setOpen(false)}>{item.label}</a>
+          ))}
+          <Link href="/search" onClick={() => setOpen(false)} className={primaryAction}>
+            Ver editais <ArrowRight size={16} aria-hidden />
+          </Link>
+        </nav>
+      )}
+    </header>
+  );
+}
+
+function Hero() {
+  const [, navigate] = useLocation();
+  const [query, setQuery] = useState('');
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = query.trim();
+    navigate(normalized ? `/search?q=${encodeURIComponent(normalized)}` : '/search');
+  };
+  const baseUrl = import.meta.env.BASE_URL;
+
+  return (
+    <section id="topo" aria-labelledby="hero-titulo" className="landing-hero">
+      <div className="landing-hero-stage">
+        <div className="landing-hero-copy">
+          <p className="landing-hero-label">Pardal Digital</p>
+          <h1 id="hero-titulo" className="landing-hero-title">
+            Seu radar de oportunidades,
+            <span>na palma da mão.</span>
+          </h1>
+          <p className="landing-hero-description">Encontre licitações e editais por assunto, região e prazo.</p>
+        </div>
+
+        <div className="landing-hero-photo">
+          <img
+            src={`${baseUrl}brand/landing-hero.jpg`}
+            alt="Profissional olhando para novos caminhos"
+            width={2048}
+            height={1367}
+            fetchPriority="high"
+          />
+          <span className="landing-hero-wing" aria-hidden />
+        </div>
+
+        <form onSubmit={submit} role="search" className="landing-hero-search">
+          <label htmlFor="home-search">O que você procura?</label>
+          <div className="landing-hero-search-row">
+            <Search size={20} aria-hidden />
+            <input
+              id="home-search"
+              name="q"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Palavra-chave, órgão ou área de interesse"
+            />
+            <button type="submit">Buscar <ArrowRight size={16} aria-hidden /></button>
+          </div>
+          <p>Busca livre com dados oficiais do PNCP.</p>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+type DiscoveryItem = {
   icon: LucideIcon;
-  label: string;
-  /** Palette fill. The ink on it is always `texto-sobre-destaque` (petróleo), ≥ 5.5:1 on all three. */
-  fill: string;
+  title: string;
+  description: string;
+  href: string;
+  tone: string;
+  testId: string;
 };
 
-// One color per kind of opportunity, shared by the hero chips and the "what you find" cards.
-const kinds = {
-  tenders: { icon: Landmark, label: 'Licitações', fill: 'bg-salvia' },
-  culture: { icon: Clapperboard, label: 'Editais nacionais', fill: 'bg-aqua' },
-  international: { icon: Globe2, label: 'Internacionais', fill: 'bg-oliva' },
-} satisfies Record<string, Kind>;
+const discoveryItems: DiscoveryItem[] = [
+  { icon: Landmark, title: 'Licitações', description: 'Compras públicas abertas no PNCP para produtos e serviços.', href: '/search', tone: 'bg-salvia', testId: 'link-landing-find-tenders' },
+  { icon: Clapperboard, title: 'Editais nacionais', description: 'Chamadas de cultura, fomento e pesquisa em todo o Brasil.', href: '/oportunidades', tone: 'bg-aqua', testId: 'link-landing-find-culture' },
+  { icon: Globe2, title: 'Internacionais', description: 'Oportunidades publicadas por organismos internacionais.', href: '/oportunidades?scope=international', tone: 'bg-oliva', testId: 'link-landing-find-international' },
+];
 
-function KindChip({ kind, className }: { kind: Kind; className?: string }) {
-  const Icon = kind.icon;
+function DiscoverySection() {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-xs font-bold text-texto-sobre-destaque',
-        kind.fill,
-        className,
-      )}
-    >
-      <Icon size={14} aria-hidden /> {kind.label}
-    </span>
-  );
-}
-
-/**
- * The hero picture: the pardal perched on an edital, three kinds of opportunity around it and the alert it sends.
- * Decorative: the headline already says all of it.
- */
-function HeroArt({ reducedMotion }: { reducedMotion: boolean }) {
-  return (
-    <div aria-hidden className="relative mx-auto w-full max-w-xl lg:mx-0">
-      <div className="relative overflow-hidden rounded-2xl bg-superficie-inversa px-4 pb-6 pt-10 sm:px-8">
-        {/* Rings behind the edital, drawn in the inverse ink at low alpha. */}
-        <svg viewBox="0 0 400 400" className="absolute -right-24 -top-24 size-96 text-texto-inverso/15" fill="none">
-          {[60, 110, 160, 198].map((r) => (
-            <circle key={r} cx="200" cy="200" r={r} stroke="currentColor" strokeWidth="1.5" />
+    <section id="descobrir" aria-labelledby="descobrir-titulo" className="landing-discovery scroll-mt-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+        <div className="max-w-3xl">
+          <p className="landing-section-label">Descubra por interesse</p>
+          <h2 id="descobrir-titulo" className="landing-section-title max-w-[13ch]">O que você quer encontrar?</h2>
+          <p className="landing-section-copy max-w-2xl">Escolha um caminho. Cada resultado leva ao documento oficial.</p>
+        </div>
+        <div className="landing-interest-grid">
+          {discoveryItems.map(({ icon: Icon, title, description, href, tone, testId }) => (
+            <Link key={title} href={href} data-testid={testId} className={cn('landing-interest-card group', tone)}>
+              <span className="landing-interest-icon"><Icon size={24} aria-hidden /></span>
+              <span className="min-w-0"><strong>{title}</strong><small>{description}</small></span>
+              <ArrowRight size={20} aria-hidden className="ml-auto shrink-0 transition-transform group-hover:translate-x-1" />
+            </Link>
           ))}
-        </svg>
-        <PardalClip clip="pardal-raio-x" reducedMotion={reducedMotion} className="relative mx-auto" />
-      </div>
-      {/* Phones: a row under the picture. From sm up the chips float around its edges. */}
-      <div className="mt-5 flex flex-wrap justify-center gap-2 sm:contents">
-        <KindChip kind={kinds.tenders} className="-rotate-2 sm:absolute sm:-left-5 sm:top-8 sm:-rotate-3" />
-        <KindChip kind={kinds.culture} className="rotate-1 sm:absolute sm:-right-5 sm:bottom-[22%] sm:rotate-2" />
-        <KindChip kind={kinds.international} className="-rotate-1 sm:absolute sm:-bottom-4 sm:left-10 sm:-rotate-2" />
-        <span className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-surface px-3.5 py-1.5 text-xs font-semibold text-foreground sm:absolute sm:-top-4 sm:right-10">
-          <Bell size={14} aria-hidden className="text-primary" /> Novo edital para você
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function Hero({ reducedMotion }: { reducedMotion: boolean }) {
-  return (
-    <section
-      aria-labelledby="hero-titulo"
-      className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pt-16 lg:grid-cols-[1.05fr_.95fr] lg:gap-16 lg:pb-28 lg:pt-20"
-    >
-      <div className="min-w-0">
-        <h1 id="hero-titulo" className="max-w-2xl type-titulo-2 sm:type-titulo-1 lg:type-display">
-          <span className="block text-hero-lead">Editais públicos e oportunidades,</span>
-          <span className="block text-hero-highlight">num lugar só.</span>
-        </h1>
-        <p className="mt-6 max-w-xl type-corpo text-muted-foreground sm:type-corpo-grande">
-          Licitações do PNCP, editais nacionais e oportunidades internacionais. Salve o que interessa e o Pardal
-          avisa quando surgir algo para você.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link href="/search" data-testid="link-hero-demo" className={heroCta}>
-            <Search size={16} aria-hidden /> Ver editais abertos
-          </Link>
-          <AccountCta testId="link-hero-start" className={secondaryCta} label="Entrar ou criar conta" />
         </div>
-        <p className="mt-5 type-meta text-muted-foreground">Pesquisar é livre, sem cadastro. Os alertas vêm com a conta.</p>
-      </div>
-      <HeroArt reducedMotion={reducedMotion} />
-    </section>
-  );
-}
-
-function TeaserSection({ reducedMotion }: { reducedMotion: boolean }) {
-  return (
-    <section id="em-acao" data-testid="section-teaser" aria-labelledby="em-acao-titulo" className="pb-20 sm:pb-28">
-      <div className="mx-auto max-w-5xl px-5 sm:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className={eyebrow}>Na prática</div>
-          <h2 id="em-acao-titulo" className={sectionTitle}>
-            Da busca ao edital certo.
-          </h2>
-          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
-            Escreva o que você vende e veja os editais abertos com órgão, prazo e valor.
-          </p>
-        </div>
-        <PardalTeaser reducedMotion={reducedMotion} className="mt-10 lg:mt-12" />
       </div>
     </section>
   );
 }
 
-const steps: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: Search, title: 'Busque', text: 'Escreva o que você vende ou produz e filtre por estado, prazo e valor.' },
-  { icon: Bookmark, title: 'Salve', text: 'Guarde os editais que interessam e as buscas que você repete.' },
-  { icon: Bell, title: 'Receba o aviso', text: 'O Pardal avisa no app e por e-mail quando surge edital novo ou um prazo muda.' },
+const journey = [
+  { icon: Search, title: 'Busque do seu jeito', text: 'Escreva o que sua empresa vende ou produz. O Pardal encontra oportunidades relacionadas.' },
+  { icon: FileSearch, title: 'Entenda antes de abrir', text: 'Veja órgão, prazo, valor e localização. Depois confira o documento na fonte oficial.' },
+  { icon: Bell, title: 'Acompanhe o que importa', text: 'Salve editais e buscas. Receba avisos quando surgir uma oportunidade ou um prazo mudar.' },
 ];
 
 function HowItWorksSection() {
   return (
-    <section id="como-funciona" aria-labelledby="como-funciona-titulo" className="border-y border-border bg-surface py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="max-w-2xl">
-          <div className={eyebrow}>Como funciona</div>
-          <h2 id="como-funciona-titulo" className={sectionTitle}>
-            Três passos. Nenhum manual.
-          </h2>
+    <section id="como-funciona" aria-labelledby="como-funciona-titulo" className="landing-journey scroll-mt-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:px-12 lg:py-28 xl:px-20">
+        <div className="landing-journey-heading">
+          <div>
+            <h2 id="como-funciona-titulo">Da busca ao edital certo.</h2>
+            <p>Um caminho curto para encontrar, entender e acompanhar oportunidades.</p>
+          </div>
+          <LandingMotionPlaylist />
         </div>
-        <ol className="relative mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
-          {steps.map(({ icon: Icon, title, text }, index) => (
-            <li key={title} className="relative flex gap-5 md:flex-col md:gap-6">
-              {index < steps.length - 1 && (
-                // The thread to the next step: down on phones (across the 2.5rem gap), sideways from md up (2rem gap).
-                <span
-                  aria-hidden
-                  className="absolute left-6 top-12 h-[calc(100%_-_0.5rem)] border-l-2 border-dashed border-border md:left-12 md:top-6 md:h-0 md:w-[calc(100%_-_1rem)] md:border-l-0 md:border-t-2"
-                />
-              )}
-              <span className="relative grid size-12 shrink-0 place-items-center rounded-pill border-2 border-foreground bg-background text-foreground">
-                <Icon size={20} aria-hidden />
-              </span>
-              <div>
-                <h3 className="type-titulo-3">
-                  <span className="mr-2 type-data text-muted-foreground">{index + 1}.</span>
-                  {title}
-                </h3>
-                <p className="mt-2 max-w-xs type-corpo text-muted-foreground">{text}</p>
-              </div>
+        <ol className="landing-journey-list">
+          {journey.map(({ icon: Icon, title, text }) => (
+            <li key={title}>
+              <span className="landing-journey-icon"><Icon size={22} aria-hidden /></span>
+              <div><h3>{title}</h3><p>{text}</p></div>
             </li>
           ))}
         </ol>
@@ -256,196 +262,71 @@ function HowItWorksSection() {
   );
 }
 
-const finds: { id: string; kind: Kind; source: string; text: string; href: string; cta: string; tilt: string }[] = [
-  {
-    id: 'tenders',
-    kind: kinds.tenders,
-    source: 'PNCP',
-    text: 'Compras de prefeituras, estados e União, com prazo, valor e documentos do edital.',
-    href: '/search',
-    cta: 'Explorar licitações',
-    tilt: 'lg:-rotate-3 lg:translate-y-6',
-  },
-  {
-    id: 'culture',
-    kind: kinds.culture,
-    source: 'Cultura e fomento',
-    text: 'Editais de cultura, fomento e pesquisa de órgãos públicos, separados das compras.',
-    href: '/oportunidades',
-    cta: 'Ver editais nacionais',
-    tilt: 'lg:-translate-y-2',
-  },
-  {
-    id: 'international',
-    kind: kinds.international,
-    source: 'Organismos internacionais',
-    text: 'Chamadas e licitações publicadas fora do Brasil, com o edital oficial sempre a um clique.',
-    href: '/oportunidades?scope=international',
-    cta: 'Ver internacionais',
-    tilt: 'lg:rotate-3 lg:translate-y-6',
-  },
-];
-
-/** A stylized edital: lines instead of text, like the pardal clip. Not data: it only hints at the shape of a card. */
-function SketchLines() {
-  return (
-    <span aria-hidden className="mt-6 block space-y-2">
-      <span className="block h-1.5 w-11/12 rounded-pill bg-texto-sobre-destaque/25" />
-      <span className="block h-1.5 w-3/4 rounded-pill bg-texto-sobre-destaque/25" />
-      <span className="block h-1.5 w-5/6 rounded-pill bg-texto-sobre-destaque/60" />
-      <span className="block h-1.5 w-1/2 rounded-pill bg-texto-sobre-destaque/25" />
-    </span>
-  );
-}
-
-function FindsSection() {
-  return (
-    <section id="encontra" data-pardal-momento aria-labelledby="encontra-titulo" className="py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className={eyebrow}>O que você encontra</div>
-          <h2 id="encontra-titulo" className={sectionTitle}>
-            Três tipos de oportunidade, uma busca.
-          </h2>
-          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
-            Tudo vem de fonte oficial e leva ao documento original.
-          </p>
-        </div>
-        <ul className="mt-14 grid gap-6 md:grid-cols-3 lg:mt-16 lg:gap-4">
-          {finds.map(({ id, kind, source, text, href, cta, tilt }) => {
-            const Icon = kind.icon;
-            return (
-              <li key={id} className={cn('motion-safe:transition-transform motion-safe:duration-base', tilt, 'lg:hover:translate-y-0 lg:hover:rotate-0 lg:focus-within:translate-y-0 lg:focus-within:rotate-0')}>
-                <Link
-                  href={href}
-                  data-testid={`link-landing-find-${id}`}
-                  className={cn('group flex h-full flex-col rounded-2xl p-7 text-texto-sobre-destaque sm:p-8', kind.fill)}
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="grid size-12 place-items-center rounded-pill border-2 border-texto-sobre-destaque">
-                      <Icon size={22} aria-hidden />
-                    </span>
-                    <span className="type-rotulo">{source}</span>
-                  </span>
-                  <SketchLines />
-                  <h3 className="mt-8 type-titulo-3">{kind.label}</h3>
-                  <p className="mt-2 flex-1 type-legenda">{text}</p>
-                  <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-bold group-hover:underline">
-                    {cta} <ArrowRight size={15} aria-hidden />
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-const productVideos = [
-  {
-    name: 'pardal-recomendacao',
-    title: 'Como a recomendação escolhe os editais',
-    label: 'Vídeo: como a recomendação do Pardal Digital funciona',
-    description:
-      'Você conta o que vende e onde atende, vê por que cada edital apareceu para você e faz a triagem do dia. 1 min 37 s, sem som.',
-    subject: 'o vídeo da recomendação',
-    testId: 'video-landing-recomendacao',
-  },
-  {
-    name: 'pardal-funcionalidades',
-    title: 'Do edital encontrado à participação',
-    label: 'Vídeo: funcionalidades do Pardal Digital',
-    description:
-      'Buscas salvas com alertas, perguntas ao edital com a página citada, próxima ação com prazo e o mural de processos. 1 min 52 s, sem som.',
-    subject: 'o vídeo das funcionalidades',
-    testId: 'video-landing-funcionalidades',
-  },
-] as const;
-
-function ProductVideosSection({ reducedMotion }: { reducedMotion: boolean }) {
-  return (
-    <section id="por-dentro" data-testid="section-product-videos" aria-labelledby="por-dentro-titulo" className="pb-20 sm:pb-28">
-      <div className="mx-auto max-w-5xl px-5 sm:px-8">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className={eyebrow}>Por dentro</div>
-          <h2 id="por-dentro-titulo" className={sectionTitle}>
-            Veja o Pardal funcionando.
-          </h2>
-          <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">
-            Telas reais do produto, da recomendação ao acompanhamento de cada edital.
-          </p>
-        </div>
-        <div className="mt-10 flex flex-col gap-14 lg:mt-12 lg:gap-16">
-          {productVideos.map(({ title, testId, ...video }) => (
-            <div key={video.name}>
-              <h3 className="mb-4 type-titulo-3">{title}</h3>
-              <LoopVideo {...video} testId={testId} toggleTestId={`button-${testId.replace('video-', '')}-toggle`} reducedMotion={reducedMotion} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 const planIncludes = [
-  'Licitações, editais nacionais e internacionais na mesma busca',
+  'Licitações e editais nacionais e internacionais na mesma busca',
   'Editais salvos e buscas monitoradas, sem limite',
   'Alertas no app e resumo diário por e-mail',
-  'Cancele quando quiser, nas Configurações',
+  'Cancelamento nas Configurações, quando quiser',
 ];
 
-/** Single plan. The price comes only from `/billing/plan`: none configured (`null`) or a failed request shows no price. */
 function PlanSection() {
   const plan = usePublicPlan();
   const trialDays = useTrialDays();
   const price = plan.data?.monthlyBrl ?? null;
   const signedIn = useSession().status === 'authenticated';
   return (
-    <section id="plano" data-pardal-momento data-testid="section-plan" aria-labelledby="plano-titulo" className="border-y border-border bg-surface py-20 sm:py-28">
-      <div className="mx-auto max-w-xl px-5 text-center sm:px-8">
-        <div className={eyebrow}>Plano</div>
-        <h2 id="plano-titulo" className={sectionTitle}>
-          Um plano, tudo incluído.
-        </h2>
-        <p className="mt-4 type-corpo text-muted-foreground">
-          Pesquisar continua livre. A assinatura libera salvar, monitorar e receber alertas.
-        </p>
-
-        <div className="mt-10 rounded-2xl border border-border-strong bg-background p-7 text-left sm:p-10">
-          <span className="inline-flex rounded-pill bg-action px-3.5 py-1 text-xs font-bold text-action-foreground">
-            {trialDays} dias grátis, sem cartão
-          </span>
-          <div className="mt-6 min-h-12">
-            {plan.isPending && (
-              <span role="status" aria-label="Carregando plano" className="block h-12 w-48 animate-pulse rounded-lg bg-muted" />
-            )}
-            {price !== null && (
-              <p data-testid="text-plan-price" className="flex items-baseline gap-2">
-                <span className="type-titulo-1 text-foreground sm:type-display">{formatCurrencyPrecise(price)}</span>
-                <span className="text-sm font-semibold text-muted-foreground">/ mês</span>
-              </p>
-            )}
-            {plan.isError && (
-              <p role="alert" className="text-xs text-destructive">
-                Não foi possível carregar o valor da assinatura agora.
-              </p>
-            )}
+    <section id="plano" data-testid="section-plan" aria-labelledby="plano-titulo" className="landing-plan scroll-mt-20">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+        <div className="landing-plan-shell">
+          <div className="landing-plan-message">
+            <p className="landing-section-label">Plano</p>
+            <h2 id="plano-titulo">Um plano, tudo incluído.</h2>
+            <p>Pesquisar continua livre. A assinatura libera salvar, monitorar e receber alertas.</p>
+            <ul>
+              {planIncludes.map((item) => <li key={item}><Check size={18} aria-hidden /><span>{item}</span></li>)}
+            </ul>
           </div>
-          <ul className="mt-8 space-y-3 border-t border-border-subtle pt-6 text-sm">
-            {planIncludes.map((item) => (
-              <li key={item} className="flex items-start gap-2.5">
-                <Check size={16} aria-hidden className="mt-0.5 shrink-0 text-primary" />
-                <span className="leading-5 text-foreground">{item}</span>
-              </li>
-            ))}
-          </ul>
-          <Link href={signedIn ? BILLING_HREF : '/login'} data-testid="link-plan-start" className={cn(primaryCta, 'mt-8 w-full justify-center')}>
-            {signedIn ? 'Ver minha assinatura' : `Começar ${trialDays} dias grátis`} <ArrowRight size={16} aria-hidden />
+          <div className="landing-plan-offer">
+            <span className="landing-plan-trial"><ShieldCheck size={17} aria-hidden /> {trialDays} dias grátis, sem cartão</span>
+            <div className="landing-plan-price" aria-live="polite">
+              {plan.isPending && <span role="status" aria-label="Carregando plano" className="block h-14 w-52 animate-pulse rounded-lg bg-muted" />}
+              {price !== null && <p data-testid="text-plan-price"><strong>{formatCurrencyPrecise(price)}</strong><span>/ mês</span></p>}
+              {plan.isError && <p role="alert" className="text-sm">Não foi possível carregar o valor agora.</p>}
+            </div>
+            <Link href={signedIn ? BILLING_HREF : '/login'} data-testid="link-plan-start" className={brandAction}>
+              {signedIn ? 'Ver minha assinatura' : `Testar ${trialDays} dias grátis`} <ArrowRight size={16} aria-hidden />
+            </Link>
+            <Link href="/search" className="landing-plan-secondary">Continuar pesquisando</Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EditorialSection() {
+  const baseUrl = import.meta.env.BASE_URL;
+  return (
+    <section aria-labelledby="editorial-titulo" className="landing-editorial">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+        <h2 id="editorial-titulo" className="landing-section-title max-w-[12ch]">Informação para decidir melhor.</h2>
+        <div className="landing-editorial-grid">
+          <Link href="/ajuda" className="landing-editorial-feature group">
+            <img src={`${baseUrl}brand/landing-study.jpg`} alt="Pessoa estudando documentos e oportunidades" width={896} height={1152} loading="lazy" />
+            <span><small>Ajuda e glossário</small><strong>Entenda os termos antes de participar.</strong><em>Consultar guia <ArrowRight size={16} aria-hidden /></em></span>
           </Link>
-          <p className="mt-4 text-center type-meta text-muted-foreground">O teste vale uma vez por conta Google.</p>
+          <div className="landing-editorial-links">
+            <Link href="/transparencia" className="group">
+              <span className="landing-editorial-mark"><Sparkles size={28} aria-hidden /></span>
+              <span><small>Transparência</small><strong>Compare histórico e resultados de compras públicas.</strong></span>
+              <ArrowRight size={20} aria-hidden className="transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link href="/oportunidades" className="group">
+              <span className="landing-editorial-mark landing-editorial-mark-alt"><Globe2 size={28} aria-hidden /></span>
+              <span><small>Novos caminhos</small><strong>Veja chamadas nacionais e internacionais.</strong></span>
+              <ArrowRight size={20} aria-hidden className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
@@ -455,41 +336,18 @@ function PlanSection() {
 function FaqSection() {
   const trialDays = useTrialDays();
   const faqs = [
-    {
-      q: 'Preciso pagar para ver os editais?',
-      a: 'Não. A busca, o detalhe dos editais e as oportunidades são abertos a todos. A assinatura libera salvar, monitorar e receber alertas.',
-    },
-    {
-      q: 'De onde vêm as oportunidades?',
-      a: 'As licitações vêm do PNCP (Portal Nacional de Contratações Públicas) e são atualizadas todos os dias. Os editais nacionais vêm do Mapas Culturais e de órgãos federais de cultura e fomento, e as internacionais, de organismos que publicam editais abertos. Cada uma leva ao documento oficial.',
-    },
-    {
-      q: 'Como funciona o teste grátis?',
-      a: `Você entra com a conta Google e tem ${trialDays} dias com tudo liberado. Não pedimos cartão para começar.`,
-    },
-    {
-      q: 'Como chegam os alertas?',
-      a: 'No sino do app e num resumo diário por e-mail, sobre os editais que você salvou e as buscas que você monitora.',
-    },
-    {
-      q: 'Posso cancelar quando quiser?',
-      a: 'Sim, nas Configurações da conta, sem multa. O acesso continua até o fim do período já pago.',
-    },
+    { q: 'Preciso pagar para ver os editais?', a: 'Não. A busca, o detalhe dos editais e as oportunidades são públicos. A assinatura libera salvar, monitorar e receber alertas.' },
+    { q: 'De onde vêm as oportunidades?', a: 'As licitações vêm do PNCP. Editais nacionais vêm do Mapas Culturais e de órgãos de fomento. Cada resultado leva ao documento oficial.' },
+    { q: 'Como funciona o teste grátis?', a: `Você entra com a conta Google e tem ${trialDays} dias com todos os recursos liberados. Não pedimos cartão para começar.` },
+    { q: 'Como chegam os alertas?', a: 'No sino do app e em um resumo diário por e-mail, com base nos editais salvos e nas buscas monitoradas.' },
   ];
   return (
-    <section id="duvidas" aria-labelledby="duvidas-titulo" className="mx-auto max-w-3xl px-5 py-20 sm:px-8 sm:py-28">
-      <div className="text-center">
-        <div className={eyebrow}>Dúvidas</div>
-        <h2 id="duvidas-titulo" className={sectionTitle}>
-          Perguntas rápidas
-        </h2>
-      </div>
-      <Accordion type="single" collapsible className="mt-10 w-full border-t border-border-subtle">
-        {faqs.map((faq, idx) => (
-          <AccordionItem key={faq.q} value={`item-${idx}`} className="border-border-subtle">
-            <AccordionTrigger className="text-left text-base font-semibold text-foreground hover:no-underline hover:text-primary">
-              {faq.q}
-            </AccordionTrigger>
+    <section id="duvidas" aria-labelledby="duvidas-titulo" className="mx-auto max-w-3xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-28">
+      <h2 id="duvidas-titulo" className="landing-section-title text-center">Perguntas rápidas</h2>
+      <Accordion type="single" collapsible className="mt-8 w-full sm:mt-10 border-t border-border-subtle">
+        {faqs.map((faq, index) => (
+          <AccordionItem key={faq.q} value={`item-${index}`} className="border-border-subtle">
+            <AccordionTrigger className="text-left text-base font-bold hover:no-underline">{faq.q}</AccordionTrigger>
             <AccordionContent className="type-corpo text-muted-foreground">{faq.a}</AccordionContent>
           </AccordionItem>
         ))}
@@ -498,92 +356,39 @@ function FaqSection() {
   );
 }
 
-function FinalCta({ reducedMotion }: { reducedMotion: boolean }) {
+function FinalCta() {
   return (
-    <section aria-labelledby="cta-titulo" className="px-5 pb-20 sm:px-8 sm:pb-28">
-      {/* On the inverse block the focus ring takes the inverse ink, or it would vanish into the background. */}
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 rounded-2xl bg-superficie-inversa px-6 [--ring:var(--texto-inverso)] py-14 text-center sm:px-14 lg:flex-row lg:justify-between lg:text-left">
-        <div className="max-w-xl">
-          <h2 id="cta-titulo" className="type-titulo-2 text-texto-inverso lg:type-titulo-1">
-            Comece pelos editais abertos hoje.
-          </h2>
-          <p className="mt-3 type-corpo text-texto-inverso">
-            Pesquise sem cadastro. Quando quiser alertas, entre com o Google.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <Link href="/search" data-testid="link-final-search" className={heroCta}>
-              <Search size={16} aria-hidden /> Ver editais abertos
-            </Link>
-            <AccountCta
-              testId="link-final-start"
-              className="inline-flex h-13 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-texto-inverso underline-offset-4 hover:underline"
-              label="Entrar ou criar conta"
-              inversePlaceholder
-            />
-          </div>
+    <section aria-labelledby="cta-titulo" className="px-5 pb-14 sm:px-8 sm:pb-28">
+      <div className="landing-final-cta">
+        <div><h2 id="cta-titulo">Seu próximo edital pode estar aberto agora.</h2><p>Pesquise sem cadastro. Quando quiser alertas, entre com o Google.</p></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link href="/search" data-testid="link-final-search" className={primaryAction}><Search size={16} aria-hidden /> Ver editais</Link>
+          <AccountCta testId="link-final-start" className="landing-final-secondary" label="Entrar ou criar conta" />
         </div>
-        <PardalClip clip="pardal-assinatura" reducedMotion={reducedMotion} className="w-40 shrink-0 sm:w-48" />
       </div>
     </section>
   );
 }
 
-// Marketing page. Hero sizes sit above the product type scale on purpose; every color is a design system token.
 export default function LandingPage() {
-  const reducedMotion = useMediaQuery(REDUCED_MOTION_MEDIA);
   return (
-    <div className="relative min-h-[100dvh] overflow-x-clip bg-background text-foreground">
-      <PardalFlight reducedMotion={reducedMotion} />
-      <header className="sticky top-0 z-sticky border-b border-border-subtle bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/" data-testid="link-logo" className="flex items-center gap-2.5">
-            <BrandLogo className="h-11 sm:h-12" />
-          </Link>
-          <nav aria-label="Seções" className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#como-funciona" className="transition-colors duration-fast hover:text-foreground">
-              Como funciona
-            </a>
-            <a href="#encontra" className="transition-colors duration-fast hover:text-foreground">
-              O que você encontra
-            </a>
-            <a href="#plano" className="transition-colors duration-fast hover:text-foreground">
-              Plano
-            </a>
-            <a href="#duvidas" className="transition-colors duration-fast hover:text-foreground">
-              Dúvidas
-            </a>
-            <LandingNavActions />
-          </nav>
-          <div className="md:hidden">
-            <LandingNavActions mobile />
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-[100dvh] overflow-x-clip bg-background text-foreground">
+      <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-toast focus:rounded-lg focus:bg-action focus:px-4 focus:py-3 focus:font-bold focus:text-action-foreground">Pular para o conteúdo</a>
+      <LandingHeader />
       <main id="conteudo" tabIndex={-1} className="outline-none">
-        <Hero reducedMotion={reducedMotion} />
-        <TeaserSection reducedMotion={reducedMotion} />
+        <Hero />
+        <DiscoverySection />
         <HowItWorksSection />
         <OpportunityMapSection />
-        <FindsSection />
-        <ProductVideosSection reducedMotion={reducedMotion} />
+        <EditorialSection />
         <PlanSection />
         <FaqSection />
-        <FinalCta reducedMotion={reducedMotion} />
+        <FinalCta />
       </main>
-
-      <footer className="border-t border-border bg-surface px-5 py-12 sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
-          <div className="space-y-1">
-            <p className="font-semibold text-foreground">Pardal Digital · Editais públicos e oportunidades</p>
-            <p>© 2026 Pardal Digital · Dados oficiais do PNCP, do Mapas Culturais e de organismos internacionais.</p>
-          </div>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <Link href="/ajuda" data-testid="link-footer-help" className="font-semibold text-primary underline-offset-4 hover:underline">
-              Ajuda e glossário de licitações
-            </Link>
-            <LegalLinks className="sm:justify-end" />
-          </div>
+      <footer className="landing-footer">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 px-5 py-10 sm:gap-8 sm:px-8 sm:py-12 md:flex-row md:items-end">
+          <div><BrandLogo className="h-10" /><p className="mt-5 max-w-md text-sm text-muted-foreground">Editais públicos e oportunidades em um só lugar.</p><p className="mt-2 text-sm text-muted-foreground sm:text-xs">© 2026 Pardal Digital. Dados de fontes oficiais.</p></div>
+          <div className="landing-footer-links flex flex-col gap-3 text-sm font-semibold md:items-end"><Link href="/ajuda">Ajuda e glossário</Link><LegalLinks className="md:justify-end" /></div>
         </div>
       </footer>
     </div>

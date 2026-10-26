@@ -54,7 +54,7 @@ const BAND_MARGIN = 48;
 // Page scroll speed (px/s) at which the resting bird's slow beat is fully on.
 const FLUTTER_SCROLL_SPEED = 900;
 // Logo ink per theme (`--petroleo`, `--lima-marca`); the extruded sides use a second palette color so depth reads.
-const inkFor = (dark: boolean) => (dark ? { face: 0xbfe17c, side: 0x9ed6d1 } : { face: 0x164c49, side: 0xb8cda5 });
+const inkFor = (dark: boolean) => (dark ? { face: 0xdff6a1, side: 0xa6dccf } : { face: 0x00464e, side: 0xa6dccf });
 
 const AXIS_X = new THREE.Vector3(1, 0, 0);
 const AXIS_Z = new THREE.Vector3(0, 0, 1);

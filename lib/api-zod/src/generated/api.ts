@@ -1704,6 +1704,7 @@ export const ExportAccountDataResponse = zod.object({
   "type": zod.string(),
   "createdAt": zod.coerce.date(),
   "readAt": zod.coerce.date().nullable(),
+  "dismissedAt": zod.coerce.date().nullable(),
   "tenderId": zod.string().nullable(),
   "tenderTitle": zod.string().nullable(),
   "tenderNumberShort": zod.string().nullable(),
@@ -3412,6 +3413,57 @@ export const markNotificationsReadResponseUnreadCountMin = 0;
 
 export const MarkNotificationsReadResponse = zod.object({
   "unreadCount": zod.number().int().min(markNotificationsReadResponseUnreadCountMin)
+})
+
+
+/**
+ * Removes notifications from the feed, the unread count and e-mail (soft delete: producers never create them again). `ids` of other users are ignored. Every row removed by one call shares `dismissedAt`.
+ */
+
+export const dismissNotificationsBodyIdsMax = 100;
+
+
+
+export const DismissNotificationsBody = zod.object({
+  "ids": zod.array(zod.string().min(1)).max(dismissNotificationsBodyIdsMax).optional(),
+  "allRead": zod.boolean().optional().describe('Removes every read notification.')
+})
+
+export const dismissNotificationsResponseDismissedCountMin = 0;
+
+export const dismissNotificationsResponseUnreadCountMin = 0;
+
+
+
+export const DismissNotificationsResponse = zod.object({
+  "dismissedCount": zod.number().int().min(dismissNotificationsResponseDismissedCountMin),
+  "dismissedAt": zod.coerce.date().nullable(),
+  "unreadCount": zod.number().int().min(dismissNotificationsResponseUnreadCountMin)
+})
+
+
+/**
+ * Undoes a removal: `ids`, or the `dismissedAt` returned by the dismiss call. `ids` of other users are ignored.
+ */
+
+export const restoreNotificationsBodyIdsMax = 100;
+
+
+
+export const RestoreNotificationsBody = zod.object({
+  "ids": zod.array(zod.string().min(1)).max(restoreNotificationsBodyIdsMax).optional(),
+  "dismissedAt": zod.coerce.date().optional()
+})
+
+export const restoreNotificationsResponseRestoredCountMin = 0;
+
+export const restoreNotificationsResponseUnreadCountMin = 0;
+
+
+
+export const RestoreNotificationsResponse = zod.object({
+  "restoredCount": zod.number().int().min(restoreNotificationsResponseRestoredCountMin),
+  "unreadCount": zod.number().int().min(restoreNotificationsResponseUnreadCountMin)
 })
 
 

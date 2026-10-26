@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, CircleDollarSign, FileText, Hourglass, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
+import { Bell, CalendarClock, CircleDollarSign, FileText, Hourglass, RefreshCw, Sparkles, X, type LucideIcon } from 'lucide-react';
 import { Link } from 'wouter';
 import type { Notification, NotificationType } from '@/api';
 import { cn } from '@/lib/utils';
@@ -19,14 +19,17 @@ const icons: Record<NotificationType, LucideIcon> = {
 /**
  * One notification. It is a link to `notificationHref(n)` (plain text when there is none); `onSelect` runs on click, before
  * navigation — use it to mark as read and close a popover. `compact`: popover density (subject/change clamp to one line).
+ * `onRemove` adds a "Remover" icon button beside the link (never inside it, so it does not navigate).
  */
 export function NotificationItem({
   notification: n,
   onSelect,
+  onRemove,
   compact = false,
 }: {
   notification: Notification;
   onSelect?: (n: Notification) => void;
+  onRemove?: (n: Notification) => void;
   compact?: boolean;
 }) {
   const unread = n.readAt === null;
@@ -37,7 +40,9 @@ export function NotificationItem({
   const className = cn(
     'group flex w-full gap-3 text-left transition-colors duration-fast ease-standard',
     compact ? 'px-4 py-3' : 'px-4 py-4 sm:px-5',
-    href && 'hover:bg-muted focus-visible:bg-muted',
+    // With the remove button the whole row (link + button) takes the hover background.
+    href && !onRemove && 'hover:bg-muted focus-visible:bg-muted',
+    onRemove && 'min-w-0 flex-1 pr-1 sm:pr-1',
   );
   const body = (
     <>
@@ -68,16 +73,32 @@ export function NotificationItem({
     </>
   );
 
-  if (!href) {
-    return (
-      <div data-testid={`notification-${n.id}`} className={className}>
-        {body}
-      </div>
-    );
-  }
-  return (
-    <Link href={href} data-testid={`notification-${n.id}`} onClick={() => onSelect?.(n)} className={className}>
+  const row = href ? (
+    <Link href={href} data-testid={`notification-${n.id}`} onClick={() => onSelect?.(n)} className={cn(className, onRemove && 'focus-visible:bg-muted')}>
       {body}
     </Link>
+  ) : (
+    <div data-testid={`notification-${n.id}`} className={className}>
+      {body}
+    </div>
+  );
+  if (!onRemove) return row;
+  return (
+    <div className={cn('flex items-start transition-colors duration-fast ease-standard', href && 'hover:bg-muted')}>
+      {row}
+      <button
+        type="button"
+        aria-label={`Remover notificação: ${notificationTitle(n)}`}
+        title="Remover"
+        data-testid={`button-remove-notification-${n.id}`}
+        onClick={() => onRemove(n)}
+        className={cn(
+          'mr-1 grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors duration-fast ease-standard hover:bg-surface hover:text-foreground focus-visible:focus-ring sm:mr-2',
+          compact ? 'mt-1' : 'mt-2',
+        )}
+      >
+        <X size={16} aria-hidden />
+      </button>
+    </div>
   );
 }

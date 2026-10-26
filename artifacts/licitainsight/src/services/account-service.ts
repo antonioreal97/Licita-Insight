@@ -1,8 +1,10 @@
 import {
   accountAdapter,
   isApiError,
+  type DismissNotificationsBody,
   type NotificationsParams,
   type RecommendationDismissReason,
+  type RestoreNotificationsBody,
   type SavedTendersParams,
   type SaveTenderBody,
   type TenderSearchParams,
@@ -99,6 +101,8 @@ export const accountService = {
     accountAdapter.listNotifications({ ...params, pageSize: clampPageSize(params.pageSize, 50) }, signal),
   getUnreadCount: (signal?: AbortSignal) => accountAdapter.getUnreadCount(signal),
   markNotificationsRead: (input: { ids?: string[]; all?: boolean }) => accountAdapter.markNotificationsRead(input),
+  dismissNotifications: (input: DismissNotificationsBody) => accountAdapter.dismissNotifications(input),
+  restoreNotifications: (input: RestoreNotificationsBody) => accountAdapter.restoreNotifications(input),
 
   getNotificationPreferences: (signal?: AbortSignal) => accountAdapter.getNotificationPreferences(signal),
   updateNotificationPreferences: (body: UpdateNotificationPreferencesBody) => accountAdapter.updateNotificationPreferences(body),

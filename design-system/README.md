@@ -12,12 +12,12 @@ Tokens live in `artifacts/licitainsight/src/index.css`. The living reference ren
 
 ## Identity (keep it)
 
-> Since October 2026 the palette, type and logo follow the Pardal design system: [`docs/design-system.md`](../docs/design-system.md).
-> Where this folder disagrees on colors, fonts, radius or shadows, that document wins.
+> Since 22 October 2026 the palette, type, radius, shadows and motion follow the Claude Design system "Pardal Digital": [`docs/design-system.md`](../docs/design-system.md).
+> Where this folder disagrees on colors, fonts, radius, shadows or motion, that document wins.
 
-- **Creme** (light) and **Petróleo** (dark) themes; `.dark` on `<html>` flips every token. Nothing is hard-coded to one theme.
-- **Petróleo** ink for all text; **lima** (`--destaque` / `--action`) fills the one main action per screen.
-- **Qurova** for titles and **Nexa** for text (Quicksand and Montserrat stand in, self-hosted in `public/fonts/`).
+- **Gelo** (light) and **Petróleo** (dark) themes; `.dark` on `<html>` flips every token. Nothing is hard-coded to one theme.
+- **Petróleo** ink for all text and the one main action per area; **lima** (`--destaque` / `--accent`) marks what is selected.
+- **Qurova** for titles and **Nexa** for text (Quicksand and Figtree stand in, self-hosted in `public/fonts/`).
 
 ## Principles
 

@@ -46,7 +46,7 @@ function MapPlaceholder() {
           <p className="type-label">
             <Bar>{MAP_LEGEND_TITLE}</Bar>
           </p>
-          <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2 text-xs">
+          <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2 text-xs max-md:text-sm">
             {LEGEND_SAMPLE.map((text, index) => (
               <li key={index} className="flex items-center gap-1.5 tabular-nums">
                 <span className="size-3.5 rounded-sm border border-transparent bg-muted" />
@@ -64,11 +64,11 @@ function MapPlaceholder() {
         <ul className="mt-5 space-y-2">
           {Array.from({ length: RANKING_SIZE }, (_, index) => (
             // The height of one ranking card: padding, name line, bar and value line.
-            <li key={index} className="h-[5.875rem] rounded-xl bg-muted motion-safe:animate-pulse" />
+            <li key={index} className="h-[6.125rem] rounded-xl bg-muted motion-safe:animate-pulse md:h-[5.875rem]" />
           ))}
         </ul>
         <div className="mt-5 h-[2.875rem] rounded-xl border border-border" />
-        <p className="mt-4 type-meta">
+        <p className="mt-4 type-meta max-md:text-sm">
           <Bar>
             {MAP_SOURCE_NOTE} Dados atualizados em {formatDateTime(new Date().toISOString())}.
           </Bar>
@@ -90,12 +90,11 @@ export function OpportunityMapSection() {
       id={OPPORTUNITY_MAP_ID}
       data-testid="section-opportunity-map"
       aria-labelledby="mapa-titulo"
-      className="py-20 sm:py-28"
+      className="py-14 sm:py-28"
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="max-w-2xl">
-          <div className="type-eyebrow font-bold uppercase tracking-eyebrow text-primary">Radar por estado</div>
-          <h2 id="mapa-titulo" className="mt-3 type-titulo-2 lg:type-titulo-1">
+          <h2 id="mapa-titulo" className="type-titulo-2 lg:type-titulo-1">
             Onde estão as oportunidades agora
           </h2>
           <p className="mt-4 type-corpo text-muted-foreground sm:type-corpo-grande">

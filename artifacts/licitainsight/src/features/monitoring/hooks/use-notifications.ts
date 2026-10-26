@@ -1,9 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { NotificationsParams, UnreadCountResponse } from '@/api';
+import type { DismissNotificationsBody, Notification, NotificationsParams, NotificationsResponse, RestoreNotificationsBody, UnreadCountResponse } from '@/api';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useBilling } from '@/features/billing/hooks/use-billing';
 import { accountService } from '@/services/account-service';
 import { queryKeys } from '@/services/query-keys';
+
+const listsKey = [...queryKeys.me.notifications.all, 'list'] as const;
 
 /** In-app notifications (`createdAt desc`). The response's `unreadCount` also refreshes the badge cache. */
 export function useNotifications({ unreadOnly, page, pageSize }: NotificationsParams) {
@@ -48,7 +50,41 @@ export function useMarkNotificationsRead() {
     mutationFn: (input: { ids?: string[]; all?: boolean }) => accountService.markNotificationsRead(input),
     onSuccess: (response) => {
       queryClient.setQueryData<UnreadCountResponse>(queryKeys.me.notifications.unreadCount, response);
-      queryClient.invalidateQueries({ queryKey: [...queryKeys.me.notifications.all, 'list'] });
+      queryClient.invalidateQueries({ queryKey: listsKey });
     },
+  });
+}
+
+/**
+ * Removes notifications (`{ ids }` or `{ allRead: true }`). They leave every cached list at once (Monitoramento and the
+ * bell share the cache), so a removed row never flashes back; the lists refetch afterwards for totals and pagination.
+ */
+export function useDismissNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DismissNotificationsBody) => accountService.dismissNotifications(input),
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: listsKey });
+      const removed = (n: Notification) => (input.allRead ? n.readAt !== null : input.ids?.includes(n.id) === true);
+      queryClient.setQueriesData<NotificationsResponse>({ queryKey: listsKey }, (page) =>
+        page && page.data.some(removed) ? { ...page, data: page.data.filter((n) => !removed(n)) } : page,
+      );
+    },
+    onSuccess: ({ unreadCount }) => {
+      queryClient.setQueryData<UnreadCountResponse>(queryKeys.me.notifications.unreadCount, { unreadCount });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: listsKey }),
+  });
+}
+
+/** Undoes a removal (`{ dismissedAt }` from the dismiss response, or `{ ids }`). */
+export function useRestoreNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RestoreNotificationsBody) => accountService.restoreNotifications(input),
+    onSuccess: ({ unreadCount }) => {
+      queryClient.setQueryData<UnreadCountResponse>(queryKeys.me.notifications.unreadCount, { unreadCount });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: listsKey }),
   });
 }

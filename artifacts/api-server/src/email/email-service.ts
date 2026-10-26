@@ -258,6 +258,8 @@ const digestCandidates = async (
         eq(usersTable.emailDigest, "daily"),
         // Avisos de assinatura (fim do teste) ficam só no app: e-mail é para monitoramento e alertas.
         ne(notificationsTable.type, "trial_ending"),
+        // Removed by the user: out of the feed, out of the e-mail.
+        isNull(notificationsTable.dismissedAt),
         isNull(emailDeliveryNotificationsTable.notificationId),
         lte(notificationsTable.createdAt, now),
       ),
@@ -298,6 +300,7 @@ const immediateCandidates = async (
     .where(
       and(
         eq(usersTable.emailImmediateCritical, true),
+        isNull(notificationsTable.dismissedAt),
         isNull(emailDeliveryNotificationsTable.notificationId),
         lte(notificationsTable.createdAt, cutoff),
         or(

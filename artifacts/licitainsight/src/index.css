@@ -5,9 +5,837 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Self-hosted stand-ins (SIL OFL 1.1, licenses in public/fonts/): Quicksand for Qurova, Montserrat for Nexa.
- * Variable woff2 from Fontsource, latin + latin-ext. Qurova/Nexa go here as new @font-face blocks (docs/design-system.md).
+ * Self-hosted stand-ins (SIL OFL 1.1, licenses in public/fonts/): Quicksand for Qurova, Figtree for Nexa
+ * (Figtree is the Nexa fallback named by the Claude Design system). Variable woff2 from Fontsource, latin + latin-ext.
+ * Licensed Qurova/Nexa files go here as new @font-face blocks (docs/design-system.md).
  */
+/* Editorial landing inspired by the supplied Pardal reference. */
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  backdrop-filter: blur(16px);
+}
+.landing-nav-link {
+  position: relative;
+  padding-block: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.landing-nav-link::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.landing-nav-link:hover,
+.landing-nav-link:focus-visible {
+  color: var(--foreground);
+}
+.landing-nav-link:hover::after,
+.landing-nav-link:focus-visible::after {
+  transform: scaleX(1);
+}
+.landing-mobile-menu {
+  display: grid;
+  gap: 0.25rem;
+  border-top: 1px solid var(--border-subtle);
+  padding: 1rem 1.25rem 1.25rem;
+  background: var(--background);
+}
+.landing-mobile-menu > a:not(:last-child) {
+  border-radius: var(--raio-sm);
+  padding: 0.8rem 0.75rem;
+  font-family: var(--fonte-titulo);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.landing-hero {
+  overflow: hidden;
+  background: var(--petroleo);
+  color: var(--gelo);
+}
+.landing-hero-stage {
+  position: relative;
+  display: grid;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: 3.5rem 1.25rem 0;
+}
+.landing-hero-copy {
+  position: relative;
+  z-index: 2;
+  order: 1;
+}
+.landing-hero-label,
+.landing-section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.landing-hero-label {
+  color: var(--lima-marca);
+}
+.landing-hero-title {
+  max-width: 11ch;
+  margin-top: 1rem;
+  font-family: var(--fonte-titulo);
+  font-size: clamp(3rem, 12vw, 4.25rem);
+  font-weight: 500;
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+}
+.landing-hero-title span {
+  display: block;
+  color: var(--lima-marca);
+}
+.landing-hero-description {
+  max-width: 31rem;
+  margin-top: 1.4rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--gelo) 82%, transparent);
+}
+.landing-hero-photo {
+  position: relative;
+  order: 3;
+  height: 23rem;
+  margin: 0 -1.25rem;
+  overflow: hidden;
+  border-radius: var(--raio-lg) var(--raio-lg) 0 0;
+  background: var(--petroleo);
+}
+.landing-hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 42% 32%;
+}
+.landing-hero-wing {
+  position: absolute;
+  right: -28%;
+  bottom: -25%;
+  width: 105%;
+  height: 48%;
+  border-radius: 50% 18% 0 0;
+  background: var(--aqua);
+  transform: rotate(-9deg);
+  transform-origin: bottom right;
+}
+.landing-hero-search {
+  position: relative;
+  z-index: 3;
+  order: 2;
+  margin: 2rem 0 -1.25rem;
+  border-radius: var(--raio-md);
+  background: var(--creme-claro);
+  padding: 1rem;
+  color: var(--petroleo);
+  border: 1px solid color-mix(in srgb, var(--petroleo) 18%, transparent);
+}
+.landing-hero-search > label {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.landing-hero-search-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--petroleo) 34%, transparent);
+  border-radius: var(--raio-sm);
+  padding-left: 0.9rem;
+  background: var(--creme-claro);
+}
+.landing-hero-search-row:focus-within {
+  border-color: var(--petroleo);
+  outline: 3px solid color-mix(in srgb, var(--aqua) 64%, transparent);
+  outline-offset: 2px;
+}
+.landing-hero-search-row input {
+  min-width: 0;
+  height: 3.5rem;
+  background: transparent;
+  font-size: 0.92rem;
+  outline: none;
+}
+.landing-hero-search-row button {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  min-height: 3.15rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0 0.25rem 0.25rem;
+  border-radius: var(--raio-sm);
+  background: var(--petroleo);
+  color: var(--creme-claro);
+  font-size: 0.88rem;
+  font-weight: 800;
+  transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard);
+}
+.landing-hero-search-row button:hover {
+  background: var(--petroleo-profundo);
+}
+.landing-hero-search-row button:active {
+  transform: translateY(1px);
+}
+.landing-hero-search > p {
+  margin-top: 0.55rem;
+  font-size: 0.68rem;
+  color: color-mix(in srgb, var(--petroleo) 72%, transparent);
+}
+
+.landing-discovery {
+  background: var(--surface);
+}
+.landing-section-title {
+  margin-top: 0.75rem;
+  font-family: var(--fonte-titulo);
+  font-size: clamp(2.5rem, 5.2vw, 4.8rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+.landing-section-copy {
+  margin-top: 1.25rem;
+  color: var(--muted-foreground);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+.landing-interest-grid {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 2.5rem;
+}
+.landing-interest-card {
+  display: flex;
+  min-height: 10rem;
+  align-items: flex-start;
+  gap: 1rem;
+  border: 1px solid color-mix(in srgb, var(--petroleo) 18%, transparent);
+  border-radius: var(--raio-md);
+  padding: 1.35rem;
+  color: var(--texto-sobre-destaque);
+  transition: transform var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+.landing-interest-card:hover,
+.landing-interest-card:focus-visible {
+  border-color: var(--petroleo);
+  transform: translateY(-3px);
+}
+.landing-interest-icon {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1.5px solid currentColor;
+  border-radius: var(--raio-sm);
+}
+.landing-interest-card strong,
+.landing-interest-card small {
+  display: block;
+}
+.landing-interest-card strong {
+  font-family: var(--fonte-titulo);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.landing-interest-card small {
+  max-width: 26ch;
+  margin-top: 0.5rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.landing-journey {
+  background: var(--superficie-inversa);
+  color: var(--texto-inverso);
+}
+.landing-journey-heading {
+  display: grid;
+  gap: 2rem;
+}
+.landing-journey-heading h2,
+.landing-plan-message h2,
+.landing-final-cta h2 {
+  max-width: 12ch;
+  font-family: var(--fonte-titulo);
+  font-size: clamp(2.75rem, 5.3vw, 5rem);
+  font-weight: 500;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+.landing-journey-heading p {
+  max-width: 31rem;
+  margin-top: 1.25rem;
+  color: color-mix(in srgb, var(--texto-inverso) 76%, transparent);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+.landing-journey-media {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--raio-lg);
+  border: 1px solid color-mix(in srgb, var(--texto-inverso) 24%, transparent);
+  background: var(--petroleo-profundo);
+}
+.landing-journey-media video {
+  display: block;
+  width: 100%;
+  max-height: 32rem;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.landing-journey-media-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.landing-journey-media-caption p {
+  margin: 0;
+  max-width: none;
+  color: color-mix(in srgb, var(--texto-inverso) 76%, transparent);
+}
+.landing-journey-list {
+  display: grid;
+  gap: 1px;
+  margin-top: 3rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--texto-inverso) 24%, transparent);
+  border-radius: var(--raio-md);
+  background: color-mix(in srgb, var(--texto-inverso) 24%, transparent);
+}
+.landing-journey-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--superficie-inversa);
+}
+.landing-journey-icon {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border-radius: var(--raio-sm);
+  background: var(--destaque);
+  color: var(--texto-sobre-destaque);
+}
+.landing-journey-list h3 {
+  font-family: var(--fonte-titulo);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.landing-journey-list p {
+  max-width: 34ch;
+  margin-top: 0.45rem;
+  color: color-mix(in srgb, var(--texto-inverso) 74%, transparent);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+#mapa {
+  background: var(--surface-sunken);
+}
+#mapa > div > div:first-child {
+  max-width: 46rem;
+}
+#mapa #mapa-titulo {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(2.5rem, 5vw, 4.7rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.landing-editorial-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+.landing-editorial-feature {
+  position: relative;
+  min-height: 36rem;
+  overflow: hidden;
+  border-radius: var(--raio-lg);
+  background: var(--petroleo);
+  color: var(--creme-claro);
+}
+.landing-editorial-feature::after {
+  content: '';
+  position: absolute;
+  inset: 52% 0 0;
+  background: color-mix(in srgb, var(--petroleo-profundo) 88%, transparent);
+}
+.landing-editorial-feature img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 38%;
+  filter: saturate(0.7) contrast(1.08) brightness(0.82);
+  transition: transform 450ms var(--ease-standard);
+}
+.landing-editorial-feature:hover img {
+  transform: scale(1.025);
+}
+.landing-editorial-feature > span {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  gap: 0.75rem;
+  padding: 2rem;
+}
+.landing-editorial-feature small,
+.landing-editorial-links small {
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.landing-editorial-feature strong {
+  max-width: 20ch;
+  font-family: var(--fonte-titulo);
+  font-size: clamp(1.75rem, 3vw, 2.7rem);
+  line-height: 1.06;
+}
+.landing-editorial-feature em {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.landing-editorial-links {
+  display: grid;
+  gap: 1rem;
+}
+.landing-editorial-links > a {
+  display: grid;
+  min-height: 17.5rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 1rem;
+  border-radius: var(--raio-lg);
+  background: var(--surface);
+  padding: 1.35rem;
+}
+.landing-editorial-links strong {
+  display: block;
+  max-width: 25ch;
+  margin-top: 0.65rem;
+  font-family: var(--fonte-titulo);
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+.landing-editorial-mark {
+  display: grid;
+  width: 6rem;
+  height: 100%;
+  min-height: 11rem;
+  place-items: center;
+  border-radius: var(--raio-md);
+  background: var(--aqua);
+  color: var(--petroleo);
+}
+.landing-editorial-mark-alt {
+  background: var(--lima);
+}
+
+.landing-plan {
+  background: var(--surface);
+}
+.landing-plan-shell {
+  display: grid;
+  gap: 2rem;
+  overflow: hidden;
+  border-radius: var(--raio-lg);
+  background: var(--petroleo);
+  padding: clamp(2rem, 6vw, 5rem);
+  color: var(--gelo);
+}
+.landing-plan-message .landing-section-label {
+  color: var(--lima-marca);
+}
+.landing-plan-message > p:not(.landing-section-label) {
+  max-width: 34rem;
+  margin-top: 1.5rem;
+  color: color-mix(in srgb, var(--gelo) 78%, transparent);
+  line-height: 1.55;
+}
+.landing-plan-message ul {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 2rem;
+}
+.landing-plan-message li {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  line-height: 1.45;
+}
+.landing-plan-message li svg {
+  margin-top: 0.15rem;
+  color: var(--lima-marca);
+}
+.landing-plan-offer {
+  align-self: center;
+  border-radius: var(--raio-lg);
+  background: var(--creme-claro);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  color: var(--petroleo);
+}
+.landing-plan-trial {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--raio-pill);
+  background: var(--lima);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.landing-plan-price {
+  min-height: 5.2rem;
+  margin-block: 1.5rem;
+}
+.landing-plan-price p {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+.landing-plan-price strong {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(3rem, 5vw, 4.8rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+.landing-plan-price span {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.landing-plan-offer > a {
+  width: 100%;
+}
+.landing-plan-secondary {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--petroleo) 30%, transparent);
+  border-radius: var(--raio-sm);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+.landing-final-cta {
+  display: flex;
+  max-width: 72rem;
+  flex-direction: column;
+  gap: 2rem;
+  margin-inline: auto;
+  border-radius: var(--raio-lg);
+  background: var(--aqua);
+  padding: clamp(2rem, 6vw, 4.5rem);
+  color: var(--petroleo);
+}
+.landing-final-cta h2 {
+  max-width: 15ch;
+  font-size: clamp(2.4rem, 4.7vw, 4.5rem);
+}
+.landing-final-cta p {
+  max-width: 34rem;
+  margin-top: 1rem;
+  line-height: 1.55;
+}
+.landing-final-secondary {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--petroleo);
+  border-radius: var(--raio-sm);
+  padding-inline: 1.25rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+.landing-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/*
+ * Phones: title, search and the Buscar button fit the first screen (above the cookie notice too), copy stays at
+ * 14 px or more, taps are 44 px, and the cards lose the height they only need beside a desktop column.
+ * Tablets and desktop keep the rules above.
+ */
+@media (max-width: 767px) {
+  .landing-hero-stage {
+    padding-top: 1.5rem;
+  }
+  .landing-hero-title {
+    margin-top: 0.75rem;
+    font-size: clamp(2.5rem, 11.2vw, 3.4rem);
+  }
+  .landing-hero-description {
+    margin-top: 0.875rem;
+  }
+  .landing-hero-photo {
+    height: 18rem;
+  }
+  .landing-hero-search {
+    margin-top: 1rem;
+    padding: 0.875rem;
+  }
+  .landing-hero-search > label {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .landing-hero-search-row input {
+    height: 3rem;
+    /* 16 px: below that, iOS Safari zooms the page when the field takes focus. */
+    font-size: 1rem;
+  }
+  .landing-hero-search-row button {
+    min-height: 3rem;
+    font-size: 0.9375rem;
+  }
+  .landing-hero-search > p {
+    font-size: 0.875rem;
+  }
+  .landing-hero-label,
+  .landing-section-label,
+  .landing-editorial-feature small,
+  .landing-editorial-links small {
+    font-size: 0.75rem;
+  }
+  .landing-interest-grid,
+  .landing-editorial-grid {
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+  .landing-interest-card {
+    min-height: 0;
+    padding: 1.15rem;
+  }
+  .landing-interest-card small {
+    font-size: 0.9375rem;
+  }
+  .landing-journey-heading {
+    gap: 1.5rem;
+  }
+  .landing-journey-list {
+    margin-top: 2rem;
+  }
+  .landing-journey-list li {
+    padding: 1.25rem;
+  }
+  .landing-journey-list p {
+    font-size: 0.9375rem;
+  }
+  .landing-editorial-feature {
+    min-height: 25rem;
+  }
+  .landing-editorial-feature::after {
+    inset: 45% 0 0;
+  }
+  .landing-editorial-feature > span {
+    padding: 1.5rem;
+  }
+  .landing-editorial-feature em {
+    font-size: 0.9375rem;
+  }
+  .landing-editorial-links {
+    gap: 0.75rem;
+  }
+  .landing-editorial-links > a {
+    min-height: 0;
+    align-items: center;
+    padding: 1rem;
+  }
+  .landing-editorial-links strong {
+    margin-top: 0.35rem;
+    font-size: 1.2rem;
+  }
+  .landing-editorial-mark {
+    width: 3.5rem;
+    height: 3.5rem;
+    min-height: 0;
+  }
+  .landing-plan-shell {
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+  .landing-plan-message > p:not(.landing-section-label) {
+    margin-top: 1rem;
+  }
+  .landing-plan-message ul {
+    margin-top: 1.5rem;
+  }
+  .landing-plan-trial {
+    font-size: 0.875rem;
+  }
+  /* The loading bar is 3.5rem tall and the price line 3rem, so the card keeps its height when the plan arrives. */
+  .landing-plan-price {
+    min-height: 3.5rem;
+    margin-block: 1.25rem;
+  }
+  .landing-plan-secondary,
+  .landing-final-secondary {
+    font-size: 0.9375rem;
+  }
+  .landing-final-cta {
+    gap: 1.5rem;
+    padding: 1.75rem 1.5rem;
+  }
+  .landing-footer-links a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  .landing-footer-links {
+    gap: 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .landing-hero-search-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 0.25rem 0.25rem 0.25rem 1rem;
+  }
+  .landing-hero-search-row button {
+    grid-column: auto;
+    min-height: 3.1rem;
+    margin: 0;
+    padding-inline: 1.35rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .landing-interest-grid {
+    grid-template-columns: 1.1fr 0.95fr 1.05fr;
+  }
+  .landing-journey-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .landing-journey-list li {
+    grid-template-columns: 1fr;
+  }
+  .landing-editorial-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+  }
+  .landing-plan-shell {
+    grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+  }
+  .landing-final-cta {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-hero-stage {
+    grid-template-columns: minmax(0, 52%) minmax(0, 48%);
+    grid-template-rows: 1fr auto;
+    height: clamp(43rem, calc(100dvh - 4.5rem), 52rem);
+    padding: 0 5rem 2.25rem;
+  }
+  .landing-hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem 0 10rem;
+  }
+  .landing-hero-title {
+    max-width: 10.5ch;
+    font-size: clamp(4.1rem, 5.35vw, 5.35rem);
+  }
+  .landing-hero-photo {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    height: 100%;
+    margin: 0 -5rem 0 -2rem;
+    border-radius: 0 0 0 5rem;
+  }
+  .landing-hero-photo img {
+    object-position: 40% 30%;
+  }
+  .landing-hero-search {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 5rem;
+    width: min(48rem, 61%);
+    margin: 0;
+  }
+  .landing-interest-card:nth-child(1) {
+    transform: translateY(1.25rem) rotate(-1.2deg);
+  }
+  .landing-interest-card:nth-child(3) {
+    transform: translateY(1.25rem) rotate(1.2deg);
+  }
+  .landing-interest-card:hover,
+  .landing-interest-card:focus-visible {
+    transform: translateY(-3px) rotate(0);
+  }
+  .landing-journey-heading {
+    grid-template-columns: minmax(0, 0.8fr) minmax(30rem, 1.2fr);
+    align-items: center;
+    gap: 5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero-copy {
+    animation: landing-copy-in 700ms var(--ease-standard) both;
+  }
+  .landing-hero-photo img {
+    animation: landing-photo-in 1000ms var(--ease-standard) both;
+  }
+  .landing-hero-wing {
+    animation: landing-wing-in 1200ms var(--ease-standard) 120ms both;
+  }
+}
+
+@keyframes landing-copy-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes landing-photo-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes landing-wing-in {
+  from { transform: translate(16%, 45%) rotate(-3deg); }
+  to { transform: rotate(-9deg); }
+}
 @font-face {
   font-family: 'Quicksand';
   font-style: normal;
@@ -25,19 +853,19 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Montserrat';
+  font-family: 'Figtree';
   font-style: normal;
   font-display: swap;
-  font-weight: 100 900;
-  src: url('/fonts/montserrat-latin-ext-wght-normal.woff2') format('woff2-variations');
+  font-weight: 300 900;
+  src: url('/fonts/figtree-latin-ext-wght-normal.woff2') format('woff2-variations');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Montserrat';
+  font-family: 'Figtree';
   font-style: normal;
   font-display: swap;
-  font-weight: 100 900;
-  src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 300 900;
+  src: url('/fonts/figtree-latin-wght-normal.woff2') format('woff2-variations');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
@@ -65,6 +893,13 @@
   --color-creme: var(--creme);
   --color-creme-claro: var(--creme-claro);
   --color-nevoa: var(--nevoa);
+  --color-gelo: var(--gelo);
+  --color-surface-mist: var(--surface-mist);
+  --color-surface-sand: var(--surface-sand);
+  --color-petroleo-hover: var(--petroleo-hover);
+  --color-petroleo-deep: var(--petroleo-deep);
+  --color-map-state: var(--map-state);
+  --color-map-state-empty: var(--map-state-empty);
   --color-fundo: var(--fundo);
   --color-fundo-alt: var(--fundo-alt);
   --color-texto: var(--texto);
@@ -198,31 +1033,38 @@
   --radius-lg: var(--raio-sm); /* controls: fields, nav items */
   --radius-xl: var(--raio-md); /* cards and color blocks */
   --radius-2xl: var(--raio-lg); /* dialogs, sheets, large cut-out sections */
-  --radius-pill: var(--raio-pill); /* buttons and chips */
+  --radius-button: var(--raio-botao); /* buttons */
+  --radius-pill: var(--raio-pill); /* chips and badges */
+
+  /* Soft, teal-tinted shadows (Claude Design → shadow). Tailwind's scale points at them. */
+  --shadow-sm: var(--sombra-suave);
+  --shadow: var(--sombra-suave);
+  --shadow-md: var(--sombra-campo);
+  --shadow-lg: var(--sombra-flutuante);
+  --shadow-xl: var(--sombra-elevada);
+  --shadow-2xl: var(--sombra-oferta);
+  --shadow-soft: var(--sombra-suave);
+  --shadow-field: var(--sombra-campo);
+  --shadow-float: var(--sombra-flutuante);
+  --shadow-lift: var(--sombra-elevada);
+  --shadow-offer: var(--sombra-oferta);
 }
 
 @theme {
-  --tracking-display: -0.01em;
-  --tracking-heading: 0em;
-  --tracking-label: 0.06em;
-  --tracking-eyebrow: 0.06em;
+  --tracking-display: -0.04em;
+  --tracking-heading: -0.02em;
+  --tracking-label: 0.12em;
+  --tracking-eyebrow: 0.16em;
 
-  /* Motion */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Motion: everything eases on one curve (Claude Design → Motion and states). */
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --default-transition-duration: 160ms;
-  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Pardal has no shadows: colors are flat. Overlaps are told apart by the --border edge. */
   --shadow-2xs: 0 0 #0000;
   --shadow-xs: 0 0 #0000;
-  --shadow-sm: 0 0 #0000;
-  --shadow: 0 0 #0000;
-  --shadow-md: 0 0 #0000;
-  --shadow-lg: 0 0 #0000;
-  --shadow-xl: 0 0 #0000;
-  --shadow-2xl: 0 0 #0000;
 
   /* Layout. Breakpoints are Tailwind defaults (sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536). */
   --spacing-header: 76px;
@@ -233,32 +1075,41 @@
   --container-prose: 68ch;
 }
 
-/* CREME (light, default) */
+/* GELO (light, default). Palette and roles from the Claude Design system "Pardal Digital" (docs/design-system.md). */
 :root {
   color-scheme: light;
 
   /* ── Pardal palette (tokens.json → color.tokens) ──────────────── */
-  --lima: #d9f58b;
-  --lima-marca: #bfe17c; /* logo ink on dark backgrounds only */
-  --aqua: #9ed6d1;
+  --petroleo: #00464e; /* brand ink: all text, icons and primary fills */
+  --petroleo-hover: #07383e;
+  --petroleo-deep: #032f35;
+  --lima: #dff6a1; /* "selected / yours": active states, chips, selection. Never as text on a light ground */
+  --aqua: #a6dccf; /* supporting hue: icon tiles, wing curves, link underlines, focus halos */
+  --gelo: #fefefe;
+  --surface-mist: #f3f7f3;
+  --surface-sand: #f4f5f0;
+  --map-state: #dce8e3;
+  --map-state-empty: #edf1ee;
+  /* Supporting fills from the first Pardal package, kept for tender states (the new system has none). */
   --salvia: #b8cda5;
   --oliva: #c0cc6f;
-  --petroleo: #164c49;
-  --petroleo-profundo: #00464e;
-  --creme: #efebe1;
-  --creme-claro: #f6f3ed;
   --nevoa: #cbd0c8;
+  /* Earlier names, now aliases, so feature code and the landing keep working. */
+  --lima-marca: var(--lima);
+  --petroleo-profundo: var(--petroleo-deep);
+  --creme: var(--surface-mist);
+  --creme-claro: var(--gelo);
 
-  /* ── Pardal semantic tokens, theme Creme ──────────────────────── */
-  --fundo: var(--creme-claro);
-  --fundo-alt: var(--creme);
+  /* ── Pardal semantic tokens, theme Gelo ───────────────────────── */
+  --fundo: var(--gelo);
+  --fundo-alt: var(--surface-mist);
   --texto: var(--petroleo);
   --marca: var(--petroleo);
   --destaque: var(--lima);
   --texto-sobre-destaque: var(--petroleo);
-  --superficie-inversa: var(--petroleo-profundo);
-  --texto-inverso: var(--creme-claro);
-  --linha: var(--nevoa);
+  --superficie-inversa: var(--petroleo);
+  --texto-inverso: var(--gelo);
+  --linha: #d1e3de; /* oklch(0.9 0.02 180) */
   --foco: var(--petroleo);
 
   /* ── Spacing, radius, type ────────────────────────────────────── */
@@ -267,94 +1118,103 @@
   --espaco-3: 32px;
   --espaco-4: 64px;
 
-  --raio-sm: 8px;
-  --raio-md: 14px;
-  --raio-lg: 24px;
+  --raio-sm: 0.75rem; /* fields, nav items, small controls */
+  --raio-botao: 1rem; /* buttons (--radius in the Claude Design system) */
+  --raio-md: 1.35rem; /* cards */
+  --raio-lg: 1.75rem; /* dialogs, sheets, big panels */
   --raio-pill: 999px;
 
-  /* Qurova and Nexa are licensed; Quicksand and Montserrat stand in until their files land in public/fonts/. */
-  --fonte-titulo: 'Qurova', 'Quicksand', system-ui, sans-serif;
-  --fonte-texto: 'Nexa', 'Montserrat', system-ui, sans-serif;
+  /* Soft, teal-tinted shadows. A shadow means something lifts off the page; dense lists stay flat. */
+  --sombra-suave: 0 14px 40px rgba(0, 70, 78, 0.045);
+  --sombra-campo: 0 12px 35px rgba(0, 70, 78, 0.06);
+  --sombra-flutuante: 0 10px 30px rgba(0, 70, 78, 0.08);
+  --sombra-elevada: 0 20px 50px rgba(0, 22, 25, 0.24);
+  --sombra-oferta: 0 24px 70px rgba(0, 20, 23, 0.25);
 
-  /* `font` shorthands, one per style in tokens.json (type.groups). Tracking lives next to them. */
-  --display: 500 64px/68px var(--fonte-titulo);
-  --display-tracking: -0.01em;
-  --titulo-1: 500 44px/52px var(--fonte-titulo);
-  --titulo-2: 500 32px/40px var(--fonte-titulo);
-  --titulo-3: 500 24px/32px var(--fonte-titulo);
-  --corpo-grande: 400 20px/30px var(--fonte-texto);
-  --corpo: 400 16px/26px var(--fonte-texto);
-  --legenda: 400 14px/20px var(--fonte-texto);
-  --rotulo: 400 13px/16px var(--fonte-texto);
-  --rotulo-tracking: 0.06em;
+  /* Qurova and Nexa are licensed; Quicksand and Figtree stand in until their files land in public/fonts/. */
+  --fonte-titulo: 'Qurova', 'Quicksand', ui-sans-serif, system-ui, sans-serif;
+  --fonte-texto: 'Nexa', 'Figtree', ui-sans-serif, system-ui, sans-serif;
+
+  /* `font` shorthands, one per style in tokens.json (type.groups). Tracking lives next to them.
+   * Display sizes are the desktop maximums; pages scale them down with clamp(). */
+  --display: 500 4rem/0.95 var(--fonte-titulo);
+  --display-tracking: -0.04em;
+  --titulo-1: 500 2.75rem/1 var(--fonte-titulo);
+  --titulo-2: 500 2rem/1.08 var(--fonte-titulo);
+  --titulo-3: 500 1.5rem/1.2 var(--fonte-titulo);
+  --titulo-tracking: -0.035em;
+  --corpo-grande: 400 1.08rem/1.55 var(--fonte-texto);
+  --corpo: 400 1rem/1.55 var(--fonte-texto);
+  --legenda: 400 0.86rem/1.4 var(--fonte-texto);
+  --rotulo: 700 0.75rem/1.3 var(--fonte-texto);
+  --rotulo-tracking: 0.16em;
 
   /* ── App roles → Pardal ────────────────────────────────────────── */
   /* Overlays and quiet fills are the text ink at low alpha: no new hue, and they read on fundo and fundo-alt alike. */
-  --button-outline: color-mix(in srgb, var(--texto) 14%, transparent);
-  --badge-outline: color-mix(in srgb, var(--texto) 8%, transparent);
+  --button-outline: color-mix(in srgb, var(--texto) 24%, transparent);
+  --badge-outline: color-mix(in srgb, var(--texto) 14%, transparent);
   --elevate-1: color-mix(in srgb, var(--texto) 4%, transparent);
-  --elevate-2: color-mix(in srgb, var(--texto) 9%, transparent);
+  --elevate-2: color-mix(in srgb, var(--texto) 8%, transparent);
 
-  /* Surfaces: the page is fundo, cards and sections are fundo-alt, menus and dialogs sit on fundo. */
+  /* Surfaces: the page and cards are gelo, quiet sections are surface-mist, menus and dialogs sit on gelo. */
   --background: var(--fundo);
   --surface: var(--fundo-alt);
-  --surface-sunken: var(--fundo);
+  --surface-sunken: var(--fundo-alt);
   --surface-raised: var(--fundo);
-  --card: var(--fundo-alt);
+  --card: var(--fundo);
   --card-foreground: var(--texto);
-  --card-border: var(--linha);
+  --card-border: color-mix(in srgb, var(--texto) 16%, var(--fundo));
   --popover: var(--surface-raised);
   --popover-foreground: var(--texto);
-  --popover-border: var(--linha);
+  --popover-border: color-mix(in srgb, var(--texto) 16%, var(--fundo));
 
-  /* Text: one ink (texto). Secondary text is the same ink mixed into fundo, still ≥ 4.5:1 on every surface. */
+  /* Text: one ink (petroleo). Secondary text is petroleo at reduced strength, never grey. */
   --foreground: var(--texto);
-  --muted-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo));
+  --muted-foreground: #34565a; /* oklch(0.43 0.04 205) */
   --foreground-subtle: color-mix(in srgb, var(--texto) 62%, var(--fundo)); /* icons, disabled, decoration only */
   --hero-lead: var(--muted-foreground);
   --hero-highlight: var(--texto);
 
-  /* Borders: linha for decorative dividers, texto for field edges (tokens.json → linha). */
+  /* Borders: linha is the hairline; controls get petroleo at a strength that keeps 3:1 (WCAG 1.4.11). */
   --border-subtle: color-mix(in srgb, var(--linha) 60%, var(--fundo));
   --border: var(--linha);
-  --border-strong: color-mix(in srgb, var(--texto) 45%, var(--fundo));
-  --input: var(--texto);
+  --border-strong: color-mix(in srgb, var(--texto) 32%, var(--fundo));
+  --input: color-mix(in srgb, var(--texto) 62%, var(--fundo));
   --ring: var(--foco);
 
   /* Scrim behind modals, sheets and the mobile nav. Always dark, so use it with alpha: bg-scrim/50 */
-  --scrim: var(--petroleo-profundo);
+  --scrim: var(--petroleo-deep);
 
-  /* Primary: links and selected controls. Same ink as foco (petroleo here, lima in Petróleo). */
+  /* Primary: links, selected controls and primary fills (petroleo here, lima in Petróleo). */
   --primary: var(--foco);
   --primary-foreground: var(--texto-inverso);
-  --primary-hover: var(--petroleo-profundo);
-  --primary-active: var(--petroleo-profundo);
-  --primary-subtle: var(--salvia);
+  --primary-hover: var(--petroleo-hover);
+  --primary-active: var(--petroleo-hover);
+  --primary-subtle: var(--lima);
   --primary-subtle-foreground: var(--petroleo);
-  /* Action = destaque: the main button. At most one lima highlight per screen. */
-  --action: var(--destaque);
-  --action-hover: var(--oliva);
-  --action-active: var(--oliva);
-  --action-foreground: var(--texto-sobre-destaque);
+  /* Action: the main button. Petroleo fill with gelo text, one per view. */
+  --action: var(--petroleo);
+  --action-hover: var(--petroleo-hover);
+  --action-active: var(--petroleo-hover);
+  --action-foreground: var(--gelo);
 
   /* Inverse = superficie-inversa (Button variant "dark", impact blocks). */
   --inverse: var(--superficie-inversa);
   --inverse-foreground: var(--texto-inverso);
-  --inverse-hover: var(--petroleo);
+  --inverse-hover: var(--petroleo-hover);
 
-  --secondary: var(--elevate-2);
-  --secondary-foreground: var(--texto);
-  --muted: var(--elevate-2);
-  --accent: var(--aqua);
+  --secondary: var(--aqua);
+  --secondary-foreground: var(--petroleo);
+  --muted: #ecf6f2; /* oklch(0.965 0.012 170) */
+  --accent: var(--lima);
   --accent-foreground: var(--petroleo);
 
-  /* Error has no hue of its own in the palette: it inverts the surface (superficie-inversa) and always carries
-   * text and an icon. See docs/design-system.md → "Estados". */
-  --destructive: var(--superficie-inversa);
-  --destructive-foreground: var(--texto-inverso);
-  --destructive-subtle: var(--superficie-inversa);
-  --destructive-subtle-foreground: var(--texto-inverso);
-  --destructive-subtle-border: var(--superficie-inversa);
+  /* Errors and destructive actions only. Always with text and an icon. */
+  --destructive: #b02b27; /* oklch(0.5 0.17 27) */
+  --destructive-foreground: var(--gelo);
+  --destructive-subtle: color-mix(in srgb, var(--destructive) 10%, var(--fundo));
+  --destructive-subtle-foreground: var(--destructive);
+  --destructive-subtle-border: color-mix(in srgb, var(--destructive) 35%, var(--fundo));
   /* Warning = "look at this soon" (deadlines ≤ 7 days, degraded service): oliva fill with petroleo text. */
   --warning: var(--texto);
   --warning-subtle: var(--oliva);
@@ -374,6 +1234,7 @@
   --status-direct: var(--aqua);
   --status-direct-foreground: var(--petroleo);
 
+  /* Charts: petroleo, aqua, lima. On light grounds lima is too faint for a bar, so series 3 uses oliva there. */
   --chart-1: var(--petroleo);
   --chart-2: var(--aqua);
   --chart-3: var(--oliva);
@@ -381,22 +1242,22 @@
   --chart-5: var(--nevoa);
 
   /* Choropleth of open tenders by state: the foco ink mixed into the page in five even steps, so more volume
-   * always means more ink (darker on Creme, brighter on Petróleo). A state without open tenders is fundo-alt. */
-  --mapa-vazio: var(--fundo-alt);
+   * always means more ink (darker on Gelo, brighter on Petróleo). A state without open tenders is map-state-empty. */
+  --mapa-vazio: var(--map-state-empty);
   --mapa-1: color-mix(in srgb, var(--foco) 20%, var(--fundo));
   --mapa-2: color-mix(in srgb, var(--foco) 40%, var(--fundo));
   --mapa-3: color-mix(in srgb, var(--foco) 60%, var(--fundo));
   --mapa-4: color-mix(in srgb, var(--foco) 80%, var(--fundo));
   --mapa-5: var(--foco);
 
-  /* Sidebar: fundo-alt, so the logo matches the page theme (petroleo on Creme, lima on Petróleo). */
-  --sidebar: var(--fundo-alt);
+  /* Sidebar: gelo with a hairline, the active item in lima ("selected / yours"). */
+  --sidebar: var(--fundo);
   --sidebar-foreground: var(--texto);
-  --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo-alt));
-  --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 86%, var(--fundo-alt));
+  --sidebar-muted-foreground: var(--muted-foreground);
+  --sidebar-subtle-foreground: var(--muted-foreground);
   --sidebar-strong-foreground: var(--texto);
   --sidebar-border: var(--linha);
-  --sidebar-primary: var(--salvia);
+  --sidebar-primary: var(--lima);
   --sidebar-primary-foreground: var(--petroleo);
   --sidebar-accent: var(--elevate-2);
   --sidebar-accent-foreground: var(--texto);
@@ -410,7 +1271,7 @@
   --accent-border: var(--accent);
   --destructive-border: var(--destructive);
 
-  --radius: var(--raio-sm);
+  --radius: var(--raio-botao);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -428,6 +1289,8 @@
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 280ms;
+  /* The landing flight path (pardal-flight-easing.ts) is tuned on this curve; UI transitions use --ease-standard. */
+  --ease-voo: cubic-bezier(0.2, 0, 0, 1);
 
   /* Z-index scale */
   --z-base: 0;
@@ -439,44 +1302,77 @@
   --z-popover: 50;
   --z-toast: 100;
 
-  /* Focus: solid 2px foco ring, 2px away from the element. */
+  /* Focus: solid 2px foco ring, 3px away from the element (3px lima, 4px away, in Petróleo). */
   --focus-ring-width: 2px;
-  --focus-ring-offset: 2px;
+  --focus-ring-offset: 3px;
+  --halo-campo: 0 0 0 3px color-mix(in srgb, var(--aqua) 58%, transparent);
 }
 
-/* PETRÓLEO (dark). Palette fills (salvia, oliva, aqua, nevoa) keep petroleo text in both themes. */
+/* PETRÓLEO (dark), derived from the Claude Design petroleo sections: petroleo-deep page, petroleo cards, gelo text,
+ * lima highlights and focus. Palette fills (aqua, lima, salvia, oliva, nevoa) keep petroleo text in both themes. */
 .dark {
   color-scheme: dark;
 
-  --fundo: var(--petroleo-profundo);
+  --fundo: var(--petroleo-deep);
   --fundo-alt: var(--petroleo);
-  --texto: var(--creme-claro);
-  --marca: var(--lima-marca);
-  --superficie-inversa: var(--creme-claro);
+  --texto: var(--gelo);
+  --marca: var(--lima);
+  --superficie-inversa: var(--gelo);
   --texto-inverso: var(--petroleo);
-  --linha: var(--salvia);
+  --linha: color-mix(in srgb, var(--gelo) 22%, var(--petroleo-deep));
   --foco: var(--lima);
 
+  /* Shadows barely read on petroleo; keep the deep ones for cards floating over the page. */
+  --sombra-suave: 0 14px 40px rgba(0, 12, 14, 0.25);
+  --sombra-campo: 0 12px 35px rgba(0, 12, 14, 0.3);
+  --sombra-flutuante: 0 10px 30px rgba(0, 12, 14, 0.35);
+
   /* Same formulas as :root, re-resolved against the Petróleo values. */
-  --button-outline: color-mix(in srgb, var(--texto) 18%, transparent);
-  --badge-outline: color-mix(in srgb, var(--texto) 10%, transparent);
+  --button-outline: color-mix(in srgb, var(--texto) 35%, transparent);
+  --badge-outline: color-mix(in srgb, var(--texto) 18%, transparent);
   --elevate-1: color-mix(in srgb, var(--texto) 6%, transparent);
   --elevate-2: color-mix(in srgb, var(--texto) 12%, transparent);
-  --muted-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo));
-  --foreground-subtle: color-mix(in srgb, var(--texto) 64%, var(--fundo));
-  --border-subtle: color-mix(in srgb, var(--linha) 35%, var(--fundo));
+  --card: var(--fundo-alt);
+  --card-border: color-mix(in srgb, var(--texto) 18%, var(--fundo-alt));
+  --popover: var(--fundo-alt);
+  --popover-border: color-mix(in srgb, var(--texto) 22%, var(--fundo-alt));
+  --surface: var(--fundo-alt);
+  --surface-sunken: var(--fundo);
+  --surface-raised: var(--fundo-alt);
+  --muted: var(--elevate-2);
+  --muted-foreground: color-mix(in srgb, var(--texto) 78%, var(--fundo-alt));
+  --foreground-subtle: color-mix(in srgb, var(--texto) 62%, var(--fundo));
+  --border-subtle: color-mix(in srgb, var(--linha) 50%, var(--fundo));
   --border-strong: color-mix(in srgb, var(--texto) 50%, var(--fundo));
+  --input: color-mix(in srgb, var(--texto) 60%, var(--fundo));
   --hero-highlight: var(--lima);
-  --primary-hover: var(--oliva);
-  --primary-active: var(--oliva);
-  --inverse-hover: var(--creme);
+  --primary-foreground: var(--petroleo);
+  --primary-hover: color-mix(in srgb, var(--lima) 82%, var(--gelo));
+  --primary-active: color-mix(in srgb, var(--lima) 82%, var(--gelo));
+  --action: var(--lima);
+  --action-hover: color-mix(in srgb, var(--lima) 82%, var(--gelo));
+  --action-active: color-mix(in srgb, var(--lima) 82%, var(--gelo));
+  --action-foreground: var(--petroleo);
+  --inverse-hover: var(--surface-mist);
+  --destructive: #ff9d8f; /* the error red lightened for petroleo grounds */
+  --destructive-foreground: var(--petroleo-deep);
+  --destructive-subtle: color-mix(in srgb, var(--destructive) 12%, var(--fundo));
+  --destructive-subtle-foreground: var(--destructive);
+  --destructive-subtle-border: color-mix(in srgb, var(--destructive) 40%, var(--fundo-alt));
   --warning: var(--oliva);
+  --chart-3: var(--lima);
+  --mapa-vazio: color-mix(in srgb, var(--gelo) 6%, var(--fundo));
   --mapa-1: color-mix(in srgb, var(--foco) 20%, var(--fundo));
   --mapa-2: color-mix(in srgb, var(--foco) 40%, var(--fundo));
   --mapa-3: color-mix(in srgb, var(--foco) 60%, var(--fundo));
   --mapa-4: color-mix(in srgb, var(--foco) 80%, var(--fundo));
-  --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
-  --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 82%, var(--fundo-alt));
+  --sidebar: var(--fundo-alt);
+  --sidebar-border: color-mix(in srgb, var(--texto) 18%, var(--fundo-alt));
+  --sidebar-muted-foreground: color-mix(in srgb, var(--texto) 78%, var(--fundo-alt));
+  --sidebar-subtle-foreground: color-mix(in srgb, var(--texto) 78%, var(--fundo-alt));
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 4px;
+  --halo-campo: 0 0 0 3px color-mix(in srgb, var(--lima) 50%, transparent);
 }
 
 @layer base {
@@ -493,12 +1389,13 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 
-  /* Titles in Qurova (Quicksand stand-in), sentence case. Only type-rotulo is uppercase. */
+  /* Titles in Qurova (Quicksand stand-in), sentence case, tight tracking. Only type-rotulo is uppercase. */
   h1,
   h2,
   h3,
   h4 {
     font-family: var(--fonte-titulo);
+    letter-spacing: var(--tracking-heading);
   }
 
   ::selection {
@@ -506,10 +1403,17 @@
     color: var(--texto-sobre-destaque);
   }
 
-  /* One focus language for every interactive element: solid 2px foco ring, 2px away (tokens.json → foco). */
+  /* One focus language for every interactive element: solid foco ring, 3px away (4px in Petróleo). */
   :focus-visible {
     outline: var(--focus-ring-width) solid var(--ring);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Text fields focus like the Claude Design search row: full foco border plus a soft halo, no detached ring. */
+  :where(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), textarea, select):focus-visible {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: var(--halo-campo);
   }
 
   /* Honor reduced transparency: translucent bars become solid. */
@@ -540,12 +1444,15 @@
 }
 @utility type-titulo-1 {
   font: var(--titulo-1);
+  letter-spacing: var(--titulo-tracking);
 }
 @utility type-titulo-2 {
   font: var(--titulo-2);
+  letter-spacing: var(--titulo-tracking);
 }
 @utility type-titulo-3 {
   font: var(--titulo-3);
+  letter-spacing: -0.02em;
 }
 @utility type-corpo-grande {
   font: var(--corpo-grande);
@@ -722,8 +1629,9 @@
   }
 
   .field :is(input, textarea):focus-visible {
-    outline: var(--focus-ring-width) solid var(--ring);
-    outline-offset: var(--focus-ring-offset);
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: var(--halo-campo);
   }
 
   .field :is(input, textarea):disabled {
