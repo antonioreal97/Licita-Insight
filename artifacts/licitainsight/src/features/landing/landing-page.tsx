@@ -34,9 +34,6 @@ const inverseAction =
 const brandAction =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-petroleo px-5 text-sm font-bold text-gelo transition-[transform,background-color] duration-fast hover:bg-petroleo-hover active:translate-y-px';
 
-// The header link beside the menu button on phones: text-sized, but a 44 px tap target.
-const compactLink = 'inline-flex min-h-11 items-center px-1 text-sm font-bold';
-
 const useTrialDays = () => usePublicPlan().data?.trialDays ?? 7;
 
 function SessionPlaceholder({ inverse = false }: { inverse?: boolean }) {
@@ -55,14 +52,14 @@ function AccountAction({ compact = false }: { compact?: boolean }) {
   if (status === 'loading') return <SessionPlaceholder />;
   if (status === 'authenticated') {
     return (
-      <Link href="/dashboard" data-testid="link-landing-dashboard" className={compact ? compactLink : inverseAction}>
+      <Link href="/dashboard" data-testid="link-landing-dashboard" className={compact ? 'text-sm font-bold' : inverseAction}>
         Visão geral {!compact && <ArrowRight size={16} aria-hidden />}
       </Link>
     );
   }
   if (compact) {
     return (
-      <Link href="/login" data-testid="link-landing-login-mobile" className={compactLink}>
+      <Link href="/login" data-testid="link-landing-login-mobile" className="text-sm font-bold">
         Entrar
       </Link>
     );
@@ -167,8 +164,8 @@ function Hero() {
           <img
             src={`${baseUrl}brand/landing-hero.jpg`}
             alt="Profissional olhando para novos caminhos"
-            width={682}
-            height={1024}
+            width={2048}
+            height={1367}
             fetchPriority="high"
           />
           <span className="landing-hero-wing" aria-hidden />
@@ -212,7 +209,7 @@ const discoveryItems: DiscoveryItem[] = [
 function DiscoverySection() {
   return (
     <section id="descobrir" aria-labelledby="descobrir-titulo" className="landing-discovery scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
         <div className="max-w-3xl">
           <p className="landing-section-label">Descubra por interesse</p>
           <h2 id="descobrir-titulo" className="landing-section-title max-w-[13ch]">O que você quer encontrar?</h2>
@@ -241,7 +238,7 @@ const journey = [
 function HowItWorksSection() {
   return (
     <section id="como-funciona" aria-labelledby="como-funciona-titulo" className="landing-journey scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:px-12 lg:py-28 xl:px-20">
+      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-28 xl:px-20">
         <div className="landing-journey-heading">
           <div>
             <h2 id="como-funciona-titulo">Da busca ao edital certo.</h2>
@@ -276,7 +273,7 @@ function PlanSection() {
   const signedIn = useSession().status === 'authenticated';
   return (
     <section id="plano" data-testid="section-plan" aria-labelledby="plano-titulo" className="landing-plan scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
         <div className="landing-plan-shell">
           <div className="landing-plan-message">
             <p className="landing-section-label">Plano</p>
@@ -308,7 +305,7 @@ function EditorialSection() {
   const baseUrl = import.meta.env.BASE_URL;
   return (
     <section aria-labelledby="editorial-titulo" className="landing-editorial">
-      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 md:py-20 lg:py-28">
+      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
         <h2 id="editorial-titulo" className="landing-section-title max-w-[12ch]">Informação para decidir melhor.</h2>
         <div className="landing-editorial-grid">
           <Link href="/ajuda" className="landing-editorial-feature group">
@@ -342,9 +339,9 @@ function FaqSection() {
     { q: 'Como chegam os alertas?', a: 'No sino do app e em um resumo diário por e-mail, com base nos editais salvos e nas buscas monitoradas.' },
   ];
   return (
-    <section id="duvidas" aria-labelledby="duvidas-titulo" className="mx-auto max-w-3xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-28">
+    <section id="duvidas" aria-labelledby="duvidas-titulo" className="mx-auto max-w-3xl scroll-mt-20 px-5 py-20 sm:px-8 sm:py-28">
       <h2 id="duvidas-titulo" className="landing-section-title text-center">Perguntas rápidas</h2>
-      <Accordion type="single" collapsible className="mt-8 w-full sm:mt-10 border-t border-border-subtle">
+      <Accordion type="single" collapsible className="mt-10 w-full border-t border-border-subtle">
         {faqs.map((faq, index) => (
           <AccordionItem key={faq.q} value={`item-${index}`} className="border-border-subtle">
             <AccordionTrigger className="text-left text-base font-bold hover:no-underline">{faq.q}</AccordionTrigger>
@@ -358,10 +355,10 @@ function FaqSection() {
 
 function FinalCta() {
   return (
-    <section aria-labelledby="cta-titulo" className="px-5 pb-14 sm:px-8 sm:pb-28">
+    <section aria-labelledby="cta-titulo" className="px-5 pb-20 sm:px-8 sm:pb-28">
       <div className="landing-final-cta">
         <div><h2 id="cta-titulo">Seu próximo edital pode estar aberto agora.</h2><p>Pesquise sem cadastro. Quando quiser alertas, entre com o Google.</p></div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="flex flex-wrap gap-3">
           <Link href="/search" data-testid="link-final-search" className={primaryAction}><Search size={16} aria-hidden /> Ver editais</Link>
           <AccountCta testId="link-final-start" className="landing-final-secondary" label="Entrar ou criar conta" />
         </div>
@@ -386,9 +383,9 @@ export default function LandingPage() {
         <FinalCta />
       </main>
       <footer className="landing-footer">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 px-5 py-10 sm:gap-8 sm:px-8 sm:py-12 md:flex-row md:items-end">
-          <div><BrandLogo className="h-10" /><p className="mt-5 max-w-md text-sm text-muted-foreground">Editais públicos e oportunidades em um só lugar.</p><p className="mt-2 text-sm text-muted-foreground sm:text-xs">© 2026 Pardal Digital. Dados de fontes oficiais.</p></div>
-          <div className="landing-footer-links flex flex-col gap-3 text-sm font-semibold md:items-end"><Link href="/ajuda">Ajuda e glossário</Link><LegalLinks className="md:justify-end" /></div>
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 px-5 py-12 sm:px-8 md:flex-row md:items-end">
+          <div><BrandLogo className="h-10" /><p className="mt-5 max-w-md text-sm text-muted-foreground">Editais públicos e oportunidades em um só lugar.</p><p className="mt-2 text-xs text-muted-foreground">© 2026 Pardal Digital. Dados de fontes oficiais.</p></div>
+          <div className="flex flex-col gap-3 text-sm font-semibold md:items-end"><Link href="/ajuda">Ajuda e glossário</Link><LegalLinks className="md:justify-end" /></div>
         </div>
       </footer>
     </div>

@@ -7,6 +7,7 @@
 - Nome do produto na UI: Pardal Digital. O logo oficial (SVG de cor fixa) fica em `artifacts/licitainsight/public/brand/` (`pardal-logo-petroleo.svg` no tema Gelo (claro), `pardal-logo-lima.svg` no tema Petróleo, `pardal-simbolo-*.svg` para espaços pequenos) e entra pelo componente `BrandLogo`; o favicon `artifacts/licitainsight/public/favicon.svg` é gerado de `pardal-simbolo-petroleo.svg`. Design system em `docs/design-system.md`. Os identificadores técnicos legados permanecem para preservar compatibilidade.
 - Sessão: manter o cookie HttpOnly `licita_session`; não guardar o token no `localStorage` — só o relógio de inatividade e preferências opcionais.
 - Assinatura mensal atrativa em R$ 49,90 (`BILLING_MONTHLY_BRL=49.90`); reajustar só se o custo real por assinante apertar.
+- Landing: vídeos de motion sem áudio (`muted`); só motion visual, nunca trilha sonora.
 
 ## Learned Workspace Facts
 
@@ -19,6 +20,6 @@
 - O frontend chama a API pela mesma origem (proxy do Vite `/api` → `:3001`, `VITE_API_BASE_URL=/api`; no Docker, `API_PROXY_TARGET=http://api:3001`). Em produção o frontend sobe na Vercel (`vercel.json`, `middleware.js`, `API_UPSTREAM_ORIGIN`).
 - Busca semântica (`mode=semantic`) cai para palavra-chave com aviso na UI quando embeddings não estão disponíveis.
 - Chamadas de fomento audiovisual ficam fora de `tenders`: tabela `cultural_opportunities`, UI em `/oportunidades`, coleta Mapas Culturais (`pnpm --filter @workspace/api-server run collect:opportunities`), agenda desligável com `CULTURE_DAILY_COLLECT=false`. Filtro por `@keyword` (não `term:linguagem`). Contrato: `docs/contracts/opportunities-v1.md`.
-- Assinatura mensal via Asaas: busca, detalhe e oportunidades continuam públicos; salvar, monitorar, buscas salvas e notificações exigem assinatura ativa (`402` / `SUBSCRIPTION_REQUIRED`). Produção: `BILLING_MONTHLY_BRL=49.90`. Env: `ASAAS_API_KEY`, `ASAAS_API_BASE_URL`, `ASAAS_WEBHOOK_TOKEN`, `BILLING_MONTHLY_BRL`. Webhook: `POST /api/v1/billing/asaas/webhook`.
-- Aderência (company fit): perfil em `/api/v1/me/company-profile` (só sessão, fora do paywall); score em `GET /api/v1/me/fit` (exige assinatura). Comparação por texto com Jev — sem CATMAT/CNAE. Contrato: `docs/contracts/company-fit-v1.md`.
+- Assinatura mensal via Asaas: busca, detalhe e oportunidades continuam públicos; salvar, monitorar, buscas salvas e notificações exigem assinatura ativa (`402` / `SUBSCRIPTION_REQUIRED`). Produção: `BILLING_MONTHLY_BRL=49.90`. Env: `ASAAS_API_KEY`, `ASAAS_API_BASE_URL`, `ASAAS_WEBHOOK_TOKEN`, `BILLING_MONTHLY_BRL`. Webhook: `POST /api/v1/billing/asaas/webhook`. E-mail transacional: `BREVO_API_KEY` (preferência) ou `RESEND_API_KEY`, mais `MAIL_FROM`; sem chave o envio é skipped.
+- Aderência (company fit): perfil em `/api/v1/me/company-profile` (só sessão, fora do paywall); score em `GET /api/v1/me/fit` (exige assinatura). Comparação por texto com Jev — sem CATMAT/CNAE. Níveis: alta `>= 0.75`, média `>= 0.55`; gate padrão `shadow`. Contrato: `docs/contracts/company-fit-v1.md`.
 - Em macOS, overrides do `pnpm-workspace.yaml` que removem binários nativos não-linux podem quebrar esbuild/rollup/lightningcss/oxide; se faltar `@*-darwin-arm64`, revisar esses overrides.
