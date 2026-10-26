@@ -20,6 +20,13 @@ const clips = [
   },
 ] as const;
 
+// Phones get the silent 720p cuts (`<clip>-720.mp4`, a quarter of the bytes); 1080p is wasted on a 350 px wide player.
+const SMALL_SCREEN = '(max-width: 767px)';
+
+/** "Data saver" on (Chrome on Android, some browsers): nothing downloads or plays until the button asks for it. */
+const prefersSaveData = () =>
+  (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+
 const play = (video: HTMLVideoElement) =>
   video.play().catch((error: unknown) => {
     if (error instanceof DOMException && (error.name === 'AbortError' || error.name === 'NotAllowedError')) {
@@ -31,7 +38,7 @@ const play = (video: HTMLVideoElement) =>
 /**
  * Três clipes de motion design da plataforma em sequência (sem áudio): ao terminar um, começa o próximo;
  * ao terminar o último, volta ao primeiro. Só baixa perto da viewport; pausa fora dela.
- * Com reduced motion, não inicia sozinho — só pelo botão.
+ * Com reduced motion ou economia de dados, não inicia sozinho — só pelo botão.
  */
 export function LandingMotionPlaylist({ className }: { className?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,6 +47,8 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
   const [near, setNear] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [saveData] = useState(prefersSaveData);
+  const autoplay = !reducedMotion && !saveData;
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -66,7 +75,7 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
           video.pause();
           return;
         }
-        if (userWantsPlay.current ?? !reducedMotion) play(video);
+        if (userWantsPlay.current ?? autoplay) play(video);
       },
       { threshold: 0.4 },
     );
@@ -76,15 +85,15 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
       nearObserver.disconnect();
       visibleObserver.disconnect();
     };
-  }, [reducedMotion]);
+  }, [autoplay]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !near) return;
     video.load();
     if (userWantsPlay.current === false) return;
-    if (userWantsPlay.current === true || !reducedMotion) play(video);
-  }, [index, near, reducedMotion]);
+    if (userWantsPlay.current === true || autoplay) play(video);
+  }, [index, near, autoplay]);
 
   const toggle = () => {
     const video = videoRef.current;
@@ -95,7 +104,7 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
   };
 
   const clip = clips[index];
-  const src = near ? `${import.meta.env.BASE_URL}motion/${clip.file}.mp4` : undefined;
+  const file = `${import.meta.env.BASE_URL}motion/${clip.file}`;
 
   return (
     <figure className={className}>
@@ -109,12 +118,18 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
           height={1080}
           muted
           playsInline
-          preload={near ? 'metadata' : 'none'}
-          src={src}
+          preload={near && !saveData ? 'metadata' : 'none'}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => setIndex((current) => (current + 1) % clips.length)}
-        />
+        >
+          {near && (
+            <>
+              <source src={`${file}-720.mp4`} type="video/mp4" media={SMALL_SCREEN} />
+              <source src={`${file}.mp4`} type="video/mp4" />
+            </>
+          )}
+        </video>
       </div>
       <figcaption className="landing-journey-media-caption">
         <p id="journey-motion-descricao" className="type-meta">
@@ -125,6 +140,7 @@ export function LandingMotionPlaylist({ className }: { className?: string }) {
           size="sm"
           onClick={toggle}
           data-testid="button-landing-motion-playlist-toggle"
+          className="max-md:h-11 max-md:px-4 max-md:text-sm"
           aria-label={playing ? 'Pausar o vídeo' : 'Reproduzir o vídeo'}
         >
           {playing ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
