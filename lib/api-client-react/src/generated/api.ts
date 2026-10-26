@@ -47,6 +47,8 @@ import type {
   CreateSavedSearchRequest,
   DeleteAccountRequest,
   DevLoginRequest,
+  DismissNotificationsRequest,
+  DismissNotificationsResult,
   DismissRecommendationRequest,
   EmailUnsubscribeRequest,
   EmailUnsubscribeResponse,
@@ -87,6 +89,8 @@ import type {
   RecommendationsResponse,
   RecordRecommendationEvent202,
   RedeemCouponRequest,
+  RestoreNotificationsRequest,
+  RestoreNotificationsResult,
   SavedSearch,
   SavedSearchList,
   SavedTender,
@@ -5761,5 +5765,175 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getMarkNotificationsReadMutationOptions(options));
+    }
+
+export const getDismissNotificationsUrl = () => {
+
+
+
+
+  return `/api/v1/me/notifications/dismiss`
+}
+
+/**
+ * Removes notifications from the feed, the unread count and e-mail (soft delete: producers never create them again). `ids` of other users are ignored. Every row removed by one call shares `dismissedAt`.
+ */
+export const dismissNotifications = async (dismissNotificationsRequest: DismissNotificationsRequest, options?: Parameters<typeof customFetch>[1]): Promise<DismissNotificationsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DismissNotificationsResult>(getDismissNotificationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(dismissNotificationsRequest)
+  }
+);}
+
+
+
+
+
+export const getDismissNotificationsMutationKey = () => ['dismissNotifications'] as const;
+
+export const getDismissNotificationsMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissNotifications>>, TError,DismissNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dismissNotifications>>, TError,DismissNotificationsMutationVariables, TContext> => {
+
+const mutationKey = getDismissNotificationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dismissNotifications>>, DismissNotificationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  dismissNotifications(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DismissNotificationsMutationResult = NonNullable<Awaited<ReturnType<typeof dismissNotifications>>>
+    export type DismissNotificationsMutationBody = BodyType<DismissNotificationsRequest>
+    export type DismissNotificationsMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type DismissNotificationsMutationVariables = {data: BodyType<DismissNotificationsRequest>}
+
+    export const useDismissNotifications = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissNotifications>>, TError,DismissNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dismissNotifications>>,
+        TError,
+        DismissNotificationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDismissNotificationsMutationOptions(options));
+    }
+
+export const getRestoreNotificationsUrl = () => {
+
+
+
+
+  return `/api/v1/me/notifications/restore`
+}
+
+/**
+ * Undoes a removal: `ids`, or the `dismissedAt` returned by the dismiss call. `ids` of other users are ignored.
+ */
+export const restoreNotifications = async (restoreNotificationsRequest: RestoreNotificationsRequest, options?: Parameters<typeof customFetch>[1]): Promise<RestoreNotificationsResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RestoreNotificationsResult>(getRestoreNotificationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(restoreNotificationsRequest)
+  }
+);}
+
+
+
+
+
+export const getRestoreNotificationsMutationKey = () => ['restoreNotifications'] as const;
+
+export const getRestoreNotificationsMutationOptions = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreNotifications>>, TError,RestoreNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreNotifications>>, TError,RestoreNotificationsMutationVariables, TContext> => {
+
+const mutationKey = getRestoreNotificationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreNotifications>>, RestoreNotificationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  restoreNotifications(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreNotificationsMutationResult = NonNullable<Awaited<ReturnType<typeof restoreNotifications>>>
+    export type RestoreNotificationsMutationBody = BodyType<RestoreNotificationsRequest>
+    export type RestoreNotificationsMutationError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>
+    export type RestoreNotificationsMutationVariables = {data: BodyType<RestoreNotificationsRequest>}
+
+    export const useRestoreNotifications = <TError = ErrorType<InvalidParameterResponse | UnauthenticatedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreNotifications>>, TError,RestoreNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreNotifications>>,
+        TError,
+        RestoreNotificationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreNotificationsMutationOptions(options));
     }
 

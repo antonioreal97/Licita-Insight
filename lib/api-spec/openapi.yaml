@@ -1692,6 +1692,59 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/notifications/dismiss:
+    post:
+      operationId: dismissNotifications
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      description: >-
+        Removes notifications from the feed, the unread count and e-mail (soft delete: producers never create them
+        again). `ids` of other users are ignored. Every row removed by one call shares `dismissedAt`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DismissNotificationsRequest"
+      responses:
+        "200":
+          description: Removed notifications and the remaining unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DismissNotificationsResult"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/notifications/restore:
+    post:
+      operationId: restoreNotifications
+      tags: [account]
+      security: [{ sessionCookie: [] }]
+      description: >-
+        Undoes a removal: `ids`, or the `dismissedAt` returned by the dismiss call. `ids` of other users are ignored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestoreNotificationsRequest"
+      responses:
+        "200":
+          description: Restored notifications and the remaining unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestoreNotificationsResult"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     sessionCookie:
@@ -2386,6 +2439,7 @@ components:
         type: { type: string }
         createdAt: { type: string, format: date-time }
         readAt: { type: [string, "null"], format: date-time }
+        dismissedAt: { type: [string, "null"], format: date-time }
         tenderId: { type: [string, "null"] }
         tenderTitle: { type: [string, "null"] }
         tenderNumberShort: { type: [string, "null"] }
@@ -2413,6 +2467,7 @@ components:
           type,
           createdAt,
           readAt,
+          dismissedAt,
           tenderId,
           tenderTitle,
           tenderNumberShort,
@@ -4336,6 +4391,37 @@ components:
           maxItems: 100
           items: { type: string, minLength: 1 }
         all: { type: boolean }
+    DismissNotificationsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          maxItems: 100
+          items: { type: string, minLength: 1 }
+        allRead: { type: boolean, description: Removes every read notification. }
+    DismissNotificationsResult:
+      type: object
+      properties:
+        dismissedCount: { type: integer, minimum: 0 }
+        dismissedAt: { type: [string, "null"], format: date-time }
+        unreadCount: { type: integer, minimum: 0 }
+      required: [dismissedCount, dismissedAt, unreadCount]
+    RestoreNotificationsRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        ids:
+          type: array
+          maxItems: 100
+          items: { type: string, minLength: 1 }
+        dismissedAt: { type: string, format: date-time }
+    RestoreNotificationsResult:
+      type: object
+      properties:
+        restoredCount: { type: integer, minimum: 0 }
+        unreadCount: { type: integer, minimum: 0 }
+      required: [restoredCount, unreadCount]
     OpportunityStatus:
       type: string
       enum: [open, upcoming, closed, undated]
