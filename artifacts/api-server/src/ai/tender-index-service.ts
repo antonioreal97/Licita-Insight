@@ -29,6 +29,7 @@ import { completedIndexStatus } from "./policy";
 import { enqueueAiJob, runEnqueuedAiJobNow } from "./ai-job-queue";
 import { appRoleFromEnv } from "../app-role";
 import { scheduleTenderDetailEnrichment } from "../ingest/schedule-tender-detail-enrichment";
+import { pncpReachableUrl } from "../ingest/pncp-map";
 import { extractionDocumentStatus } from "./ocr-routing";
 import { recognizeDocument } from "./ocr-client";
 
@@ -126,10 +127,11 @@ export const downloadDocument = async (
   url: string,
   maxBytes: number,
 ): Promise<Uint8Array> => {
-  validateDocumentUrl(url);
+  const reachable = pncpReachableUrl(url);
+  validateDocumentUrl(reachable);
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetch(reachable, {
       signal: AbortSignal.timeout(aiConfig().documentTimeoutMs),
     });
   } catch (error) {
@@ -471,11 +473,12 @@ const enqueueDocumentOcrJobs = async (tenderId: string, version: number, documen
 
 const processIndex = async (
   tenderId: string,
-  documents: TenderDocumentRecord[],
+  storedDocuments: TenderDocumentRecord[],
   version: number,
   previousVersion: number,
 ): Promise<void> => {
   try {
+    const documents = storedDocuments.map((document) => ({ ...document, url: pncpReachableUrl(document.url) }));
     const ocrDocumentIds: string[] = [];
     const sourceIds = new Set(documents.map(({ id }) => id));
     const existingRows = await db

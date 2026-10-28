@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   mapEstimatedValue,
+  mapPncpDocuments,
   mapPublication,
   mapPncpStatus,
   mergeTimeline,
+  pncpReachableUrl,
   pncpTenderNumberShort,
 } from "./pncp-map";
 import { DISPLAY_TITLE_RULES_VERSION } from "./title-normalizer";
@@ -278,5 +280,21 @@ describe("PNCP publication mapping", () => {
       ).status,
       "open",
     );
+  });
+});
+
+describe("PNCP document links", () => {
+  it("drops the internal port PNCP puts in file links, which times out from outside", () => {
+    const [document] = mapPncpDocuments(
+      [{ sequencialDocumento: 1, titulo: "Edital.pdf", url: "https://pncp.gov.br:56012/pncp-api/v1/orgaos/00394460000141/compras/2025/1/arquivos/1" }],
+      { cnpj: "00394460000141", ano: 2025, sequencial: 1 },
+    );
+    assert.equal(document?.url, "https://pncp.gov.br/pncp-api/v1/orgaos/00394460000141/compras/2025/1/arquivos/1");
+  });
+
+  it("leaves other hosts and port-less links as they are", () => {
+    assert.equal(pncpReachableUrl("https://pncp.gov.br/api/pncp/v1/a"), "https://pncp.gov.br/api/pncp/v1/a");
+    assert.equal(pncpReachableUrl("https://compras.exemplo.gov.br:8443/a"), "https://compras.exemplo.gov.br:8443/a");
+    assert.equal(pncpReachableUrl("not a url"), "not a url");
   });
 });

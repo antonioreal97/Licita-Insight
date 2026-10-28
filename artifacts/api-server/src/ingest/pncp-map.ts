@@ -451,9 +451,21 @@ const absoluteUrl = (value: unknown): string | null => {
   if (!text) return null;
   try {
     const url = new URL(text);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+    return url.protocol === "http:" || url.protocol === "https:" ? pncpReachableUrl(url.toString()) : null;
   } catch {
     return null;
+  }
+};
+
+/** PNCP lists files under internal ports (pncp.gov.br:56012) that time out from outside; the same path answers on the default port. */
+export const pncpReachableUrl = (value: string): string => {
+  try {
+    const url = new URL(value);
+    if (url.hostname.toLowerCase() !== "pncp.gov.br" || !url.port) return value;
+    url.port = "";
+    return url.toString();
+  } catch {
+    return value;
   }
 };
 

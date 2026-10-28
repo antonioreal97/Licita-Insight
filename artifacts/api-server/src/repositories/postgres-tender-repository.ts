@@ -21,6 +21,7 @@ import type {
 } from "@workspace/db/schema";
 import type { FacetGroup, SearchCriteria } from "../domain/search";
 import { platformKind, platformUrl } from "../catalog/tender-platforms";
+import { pncpReachableUrl } from "../ingest/pncp-map";
 import { normalizeText, queryTokens } from "../domain/normalize";
 import {
   pncpTenderNumberShort,
@@ -478,7 +479,7 @@ export const tenderRowToDetail = (
       name: document.name,
       type: document.type,
       sizeBytes: document.sizeBytes,
-      url: document.url,
+      url: pncpReachableUrl(document.url),
       publishedAt: document.publishedAt ? new Date(document.publishedAt) : null,
     })),
     timeline: timeline.map((entry) => ({
