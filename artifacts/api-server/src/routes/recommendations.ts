@@ -120,8 +120,17 @@ router.post(
       return;
     }
     if (req.body?.type === "click") {
+      const tenderId =
+        typeof req.body.tenderId === "string" &&
+        req.body.tenderId.length > 0 &&
+        req.body.tenderId.length <= 200
+          ? req.body.tenderId
+          : undefined;
       res.status(202).json({
-        recorded: await recordRecommendationEvent(userId, { type: "click" }),
+        recorded: await recordRecommendationEvent(userId, {
+          type: "click",
+          tenderId,
+        }),
       });
       return;
     }
