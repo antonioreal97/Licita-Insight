@@ -131,6 +131,10 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   if (dismissedColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0051_notification_dismissal.sql', import.meta.url), 'utf8'),
   );
+  // Not copied from public: the shared test database may predate it. Idempotent, and creates the table in this schema.
+  await pool.query(
+    readFileSync(new URL('../../../../lib/db/migrations/0052_recommendation_impressions.sql', import.meta.url), 'utf8'),
+  );
   const interestsColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'recommendation_metrics_daily' and column_name = 'interests'", [schema]);
   if (interestsColumn.rowCount === 0) await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0032_recommendation_interests.sql', import.meta.url), 'utf8'),
