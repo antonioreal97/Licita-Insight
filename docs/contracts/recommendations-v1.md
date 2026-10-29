@@ -8,6 +8,8 @@ Status: implementado. A funcionalidade aparece somente no app do Pardal Digital;
 
 A preferência `recommendationPersonalizationEnabled` nasce `false`. Sem opt-in, a API descarta buscas e visualizações antes de inserir qualquer linha. Ao desligar, o frontend envia `deleteHistory: true` (default da API) e informa que o histórico será apagado. Também existe `DELETE /api/v1/me/recommendation-history`. Eventos são retidos por no máximo 180 dias e a limpeza roda diariamente.
 
+Impressões (o que cada usuário viu, com as partes do score) são registradas para todos os usuários com acesso, retidas por 180 dias, incluídas na exportação e apagadas com o histórico e com a conta. O clique numa recomendação é comportamento de navegação: só marca a impressão com o opt-in (sem ele, entra apenas no contador global). Ver [Avaliação offline](#avaliação-offline).
+
 Sinais que não dependem do opt-in: perfil da empresa, editais salvos e monitorados, buscas salvas e as respostas da triagem — **Interessa** (expressões do edital, uma vez por edital) e Não interessa. São sinais explícitos, como salvar um edital. O opt-in acrescenta somente termos normalizados de busca e ids de editais abertos. A exportação `pardal-digital-dados-YYYY-MM-DD.json` inclui preferência, eventos ainda retidos, feedback, perfil calculado e recomendações materializadas. Excluir a conta remove tudo por `ON DELETE CASCADE`.
 
 As finalidades e os tipos de proponente do perfil da conta são dados **declarados** pelo usuário. Eles pesam materiais sem depender do opt-in de personalização comportamental. Sem resposta de finalidade, o fluxo, formato e ordenação de recomendações permanecem como antes.
@@ -45,7 +47,7 @@ type Recommendation = {
 };
 ```
 
-Impressões são somadas na leitura da página; cliques e dismiss são somados em seus endpoints. `recommendation_metrics_daily` guarda apenas contadores diários globais, sem user id, tender id ou conteúdo de busca.
+Impressões são somadas na leitura da página; cliques e dismiss são somados em seus endpoints. `recommendation_metrics_daily` guarda apenas contadores diários globais, sem user id, tender id ou conteúdo de busca. Por usuário, a leitura da página também grava `recommendation_impressions` (ver [Avaliação offline](#avaliação-offline)); a resposta da API não muda.
 
 ## Perfil e pesos
 
@@ -87,3 +89,17 @@ A dispensa aceita corpo opcional `{ "reason": "not_offering" | "region" | "value
 Esses ajustes são leves, não filtros obrigatórios, e não mudam a cobertura/faixa declarada no perfil. Os termos confirmados no painel “Quer deixar isso fora do seu perfil?” vão às exclusões pelo PUT do perfil. A personalização de navegação (opt-in) continua separada dos sinais explícitos de Interessa/Não interessa.
 
 A meta é de dez decisões/itens vistos, incluindo os pulados; pular não grava sinal no servidor. Ao esgotar uma seleção menor, o resumo informa isso sem simular dez itens. Progresso por usuário e dia de Brasília fica em memória durante a navegação; com consentimento de armazenamento opcional, também em `sessionStorage` para sobreviver a recargas da aba. Não sincroniza entre dispositivos/abas e não cria streak. Logout ou recusa de cookies remove a cópia opcional; nenhum token é armazenado. As exigências vêm somente das fichas prontas, sem iniciar análise. Custo adicional de IA por triagem/alerta: zero.
+
+## Avaliação offline
+
+Objetivo: medir o ranking com o que os usuários realmente viram e fizeram, antes de mexer em qualquer peso. Migração `0052`.
+
+- **Partes do score:** `scoreRecommendation` soma cada parcela por um componente nomeado (`profileCategory`, `profileTerms`, `profileDescription`, `interest`, `historyTerms`, `historyCategory`, `location`, `organization`, `value`, `platform`, `deadline`, `novelty`, `dismissalPenalty`). A soma das partes é o score, na mesma ordem de antes (o score não muda). As partes ficam em `user_recommendations.features`; não aparecem na resposta da API.
+- **Impressões:** cada leitura de `GET /recommendations` grava em `recommendation_impressions` os editais da página com escopo (`all`/`profile`), posição na tela, rank, score, partes, `algorithmVersion` e o momento da geração. Uma linha por edital, rodada e escopo: reler a página ou o polling não duplicam. Falha ao gravar não derruba a página.
+- **Clique:** `{type:'click', tenderId}` marca `clicked_at` na impressão mais recente daquele edital, só com o opt-in.
+- **Desfechos** vêm das tabelas que já existem, dentro de uma janela após a exibição (padrão 14 dias): clique (ganho 1), Interessa (2), salvar (2), monitorar (3), avançar no quadro para participando/enviado/aguardando/concluído (4); vale o mais forte. "Não interessa" ou "Descartado" no quadro sem ação positiva conta como negativo.
+- **Métricas** por lista exibida (usuário × escopo × rodada): precision@k, hit@k, nDCG@k (só listas com algum positivo) e negativos no top k. A variante reordena as mesmas listas com outros pesos por parte (`{}` reproduz a produção), então mede ordenação, não editais que nunca apareceram, e herda o viés de posição. Comparar variante e produção no mesmo período.
+- **Comando** (somente leitura): `pnpm --filter @workspace/api-server run evaluate:recommendations -- --days 30 --window 14 --k 10 [--weights pesos.json] [--include-open] [--json]`. Sem `--include-open`, ficam de fora as impressões cuja janela ainda não fechou.
+- **Retenção e privacidade:** 180 dias (limpeza no job diário das 03:00), exportação LGPD (`recommendationImpressions`), "Apagar histórico" e exclusão da conta.
+
+Próximo passo, quando houver desfechos suficientes: calibrar os pesos por parte com esses dados e só trocar a versão do algoritmo se a variante ganhar da produção nesta avaliação.

@@ -18,6 +18,7 @@ import {
   notificationsTable,
   recommendationDismissalsTable,
   recommendationEventsTable,
+  recommendationImpressionsTable,
   recommendationInterestProfilesTable,
   userRecommendationsTable,
   savedSearchesTable,
@@ -50,13 +51,14 @@ export const ACCOUNT_EXPORT_TABLES = {
   ai_fit_daily_usage: "fitUsage",
   recommendation_events: "recommendationEvents",
   recommendation_dismissals: "recommendationDismissals",
+  recommendation_impressions: "recommendationImpressions",
   recommendation_interest_profiles: "recommendationInterestProfile",
   user_recommendations: "recommendations",
   ai_jobs: "aiJobs",
 } as const;
 
 export async function exportAccountData(userId: string, now = new Date()) {
-  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyDocuments, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations] =
+  const [users, sessions, savedTenders, savedSearches, notifications, subscriptions, couponRedemptions, emailDeliveries, aiQuestions, aiDailyUsage, aiDailyTenders, aiJobs, companyProfiles, companyDocuments, companyFits, fitUsage, recommendationEvents, recommendationDismissals, recommendationInterest, recommendations, recommendationImpressions] =
     await Promise.all([
       db
         .select({
@@ -245,6 +247,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
       db.select().from(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId)),
       db.select().from(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId)).limit(1),
       db.select().from(userRecommendationsTable).where(eq(userRecommendationsTable.userId, userId)),
+      db.select().from(recommendationImpressionsTable).where(eq(recommendationImpressionsTable.userId, userId)),
     ]);
 
   const user = users[0];
@@ -270,6 +273,7 @@ export async function exportAccountData(userId: string, now = new Date()) {
     recommendationDismissals,
     recommendationInterestProfile: recommendationInterest[0] ?? null,
     recommendations,
+    recommendationImpressions,
     subscription: subscriptions[0] ?? null,
     couponRedemptions,
   };
@@ -349,6 +353,7 @@ const defaultDeleteAccountDependencies: DeleteAccountDependencies = {
       await tx.delete(recommendationInterestProfilesTable).where(eq(recommendationInterestProfilesTable.userId, userId));
       await tx.delete(recommendationDismissalsTable).where(eq(recommendationDismissalsTable.userId, userId));
       await tx.delete(recommendationEventsTable).where(eq(recommendationEventsTable.userId, userId));
+      await tx.delete(recommendationImpressionsTable).where(eq(recommendationImpressionsTable.userId, userId));
       await tx
         .delete(subscriptionsTable)
         .where(eq(subscriptionsTable.userId, userId));

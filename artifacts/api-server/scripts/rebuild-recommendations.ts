@@ -11,6 +11,7 @@ console.log(
       users: result.users,
       recommendations: result.recommendations,
       deletedEvents: result.deletedEvents,
+      deletedImpressions: result.deletedImpressions,
     },
     null,
     2,

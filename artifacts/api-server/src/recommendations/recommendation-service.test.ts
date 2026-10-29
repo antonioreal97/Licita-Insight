@@ -1094,3 +1094,24 @@ test("triagem: só entra edital com oferta, palavra-chave ou categoria do perfil
   assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", "SP"), { ...base, coverageScope: "national" }), true);
   assert.equal(alignsWithRegisteredProfile(tender("aquisicao de drone", "MG"), { ...base, coverageScope: null }), false);
 });
+
+test("as partes do score somam o score e guardam o sinal de cada componente", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const sum = (features: Record<string, number | undefined>) =>
+    Number(Object.values(features).reduce<number>((total, value) => total + (value ?? 0), 0).toFixed(5));
+  const inside = scoreRecommendation({ ...baseCandidate, state: "SP" }, profile, [], now);
+  const penalized = scoreRecommendation(
+    { ...baseCandidate, state: "SP" },
+    profile,
+    [{ terms: ["hemodialise"], categories: [], dismissedAt: now }],
+    now,
+  );
+  assert.ok(inside && penalized);
+  for (const result of [inside, penalized]) {
+    assert.ok(Math.abs(sum(result.features) - result.score) < 0.0001);
+    assert.ok((result.features.deadline ?? 0) > 0);
+  }
+  assert.ok((inside.features.location ?? 0) > 0);
+  assert.ok((penalized.features.dismissalPenalty ?? 0) < 0);
+  assert.equal(inside.features.dismissalPenalty, undefined);
+});
