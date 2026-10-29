@@ -10,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { usersTable } from "./accounts";
@@ -146,6 +147,24 @@ export const recommendationInterestProfilesTable = pgTable(
   },
 );
 
+/** One additive part of a recommendation score; the score is the sum of the parts. */
+export type RecommendationFeatureKey =
+  | "profileCategory"
+  | "profileTerms"
+  | "profileDescription"
+  | "interest"
+  | "historyTerms"
+  | "historyCategory"
+  | "location"
+  | "organization"
+  | "value"
+  | "platform"
+  | "deadline"
+  | "novelty"
+  | "dismissalPenalty";
+
+export type RecommendationFeatures = Partial<Record<RecommendationFeatureKey, number>>;
+
 export const userRecommendationsTable = pgTable(
   "user_recommendations",
   {
@@ -161,6 +180,11 @@ export const userRecommendationsTable = pgTable(
       .$type<RecommendationReason[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    /** Score parts, kept so an offline evaluation can re-rank with other weights. */
+    features: jsonb("features")
+      .$type<RecommendationFeatures>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     generatedAt: timestamp("generated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -172,6 +196,57 @@ export const userRecommendationsTable = pgTable(
       sql`${table.rank} between 1 and 50`,
     ),
     index("user_recommendations_user_rank_idx").on(table.userId, table.rank),
+  ],
+);
+
+/**
+ * What each user was shown, with the score parts at that moment: the base for offline evaluation and, later, for
+ * calibrating the weights. One row per tender per ranking run and scope, so re-reading a page adds nothing.
+ * Outcomes come from the tables that already hold them (saved, monitored, Interessa, dismissals); only the click,
+ * which has no other trace, lives here, and only with the browsing opt-in. Kept for 180 days like the events.
+ */
+export const recommendationImpressionsTable = pgTable(
+  "recommendation_impressions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    tenderId: text("tender_id")
+      .notNull()
+      .references(() => tendersTable.id, { onDelete: "cascade" }),
+    scope: text("scope").$type<"all" | "profile">().notNull(),
+    /** 1-based place on screen for this scope (triage filters the stored ranking). */
+    position: integer("position").notNull(),
+    rank: integer("rank").notNull(),
+    score: numeric("score", { precision: 10, scale: 5 }).notNull(),
+    features: jsonb("features")
+      .$type<RecommendationFeatures>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    algorithmVersion: integer("algorithm_version").notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull(),
+    shownAt: timestamp("shown_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    clickedAt: timestamp("clicked_at", { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      "recommendation_impressions_scope_check",
+      sql`${table.scope} in ('all', 'profile')`,
+    ),
+    uniqueIndex("recommendation_impressions_run_idx").on(
+      table.userId,
+      table.tenderId,
+      table.scope,
+      table.generatedAt,
+    ),
+    index("recommendation_impressions_user_time_idx").on(
+      table.userId,
+      table.shownAt,
+    ),
+    index("recommendation_impressions_retention_idx").on(table.shownAt),
   ],
 );
 

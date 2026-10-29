@@ -16,6 +16,7 @@ import {
   db,
   recommendationDismissalsTable,
   recommendationEventsTable,
+  recommendationImpressionsTable,
   recommendationInterestProfilesTable,
   recommendationMetricsDailyTable,
   savedSearchesTable,
@@ -24,6 +25,8 @@ import {
   userRecommendationsTable,
   usersTable,
   type RecommendationInterestProfile,
+  type RecommendationFeatureKey,
+  type RecommendationFeatures,
   type RecommendationReason,
   type TenderCategory,
   type WeightedRecommendationValue,
@@ -61,8 +64,11 @@ const MIN_SAVED_VALUES_FOR_INFERENCE = 5;
 const MAX_DISMISSAL_PENALTY = 12;
 /** After this many interest events share an expression, it can qualify new candidates alone. */
 const LEARNED_INTEREST_THRESHOLD = 2;
-/** Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version. */
-export const RECOMMENDATION_ALGORITHM_VERSION = 2;
+/**
+ * Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version.
+ * 3: same ranking as 2; rows also store the score parts (features) that impressions log.
+ */
+export const RECOMMENDATION_ALGORITHM_VERSION = 3;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
 const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
@@ -842,12 +848,21 @@ export function alignsWithRegisteredProfile(
   }).matches;
 }
 
+const roundFeatures = (features: RecommendationFeatures): RecommendationFeatures =>
+  Object.fromEntries(
+    Object.entries(features).map(([key, value]) => [key, Number(value.toFixed(5))]),
+  );
+
 export function scoreRecommendation(
   candidate: ScoreCandidate,
   profile: RecommendationInterestProfile,
   dismissed: DismissedSignal[],
   now = new Date(),
-): { score: number; reasons: RecommendationReason[] } | null {
+): {
+  score: number;
+  reasons: RecommendationReason[];
+  features: RecommendationFeatures;
+} | null {
   const normalizedText = normalizeText(candidate.searchText);
   if (
     profile.exclusions.some((term) =>
@@ -857,6 +872,12 @@ export function scoreRecommendation(
     return null;
   const reasons: RecommendationReason[] = [];
   let score = 0;
+  const features: RecommendationFeatures = {};
+  // Same additions, in the same order, as the score: the parts always sum to it.
+  const add = (key: RecommendationFeatureKey, amount: number) => {
+    score += amount;
+    features[key] = (features[key] ?? 0) + amount;
+  };
 
   // Whole-expression match (same rule as company-fit / opportunity scoring): profile offerings and
   // selected keywords stay as phrases; only free-text description was tokenized into signal terms.
@@ -887,8 +908,10 @@ export function scoreRecommendation(
     profileCategoryMatches[0]?.weight ??
     0;
   if (profileCategoryMatches[0]) {
-    score +=
-      25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory);
+    add(
+      "profileCategory",
+      25 * cappedRatio(profileCategoryMatches[0].weight, maxProfileCategory),
+    );
     reasons.push({
       kind: "profile",
       text: `Categoria do seu perfil: ${profileCategoryMatches[0].category.label}`,
@@ -902,10 +925,13 @@ export function scoreRecommendation(
     .filter((term) => hasAnySource(term, PROFILE_TERM_SOURCES))
     .slice(0, 3)
     .reduce((sum, term) => sum + term.weight, 0);
-  score += Math.min(
-    30,
-    candidate.textRank * 20 +
-      18 * cappedRatio(profileTermStrength, maxProfileTerms),
+  add(
+    "profileTerms",
+    Math.min(
+      30,
+      candidate.textRank * 20 +
+        18 * cappedRatio(profileTermStrength, maxProfileTerms),
+    ),
   );
   if (profileTermMatches.length) {
     reasons.push({
@@ -929,7 +955,7 @@ export function scoreRecommendation(
       .filter((term) => hasAnySource(term, PROFILE_DESCRIPTION_SOURCES))
       .slice(0, 3)
       .reduce((sum, term) => sum + term.weight, 0);
-    score += 6 * cappedRatio(strength, maximum);
+    add("profileDescription", 6 * cappedRatio(strength, maximum));
   }
 
   const interestMatches = [
@@ -949,7 +975,7 @@ export function scoreRecommendation(
       )
       .slice(0, 3)
       .reduce((sum, term) => sum + term.weight, 0);
-    score += 16 * cappedRatio(interestStrength, maxInterest);
+    add("interest", 16 * cappedRatio(interestStrength, maxInterest));
     reasons.push({
       kind: "interest",
       text: `Parecido com editais que você marcou como interesse: ${interestMatches.map((term) => term.value).join(", ")}`,
@@ -973,7 +999,7 @@ export function scoreRecommendation(
       .filter((term) => hasAnySource(term, HISTORY_TERM_SOURCES))
       .slice(0, 3)
       .reduce((sum, term) => sum + term.weight, 0);
-    score += 10 * cappedRatio(historyStrength, maxHistory);
+    add("historyTerms", 10 * cappedRatio(historyStrength, maxHistory));
     const source = [...valueSources(historyTermMatches[0]!)].find((item) =>
       HISTORY_TERM_SOURCES.has(item),
     );
@@ -1011,8 +1037,10 @@ export function scoreRecommendation(
     const maxHistoryCategory =
       profile.categories.find((item) => !isProfileCategory(item))?.weight ??
       historyCategoryMatches[0].weight;
-    score +=
-      12 * cappedRatio(historyCategoryMatches[0].weight, maxHistoryCategory);
+    add(
+      "historyCategory",
+      12 * cappedRatio(historyCategoryMatches[0].weight, maxHistoryCategory),
+    );
     reasons.push({
       kind: "saved",
       text: `Categoria parecida com seus interesses: ${historyCategoryMatches[0].category.label}`,
@@ -1037,14 +1065,14 @@ export function scoreRecommendation(
     )
       return null;
     if (geographicallyOk && coverage.scope === "custom") {
-      score += region.remote ? 18 : 32;
+      add("location", region.remote ? 18 : 32);
       reasons.push({ kind: "location", text: region.reason });
     } else if (!geographicallyOk && coverage.scope === "custom") {
-      score -= 18;
+      add("location", -18);
       reasons.push({ kind: "location", text: "Fora da sua região" });
     }
   } else if (weightFor(profile.states, state) > 0) {
-    score += 9;
+    add("location", 9);
     reasons.push({
       kind: "location",
       text: `UF frequente nos seus interesses: ${state}`,
@@ -1055,9 +1083,11 @@ export function scoreRecommendation(
     candidate.organizationId,
   );
   if (organizationWeight > 0) {
-    score +=
+    add(
+      "organization",
       8 *
-      cappedRatio(organizationWeight, profile.organizations[0]?.weight ?? 0);
+        cappedRatio(organizationWeight, profile.organizations[0]?.weight ?? 0),
+    );
     reasons.push({
       kind: "organization",
       text: `Órgão relacionado ao seu histórico: ${candidate.organizationName}`,
@@ -1074,7 +1104,7 @@ export function scoreRecommendation(
     const inRange =
       (profile.valueMin === null || value >= profile.valueMin) &&
       (profile.valueMax === null || value <= profile.valueMax);
-    score += inRange ? 8 : -5;
+    add("value", inRange ? 8 : -5);
     if (inRange)
       reasons.push({
         kind: "value",
@@ -1087,7 +1117,7 @@ export function scoreRecommendation(
     candidate.platform &&
     profile.registeredPlatforms?.includes(candidate.platform)
   ) {
-    score += 6;
+    add("platform", 6);
     reasons.push({
       kind: "platform",
       text: `Disputa em plataforma onde você é cadastrado: ${candidate.platformLabel ?? candidate.platform}`,
@@ -1099,14 +1129,14 @@ export function scoreRecommendation(
         (candidate.proposalDeadline.getTime() - now.getTime()) / 86_400_000,
       )
     : 120;
-  score += days <= 3 ? 1 : days <= 15 ? 6 : days <= 45 ? 4 : 2;
+  add("deadline", days <= 3 ? 1 : days <= 15 ? 6 : days <= 45 ? 4 : 2);
   const ageDays = candidate.publishedAt
     ? Math.max(
         0,
         (now.getTime() - candidate.publishedAt.getTime()) / 86_400_000,
       )
     : 90;
-  score += Math.max(0, 6 - ageDays / 10);
+  add("novelty", Math.max(0, 6 - ageDays / 10));
   const candidateSlugs = new Set(
     candidate.categories.map((category) => category.slug),
   );
@@ -1140,9 +1170,14 @@ export function scoreRecommendation(
     if (categoryOverlap) dismissalPenalty += 3 * decay;
     dismissalPenalty += Math.min(4, termOverlap) * decay;
   }
-  score -= Math.min(MAX_DISMISSAL_PENALTY, dismissalPenalty);
+  if (dismissalPenalty > 0)
+    add("dismissalPenalty", -Math.min(MAX_DISMISSAL_PENALTY, dismissalPenalty));
   return score > 0 && reasons.length > 0
-    ? { score: Number(score.toFixed(5)), reasons: reasons.slice(0, 3) }
+    ? {
+        score: Number(score.toFixed(5)),
+        reasons: reasons.slice(0, 3),
+        features: roundFeatures(features),
+      }
     : null;
 }
 
@@ -1324,6 +1359,7 @@ export async function rebuildRecommendationsForUser(
           rank: index + 1,
           score: item.score.toFixed(5),
           reasons: item.reasons,
+          features: item.features,
           generatedAt: now,
         })),
       );
@@ -1368,6 +1404,38 @@ const incrementMetric = async (
 };
 
 export type RecommendationScope = "all" | "profile";
+
+/** What the user saw, for offline evaluation. Best effort: a failed log never fails the page. */
+const recordImpressions = async (
+  userId: string,
+  scope: RecommendationScope,
+  rows: { recommendation: typeof userRecommendationsTable.$inferSelect }[],
+  offset: number,
+  now = new Date(),
+) => {
+  if (rows.length === 0) return;
+  try {
+    await db
+      .insert(recommendationImpressionsTable)
+      .values(
+        rows.map(({ recommendation }, index) => ({
+          userId,
+          tenderId: recommendation.tenderId,
+          scope,
+          position: offset + index + 1,
+          rank: recommendation.rank,
+          score: recommendation.score,
+          features: recommendation.features,
+          algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
+          generatedAt: recommendation.generatedAt,
+          shownAt: now,
+        })),
+      )
+      .onConflictDoNothing();
+  } catch (error) {
+    logger.warn({ err: error, userId }, "Recommendation impressions not recorded");
+  }
+};
 
 export async function listRecommendations(
   userId: string,
@@ -1504,6 +1572,7 @@ export async function listRecommendations(
     count = Number(total);
   }
   await incrementMetric("impressions", rows.length);
+  await recordImpressions(userId, scope, rows, (page - 1) * pageSize);
   const data = rows.map(({ recommendation, tender }) => {
     const detail = tenderRowToDetail(tender);
     const {
@@ -1795,6 +1864,9 @@ const clearLearnedRecommendationSignals = async (
   await executor
     .delete(recommendationDismissalsTable)
     .where(eq(recommendationDismissalsTable.userId, userId));
+  await executor
+    .delete(recommendationImpressionsTable)
+    .where(eq(recommendationImpressionsTable.userId, userId));
 };
 
 export async function getRecommendationPreferences(userId: string) {
@@ -1858,17 +1930,45 @@ export async function deleteRecommendationHistory(
   scheduleRecommendationRebuild(userId, 0);
 }
 
+/** A click is browsing behaviour: it marks the latest impression only with the personalization opt-in. */
+const recordImpressionClick = async (
+  userId: string,
+  tenderId: string,
+  now: Date,
+) => {
+  const [user] = await db
+    .select({ enabled: usersTable.recommendationPersonalizationEnabled })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+  if (!user?.enabled) return;
+  await db
+    .update(recommendationImpressionsTable)
+    .set({ clickedAt: now })
+    .where(
+      eq(
+        recommendationImpressionsTable.id,
+        sql`(select ${recommendationImpressionsTable.id} from ${recommendationImpressionsTable}
+          where ${recommendationImpressionsTable.userId} = ${userId}
+            and ${recommendationImpressionsTable.tenderId} = ${tenderId}
+            and ${recommendationImpressionsTable.clickedAt} is null
+          order by ${recommendationImpressionsTable.shownAt} desc limit 1)`,
+      ),
+    );
+};
+
 export async function recordRecommendationEvent(
   userId: string,
   input:
     | { type: "search"; query: string }
     | { type: "tender_view"; tenderId: string }
-    | { type: "click" }
+    | { type: "click"; tenderId?: string }
     | { type: "interest"; tenderId: string },
   now = new Date(),
 ): Promise<boolean> {
   if (input.type === "click") {
     await incrementMetric("clicks", 1, now);
+    if (input.tenderId) await recordImpressionClick(userId, input.tenderId, now);
     return true;
   }
   if (input.type === "interest") {
@@ -1965,12 +2065,21 @@ export async function recordRecommendationEvent(
 
 export async function runDailyRecommendations(
   now = new Date(),
-): Promise<{ users: number; recommendations: number; deletedEvents: number }> {
+): Promise<{
+  users: number;
+  recommendations: number;
+  deletedEvents: number;
+  deletedImpressions: number;
+}> {
   const cutoff = new Date(now.getTime() - RETENTION_DAYS * 86_400_000);
   const deleted = await db
     .delete(recommendationEventsTable)
     .where(lt(recommendationEventsTable.occurredAt, cutoff))
     .returning({ id: recommendationEventsTable.id });
+  const deletedImpressions = await db
+    .delete(recommendationImpressionsTable)
+    .where(lt(recommendationImpressionsTable.shownAt, cutoff))
+    .returning({ id: recommendationImpressionsTable.id });
   const users = await db.select({ id: usersTable.id }).from(usersTable);
   let recommendations = 0;
   for (const user of users)
@@ -1979,6 +2088,7 @@ export async function runDailyRecommendations(
     users: users.length,
     recommendations,
     deletedEvents: deleted.length,
+    deletedImpressions: deletedImpressions.length,
   };
 }
 
