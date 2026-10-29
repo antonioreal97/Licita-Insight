@@ -55,11 +55,12 @@ const fingerprint = (documents: TenderDocumentRecord[]): string =>
       JSON.stringify({
         extractorVersion: EXTRACTOR_VERSION,
         ocrEnabled: documentOcrConfig().enabled,
+        // Reachable URL: a tender stored with PNCP's internal port gets a new fingerprint and is read again.
         documents: documents.map(
           ({ id, name, url, sizeBytes, publishedAt }) => ({
             id,
             name,
-            url,
+            url: pncpReachableUrl(url),
             sizeBytes,
             publishedAt,
           }),
