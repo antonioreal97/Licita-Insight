@@ -2,7 +2,37 @@
 
 Deriva de [productContext](productContext.md), [systemPatterns](systemPatterns.md) e [techContext](techContext.md). Alimenta [progress](progress.md).
 
-## Foco agora
+## Foco agora (29 out 2026)
+
+Produção: servidor MacBook/Ubuntu (`ssh licita-worker`) atrás da borda Oracle, frontend na Vercel, domínio
+`pardaldigital.com`. Em 29/10 01:17 o servidor roda `d79274f` (`ops/macbook-worker`), com a app idêntica ao `main`
+`13ba2a6`. Deploy: push no `ops/macbook-worker` → `licita-monitor-deploy.timer` (10 min) → Albert-CLAUDE, que segue
+`ops/macbook/monitor/ALBERT.md` e relata na issue #29. Cada merge no `main` vai ao servidor por um PR de sync
+`ops/sync-<n>-...` (base `ops/macbook-worker`).
+
+28–29 out 2026:
+- Documentos do PNCP: a API do PNCP passou a listar os arquivos com portas internas (`https://pncp.gov.br:560xx/...`),
+  que dão timeout de fora; ficha e Perguntar ao edital caíam em "Não conseguimos ler os documentos agora". O #193
+  tira a porta (`pncpReachableUrl` em `ingest/pncp-map.ts`) na coleta, no download do índice e nos links da API. O
+  #195 usa o link sem porta na impressão digital do índice, para reler os editais que falharam antes do deploy.
+  Os dois estão no ar desde 29/10 01:17. Falta o owner confirmar no edital `01665769000191-1-000019-2026`.
+- Busca com termo comum (`q=pregao`, ~28% dos editais) responde 500: varredura completa com ordenação de linhas
+  inteiras (com `raw_payload`) passa do `statement_timeout` de 15 s. Não é regressão; termos raros usam o índice
+  trigram. Proposta do Albert (#29, 29/10 01:05): busca em duas fases (ids, depois linhas), sem `raw_payload` no
+  resumo, ranking sobre candidatos ou `tsvector`, contagem estimada. Sem PR ainda.
+- Fila de deploy travada: o handoff `20261013-150422.md.steve` nunca recebeu "## Resultado do Codex", então
+  `codex_running()` fica verdadeiro e os `.queued` (9 em 29/10) não andam. Com o Albert sem cota, o deploy fica
+  parado; em 28/10 foi preciso mandar o pedido ao terminal dele com autorização do owner.
+
+De 15 a 26 out 2026 (PRs #149–#192): recomendações e triagem respeitando o perfil, prontidão para licitar, quadro e
+calendário dos editais salvos, glossário interativo, design system "Pardal Digital" (#185), landing editorial e
+login em duas partes, remover notificações, T-01/T-02 de segurança (#169), avisos do BID, backup diário verificado
+com cópia na Oracle. Detalhes em [progress](progress.md).
+
+Na mesa: issue #170 (MCP para assinantes, Fase 1, leitura com token pessoal); branch `feat/workspaces-phase-1`
+(Espaços; Fase 1 só com nova autorização do owner); #41 (migração para `pardaldigital.com`); PR #187 (dependabot).
+
+## Histórico de ciclos
 
 Servidor 24h + frontend na Vercel (05–06 out 2026, branch `ops/macbook-worker`; issue #28 acompanha o passo a passo).
 Contexto compactado dos terminais Codex encerrados em 06/10 (sessões "Confira sessões abertas do Codex",
@@ -211,6 +241,15 @@ Ambiente: o Docker Desktop reinicia sozinho e derruba o stack `licita-insight`; 
 
 ## Próximos passos
 
+1. Busca com termo comum: PR com a busca em duas fases (proposta do Albert na #29) e medir com `q=pregao` depois das
+   05:30, sem a classificação noturna.
+2. Destravar a fila de deploy: arquivar os handoffs antigos sem executá-los e corrigir no monitor o handoff do Steve
+   que nunca termina (e o envio ao Albert quando a cota volta).
+3. Regra de deploy: evitar `app_build` entre 00:00 e 05:30 (classificação noturna); ajustar a janela no `ALBERT.md`.
+4. MCP para assinantes (#170), agora que T-01/T-02 entraram.
+
+Anteriores a 15 out 2026, a revisar:
+
 1. Decidir sobre um checkout de teste real no Asaas Sandbox para validar o fluxo de cobrança ponta a ponta
    (oferecido ao owner em 27 set 2026, sem resposta ainda — ação com efeito externo, precisa de aprovação
    explícita mesmo em modo sandbox).
@@ -221,6 +260,14 @@ Ambiente: o Docker Desktop reinicia sozinho e derruba o stack `licita-insight`; 
 
 ## Cuidados ativos
 
+- Links de documentos do PNCP podem vir com porta interna (`pncp.gov.br:560xx`), inacessível de fora. Passar
+  sempre por `pncpReachableUrl`. O allowlist de hosts confere só o hostname, então a porta passa na validação.
+- O índice de documentos só é refeito quando muda o `sourceFingerprint`; "Tentar de novo" na UI é só um novo GET.
+  Corrigir a causa de um `failed` gravado não basta: é preciso mudar a impressão digital ou reindexar.
+- `statement_timeout` padrão de 15 s (`DB_STATEMENT_TIMEOUT_MS`): consultas da busca com termo comum estouram.
+- Reconstruir o app entre 00:00 e 05:30 faz as coletas da subida competirem com a classificação noturna (Ollama);
+  em 29/10 a coleta de transparência caiu por timeout.
+- Ler logs e o banco de produção é bloqueado para o Orchestrator; pedir ao Albert (somente leitura) ou ao owner.
 - `docker compose restart <serviço>` **não relê o `.env`** — reinicia o processo com o ambiente que o
   container já tinha ao ser criado. Uma variável nova/alterada só entra com `docker compose up -d <serviço>`
   (recria o container; sem `--build` se o código não mudou). Descoberto em 27 set 2026 configurando o

@@ -161,14 +161,40 @@ Deriva de [activeContext](activeContext.md).
 - Teste de navegador: `scripts/test-guided-onboarding.mjs` (API interceptada, sem banco); capturas em
   `docs/reviews/guided-onboarding/`.
 
+## Entregue de 15 a 29 out 2026 (no ar no servidor e na Vercel)
+
+- Recomendações e triagem (#160, #172, #173, #176): só editais alinhados ao perfil, segmento e região respeitados;
+  "Interessa" da triagem ensina sem o opt-in de navegação.
+- Prontidão para licitar: checklist e selo nos editais (#161); documento sem validade não conta como em dia (#179).
+- Editais salvos com quadro por etapa e calendário de prazos (#171).
+- Ajuda e glossário didáticos, interativos e com desafios (#164–#167).
+- Design system "Pardal Digital" do Claude Design (#185), refinamentos da auditoria visual (#180), filtros unificados
+  (#175), landing editorial sem a fonte demo Qurova (#186, #188, #189), vídeos do produto (#177), login em duas
+  partes (#190).
+- Notificações: remover uma e limpar as lidas (#191; migração 0051 aplicada pelo owner em 26/10).
+- Segurança: teto de sessão e janela de resultados, T-01/T-02 (#169).
+- Coleta: avisos de aquisição do BID (#150); contratação direta sem prazo deixa de contar como Aberta (#154);
+  facetas da busca sem texto em cache (#156).
+- Classificação noturna: o Jev atende primeiro os editais da noite (#182); reescritas de provedor desligado fora da
+  fila de IA (#183).
+- Servidor: backup diário verificado do Postgres com teste de restore e alerta (#178), cópia criptografada na VM
+  Oracle (#181, #184).
+- Documentos do PNCP sem a porta interna (#193) e releitura dos editais que falharam por ela (#195), no ar desde
+  29/10 01:17.
+
 ## O que falta
 
-- Beta no ar: depende do owner (nome/domínio, Cloudflare Tunnel, Google OAuth em Testing, Resend).
-- Deploy no Fly.io `gru` enxuto: quando o beta tiver ~3 usuários ativos (decisão do owner, 28 set 2026).
+- Busca com termo comum dentro de 15 s (busca em duas fases; ver Problemas conhecidos).
+- MCP para assinantes, Fase 1 (#170).
 - Outras fontes além do Mapas Culturais.
 - Alerta por WhatsApp e histórico de preços (achados como gap competitivo em 27 set 2026, não iniciados).
 
 ## Problemas conhecidos
+
+- Busca com termo comum (`q=pregao`) responde 500 por `statement_timeout` de 15 s (diagnóstico na #29, 29/10).
+- Fila de deploy do monitor travada por um handoff do Steve de 13/10 sem resultado; 9 handoffs parados.
+- Coletas disparadas na subida do app caem por timeout quando o deploy acontece durante a classificação noturna.
+- Corrida ocasional na gravação de recomendações (`user_recommendations_user_id_tender_id_pk`), sem impacto visível.
 
 - Overrides de binários nativos no `pnpm-workspace.yaml` são para linux-x64 (Replit). Dev no macOS pode falhar ao resolver esbuild/lightningcss/rollup.
 - Id inexistente na API responde 404.
