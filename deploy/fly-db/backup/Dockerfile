@@ -1,4 +1,4 @@
-FROM postgres:16-bookworm
+FROM postgres:18-bookworm
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends awscli ca-certificates \
