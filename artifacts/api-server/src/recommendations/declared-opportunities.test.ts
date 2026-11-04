@@ -54,9 +54,49 @@ for (const [title, opportunityType] of [
       ),
       null,
     );
-    assert.equal(score(unrelated, ["culture"], ["company"], null), null);
+    assert.ok(score(unrelated, ["culture"], ["company"], null));
   });
 }
+
+test("sem perfil, finalidade estruturada admite chamadas e público desconhecido não exclui", () => {
+  const cultural = { ...call, title: "Chamada de cultura", audience: null };
+  const unknown = score(
+    cultural,
+    ["culture", "research"],
+    ["individual"],
+    null,
+  );
+  const individual = score(
+    { ...cultural, audience: "Pessoa física" },
+    ["culture", "research"],
+    ["individual"],
+    null,
+  );
+  assert.ok(unknown && individual);
+  assert.ok(individual.score > unknown.score);
+  assert.deepEqual(unknown.reasons, ["Chamada ligada à cultura"]);
+  assert.ok(
+    !individual.reasons.some(
+      (reason) =>
+        reason.includes("Combina com") || reason.includes("seu perfil"),
+    ),
+  );
+  assert.equal(score(cultural, ["research"], [], null), null);
+  assert.ok(
+    score(
+      { ...cultural, source: "capes", kind: "funding" },
+      ["research"],
+      [],
+      null,
+    ),
+  );
+  assert.equal(score(cultural, [], [], null), null);
+  // A profile exists even if its offerings/keywords are empty: do not enable the fallback.
+  assert.equal(
+    score(cultural, ["culture"], [], { ...profile, offerings: [] }),
+    null,
+  );
+});
 
 test("CAPES exige área ou oferta ligada ao perfil, mesmo sendo fonte de pesquisa", () => {
   const capes = {
