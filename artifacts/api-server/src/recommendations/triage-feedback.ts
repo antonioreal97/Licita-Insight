@@ -54,13 +54,15 @@ export function contextualDismissalPenalty(
     value: number | null;
   };
   if (feedback.reason === "region") {
+    // 10 (was 4): one "Fora da minha região" must dent the +32 location boost enough
+    // to demote that UF/município in the next rebuild; still under MAX_DISMISSAL_PENALTY (12).
     if (
       feedback.municipalityIbge &&
       candidate.municipalityIbge &&
       feedback.municipalityIbge === candidate.municipalityIbge
     )
-      return 4;
-    return feedback.state && feedback.state === candidate.state ? 4 : 0;
+      return 10;
+    return feedback.state && feedback.state === candidate.state ? 10 : 0;
   }
   if (feedback.reason === "value") {
     const value = candidate.estimatedValueFlag
