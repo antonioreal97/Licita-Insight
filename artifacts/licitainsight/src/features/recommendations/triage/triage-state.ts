@@ -30,3 +30,21 @@ export function dismissalMessage(reason: RecommendationDismissReason | undefined
   if (reason === 'not_offering') return 'Entendi: menos editais sobre este serviço nas próximas recomendações.';
   return 'Edital dispensado. Suas escolhas ajudam a ajustar as próximas recomendações.';
 }
+
+/** Copy of the dashboard triage entry: count is already gated to profile + region. */
+export function triageEntryCopy(count: number, reviewedCount: number): { title: string; subtitle: string } {
+  if (!count) {
+    return {
+      title: 'Confira sua triagem de hoje',
+      subtitle: `Triagem de hoje: ${reviewedCount} de ${TRIAGE_GOAL}.`,
+    };
+  }
+  const title =
+    count === 1
+      ? '1 edital na sua região para triar'
+      : `${count} editais na sua região para triar`;
+  const subtitle = reviewedCount
+    ? `Triagem de hoje: ${reviewedCount} de ${TRIAGE_GOAL}.`
+    : 'Combinam com o que você oferece. Interessa ou não? Suas escolhas melhoram a seleção.';
+  return { title, subtitle };
+}

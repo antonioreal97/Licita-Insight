@@ -4,10 +4,10 @@ import { Router } from 'wouter';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Recommendation } from '@/api';
-import { advanceProgress, dismissalMessage, DISMISS_LABELS, emptyProgress, shortcutAction, suggestedExclusion, swipeAction, triageDay } from './triage-state';
+import { advanceProgress, dismissalMessage, DISMISS_LABELS, emptyProgress, shortcutAction, suggestedExclusion, swipeAction, triageDay, triageEntryCopy } from './triage-state';
 import { TriageCard } from './triage-card';
 const render = (element: ReturnType<typeof createElement>) => renderToStaticMarkup(createElement(Router, { ssrPath: '/triagem' }, element));
-const recommendation = { tender: { id: 'triage-1', title: 'Contratação de serviços de filmagem', displayTitle: 'Serviços de filmagem', organization: { name: 'Prefeitura de teste' }, location: { city: 'Rio de Janeiro', state: 'RJ' }, proposalDeadline: null, estimatedValue: 100000, categories: [] }, reasons: [{ kind: 'profile', text: 'Ligado a filmagem no seu perfil' }] } as Recommendation;
+const recommendation = { tender: { id: 'triage-1', title: 'Contratação de serviços de filmagem', displayTitle: 'Serviços de filmagem', organization: { name: 'Prefeitura de teste' }, location: { city: 'Rio de Janeiro', state: 'RJ' }, proposalDeadline: null, estimatedValue: 100000, categories: [] }, reasons: [{ kind: 'profile', text: 'Ligado a filmagem no seu perfil' }, { kind: 'location', text: 'Em RJ, sua UF de atuação' }] } as Recommendation;
 test('daily goal counts choices once, separates interests and skips, and stops at ten', () => {
   let progress = emptyProgress();
   progress = advanceProgress(progress, '1', 'interest');
@@ -45,10 +45,18 @@ test('reasons explain the concrete signal and suggest a term for explicit confir
 });
 test('card exposes the essentials, accessible button alternatives and no more than 3 requirements', () => {
   const html = render(createElement(TriageCard, { recommendation, registeredPlatforms: [], busy: false, onAction() {}, onOpen() {}, highlights: { requirements: ['Atestado técnico', 'Equipe', 'Registro', 'Quarta exigência'].map(label => ({ label, kind: 'other' })) } as never }));
-  for (const text of ['Serviços de filmagem', 'Prefeitura de teste', 'Rio de Janeiro', '100.000', 'Ligado a filmagem', 'Abrir edital', 'Não interessa', 'Interessa', 'Pular por agora', 'Atestado técnico']) assert.ok(html.includes(text), text);
+  for (const text of ['Serviços de filmagem', 'Prefeitura de teste', 'Rio de Janeiro', '100.000', 'Ligado a filmagem', 'Em RJ, sua UF de atuação', 'Por que este edital', 'Abrir edital', 'Não interessa', 'Interessa', 'Pular por agora', 'Atestado técnico']) assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /Quarta exigência/);
   assert.match(html, /aria-labelledby="triage-tender-title"/);
   assert.match(html, /touch-action:pan-y/);
   const busy = render(createElement(TriageCard, { recommendation, registeredPlatforms: [], busy: true, onAction() {}, onOpen() {} }));
   assert.equal((busy.match(/disabled=""/g) ?? []).length, 3);
+});
+test('dashboard triage entry copy reflects region-gated deck', () => {
+  assert.deepEqual(triageEntryCopy(10, 0), {
+    title: '10 editais na sua região para triar',
+    subtitle: 'Combinam com o que você oferece. Interessa ou não? Suas escolhas melhoram a seleção.',
+  });
+  assert.equal(triageEntryCopy(1, 0).title, '1 edital na sua região para triar');
+  assert.match(triageEntryCopy(0, 3).subtitle, /3 de 10/);
 });
