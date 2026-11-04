@@ -7,8 +7,10 @@ import {
   inArray,
   isNull,
   lt,
+  not,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import {
   companyProfilesTable,
@@ -39,6 +41,7 @@ import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
+  coverageLocationTargets,
   matchServiceRegion,
   municipalityReference,
   type ServiceRegionCoverage,
@@ -68,7 +71,7 @@ const LEARNED_INTEREST_THRESHOLD = 2;
  * Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version.
  * 3: same ranking as 2; rows also store the score parts (features) that impressions log.
  */
-export const RECOMMENDATION_ALGORITHM_VERSION = 3;
+export const RECOMMENDATION_ALGORITHM_VERSION = 4;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
 const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
@@ -814,6 +817,56 @@ const directProfileMatches = (
     .sort((a, b) => b.weight - a.weight),
 });
 
+/** True when the score treated the tender as inside the declared region (or no custom coverage). */
+export const isInDeclaredRegionScore = (
+  features: RecommendationFeatures,
+): boolean => (features.location ?? 1) > 0;
+
+/** Region-first, then score: every in-region row stays above any out-of-region row (prioritize). */
+export function compareRecommendationRank(
+  a: {
+    score: number;
+    features: RecommendationFeatures;
+    candidate: { id: string };
+  },
+  b: {
+    score: number;
+    features: RecommendationFeatures;
+    candidate: { id: string };
+  },
+): number {
+  return (
+    Number(isInDeclaredRegionScore(b.features)) -
+      Number(isInDeclaredRegionScore(a.features)) ||
+    b.score - a.score ||
+    a.candidate.id.localeCompare(b.candidate.id)
+  );
+}
+
+/** Keep the offer/keyword match and the region reason in the three visible motives. */
+export function selectTopReasons(
+  reasons: RecommendationReason[],
+  limit = 3,
+): RecommendationReason[] {
+  if (reasons.length <= limit) return reasons;
+  const priority = (kind: RecommendationReason["kind"]) => {
+    if (kind === "profile" || kind === "interest") return 0;
+    if (kind === "location") return 1;
+    return 2;
+  };
+  const ranked = reasons
+    .map((reason, index) => ({ reason, index }))
+    .sort(
+      (left, right) =>
+        priority(left.reason.kind) - priority(right.reason.kind) ||
+        left.index - right.index,
+    );
+  return ranked
+    .slice(0, limit)
+    .sort((left, right) => left.index - right.index)
+    .map(({ reason }) => reason);
+}
+
 /**
  * Triage gate, stricter than scoring: the tender must match a declared offering, keyword or category
  * and fall inside the declared region whatever the coverage mode ("prioritize" still scores outsiders).
@@ -1175,11 +1228,57 @@ export function scoreRecommendation(
   return score > 0 && reasons.length > 0
     ? {
         score: Number(score.toFixed(5)),
-        reasons: reasons.slice(0, 3),
+        reasons: selectTopReasons(reasons, 3),
         features: roundFeatures(features),
       }
     : null;
 }
+
+const REMOTE_CATEGORY_SLUGS_SQL = [
+  "ti-telecom",
+  "consultoria-tecnica",
+  "educacao-capacitacao",
+  "publicidade-comunicacao",
+  "seguros-financeiros",
+] as const;
+
+/** Geographic match or (when allowed) a remote-compatible category — same idea as matchServiceRegion. */
+const coverageInsideFilter = (
+  coverage: Extract<ServiceRegionCoverage, { scope: "custom" }>,
+): SQL => {
+  const { states, municipalities } = coverageLocationTargets(coverage);
+  const clauses: SQL[] = [];
+  if (states.length) clauses.push(inArray(tendersTable.state, states));
+  if (municipalities.length)
+    clauses.push(inArray(tendersTable.cityIbgeCode, municipalities));
+  if (coverage.acceptsRemote) {
+    clauses.push(
+      sql`${tendersTable.categories} @> any(array[${sql.join(
+        REMOTE_CATEGORY_SLUGS_SQL.map(
+          (slug) => sql`${JSON.stringify([{ slug }])}::jsonb`,
+        ),
+        sql`, `,
+      )}])`,
+    );
+  }
+  return clauses.length ? (or(...clauses) as SQL) : sql`false`;
+};
+
+const interleaveCandidates = (
+  textRows: ScoreCandidate[],
+  categoryRows: ScoreCandidate[],
+  limit: number,
+): ScoreCandidate[] => {
+  const union = new Map<string, ScoreCandidate>();
+  for (let index = 0; union.size < limit; index += 1) {
+    const textRow = textRows[index];
+    const categoryRow = categoryRows[index];
+    if (!textRow && !categoryRow) break;
+    if (textRow) union.set(textRow.id, textRow);
+    if (categoryRow) union.set(categoryRow.id, categoryRow);
+  }
+  return [...union.values()].slice(0, limit);
+};
 
 const queryCandidates = async (
   profile: RecommendationInterestProfile,
@@ -1216,10 +1315,10 @@ const queryCandidates = async (
   const pathCount =
     Number(Boolean(textFilter)) + Number(Boolean(categoryFilter));
   if (!pathCount) return [];
-  const pathLimit =
-    pathCount === 1 ? CANDIDATE_LIMIT : Math.ceil(CANDIDATE_LIMIT / 2);
   const selectBy = async (
     signalFilter: NonNullable<typeof textFilter>,
+    locationFilter: SQL | undefined,
+    limit: number,
   ): Promise<ScoreCandidate[]> => {
     const rows = await db
       .select({
@@ -1261,29 +1360,48 @@ const queryCandidates = async (
           isNull(savedTendersTable.tenderId),
           isNull(recommendationDismissalsTable.tenderId),
           signalFilter,
+          locationFilter,
         ),
       )
       .orderBy(desc(tendersTable.publishedAt), asc(tendersTable.id))
-      .limit(pathLimit);
+      .limit(limit);
     return rows.map((row) => ({
       ...row,
       textRank: Number(row.textRank) || 0,
     }));
   };
-  const [textRows, categoryRows] = await Promise.all([
-    textFilter ? selectBy(textFilter) : Promise.resolve([]),
-    categoryFilter ? selectBy(categoryFilter) : Promise.resolve([]),
-  ]);
-  // Interleave the two indexed paths so neither explicit signal can starve the other.
-  const union = new Map<string, ScoreCandidate>();
-  for (let index = 0; union.size < CANDIDATE_LIMIT; index += 1) {
-    const textRow = textRows[index];
-    const categoryRow = categoryRows[index];
-    if (!textRow && !categoryRow) break;
-    if (textRow) union.set(textRow.id, textRow);
-    if (categoryRow) union.set(categoryRow.id, categoryRow);
+  const fetchUnion = async (
+    locationFilter: SQL | undefined,
+    limit: number,
+  ): Promise<ScoreCandidate[]> => {
+    const pathLimit = pathCount === 1 ? limit : Math.ceil(limit / 2);
+    const [textRows, categoryRows] = await Promise.all([
+      textFilter
+        ? selectBy(textFilter, locationFilter, pathLimit)
+        : Promise.resolve([]),
+      categoryFilter
+        ? selectBy(categoryFilter, locationFilter, pathLimit)
+        : Promise.resolve([]),
+    ]);
+    return interleaveCandidates(textRows, categoryRows, limit);
+  };
+  const coverage = coverageFromProfile(profile);
+  // Prefer the declared region among the 500 candidates so triage (scope=profile) is not
+  // starved when recent matches are mostly from other UFs.
+  if (coverage?.scope === "custom") {
+    const insideFilter = coverageInsideFilter(coverage);
+    const inside = await fetchUnion(insideFilter, CANDIDATE_LIMIT);
+    if (coverage.mode === "strict" || inside.length >= CANDIDATE_LIMIT)
+      return inside;
+    const remaining = CANDIDATE_LIMIT - inside.length;
+    const outside = await fetchUnion(not(insideFilter), remaining);
+    const seen = new Set(inside.map((row) => row.id));
+    return [
+      ...inside,
+      ...outside.filter((row) => !seen.has(row.id)),
+    ].slice(0, CANDIDATE_LIMIT);
   }
-  return [...union.values()].slice(0, CANDIDATE_LIMIT);
+  return fetchUnion(undefined, CANDIDATE_LIMIT);
 };
 
 const diversify = <T extends { candidate: ScoreCandidate }>(
@@ -1306,7 +1424,20 @@ const diversify = <T extends { candidate: ScoreCandidate }>(
       categories.set(slug, categoryCount + 1);
     }
   }
-  return [...selected, ...deferred].slice(0, RESULT_LIMIT);
+  return [...selected, ...deferred];
+};
+
+/** Diversify inside each region tier so an outsider never jumps ahead of an in-region row. */
+const diversifyPreservingRegion = <
+  T extends { candidate: ScoreCandidate; features: RecommendationFeatures },
+>(
+  ranked: T[],
+): T[] => {
+  const inside = ranked.filter((item) => isInDeclaredRegionScore(item.features));
+  const outside = ranked.filter(
+    (item) => !isInDeclaredRegionScore(item.features),
+  );
+  return [...diversify(inside), ...diversify(outside)].slice(0, RESULT_LIMIT);
 };
 
 export async function rebuildRecommendationsForUser(
@@ -1336,16 +1467,13 @@ export async function rebuildRecommendationsForUser(
       .from(recommendationDismissalsTable)
       .where(eq(recommendationDismissalsTable.userId, userId)),
   ]);
-  const ranked = diversify(
+  const ranked = diversifyPreservingRegion(
     candidates
       .flatMap((candidate) => {
         const result = scoreRecommendation(candidate, profile, dismissed, now);
         return result ? [{ candidate, ...result }] : [];
       })
-      .sort(
-        (a, b) =>
-          b.score - a.score || a.candidate.id.localeCompare(b.candidate.id),
-      ),
+      .sort(compareRecommendationRank),
   );
   await db.transaction(async (tx) => {
     await tx
