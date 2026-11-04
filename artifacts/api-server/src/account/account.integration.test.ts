@@ -24,6 +24,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   process.env.NODE_ENV = "test";
   process.env.LOG_LEVEL = "silent";
   process.env.RATE_LIMIT_AUTH_PER_MINUTE = "1000";
+  // Anonymous 401/403 probes and the tender feedback test share the per-IP public_write window.
+  process.env.RATE_LIMIT_PUBLIC_WRITE_PER_MINUTE = "1000";
+  delete process.env.FEEDBACK_NOTIFY_EMAIL;
   delete process.env.BILLING_MONTHLY_BRL;
   delete process.env.RESEND_API_KEY;
   delete process.env.MAIL_FROM;
@@ -60,6 +63,7 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     tenderAiIndexesTable,
     tenderAiPassagesTable,
     tenderAiSheetsTable,
+    tenderFeedbackTable,
     tendersTable,
     usersTable,
     userRecommendationsTable,
@@ -134,6 +138,9 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
   // Not copied from public: the shared test database may predate it. Idempotent, and creates the table in this schema.
   await pool.query(
     readFileSync(new URL('../../../../lib/db/migrations/0052_recommendation_impressions.sql', import.meta.url), 'utf8'),
+  );
+  await pool.query(
+    readFileSync(new URL('../../../../lib/db/migrations/0053_tender_feedback.sql', import.meta.url), 'utf8'),
   );
   const interestsColumn = await pool.query("select 1 from information_schema.columns where table_schema = $1 and table_name = 'recommendation_metrics_daily' and column_name = 'interests'", [schema]);
   if (interestsColumn.rowCount === 0) await pool.query(
@@ -1696,6 +1703,77 @@ test("Account API with PostgreSQL", { skip: !process.env.PNCP_TEST_DATABASE_URL 
     const [recent] = await db.select().from(emailDeliveriesTable).where(eq(emailDeliveriesTable.id, "retention-email-recent"));
     assert.equal(recent?.textBody, "keep");
     assert.equal((await request("/v1/auth/session", {}, cookie)).status, 200);
+  });
+
+  await t.test("records tender feedback anonymously or with a session, exports it and deletes it with the account", async () => {
+    const endpoint = `/v1/tenders/${encodeURIComponent(tenderId)}/feedback`;
+    const valid = { kind: "wrong_or_missing_info", section: "deadlines", message: "  O prazo exibido difere do edital publicado.  ", pageUrl: `/tenders/${tenderId}` };
+
+    assert.equal((await request(endpoint, { method: "POST", body: JSON.stringify(valid) })).status, 403);
+    assert.equal(
+      (await request(endpoint, { method: "POST", headers: { ...csrf, Origin: "http://127.0.0.1:24252" }, body: JSON.stringify(valid) })).status,
+      403,
+    );
+
+    const anonymous = await request(endpoint, {
+      method: "POST",
+      headers: { ...csrf, "User-Agent": `TEST-AGENT ${"x".repeat(400)}` },
+      body: JSON.stringify(valid),
+    });
+    assert.equal(anonymous.status, 201);
+    assert.equal(anonymous.headers.get("ratelimit-policy"), "1000;w=60");
+    const anonymousBody = (await anonymous.json()) as { id: string; status: string; createdAt: string };
+    assert.equal(anonymousBody.status, "new");
+    assert.ok(Date.parse(anonymousBody.createdAt));
+    const [anonymousRow] = await db.select().from(tenderFeedbackTable).where(eq(tenderFeedbackTable.id, anonymousBody.id));
+    assert.ok(anonymousRow);
+    assert.equal(anonymousRow.userId, null);
+    assert.equal(anonymousRow.tenderId, tenderId);
+    assert.equal(anonymousRow.kind, "wrong_or_missing_info");
+    assert.equal(anonymousRow.section, "deadlines");
+    assert.equal(anonymousRow.message, "O prazo exibido difere do edital publicado.");
+    assert.equal(anonymousRow.pageUrl, `/tenders/${tenderId}`);
+    assert.equal(anonymousRow.userAgent?.length, 300);
+    assert.equal(anonymousRow.status, "new");
+
+    for (const body of [
+      { ...valid, message: "curto     " },
+      { ...valid, message: "x".repeat(2001) },
+      { ...valid, kind: "spam" },
+      { ...valid, section: "header" },
+      { section: "summary", message: valid.message },
+    ]) {
+      assert.equal((await request(endpoint, { method: "POST", headers: csrf, body: JSON.stringify(body) })).status, 400, JSON.stringify(body));
+    }
+    const missing = await request("/v1/tenders/nao-existe-TEST/feedback", { method: "POST", headers: csrf, body: JSON.stringify(valid) });
+    assert.equal(missing.status, 404);
+
+    // Signed in without a subscription: no paywall, and the report belongs to the account.
+    const cookie = await login("tender-feedback@example.test", false);
+    const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, "tender-feedback@example.test"));
+    assert.ok(user);
+    const signedIn = await request(endpoint, {
+      method: "POST",
+      headers: csrf,
+      body: JSON.stringify({ kind: "possible_irregularity", section: null, message: "Exigência de marca específica sem justificativa.", pageUrl: "javascript:alert(1)" }),
+    }, cookie);
+    assert.equal(signedIn.status, 201);
+    const signedInBody = (await signedIn.json()) as { id: string };
+    const [signedInRow] = await db.select().from(tenderFeedbackTable).where(eq(tenderFeedbackTable.id, signedInBody.id));
+    assert.equal(signedInRow?.userId, user.id);
+    assert.equal(signedInRow?.section, null);
+    assert.equal(signedInRow?.pageUrl, null);
+
+    const exported = await request("/v1/me/export", {}, cookie);
+    assert.equal(exported.status, 200);
+    const data = (await exported.json()) as { tenderFeedback: Array<{ id: string; kind: string; message: string; tenderId: string }> };
+    assert.deepEqual(data.tenderFeedback.map(({ id, kind, tenderId: exportedTender }) => ({ id, kind, tenderId: exportedTender })), [
+      { id: signedInBody.id, kind: "possible_irregularity", tenderId },
+    ]);
+
+    assert.equal((await request("/v1/me", { method: "DELETE", headers: csrf, body: JSON.stringify({ confirm: "EXCLUIR" }) }, cookie)).status, 204);
+    assert.equal((await db.select().from(tenderFeedbackTable).where(eq(tenderFeedbackTable.userId, user.id))).length, 0);
+    assert.equal((await db.select().from(tenderFeedbackTable).where(eq(tenderFeedbackTable.id, anonymousBody.id))).length, 1);
   });
 
   await t.test("exports every user-owned table without secrets", async () => {

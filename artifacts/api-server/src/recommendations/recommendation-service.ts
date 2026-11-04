@@ -7,8 +7,10 @@ import {
   inArray,
   isNull,
   lt,
+  not,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import {
   companyProfilesTable,
@@ -39,7 +41,9 @@ import { logger } from "../lib/logger";
 import { tryRunSingletonJob } from "../jobs/job-lock";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
+  coverageLocationTargets,
   matchServiceRegion,
+  municipalities,
   municipalityReference,
   type ServiceRegionCoverage,
 } from "../service-region/service-region";
@@ -52,6 +56,12 @@ import {
   extractProfileTerms,
   isSuggestableProfileTerm,
 } from "../profile/keyword-vocabulary";
+import { installationById } from "../ingest/cultural-installations";
+import {
+  areasFromText,
+  opportunityAreaLabels,
+  type OpportunityArea,
+} from "../ingest/opportunity-areas";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -67,8 +77,10 @@ const LEARNED_INTEREST_THRESHOLD = 2;
 /**
  * Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version.
  * 3: same ranking as 2; rows also store the score parts (features) that impressions log.
+ * 4: declared region comes first (tenders and declared opportunities); declared opportunities
+ *    need profile adherence, not just a matching purpose.
  */
-export const RECOMMENDATION_ALGORITHM_VERSION = 3;
+export const RECOMMENDATION_ALGORITHM_VERSION = 4;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
 const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
@@ -814,6 +826,56 @@ const directProfileMatches = (
     .sort((a, b) => b.weight - a.weight),
 });
 
+/** True when the score treated the tender as inside the declared region (or no custom coverage). */
+export const isInDeclaredRegionScore = (
+  features: RecommendationFeatures,
+): boolean => (features.location ?? 1) > 0;
+
+/** Region-first, then score: every in-region row stays above any out-of-region row (prioritize). */
+export function compareRecommendationRank(
+  a: {
+    score: number;
+    features: RecommendationFeatures;
+    candidate: { id: string };
+  },
+  b: {
+    score: number;
+    features: RecommendationFeatures;
+    candidate: { id: string };
+  },
+): number {
+  return (
+    Number(isInDeclaredRegionScore(b.features)) -
+      Number(isInDeclaredRegionScore(a.features)) ||
+    b.score - a.score ||
+    a.candidate.id.localeCompare(b.candidate.id)
+  );
+}
+
+/** Keep the offer/keyword match and the region reason in the three visible motives. */
+export function selectTopReasons(
+  reasons: RecommendationReason[],
+  limit = 3,
+): RecommendationReason[] {
+  if (reasons.length <= limit) return reasons;
+  const priority = (kind: RecommendationReason["kind"]) => {
+    if (kind === "profile" || kind === "interest") return 0;
+    if (kind === "location") return 1;
+    return 2;
+  };
+  const ranked = reasons
+    .map((reason, index) => ({ reason, index }))
+    .sort(
+      (left, right) =>
+        priority(left.reason.kind) - priority(right.reason.kind) ||
+        left.index - right.index,
+    );
+  return ranked
+    .slice(0, limit)
+    .sort((left, right) => left.index - right.index)
+    .map(({ reason }) => reason);
+}
+
 /**
  * Triage gate, stricter than scoring: the tender must match a declared offering, keyword or category
  * and fall inside the declared region whatever the coverage mode ("prioritize" still scores outsiders).
@@ -1175,11 +1237,74 @@ export function scoreRecommendation(
   return score > 0 && reasons.length > 0
     ? {
         score: Number(score.toFixed(5)),
-        reasons: reasons.slice(0, 3),
+        reasons: selectTopReasons(reasons, 3),
         features: roundFeatures(features),
       }
     : null;
 }
+
+const REMOTE_CATEGORY_SLUGS_SQL = [
+  "ti-telecom",
+  "consultoria-tecnica",
+  "educacao-capacitacao",
+  "publicidade-comunicacao",
+  "seguros-financeiros",
+] as const;
+
+/**
+ * Geographic match or (when allowed) a remote-compatible category — same idea as matchServiceRegion.
+ * State/municipality clauses use IS NOT NULL so NOT(this) is true for tenders without UF
+ * (SQL `NOT (NULL IN (...))` is unknown and would drop no-UF rows from the prioritize fillers).
+ */
+const coverageInsideFilter = (
+  coverage: Extract<ServiceRegionCoverage, { scope: "custom" }>,
+): SQL => {
+  const { states, municipalities } = coverageLocationTargets(coverage);
+  const clauses: SQL[] = [];
+  if (states.length) {
+    clauses.push(
+      and(
+        sql`${tendersTable.state} is not null`,
+        inArray(tendersTable.state, states),
+      ) as SQL,
+    );
+  }
+  if (municipalities.length) {
+    clauses.push(
+      and(
+        sql`${tendersTable.cityIbgeCode} is not null`,
+        inArray(tendersTable.cityIbgeCode, municipalities),
+      ) as SQL,
+    );
+  }
+  if (coverage.acceptsRemote) {
+    clauses.push(
+      sql`${tendersTable.categories} @> any(array[${sql.join(
+        REMOTE_CATEGORY_SLUGS_SQL.map(
+          (slug) => sql`${JSON.stringify([{ slug }])}::jsonb`,
+        ),
+        sql`, `,
+      )}])`,
+    );
+  }
+  return clauses.length ? (or(...clauses) as SQL) : sql`false`;
+};
+
+const interleaveCandidates = (
+  textRows: ScoreCandidate[],
+  categoryRows: ScoreCandidate[],
+  limit: number,
+): ScoreCandidate[] => {
+  const union = new Map<string, ScoreCandidate>();
+  for (let index = 0; union.size < limit; index += 1) {
+    const textRow = textRows[index];
+    const categoryRow = categoryRows[index];
+    if (!textRow && !categoryRow) break;
+    if (textRow) union.set(textRow.id, textRow);
+    if (categoryRow) union.set(categoryRow.id, categoryRow);
+  }
+  return [...union.values()].slice(0, limit);
+};
 
 const queryCandidates = async (
   profile: RecommendationInterestProfile,
@@ -1216,10 +1341,10 @@ const queryCandidates = async (
   const pathCount =
     Number(Boolean(textFilter)) + Number(Boolean(categoryFilter));
   if (!pathCount) return [];
-  const pathLimit =
-    pathCount === 1 ? CANDIDATE_LIMIT : Math.ceil(CANDIDATE_LIMIT / 2);
   const selectBy = async (
     signalFilter: NonNullable<typeof textFilter>,
+    locationFilter: SQL | undefined,
+    limit: number,
   ): Promise<ScoreCandidate[]> => {
     const rows = await db
       .select({
@@ -1261,29 +1386,48 @@ const queryCandidates = async (
           isNull(savedTendersTable.tenderId),
           isNull(recommendationDismissalsTable.tenderId),
           signalFilter,
+          locationFilter,
         ),
       )
       .orderBy(desc(tendersTable.publishedAt), asc(tendersTable.id))
-      .limit(pathLimit);
+      .limit(limit);
     return rows.map((row) => ({
       ...row,
       textRank: Number(row.textRank) || 0,
     }));
   };
-  const [textRows, categoryRows] = await Promise.all([
-    textFilter ? selectBy(textFilter) : Promise.resolve([]),
-    categoryFilter ? selectBy(categoryFilter) : Promise.resolve([]),
-  ]);
-  // Interleave the two indexed paths so neither explicit signal can starve the other.
-  const union = new Map<string, ScoreCandidate>();
-  for (let index = 0; union.size < CANDIDATE_LIMIT; index += 1) {
-    const textRow = textRows[index];
-    const categoryRow = categoryRows[index];
-    if (!textRow && !categoryRow) break;
-    if (textRow) union.set(textRow.id, textRow);
-    if (categoryRow) union.set(categoryRow.id, categoryRow);
+  const fetchUnion = async (
+    locationFilter: SQL | undefined,
+    limit: number,
+  ): Promise<ScoreCandidate[]> => {
+    const pathLimit = pathCount === 1 ? limit : Math.ceil(limit / 2);
+    const [textRows, categoryRows] = await Promise.all([
+      textFilter
+        ? selectBy(textFilter, locationFilter, pathLimit)
+        : Promise.resolve([]),
+      categoryFilter
+        ? selectBy(categoryFilter, locationFilter, pathLimit)
+        : Promise.resolve([]),
+    ]);
+    return interleaveCandidates(textRows, categoryRows, limit);
+  };
+  const coverage = coverageFromProfile(profile);
+  // Prefer the declared region among the 500 candidates so triage (scope=profile) is not
+  // starved when recent matches are mostly from other UFs.
+  if (coverage?.scope === "custom") {
+    const insideFilter = coverageInsideFilter(coverage);
+    const inside = await fetchUnion(insideFilter, CANDIDATE_LIMIT);
+    if (coverage.mode === "strict" || inside.length >= CANDIDATE_LIMIT)
+      return inside;
+    const remaining = CANDIDATE_LIMIT - inside.length;
+    const outside = await fetchUnion(not(insideFilter), remaining);
+    const seen = new Set(inside.map((row) => row.id));
+    return [
+      ...inside,
+      ...outside.filter((row) => !seen.has(row.id)),
+    ].slice(0, CANDIDATE_LIMIT);
   }
-  return [...union.values()].slice(0, CANDIDATE_LIMIT);
+  return fetchUnion(undefined, CANDIDATE_LIMIT);
 };
 
 const diversify = <T extends { candidate: ScoreCandidate }>(
@@ -1306,7 +1450,20 @@ const diversify = <T extends { candidate: ScoreCandidate }>(
       categories.set(slug, categoryCount + 1);
     }
   }
-  return [...selected, ...deferred].slice(0, RESULT_LIMIT);
+  return [...selected, ...deferred];
+};
+
+/** Diversify inside each region tier so an outsider never jumps ahead of an in-region row. */
+const diversifyPreservingRegion = <
+  T extends { candidate: ScoreCandidate; features: RecommendationFeatures },
+>(
+  ranked: T[],
+): T[] => {
+  const inside = ranked.filter((item) => isInDeclaredRegionScore(item.features));
+  const outside = ranked.filter(
+    (item) => !isInDeclaredRegionScore(item.features),
+  );
+  return [...diversify(inside), ...diversify(outside)].slice(0, RESULT_LIMIT);
 };
 
 export async function rebuildRecommendationsForUser(
@@ -1336,16 +1493,13 @@ export async function rebuildRecommendationsForUser(
       .from(recommendationDismissalsTable)
       .where(eq(recommendationDismissalsTable.userId, userId)),
   ]);
-  const ranked = diversify(
+  const ranked = diversifyPreservingRegion(
     candidates
       .flatMap((candidate) => {
         const result = scoreRecommendation(candidate, profile, dismissed, now);
         return result ? [{ candidate, ...result }] : [];
       })
-      .sort(
-        (a, b) =>
-          b.score - a.score || a.candidate.id.localeCompare(b.candidate.id),
-      ),
+      .sort(compareRecommendationRank),
   );
   await db.transaction(async (tx) => {
     await tx
@@ -1626,10 +1780,11 @@ export async function listRecommendations(
           relevant,
           usage?.applicants ?? [],
           companyProfile ?? null,
+          interest,
         );
         return scored ? [{ id: candidate.id, ...scored }] : [];
       })
-      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+      .sort(compareDeclaredOpportunities)
       .slice(0, Math.min(pageSize, 10));
     const { findOpportunity } =
       await import("../repositories/postgres-opportunity-repository");
@@ -1673,31 +1828,170 @@ export async function listRecommendations(
   };
 }
 
-/** Declared interests rank public calls; unknown applicant eligibility never excludes a call. */
+type DeclaredOpportunityInput = Pick<
+  typeof culturalOpportunitiesTable.$inferSelect,
+  | "kind"
+  | "source"
+  | "areas"
+  | "audience"
+  | "opportunityType"
+  | "title"
+  | "summary"
+> &
+  Partial<
+    Pick<
+      typeof culturalOpportunitiesTable.$inferSelect,
+      "searchText" | "state" | "city" | "installationId" | "areaTerms" | "scope"
+    >
+  >;
+
+type DeclaredOpportunityScore = {
+  score: number;
+  reasons: string[];
+  /** Internal sorting tier: in-region, unknown/national, outside. Not part of the API response. */
+  regionPriority: number;
+};
+
+/** Region is a ranking tier, so no amount of topical/applicant bonuses can outweigh it. */
+export const compareDeclaredOpportunities = (
+  a: DeclaredOpportunityScore & { id: string },
+  b: DeclaredOpportunityScore & { id: string },
+): number =>
+  b.regionPriority - a.regionPriority ||
+  b.score - a.score ||
+  a.id.localeCompare(b.id);
+
+const DECLARED_GENERIC_TERMS = new Set([
+  "apoio",
+  "bolsa",
+  "bolsas",
+  "chamada",
+  "chamadas",
+  "fomento",
+  "financiamento",
+  "oportunidade",
+  "oportunidades",
+  "programa",
+  "programas",
+  "projeto",
+  "projetos",
+]);
+const concreteOpportunityTerm = (term: string): boolean =>
+  normalizeSignalTerms(term).some((word) => !DECLARED_GENERIC_TERMS.has(word));
+
+const declaredOpportunityPurposes = (
+  opportunity: DeclaredOpportunityInput,
+): string[] => {
+  const purposes: string[] = [];
+  const type = normalizedWords(opportunity.opportunityType ?? "").join(" ");
+  const researchSource = ["cnpq", "capes", "finep"].includes(
+    opportunity.source,
+  );
+  if (
+    opportunity.kind === "culture" ||
+    ["mapas", "funarte", "minc", "salic"].includes(opportunity.source)
+  )
+    purposes.push("culture");
+  if (
+    opportunity.kind === "funding" ||
+    researchSource ||
+    [
+      "bolsa",
+      "bolsa de pesquisa",
+      "fomento",
+      "financiamento",
+      "apoio financeiro",
+      "subvencao",
+    ].includes(type)
+  )
+    purposes.push("funding");
+  // The schema represents research calls as funding/innovation; free-text mentions never classify them.
+  if (
+    researchSource ||
+    opportunity.kind === "innovation" ||
+    [
+      "pesquisa",
+      "edital de pesquisa",
+      "chamada de pesquisa",
+      "projeto de pesquisa",
+      "bolsa de pesquisa",
+      "pesquisa e desenvolvimento",
+      "inovacao",
+      "edital de inovacao",
+    ].includes(type)
+  )
+    purposes.push("research");
+  return purposes;
+};
+
+const declaredOpportunityStates = new Set(
+  municipalities.map((city) => city.state),
+);
+const declaredOpportunityCities = new Map<string, typeof municipalities>();
+for (const city of municipalities) {
+  const name = normalizeText(city.name);
+  const namesakes = declaredOpportunityCities.get(name) ?? [];
+  namesakes.push(city);
+  declaredOpportunityCities.set(name, namesakes);
+}
+
+/** Resolve only structured locations and exact, unambiguous IBGE names; never guess from body text. */
+const declaredOpportunityLocation = (opportunity: DeclaredOpportunityInput) => {
+  const installation =
+    opportunity.source === "mapas" && opportunity.installationId
+      ? installationById(opportunity.installationId)
+      : undefined;
+  const explicitState = opportunity.state?.trim().toUpperCase();
+  let state =
+    explicitState && declaredOpportunityStates.has(explicitState)
+      ? explicitState
+      : null;
+  if (!state && installation && installation.scope !== "federal")
+    state = installation.uf;
+  const cityText =
+    opportunity.city?.trim() ||
+    (installation?.kind === "mapas" && installation.scope === "municipal"
+      ? installation.city
+      : null);
+  // Accept a UF suffix only inside the structured city field (e.g. Natal/RN or Natal (RN)).
+  const cityParts = cityText?.match(
+    /^(.*?)\s*(?:[\/-]\s*([A-Za-z]{2})|\(([A-Za-z]{2})\))$/,
+  );
+  const suffix = (cityParts?.[2] ?? cityParts?.[3])?.toUpperCase();
+  if (!state && suffix && declaredOpportunityStates.has(suffix)) state = suffix;
+  const name = normalizeText(cityParts?.[1] ?? cityText ?? "").trim();
+  const cities = (declaredOpportunityCities.get(name) ?? []).filter(
+    (city) => !state || city.state === state,
+  );
+  const city = cities.length === 1 ? cities[0]! : null;
+  return {
+    state: state ?? city?.state ?? null,
+    municipalityIbge: city?.ibgeCode ?? null,
+  };
+};
+
+/** A compatible purpose admits calls without a company profile; registered profiles require adherence. */
 export function scoreDeclaredOpportunity(
-  opportunity: Pick<
-    typeof culturalOpportunitiesTable.$inferSelect,
-    | "kind"
-    | "source"
-    | "areas"
-    | "audience"
-    | "opportunityType"
-    | "title"
-    | "summary"
-  > &
-    Partial<
-      Pick<
-        typeof culturalOpportunitiesTable.$inferSelect,
-        "searchText" | "state"
-      >
-    >,
+  opportunity: DeclaredOpportunityInput,
   purposes: string[],
   applicantTypes: string[],
-  profile: OpportunityProfileInput | null = null,
-): { score: number; reasons: string[] } | null {
-  const text = normalizeText(
-    `${opportunity.searchText ?? ""} ${opportunity.title} ${opportunity.summary ?? ""} ${opportunity.audience ?? ""} ${opportunity.opportunityType ?? ""} ${opportunity.areas.join(" ")}`,
+  profile:
+    (OpportunityProfileInput & { selectedCategories?: string[] }) | null = null,
+  interest?: Pick<RecommendationInterestProfile, "terms">,
+): DeclaredOpportunityScore | null {
+  const matchingPurposes = declaredOpportunityPurposes(opportunity).filter(
+    (purpose) => purposes.includes(purpose),
   );
+  if (!matchingPurposes.length) return null;
+  const areas = [...opportunity.areas, ...(opportunity.areaTerms ?? [])];
+  // Do not qualify a company from its legal type, publisher, city or boilerplate in searchText.
+  const content = [opportunity.title, opportunity.summary ?? ""];
+  const exclusionText = [
+    opportunity.searchText ?? "",
+    ...content,
+    opportunity.audience ?? "",
+    ...areas,
+  ].join(" ");
   if (profile) {
     const exclusions = [...profile.exclusions, ...profile.excludedKeywords]
       .flatMap((value) => [
@@ -1705,97 +1999,156 @@ export function scoreDeclaredOpportunity(
         ...normalizeSignalTerms(value),
       ])
       .filter(Boolean);
-    if (exclusions.some((term) => matchesRecommendationTerm(text, term)))
-      return null;
-    const state = opportunity.state?.toUpperCase() ?? null;
     if (
-      state &&
-      profile.coverageScope !== "national" &&
-      (profile.coverageMode ??
-        (profile.coverageScope === "states" ? "prioritize" : "strict")) ===
-        "strict"
-    ) {
-      const legacyCustom = profile.coverageScope === "states";
-      const center = profile.headquartersMunicipalityIbge
-        ? municipalityReference(profile.headquartersMunicipalityIbge)
-        : null;
-      const region = matchServiceRegion(
-        {
-          scope: "custom",
-          mode: "strict",
-          acceptsRemote: profile.acceptsRemote ?? false,
-          regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
-          states: profile.coverageStates.map((value) => value.toUpperCase()),
-          municipalities: (profile.coverageMunicipalities ?? []).flatMap(
-            (code) => {
-              const city = municipalityReference(code);
-              return city ? [city] : [];
-            },
-          ),
-          radius:
-            center && profile.coverageRadiusKm
-              ? {
-                  center,
-                  km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
-                }
-              : null,
-        },
-        {
-          state,
-          municipalityIbge: null,
-          categories: opportunity.areas.map((slug) => ({ slug })),
-        },
-      );
-      if (!region.matches) return null;
-    }
-  }
-  const reasons: string[] = [];
-  let score = 0;
-  if (
-    purposes.includes("culture") &&
-    (opportunity.kind === "culture" ||
-      ["mapas", "funarte", "minc", "salic"].includes(opportunity.source))
-  ) {
-    score += 55;
-    reasons.push("Chamada ligada à cultura");
-  }
-  if (
-    purposes.includes("funding") &&
-    (opportunity.kind === "funding" ||
-      /fomento|financiamento|bolsa|apoio/.test(text))
-  ) {
-    score += 55;
-    reasons.push("Oportunidade de fomento");
-  }
-  if (
-    purposes.includes("research") &&
-    (["cnpq", "capes", "finep"].includes(opportunity.source) ||
-      /pesquisa|cientific|inovacao|universidade/.test(text))
-  ) {
-    score += 55;
-    reasons.push("Oportunidade ligada à pesquisa");
-  }
-  if (!score) return null;
-  const applicantWords: Record<string, RegExp> = {
-    individual: /pessoa fisica|proponente individual|artista|pesquisador/,
-    mei: /\bmei\b|microempreendedor/,
-    company: /empresa|pessoa juridica|startup|negocio/,
-    nonprofit: /sem fins lucrativos|ong|associacao|organizacao social/,
-  };
-  if (applicantTypes.some((type) => applicantWords[type]?.test(text))) {
-    score += 12;
-    reasons.push("Público relacionado ao seu tipo de proponente");
-  }
-  if (
-    profile &&
-    [...profile.offerings, ...profile.selectedKeywords].some((term) =>
-      matchesRecommendationTerm(text, term),
+      exclusions.some((term) => matchesRecommendationTerm(exclusionText, term))
     )
-  ) {
-    score += 18;
-    reasons.push("Combina com a atividade da sua empresa");
+      return null;
   }
-  return { score, reasons };
+  const terms = [
+    ...new Set([
+      ...(profile?.offerings ?? []),
+      ...(profile?.selectedKeywords ?? []),
+    ]),
+  ].filter(concreteOpportunityTerm);
+  const termMatches = terms.filter((term) =>
+    content.some((field) => matchesRecommendationTerm(field, term)),
+  );
+  const areaMatches = areas.filter((area) => {
+    if (!concreteOpportunityTerm(area) || area === "outras") return false;
+    return (
+      profile?.selectedCategories?.some(
+        (category) =>
+          normalizedWords(category).join(" ") ===
+          normalizedWords(area).join(" "),
+      ) ||
+      terms.some(
+        (term) =>
+          matchesRecommendationTerm(area, term) ||
+          matchesRecommendationTerm(term, area) ||
+          areasFromText(term, null).includes(area as OpportunityArea),
+      )
+    );
+  });
+  const learned = (interest?.terms ?? [])
+    .filter(
+      (term) =>
+        term.weight > 0 &&
+        hasAnySource(term, INTEREST_LEARNED_SOURCES) &&
+        concreteOpportunityTerm(term.value) &&
+        [...content, ...areas].some((field) =>
+          matchesRecommendationTerm(field, term.value),
+        ),
+    )
+    .map((term) => term.value);
+  if (profile && !termMatches.length && !areaMatches.length && !learned.length)
+    return null;
+
+  let score = 30;
+  const reasons: string[] = [];
+  if (termMatches.length) {
+    score += Math.min(20, termMatches.length * 10);
+    reasons.push(
+      `Combina com sua oferta ou palavra-chave: ${termMatches.slice(0, 3).join(", ")}`,
+    );
+  }
+  if (areaMatches.length) {
+    score += 15;
+    const labels = [
+      ...new Set(
+        areaMatches.map(
+          (area) => opportunityAreaLabels[area as OpportunityArea] ?? area,
+        ),
+      ),
+    ];
+    reasons.push(`Área ligada ao seu perfil: ${labels.slice(0, 3).join(", ")}`);
+  }
+  if (learned.length) {
+    score += 10;
+    reasons.push(
+      `Relacionado aos seus interesses aprendidos: ${learned.slice(0, 3).join(", ")}`,
+    );
+  }
+  const purposeReasons: Record<string, string> = {
+    culture: "Chamada ligada à cultura",
+    funding: "Oportunidade de fomento",
+    research: "Oportunidade ligada à pesquisa",
+  };
+  score += 10;
+  reasons.push(...matchingPurposes.map((purpose) => purposeReasons[purpose]!));
+
+  // Only the declared audience can support a proponent reason, never an incidental body mention.
+  const audience = normalizeText(opportunity.audience ?? "");
+  const applicantWords: Record<string, { terms: string[]; label: string }> = {
+    individual: {
+      terms: [
+        "pessoa física",
+        "proponente individual",
+        "artista",
+        "pesquisador",
+      ],
+      label: "pessoa física",
+    },
+    mei: { terms: ["MEI", "microempreendedor"], label: "MEI" },
+    company: {
+      terms: ["empresa", "pessoa jurídica", "startup", "negócio"],
+      label: "empresa",
+    },
+    nonprofit: {
+      terms: ["sem fins lucrativos", "ONG", "associação", "organização social"],
+      label: "organização sem fins lucrativos",
+    },
+  };
+  const applicants = applicantTypes.filter((type) =>
+    applicantWords[type]?.terms.some((term) =>
+      matchesRecommendationTerm(audience, term),
+    ),
+  );
+  if (applicants.length) {
+    score += 8;
+    reasons.push(
+      `Público informado na chamada: ${applicants.map((type) => applicantWords[type]!.label).join(", ")}`,
+    );
+  }
+
+  let regionPriority = 1;
+  const location = declaredOpportunityLocation(opportunity);
+  if (profile && profile.coverageScope !== "national" && location.state) {
+    const legacyCustom = profile.coverageScope === "states";
+    const mode =
+      profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict");
+    const center = profile.headquartersMunicipalityIbge
+      ? municipalityReference(profile.headquartersMunicipalityIbge)
+      : null;
+    const region = matchServiceRegion(
+      {
+        scope: "custom",
+        mode,
+        acceptsRemote: profile.acceptsRemote ?? false,
+        regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+        states: profile.coverageStates.map((value) => value.toUpperCase()),
+        municipalities: (profile.coverageMunicipalities ?? []).flatMap(
+          (code) => {
+            const city = municipalityReference(code);
+            return city ? [city] : [];
+          },
+        ),
+        radius:
+          center && profile.coverageRadiusKm
+            ? {
+                center,
+                km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+              }
+            : null,
+      },
+      { ...location, categories: opportunity.areas.map((slug) => ({ slug })) },
+    );
+    if (!region.matches && mode === "strict") return null;
+    regionPriority = region.matches ? 2 : 0;
+    if (region.matches) score += 10;
+    // Keep geography visible even on clients that show only the first three reasons.
+    reasons.unshift(region.reason);
+  }
+  return { score, reasons, regionPriority };
 }
 
 export async function dismissRecommendation(

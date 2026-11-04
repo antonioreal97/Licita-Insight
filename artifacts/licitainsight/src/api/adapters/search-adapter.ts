@@ -1,4 +1,12 @@
-import type { OpenTendersByStateResponse, SuggestionsResponse, TenderDetail, TenderSearchParams, TenderSearchResponse } from '../types';
+import type {
+  OpenTendersByStateResponse,
+  SuggestionsResponse,
+  TenderDetail,
+  TenderFeedbackCreated,
+  TenderFeedbackInput,
+  TenderSearchParams,
+  TenderSearchResponse,
+} from '../types';
 
 /**
  * The only boundary between the frontend and the backend for search.
@@ -10,4 +18,6 @@ export interface SearchAdapter {
   getTender(id: string, signal?: AbortSignal): Promise<TenderDetail>;
   getSuggestions(q: string, limit?: number, signal?: AbortSignal): Promise<SuggestionsResponse>;
   getOpenTendersByState(signal?: AbortSignal): Promise<OpenTendersByStateResponse>;
+  /** "Reportar problema": works signed in or anonymous (tender-feedback-v1). */
+  submitTenderFeedback(id: string, input: TenderFeedbackInput): Promise<TenderFeedbackCreated>;
 }

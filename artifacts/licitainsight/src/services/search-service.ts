@@ -1,4 +1,12 @@
-import { searchAdapter, type Modality, type SearchMode, type SortOption, type TenderSearchParams, type TenderStatus } from '@/api';
+import {
+  searchAdapter,
+  type Modality,
+  type SearchMode,
+  type SortOption,
+  type TenderFeedbackInput,
+  type TenderSearchParams,
+  type TenderStatus,
+} from '@/api';
 
 export const DEFAULT_PAGE_SIZE = 20;
 
@@ -162,4 +170,5 @@ export const searchService = {
   getTender: (id: string, signal?: AbortSignal) => searchAdapter.getTender(id, signal),
   suggest: (q: string, limit?: number, signal?: AbortSignal) => searchAdapter.getSuggestions(q.trim(), limit, signal),
   openTendersByState: (signal?: AbortSignal) => searchAdapter.getOpenTendersByState(signal),
+  submitFeedback: (id: string, input: TenderFeedbackInput) => searchAdapter.submitTenderFeedback(id, { ...input, message: input.message.trim() }),
 };

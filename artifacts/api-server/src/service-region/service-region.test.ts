@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  coverageLocationTargets,
   haversineKm,
   isWithinRadius,
   matchServiceRegion,
@@ -73,4 +74,52 @@ test("categoria remota pode atravessar a região quando a empresa aceita", () =>
   );
   assert.equal(result.matches, true);
   assert.equal(result.remote, true);
+  assert.match(result.reason, /distância|distancia/i);
+});
+
+test("edital sem UF só entra pela via remota; categoria presencial fica fora", () => {
+  const noState = {
+    state: null,
+    municipalityIbge: null,
+    categories: [{ slug: "saude" }],
+  };
+  const withRemote: ServiceRegionCoverage = {
+    scope: "custom",
+    mode: "strict",
+    acceptsRemote: true,
+    regions: [],
+    states: ["SP"],
+    municipalities: [],
+    radius: null,
+  };
+  assert.equal(matchServiceRegion(coverage("strict"), noState).matches, false);
+  assert.equal(
+    matchServiceRegion(withRemote, {
+      ...noState,
+      categories: [{ slug: "ti-telecom" }],
+    }).matches,
+    true,
+  );
+  assert.equal(matchServiceRegion(withRemote, noState).matches, false);
+});
+
+test("coverageLocationTargets une UFs, macrorregião, municípios e raio", () => {
+  const targets = coverageLocationTargets({
+    scope: "custom",
+    mode: "strict",
+    acceptsRemote: false,
+    regions: ["southeast"],
+    states: ["BA"],
+    municipalities: [
+      {
+        ibgeCode: "3304557",
+        name: "Rio de Janeiro",
+        state: "RJ",
+      },
+    ],
+    radius: null,
+  });
+  assert.ok(targets.states.includes("BA"));
+  assert.ok(targets.states.includes("SP"));
+  assert.ok(targets.municipalities.includes("3304557"));
 });

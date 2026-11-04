@@ -1,6 +1,6 @@
 import type { SearchAdapter } from '../search-adapter';
-import type { OpenTendersByStateResponse, SuggestionsResponse, TenderDetail, TenderSearchResponse } from '../../types';
-import { getJson } from './http-client';
+import type { OpenTendersByStateResponse, SuggestionsResponse, TenderDetail, TenderFeedbackCreated, TenderSearchResponse } from '../../types';
+import { getJson, sendJson } from './http-client';
 
 /** Talks to the real backend (CODEX_BACKEND_AGENT) — contract: docs/contracts/search-v1.md. */
 export const httpSearchAdapter: SearchAdapter = {
@@ -8,4 +8,5 @@ export const httpSearchAdapter: SearchAdapter = {
   getTender: (id, signal) => getJson<TenderDetail>(`/v1/tenders/${encodeURIComponent(id)}`, {}, signal),
   getSuggestions: (q, limit = 8, signal) => getJson<SuggestionsResponse>('/v1/search/suggestions', { q, limit }, signal),
   getOpenTendersByState: (signal) => getJson<OpenTendersByStateResponse>('/v1/public/tenders/by-state', {}, signal),
+  submitTenderFeedback: (id, input) => sendJson<TenderFeedbackCreated>('POST', `/v1/tenders/${encodeURIComponent(id)}/feedback`, input),
 };

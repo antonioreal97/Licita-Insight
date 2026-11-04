@@ -13,11 +13,11 @@ test('legacy and topic feedback retain topic signals; reasons are bounded', () =
 test('region feedback lowers the rejected state or municipality, without penalizing the service elsewhere', () => {
   const terms = dismissalTerms('region', ['filmagem'], { ...tender, municipalityIbge: '3304557' });
   assert.equal(terms.includes('filmagem'), false);
-  assert.equal(contextualDismissalPenalty(terms, { ...tender, municipalityIbge: '3304557' }, now), 4);
+  assert.equal(contextualDismissalPenalty(terms, { ...tender, municipalityIbge: '3304557' }, now), 10);
   assert.equal(contextualDismissalPenalty(terms, { ...tender, state: 'SP', municipalityIbge: '3550308' }, now), 0);
   assert.equal(
     contextualDismissalPenalty(terms, { ...tender, state: 'SP', municipalityIbge: '3304557' }, now),
-    4,
+    10,
   );
   assert.equal(contextualDismissalPenalty(dismissalTerms('region', [], { ...tender, state: null }), tender, now), 0);
 });
