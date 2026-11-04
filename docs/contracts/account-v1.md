@@ -641,6 +641,18 @@ type AccountExport = {
     currentPeriodEnd: string | null;
     updatedAt: string;
   } | null;
+  // Feedbacks enviados com sessão pela página do edital (tender-feedback-v1). Anônimos não entram.
+  tenderFeedback: Array<{
+    id: string;
+    tenderId: string;
+    kind: "wrong_or_missing_info" | "possible_irregularity" | "broken_link" | "other";
+    section: string | null;
+    message: string;
+    pageUrl: string | null;
+    userAgent: string | null;
+    status: "new" | "triaged" | "resolved" | "dismissed";
+    createdAt: string;
+  }>;
 };
 ```
 
