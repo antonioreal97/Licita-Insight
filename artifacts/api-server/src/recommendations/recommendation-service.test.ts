@@ -12,7 +12,7 @@ const {
   temporalWeight,
 } = await import("./recommendation-service");
 
-test("finalidades recomendam fontes correspondentes e proponente só reordena", () => {
+test("finalidades requerem aderência e proponente só reordena", () => {
   const call = {
     kind: "culture" as const,
     source: "mapas" as const,
@@ -23,11 +23,22 @@ test("finalidades recomendam fontes correspondentes e proponente só reordena", 
     summary: null,
   };
   assert.equal(scoreDeclaredOpportunity(call, [], ["individual"]), null);
-  const unknown = scoreDeclaredOpportunity(call, ["culture"], ["individual"]);
+  assert.equal(
+    scoreDeclaredOpportunity(call, ["culture"], ["individual"]),
+    null,
+  );
+  const profile = { ...opportunityProfile, offerings: ["cinema"] };
+  const unknown = scoreDeclaredOpportunity(
+    call,
+    ["culture"],
+    ["individual"],
+    profile,
+  );
   const matched = scoreDeclaredOpportunity(
     { ...call, audience: "Pessoa física" },
     ["culture"],
     ["individual"],
+    profile,
   );
   assert.ok(unknown && matched);
   assert.ok(matched.score > unknown.score);
@@ -37,6 +48,7 @@ test("finalidades recomendam fontes correspondentes e proponente só reordena", 
       { ...call, kind: "funding", source: "cnpq" },
       ["research"],
       [],
+      profile,
     ),
   );
 });
@@ -1005,7 +1017,7 @@ test("oportunidades respeitam UF, município, raio, macrorregião, remoto e prio
   );
 });
 
-test("finalidades aplicam exclusão, região estrita e bônus do perfil", () => {
+test("finalidades aplicam exclusão, região estrita e requisito do perfil", () => {
   const call = {
     kind: "culture" as const,
     source: "mapas" as const,
@@ -1024,7 +1036,8 @@ test("finalidades aplicam exclusão, região estrita e bônus do perfil", () => 
     [],
     opportunityProfile,
   );
-  assert.ok(base && boosted && boosted.score > base.score);
+  assert.equal(base, null);
+  assert.ok(boosted);
   assert.equal(
     scoreDeclaredOpportunity(
       { ...call, state: "SP" },
