@@ -1,8 +1,7 @@
 import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { db, tendersTable } from "@workspace/db";
 import {
-  municipalityCodesWithinRadius,
-  statesForMacroregions,
+  coverageLocationTargets,
   type ServiceRegionCoverage,
 } from "./service-region";
 
@@ -22,23 +21,7 @@ export async function countOpenTendersInServiceRegion(
     coverage.scope === "national"
       ? undefined
       : (() => {
-          const states = [
-            ...new Set([
-              ...coverage.states,
-              ...statesForMacroregions(coverage.regions),
-            ]),
-          ];
-          const municipalities = [
-            ...new Set([
-              ...coverage.municipalities.map(({ ibgeCode }) => ibgeCode),
-              ...(coverage.radius
-                ? municipalityCodesWithinRadius(
-                    coverage.radius.center.ibgeCode,
-                    coverage.radius.km,
-                  )
-                : []),
-            ]),
-          ];
+          const { states, municipalities } = coverageLocationTargets(coverage);
           const remote = coverage.acceptsRemote
             ? sql`${tendersTable.categories} @> any(array[${sql.join(
                 REMOTE_SLUGS.map(

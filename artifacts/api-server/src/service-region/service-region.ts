@@ -233,3 +233,27 @@ export const municipalityCodesWithinRadius = (
     .filter((city) => isWithinRadius(haversineKm(center, city), radiusKm))
     .map((city) => city.ibgeCode);
 };
+
+/** UFs and municipalities that count as "inside" a custom coverage (for SQL candidate filters). */
+export function coverageLocationTargets(
+  coverage: Extract<ServiceRegionCoverage, { scope: "custom" }>,
+): { states: string[]; municipalities: string[] } {
+  const states = [
+    ...new Set([
+      ...coverage.states.map((state) => state.toUpperCase()),
+      ...statesForMacroregions(coverage.regions),
+    ]),
+  ];
+  const municipalities = [
+    ...new Set([
+      ...coverage.municipalities.map(({ ibgeCode }) => ibgeCode),
+      ...(coverage.radius
+        ? municipalityCodesWithinRadius(
+            coverage.radius.center.ibgeCode,
+            coverage.radius.km,
+          )
+        : []),
+    ]),
+  ];
+  return { states, municipalities };
+}

@@ -499,6 +499,9 @@ test("each route maps to its rate limit profile and the first match wins", () =>
     ["POST", "/api/v1/profile/keywords/from-description", true, "write"],
     ["POST", "/api/v1/profile/match-preview", true, "write"],
     ["POST", "/api/v1/me/notifications/read", true, "write"],
+    // Tender page feedback (tender-feedback-v1): signed in by user, anonymous by IP.
+    ["POST", "/api/v1/tenders/t1/feedback", true, "write"],
+    ["POST", "/api/v1/tenders/t1/feedback", false, "public_write"],
     ["GET", "/api/v1/tenders/search", false, "public"],
     ["GET", "/api/v1/tenders/t1", true, "public"],
     ["GET", "/api/v1/me/billing", true, "public"],

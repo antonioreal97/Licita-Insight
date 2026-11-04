@@ -88,7 +88,7 @@ export default function TriagePage() {
       <header className="mb-6 mt-3">
         {/* Same heading scale as every other page title (PageTitle). */}
         <h1 className="type-titulo-3 text-foreground">Encontre o que combina com você</h1>
-        <p className="mt-2 type-body text-muted-foreground">Uma seleção curta para decidir com calma. Suas escolhas ajustam as próximas recomendações.</p>
+        <p className="mt-2 type-body text-muted-foreground">Só editais que combinam com o que você oferece e estão na sua região. Interessa ou não — suas escolhas ajustam as próximas recomendações.</p>
         <div className="mt-5 flex items-center justify-between gap-3"><p id="triage-progress-label" className="font-semibold">Triagem de hoje: {progress.reviewed.length} de {TRIAGE_GOAL}</p><span className="type-meta text-muted-foreground">No seu ritmo</span></div>
         <div role="progressbar" aria-labelledby="triage-progress-label" aria-valuemin={0} aria-valuemax={TRIAGE_GOAL} aria-valuenow={progress.reviewed.length} className="mt-3 h-2 overflow-hidden rounded-pill bg-muted">
           <div className="h-full rounded-pill bg-primary" style={{ width: `${(progress.reviewed.length / TRIAGE_GOAL) * 100}%` }} />

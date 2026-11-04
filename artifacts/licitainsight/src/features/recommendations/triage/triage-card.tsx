@@ -56,8 +56,9 @@ export function TriageCard({ recommendation, highlights, registeredPlatforms, bu
         <div><dt className="type-meta text-muted-foreground">Prazo da proposta</dt><dd className="mt-1 font-semibold">{formatDateTime(tender.proposalDeadline, 'Não informado')}</dd></div>
         <div><dt className="type-meta text-muted-foreground">Valor estimado</dt><dd className="mt-1 font-semibold">{tender.estimatedValueFlag ? 'Valor em revisão' : formatCurrency(tender.estimatedValue)}</dd></div>
       </dl>
-      <section aria-label="Motivo da aderência" className="rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground">
-        <h3 className="font-semibold">Por que apareceu para você</h3>
+      <section aria-label="Motivo da recomendação" className="rounded-xl bg-primary-subtle p-4 text-primary-subtle-foreground">
+        <h3 className="font-semibold">Por que este edital</h3>
+        <p className="mt-1 type-meta opacity-90">Oferta ou palavra-chave do perfil e a região que casaram com o edital.</p>
         <ul className="mt-2 space-y-1 type-ui">{reasons.map(reason => <li key={`${reason.kind}-${reason.text}`}>{reason.text}</li>)}</ul>
       </section>
       <section aria-label="Exigências do edital" className="my-5">
