@@ -1251,15 +1251,32 @@ const REMOTE_CATEGORY_SLUGS_SQL = [
   "seguros-financeiros",
 ] as const;
 
-/** Geographic match or (when allowed) a remote-compatible category — same idea as matchServiceRegion. */
+/**
+ * Geographic match or (when allowed) a remote-compatible category — same idea as matchServiceRegion.
+ * State/municipality clauses use IS NOT NULL so NOT(this) is true for tenders without UF
+ * (SQL `NOT (NULL IN (...))` is unknown and would drop no-UF rows from the prioritize fillers).
+ */
 const coverageInsideFilter = (
   coverage: Extract<ServiceRegionCoverage, { scope: "custom" }>,
 ): SQL => {
   const { states, municipalities } = coverageLocationTargets(coverage);
   const clauses: SQL[] = [];
-  if (states.length) clauses.push(inArray(tendersTable.state, states));
-  if (municipalities.length)
-    clauses.push(inArray(tendersTable.cityIbgeCode, municipalities));
+  if (states.length) {
+    clauses.push(
+      and(
+        sql`${tendersTable.state} is not null`,
+        inArray(tendersTable.state, states),
+      ) as SQL,
+    );
+  }
+  if (municipalities.length) {
+    clauses.push(
+      and(
+        sql`${tendersTable.cityIbgeCode} is not null`,
+        inArray(tendersTable.cityIbgeCode, municipalities),
+      ) as SQL,
+    );
+  }
   if (coverage.acceptsRemote) {
     clauses.push(
       sql`${tendersTable.categories} @> any(array[${sql.join(
