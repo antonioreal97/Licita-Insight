@@ -77,6 +77,8 @@ const LEARNED_INTEREST_THRESHOLD = 2;
 /**
  * Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version.
  * 3: same ranking as 2; rows also store the score parts (features) that impressions log.
+ * 4: declared region comes first (tenders and declared opportunities); declared opportunities
+ *    need profile adherence, not just a matching purpose.
  */
 export const RECOMMENDATION_ALGORITHM_VERSION = 4;
 
