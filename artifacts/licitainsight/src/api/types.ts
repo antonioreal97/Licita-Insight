@@ -347,6 +347,17 @@ export type AwardHistoryResponse = {
   meta: AwardHistoryMeta;
 };
 
+/** Tender page feedback (tender-feedback-v1). */
+export type TenderFeedbackKind = 'wrong_or_missing_info' | 'possible_irregularity' | 'broken_link' | 'other';
+export type TenderFeedbackSection = 'summary' | 'deadlines' | 'value' | 'documents' | 'sheet' | 'items' | 'timeline' | 'other';
+export type TenderFeedbackInput = {
+  kind: TenderFeedbackKind;
+  section: TenderFeedbackSection | null;
+  message: string;
+  pageUrl: string | null;
+};
+export type TenderFeedbackCreated = { id: string; status: 'new'; createdAt: string };
+
 export type ApiErrorCode =
   | 'INVALID_PARAMETER'
   | 'NOT_FOUND'
