@@ -21,6 +21,8 @@ tags:
     description: Official PNCP contract and item result history
   - name: recommendations
     description: Personalized, explainable in-app tender recommendations
+  - name: feedback
+    description: User reports about a tender page sent to the Pardal Digital team
 paths:
   /healthz:
     get:
@@ -340,6 +342,41 @@ paths:
           $ref: "#/components/responses/AiQuotaExceeded"
         "503":
           $ref: "#/components/responses/AiUnavailable"
+  /v1/tenders/{id}/feedback:
+    post:
+      operationId: submitTenderFeedback
+      tags: [feedback]
+      summary: Report wrong or missing information, a possible irregularity or a broken link on a tender page
+      description: >-
+        Works with or without a session (no subscription). Requires the CSRF header and Origin. With a valid session the
+        report is linked to the account; without one it is anonymous and counted in the public_write rate limit by IP.
+      security: [{}, { sessionCookie: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenderFeedbackRequest"
+      responses:
+        "201":
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenderFeedbackCreated"
+        "400":
+          $ref: "#/components/responses/InvalidParameter"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/tenders/{id}/sheet:
     get:
       operationId: getTenderSheet
@@ -2764,6 +2801,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountExportCouponRedemption"
+        tenderFeedback:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountExportTenderFeedback"
       required:
         [
           exportedAt,
@@ -2787,7 +2828,56 @@ components:
           recommendations,
           subscription,
           couponRedemptions,
+          tenderFeedback,
         ]
+    TenderFeedbackKind:
+      type: string
+      enum: [wrong_or_missing_info, possible_irregularity, broken_link, other]
+    TenderFeedbackSection:
+      type: string
+      enum: [summary, deadlines, value, documents, sheet, items, timeline, other]
+    TenderFeedbackRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: { $ref: "#/components/schemas/TenderFeedbackKind" }
+        section:
+          anyOf:
+            - $ref: "#/components/schemas/TenderFeedbackSection"
+            - type: "null"
+        message:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Trimmed before the length check.
+        pageUrl:
+          type: [string, "null"]
+          maxLength: 2000
+          description: Path or same-origin URL of the page the report was sent from.
+      required: [kind, message]
+    TenderFeedbackCreated:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [new] }
+        createdAt: { type: string, format: date-time }
+      required: [id, status, createdAt]
+    AccountExportTenderFeedback:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tenderId: { type: string }
+        kind: { $ref: "#/components/schemas/TenderFeedbackKind" }
+        section:
+          anyOf:
+            - $ref: "#/components/schemas/TenderFeedbackSection"
+            - type: "null"
+        message: { type: string }
+        pageUrl: { type: [string, "null"] }
+        userAgent: { type: [string, "null"] }
+        status: { type: string, enum: [new, triaged, resolved, dismissed] }
+        createdAt: { type: string, format: date-time }
+      required: [id, tenderId, kind, section, message, pageUrl, userAgent, status, createdAt]
     AccountExportRecommendationEvent:
       type: object
       properties:

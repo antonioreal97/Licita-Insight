@@ -973,6 +973,54 @@ export interface AccountExportRecommendationEvent {
   occurredAt: string;
 }
 
+export type TenderFeedbackKind = typeof TenderFeedbackKind[keyof typeof TenderFeedbackKind];
+
+
+export const TenderFeedbackKind = {
+  wrong_or_missing_info: 'wrong_or_missing_info',
+  possible_irregularity: 'possible_irregularity',
+  broken_link: 'broken_link',
+  other: 'other',
+} as const;
+
+export type TenderFeedbackSection = typeof TenderFeedbackSection[keyof typeof TenderFeedbackSection];
+
+
+export const TenderFeedbackSection = {
+  summary: 'summary',
+  deadlines: 'deadlines',
+  value: 'value',
+  documents: 'documents',
+  sheet: 'sheet',
+  items: 'items',
+  timeline: 'timeline',
+  other: 'other',
+} as const;
+
+export type AccountExportTenderFeedbackStatus = typeof AccountExportTenderFeedbackStatus[keyof typeof AccountExportTenderFeedbackStatus];
+
+
+export const AccountExportTenderFeedbackStatus = {
+  new: 'new',
+  triaged: 'triaged',
+  resolved: 'resolved',
+  dismissed: 'dismissed',
+} as const;
+
+export interface AccountExportTenderFeedback {
+  id: string;
+  tenderId: string;
+  kind: TenderFeedbackKind;
+  section: TenderFeedbackSection | null;
+  message: string;
+  /** @nullable */
+  pageUrl: string | null;
+  /** @nullable */
+  userAgent: string | null;
+  status: AccountExportTenderFeedbackStatus;
+  createdAt: string;
+}
+
 export interface AccountExport {
   exportedAt: string;
   user: AccountExportUser;
@@ -995,6 +1043,37 @@ export interface AccountExport {
   recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
   couponRedemptions: AccountExportCouponRedemption[];
+  tenderFeedback: AccountExportTenderFeedback[];
+}
+
+export interface TenderFeedbackRequest {
+  kind: TenderFeedbackKind;
+  section?: TenderFeedbackSection | null;
+  /**
+     * Trimmed before the length check.
+     * @minLength 10
+     * @maxLength 2000
+     */
+  message: string;
+  /**
+     * Path or same-origin URL of the page the report was sent from.
+     * @maxLength 2000
+     * @nullable
+     */
+  pageUrl?: string | null;
+}
+
+export type TenderFeedbackCreatedStatus = typeof TenderFeedbackCreatedStatus[keyof typeof TenderFeedbackCreatedStatus];
+
+
+export const TenderFeedbackCreatedStatus = {
+  new: 'new',
+} as const;
+
+export interface TenderFeedbackCreated {
+  id: string;
+  status: TenderFeedbackCreatedStatus;
+  createdAt: string;
 }
 
 export type TenderAskIndexStatus = typeof TenderAskIndexStatus[keyof typeof TenderAskIndexStatus];
