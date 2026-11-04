@@ -791,6 +791,39 @@ export const AskTenderResponse = zod.object({
 
 
 /**
+ * Works with or without a session (no subscription). Requires the CSRF header and Origin. With a valid session the report is linked to the account; without one it is anonymous and counted in the public_write rate limit by IP.
+ * @summary Report wrong or missing information, a possible irregularity or a broken link on a tender page
+ */
+export const submitTenderFeedbackPathIdMax = 200;
+
+
+
+export const SubmitTenderFeedbackParams = zod.object({
+  "id": zod.coerce.string().min(1).max(submitTenderFeedbackPathIdMax)
+})
+
+export const submitTenderFeedbackBodyMessageMin = 10;
+export const submitTenderFeedbackBodyMessageMax = 2000;
+
+export const submitTenderFeedbackBodyPageUrlMax = 2000;
+
+
+
+export const SubmitTenderFeedbackBody = zod.object({
+  "kind": zod.enum(['wrong_or_missing_info', 'possible_irregularity', 'broken_link', 'other']),
+  "section": zod.union([zod.enum(['summary', 'deadlines', 'value', 'documents', 'sheet', 'items', 'timeline', 'other']),zod.null()]).optional(),
+  "message": zod.string().min(submitTenderFeedbackBodyMessageMin).max(submitTenderFeedbackBodyMessageMax).describe('Trimmed before the length check.'),
+  "pageUrl": zod.string().max(submitTenderFeedbackBodyPageUrlMax).nullish().describe('Path or same-origin URL of the page the report was sent from.')
+})
+
+export const SubmitTenderFeedbackResponse = zod.object({
+  "id": zod.string().uuid(),
+  "status": zod.enum(['new']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get or start the evidence-backed key-field sheet for a tender
  */
 
@@ -1869,6 +1902,17 @@ export const ExportAccountDataResponse = zod.object({
   "redeemedAt": zod.coerce.date(),
   "accessUntil": zod.coerce.date(),
   "durationDays": zod.union([zod.literal(7),zod.literal(30)])
+})),
+  "tenderFeedback": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "tenderId": zod.string(),
+  "kind": zod.enum(['wrong_or_missing_info', 'possible_irregularity', 'broken_link', 'other']),
+  "section": zod.union([zod.enum(['summary', 'deadlines', 'value', 'documents', 'sheet', 'items', 'timeline', 'other']),zod.null()]),
+  "message": zod.string(),
+  "pageUrl": zod.string().nullable(),
+  "userAgent": zod.string().nullable(),
+  "status": zod.enum(['new', 'triaged', 'resolved', 'dismissed']),
+  "createdAt": zod.coerce.date()
 }))
 })
 

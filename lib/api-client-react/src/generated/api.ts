@@ -108,6 +108,8 @@ import type {
   SuggestionsResponse,
   TenderAskStatus,
   TenderDetail,
+  TenderFeedbackCreated,
+  TenderFeedbackRequest,
   TenderFitsResponse,
   TenderHighlightsResponse,
   TenderSheet,
@@ -1031,6 +1033,96 @@ export const useAskTender = <TError = ErrorType<InvalidParameterResponse | Unaut
         TContext
       > => {
       return useMutation(getAskTenderMutationOptions(options));
+    }
+
+export const getSubmitTenderFeedbackUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/tenders/${id}/feedback`
+}
+
+/**
+ * Works with or without a session (no subscription). Requires the CSRF header and Origin. With a valid session the report is linked to the account; without one it is anonymous and counted in the public_write rate limit by IP.
+ * @summary Report wrong or missing information, a possible irregularity or a broken link on a tender page
+ */
+export const submitTenderFeedback = async (id: string,
+    tenderFeedbackRequest: TenderFeedbackRequest, options?: Parameters<typeof customFetch>[1]): Promise<TenderFeedbackCreated> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TenderFeedbackCreated>(getSubmitTenderFeedbackUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(tenderFeedbackRequest)
+  }
+);}
+
+
+
+
+
+export const getSubmitTenderFeedbackMutationKey = () => ['submitTenderFeedback'] as const;
+
+export const getSubmitTenderFeedbackMutationOptions = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTenderFeedback>>, TError,SubmitTenderFeedbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitTenderFeedback>>, TError,SubmitTenderFeedbackMutationVariables, TContext> => {
+
+const mutationKey = getSubmitTenderFeedbackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitTenderFeedback>>, SubmitTenderFeedbackMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitTenderFeedback(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitTenderFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof submitTenderFeedback>>>
+    export type SubmitTenderFeedbackMutationBody = BodyType<TenderFeedbackRequest>
+    export type SubmitTenderFeedbackMutationError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse | RateLimitedResponse>
+    export type SubmitTenderFeedbackMutationVariables = {id: string;data: BodyType<TenderFeedbackRequest>}
+
+    /**
+ * @summary Report wrong or missing information, a possible irregularity or a broken link on a tender page
+ */
+export const useSubmitTenderFeedback = <TError = ErrorType<InvalidParameterResponse | ForbiddenResponse | NotFoundResponse | RateLimitedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitTenderFeedback>>, TError,SubmitTenderFeedbackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitTenderFeedback>>,
+        TError,
+        SubmitTenderFeedbackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitTenderFeedbackMutationOptions(options));
     }
 
 export const getGetTenderSheetUrl = (id: string,) => {

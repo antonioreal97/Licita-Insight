@@ -22,6 +22,7 @@ import type { AccountExportSavedSearch } from './accountExportSavedSearch';
 import type { AccountExportSavedTender } from './accountExportSavedTender';
 import type { AccountExportSession } from './accountExportSession';
 import type { AccountExportSubscription } from './accountExportSubscription';
+import type { AccountExportTenderFeedback } from './accountExportTenderFeedback';
 import type { AccountExportUser } from './accountExportUser';
 import type { CompanyDocument } from './companyDocument';
 import type { CompanyProfile } from './companyProfile';
@@ -48,4 +49,5 @@ export interface AccountExport {
   recommendations: AccountExportRecommendationsItem[];
   subscription: AccountExportSubscription | null;
   couponRedemptions: AccountExportCouponRedemption[];
+  tenderFeedback: AccountExportTenderFeedback[];
 }

@@ -41,6 +41,7 @@ import { NextStepsPanel } from '@/features/participation/components/next-steps-p
 import { ParticipationPanel } from '@/features/participation/components/participation-panel';
 import { AskTenderPanel } from './components/ask-tender-panel';
 import { TenderSheetPanel } from './components/tender-sheet-panel';
+import { ReportProblem } from './components/report-problem-dialog';
 import { DeadlineIndicator } from './components/deadline-indicator';
 import { MetaItem } from './components/meta-item';
 import { NewTenderBadge } from './components/new-tender-badge';
@@ -396,6 +397,11 @@ export default function TenderDetailPage() {
           <DocumentsPanel documents={tender.documents} pending={tender.source.id === 'pncp' && tender.detailsFetchedAt === null} />
           <ParticipationPanel tenderId={tender.id} />
         </aside>
+      </div>
+
+      {/* Last thing on the page (after the aside on mobile too): feedback to the team, tender-feedback-v1. */}
+      <div className="mt-6">
+        <ReportProblem tenderId={tender.id} />
       </div>
 
       {/* Mobile: one sticky action bar instead of the header buttons. */}

@@ -3,16 +3,18 @@ import { test } from "node:test";
 
 process.env.DATABASE_URL ??= "postgresql://unused:unused@127.0.0.1:1/unused";
 const {
+  compareRecommendationRank,
   extractInterestExpressions,
   matchesRecommendationTerm,
   normalizeSignalTerms,
   scoreOpportunityForProfile,
   scoreRecommendation,
   scoreDeclaredOpportunity,
+  selectTopReasons,
   temporalWeight,
 } = await import("./recommendation-service");
 
-test("finalidades recomendam fontes correspondentes e proponente só reordena", () => {
+test("finalidades requerem aderência com perfil e proponente só reordena", () => {
   const call = {
     kind: "culture" as const,
     source: "mapas" as const,
@@ -23,11 +25,19 @@ test("finalidades recomendam fontes correspondentes e proponente só reordena", 
     summary: null,
   };
   assert.equal(scoreDeclaredOpportunity(call, [], ["individual"]), null);
-  const unknown = scoreDeclaredOpportunity(call, ["culture"], ["individual"]);
+  assert.ok(scoreDeclaredOpportunity(call, ["culture"], ["individual"]));
+  const profile = { ...opportunityProfile, offerings: ["cinema"] };
+  const unknown = scoreDeclaredOpportunity(
+    call,
+    ["culture"],
+    ["individual"],
+    profile,
+  );
   const matched = scoreDeclaredOpportunity(
     { ...call, audience: "Pessoa física" },
     ["culture"],
     ["individual"],
+    profile,
   );
   assert.ok(unknown && matched);
   assert.ok(matched.score > unknown.score);
@@ -37,6 +47,7 @@ test("finalidades recomendam fontes correspondentes e proponente só reordena", 
       { ...call, kind: "funding", source: "cnpq" },
       ["research"],
       [],
+      profile,
     ),
   );
 });
@@ -442,6 +453,112 @@ test("região rígida filtra e prioridade mantém edital de fora com motivo", ()
   assert.ok(
     prioritized.reasons.some(({ text }) => text === "Fora da sua região"),
   );
+});
+
+test("prioritize: edital da região fica acima de qualquer um de fora, mesmo com score bruto menor", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const serviceRegion = {
+    ...profile,
+    coverageScope: "custom" as const,
+    coverageMode: "prioritize" as const,
+    coverageStates: ["SP"],
+    coverageRegions: [] as ("north" | "northeast" | "central_west" | "southeast" | "south")[],
+    coverageMunicipalities: [] as string[],
+    headquartersMunicipalityIbge: null,
+    coverageRadiusKm: null,
+    acceptsRemote: false,
+  };
+  const inside = scoreRecommendation(
+    { ...baseCandidate, id: "inside", state: "SP" },
+    serviceRegion,
+    [],
+    now,
+  );
+  const outside = scoreRecommendation(
+    { ...baseCandidate, id: "outside", state: "RJ" },
+    serviceRegion,
+    [],
+    now,
+  );
+  assert.ok(inside && outside);
+  assert.ok((inside.features.location ?? 0) > 0);
+  assert.ok((outside.features.location ?? 0) < 0);
+  assert.ok(
+    inside.reasons.some(({ kind }) => kind === "location") &&
+      inside.reasons.some(({ kind }) => kind === "profile"),
+  );
+  assert.ok(outside.reasons.some(({ text }) => text === "Fora da sua região"));
+  // Hard guarantee: region tier beats raw score (outside artificially higher).
+  const ordered = [
+    {
+      candidate: { id: "outside" },
+      score: outside.score + 100,
+      features: outside.features,
+    },
+    {
+      candidate: { id: "inside" },
+      score: inside.score,
+      features: inside.features,
+    },
+  ].sort(compareRecommendationRank);
+  assert.equal(ordered[0]?.candidate.id, "inside");
+  assert.equal(ordered[1]?.candidate.id, "outside");
+});
+
+test("edital sem UF: strict descarta; prioritize marca Fora da sua região", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const noState = {
+    ...baseCandidate,
+    id: "T-no-uf",
+    state: null,
+    municipalityIbge: null,
+  };
+  const coverage = {
+    ...profile,
+    coverageScope: "custom" as const,
+    coverageStates: ["SP"],
+    coverageRegions: [] as ("north" | "northeast" | "central_west" | "southeast" | "south")[],
+    coverageMunicipalities: [] as string[],
+    headquartersMunicipalityIbge: null,
+    coverageRadiusKm: null,
+    acceptsRemote: false,
+  };
+  assert.equal(
+    scoreRecommendation(
+      noState,
+      { ...coverage, coverageMode: "strict" },
+      [],
+      now,
+    ),
+    null,
+  );
+  const prioritized = scoreRecommendation(
+    noState,
+    { ...coverage, coverageMode: "prioritize" },
+    [],
+    now,
+  );
+  assert.ok(prioritized);
+  assert.ok(
+    prioritized.reasons.some(({ text }) => text === "Fora da sua região"),
+  );
+  assert.ok((prioritized.features.location ?? 0) < 0);
+});
+
+test("motivos visíveis priorizam perfil e região quando há mais de três sinais", () => {
+  const selected = selectTopReasons(
+    [
+      { kind: "profile", text: "No seu perfil de atividade: drone" },
+      { kind: "interest", text: "Parecido com editais que você marcou como interesse: filmagem" },
+      { kind: "saved", text: "Parecido com editais salvos: camera" },
+      { kind: "location", text: "Em SP, sua UF de atuação" },
+      { kind: "organization", text: "Órgão relacionado ao seu histórico: Prefeitura" },
+    ],
+    3,
+  );
+  assert.equal(selected.length, 3);
+  assert.ok(selected.some(({ kind }) => kind === "profile"));
+  assert.ok(selected.some(({ kind }) => kind === "location"));
 });
 
 test("histórico sozinho ou termos genéricos não criam recomendação", () => {
@@ -1005,7 +1122,7 @@ test("oportunidades respeitam UF, município, raio, macrorregião, remoto e prio
   );
 });
 
-test("finalidades aplicam exclusão, região estrita e bônus do perfil", () => {
+test("finalidades aplicam exclusão, região estrita e requisito do perfil", () => {
   const call = {
     kind: "culture" as const,
     source: "mapas" as const,
