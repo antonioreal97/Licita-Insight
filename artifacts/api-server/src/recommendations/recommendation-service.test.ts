@@ -14,7 +14,7 @@ const {
   temporalWeight,
 } = await import("./recommendation-service");
 
-test("finalidades requerem aderência e proponente só reordena", () => {
+test("finalidades requerem aderência com perfil e proponente só reordena", () => {
   const call = {
     kind: "culture" as const,
     source: "mapas" as const,
@@ -25,10 +25,7 @@ test("finalidades requerem aderência e proponente só reordena", () => {
     summary: null,
   };
   assert.equal(scoreDeclaredOpportunity(call, [], ["individual"]), null);
-  assert.equal(
-    scoreDeclaredOpportunity(call, ["culture"], ["individual"]),
-    null,
-  );
+  assert.ok(scoreDeclaredOpportunity(call, ["culture"], ["individual"]));
   const profile = { ...opportunityProfile, offerings: ["cinema"] };
   const unknown = scoreDeclaredOpportunity(
     call,
@@ -1144,8 +1141,7 @@ test("finalidades aplicam exclusão, região estrita e requisito do perfil", () 
     [],
     opportunityProfile,
   );
-  assert.equal(base, null);
-  assert.ok(boosted);
+  assert.ok(base && boosted && boosted.score > base.score);
   assert.equal(
     scoreDeclaredOpportunity(
       { ...call, state: "SP" },

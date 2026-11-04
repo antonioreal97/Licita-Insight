@@ -1970,7 +1970,7 @@ const declaredOpportunityLocation = (opportunity: DeclaredOpportunityInput) => {
   };
 };
 
-/** A compatible purpose is required, but only concrete profile/learned adherence admits a call. */
+/** A compatible purpose admits calls without a company profile; registered profiles require adherence. */
 export function scoreDeclaredOpportunity(
   opportunity: DeclaredOpportunityInput,
   purposes: string[],
@@ -2040,7 +2040,7 @@ export function scoreDeclaredOpportunity(
         ),
     )
     .map((term) => term.value);
-  if (!termMatches.length && !areaMatches.length && !learned.length)
+  if (profile && !termMatches.length && !areaMatches.length && !learned.length)
     return null;
 
   let score = 30;
