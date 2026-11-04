@@ -40,6 +40,7 @@ import { tryRunSingletonJob } from "../jobs/job-lock";
 import { millisecondsUntilSaoPauloHour } from "../lib/sao-paulo-schedule";
 import {
   matchServiceRegion,
+  municipalities,
   municipalityReference,
   type ServiceRegionCoverage,
 } from "../service-region/service-region";
@@ -52,6 +53,12 @@ import {
   extractProfileTerms,
   isSuggestableProfileTerm,
 } from "../profile/keyword-vocabulary";
+import { installationById } from "../ingest/cultural-installations";
+import {
+  areasFromText,
+  opportunityAreaLabels,
+  type OpportunityArea,
+} from "../ingest/opportunity-areas";
 
 const RETENTION_DAYS = 180;
 const EVENT_HALF_LIFE_DAYS = 30;
@@ -68,7 +75,7 @@ const LEARNED_INTEREST_THRESHOLD = 2;
  * Bump when scoring rules change: reads rebuild profiles/rows stamped with an older version.
  * 3: same ranking as 2; rows also store the score parts (features) that impressions log.
  */
-export const RECOMMENDATION_ALGORITHM_VERSION = 3;
+export const RECOMMENDATION_ALGORITHM_VERSION = 4;
 
 const PROFILE_TERM_SOURCES = new Set(["profile", "profile_selected"]);
 const PROFILE_DESCRIPTION_SOURCES = new Set(["profile_description"]);
@@ -1626,10 +1633,11 @@ export async function listRecommendations(
           relevant,
           usage?.applicants ?? [],
           companyProfile ?? null,
+          interest,
         );
         return scored ? [{ id: candidate.id, ...scored }] : [];
       })
-      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+      .sort(compareDeclaredOpportunities)
       .slice(0, Math.min(pageSize, 10));
     const { findOpportunity } =
       await import("../repositories/postgres-opportunity-repository");
@@ -1673,31 +1681,170 @@ export async function listRecommendations(
   };
 }
 
-/** Declared interests rank public calls; unknown applicant eligibility never excludes a call. */
+type DeclaredOpportunityInput = Pick<
+  typeof culturalOpportunitiesTable.$inferSelect,
+  | "kind"
+  | "source"
+  | "areas"
+  | "audience"
+  | "opportunityType"
+  | "title"
+  | "summary"
+> &
+  Partial<
+    Pick<
+      typeof culturalOpportunitiesTable.$inferSelect,
+      "searchText" | "state" | "city" | "installationId" | "areaTerms" | "scope"
+    >
+  >;
+
+type DeclaredOpportunityScore = {
+  score: number;
+  reasons: string[];
+  /** Internal sorting tier: in-region, unknown/national, outside. Not part of the API response. */
+  regionPriority: number;
+};
+
+/** Region is a ranking tier, so no amount of topical/applicant bonuses can outweigh it. */
+export const compareDeclaredOpportunities = (
+  a: DeclaredOpportunityScore & { id: string },
+  b: DeclaredOpportunityScore & { id: string },
+): number =>
+  b.regionPriority - a.regionPriority ||
+  b.score - a.score ||
+  a.id.localeCompare(b.id);
+
+const DECLARED_GENERIC_TERMS = new Set([
+  "apoio",
+  "bolsa",
+  "bolsas",
+  "chamada",
+  "chamadas",
+  "fomento",
+  "financiamento",
+  "oportunidade",
+  "oportunidades",
+  "programa",
+  "programas",
+  "projeto",
+  "projetos",
+]);
+const concreteOpportunityTerm = (term: string): boolean =>
+  normalizeSignalTerms(term).some((word) => !DECLARED_GENERIC_TERMS.has(word));
+
+const declaredOpportunityPurposes = (
+  opportunity: DeclaredOpportunityInput,
+): string[] => {
+  const purposes: string[] = [];
+  const type = normalizedWords(opportunity.opportunityType ?? "").join(" ");
+  const researchSource = ["cnpq", "capes", "finep"].includes(
+    opportunity.source,
+  );
+  if (
+    opportunity.kind === "culture" ||
+    ["mapas", "funarte", "minc", "salic"].includes(opportunity.source)
+  )
+    purposes.push("culture");
+  if (
+    opportunity.kind === "funding" ||
+    researchSource ||
+    [
+      "bolsa",
+      "bolsa de pesquisa",
+      "fomento",
+      "financiamento",
+      "apoio financeiro",
+      "subvencao",
+    ].includes(type)
+  )
+    purposes.push("funding");
+  // The schema represents research calls as funding/innovation; free-text mentions never classify them.
+  if (
+    researchSource ||
+    opportunity.kind === "innovation" ||
+    [
+      "pesquisa",
+      "edital de pesquisa",
+      "chamada de pesquisa",
+      "projeto de pesquisa",
+      "bolsa de pesquisa",
+      "pesquisa e desenvolvimento",
+      "inovacao",
+      "edital de inovacao",
+    ].includes(type)
+  )
+    purposes.push("research");
+  return purposes;
+};
+
+const declaredOpportunityStates = new Set(
+  municipalities.map((city) => city.state),
+);
+const declaredOpportunityCities = new Map<string, typeof municipalities>();
+for (const city of municipalities) {
+  const name = normalizeText(city.name);
+  const namesakes = declaredOpportunityCities.get(name) ?? [];
+  namesakes.push(city);
+  declaredOpportunityCities.set(name, namesakes);
+}
+
+/** Resolve only structured locations and exact, unambiguous IBGE names; never guess from body text. */
+const declaredOpportunityLocation = (opportunity: DeclaredOpportunityInput) => {
+  const installation =
+    opportunity.source === "mapas" && opportunity.installationId
+      ? installationById(opportunity.installationId)
+      : undefined;
+  const explicitState = opportunity.state?.trim().toUpperCase();
+  let state =
+    explicitState && declaredOpportunityStates.has(explicitState)
+      ? explicitState
+      : null;
+  if (!state && installation && installation.scope !== "federal")
+    state = installation.uf;
+  const cityText =
+    opportunity.city?.trim() ||
+    (installation?.kind === "mapas" && installation.scope === "municipal"
+      ? installation.city
+      : null);
+  // Accept a UF suffix only inside the structured city field (e.g. Natal/RN or Natal (RN)).
+  const cityParts = cityText?.match(
+    /^(.*?)\s*(?:[\/-]\s*([A-Za-z]{2})|\(([A-Za-z]{2})\))$/,
+  );
+  const suffix = (cityParts?.[2] ?? cityParts?.[3])?.toUpperCase();
+  if (!state && suffix && declaredOpportunityStates.has(suffix)) state = suffix;
+  const name = normalizeText(cityParts?.[1] ?? cityText ?? "").trim();
+  const cities = (declaredOpportunityCities.get(name) ?? []).filter(
+    (city) => !state || city.state === state,
+  );
+  const city = cities.length === 1 ? cities[0]! : null;
+  return {
+    state: state ?? city?.state ?? null,
+    municipalityIbge: city?.ibgeCode ?? null,
+  };
+};
+
+/** A compatible purpose is required, but only concrete profile/learned adherence admits a call. */
 export function scoreDeclaredOpportunity(
-  opportunity: Pick<
-    typeof culturalOpportunitiesTable.$inferSelect,
-    | "kind"
-    | "source"
-    | "areas"
-    | "audience"
-    | "opportunityType"
-    | "title"
-    | "summary"
-  > &
-    Partial<
-      Pick<
-        typeof culturalOpportunitiesTable.$inferSelect,
-        "searchText" | "state"
-      >
-    >,
+  opportunity: DeclaredOpportunityInput,
   purposes: string[],
   applicantTypes: string[],
-  profile: OpportunityProfileInput | null = null,
-): { score: number; reasons: string[] } | null {
-  const text = normalizeText(
-    `${opportunity.searchText ?? ""} ${opportunity.title} ${opportunity.summary ?? ""} ${opportunity.audience ?? ""} ${opportunity.opportunityType ?? ""} ${opportunity.areas.join(" ")}`,
+  profile:
+    (OpportunityProfileInput & { selectedCategories?: string[] }) | null = null,
+  interest?: Pick<RecommendationInterestProfile, "terms">,
+): DeclaredOpportunityScore | null {
+  const matchingPurposes = declaredOpportunityPurposes(opportunity).filter(
+    (purpose) => purposes.includes(purpose),
   );
+  if (!matchingPurposes.length) return null;
+  const areas = [...opportunity.areas, ...(opportunity.areaTerms ?? [])];
+  // Do not qualify a company from its legal type, publisher, city or boilerplate in searchText.
+  const content = [opportunity.title, opportunity.summary ?? ""];
+  const exclusionText = [
+    opportunity.searchText ?? "",
+    ...content,
+    opportunity.audience ?? "",
+    ...areas,
+  ].join(" ");
   if (profile) {
     const exclusions = [...profile.exclusions, ...profile.excludedKeywords]
       .flatMap((value) => [
@@ -1705,97 +1852,156 @@ export function scoreDeclaredOpportunity(
         ...normalizeSignalTerms(value),
       ])
       .filter(Boolean);
-    if (exclusions.some((term) => matchesRecommendationTerm(text, term)))
-      return null;
-    const state = opportunity.state?.toUpperCase() ?? null;
     if (
-      state &&
-      profile.coverageScope !== "national" &&
-      (profile.coverageMode ??
-        (profile.coverageScope === "states" ? "prioritize" : "strict")) ===
-        "strict"
-    ) {
-      const legacyCustom = profile.coverageScope === "states";
-      const center = profile.headquartersMunicipalityIbge
-        ? municipalityReference(profile.headquartersMunicipalityIbge)
-        : null;
-      const region = matchServiceRegion(
-        {
-          scope: "custom",
-          mode: "strict",
-          acceptsRemote: profile.acceptsRemote ?? false,
-          regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
-          states: profile.coverageStates.map((value) => value.toUpperCase()),
-          municipalities: (profile.coverageMunicipalities ?? []).flatMap(
-            (code) => {
-              const city = municipalityReference(code);
-              return city ? [city] : [];
-            },
-          ),
-          radius:
-            center && profile.coverageRadiusKm
-              ? {
-                  center,
-                  km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
-                }
-              : null,
-        },
-        {
-          state,
-          municipalityIbge: null,
-          categories: opportunity.areas.map((slug) => ({ slug })),
-        },
-      );
-      if (!region.matches) return null;
-    }
-  }
-  const reasons: string[] = [];
-  let score = 0;
-  if (
-    purposes.includes("culture") &&
-    (opportunity.kind === "culture" ||
-      ["mapas", "funarte", "minc", "salic"].includes(opportunity.source))
-  ) {
-    score += 55;
-    reasons.push("Chamada ligada à cultura");
-  }
-  if (
-    purposes.includes("funding") &&
-    (opportunity.kind === "funding" ||
-      /fomento|financiamento|bolsa|apoio/.test(text))
-  ) {
-    score += 55;
-    reasons.push("Oportunidade de fomento");
-  }
-  if (
-    purposes.includes("research") &&
-    (["cnpq", "capes", "finep"].includes(opportunity.source) ||
-      /pesquisa|cientific|inovacao|universidade/.test(text))
-  ) {
-    score += 55;
-    reasons.push("Oportunidade ligada à pesquisa");
-  }
-  if (!score) return null;
-  const applicantWords: Record<string, RegExp> = {
-    individual: /pessoa fisica|proponente individual|artista|pesquisador/,
-    mei: /\bmei\b|microempreendedor/,
-    company: /empresa|pessoa juridica|startup|negocio/,
-    nonprofit: /sem fins lucrativos|ong|associacao|organizacao social/,
-  };
-  if (applicantTypes.some((type) => applicantWords[type]?.test(text))) {
-    score += 12;
-    reasons.push("Público relacionado ao seu tipo de proponente");
-  }
-  if (
-    profile &&
-    [...profile.offerings, ...profile.selectedKeywords].some((term) =>
-      matchesRecommendationTerm(text, term),
+      exclusions.some((term) => matchesRecommendationTerm(exclusionText, term))
     )
-  ) {
-    score += 18;
-    reasons.push("Combina com a atividade da sua empresa");
+      return null;
   }
-  return { score, reasons };
+  const terms = [
+    ...new Set([
+      ...(profile?.offerings ?? []),
+      ...(profile?.selectedKeywords ?? []),
+    ]),
+  ].filter(concreteOpportunityTerm);
+  const termMatches = terms.filter((term) =>
+    content.some((field) => matchesRecommendationTerm(field, term)),
+  );
+  const areaMatches = areas.filter((area) => {
+    if (!concreteOpportunityTerm(area) || area === "outras") return false;
+    return (
+      profile?.selectedCategories?.some(
+        (category) =>
+          normalizedWords(category).join(" ") ===
+          normalizedWords(area).join(" "),
+      ) ||
+      terms.some(
+        (term) =>
+          matchesRecommendationTerm(area, term) ||
+          matchesRecommendationTerm(term, area) ||
+          areasFromText(term, null).includes(area as OpportunityArea),
+      )
+    );
+  });
+  const learned = (interest?.terms ?? [])
+    .filter(
+      (term) =>
+        term.weight > 0 &&
+        hasAnySource(term, INTEREST_LEARNED_SOURCES) &&
+        concreteOpportunityTerm(term.value) &&
+        [...content, ...areas].some((field) =>
+          matchesRecommendationTerm(field, term.value),
+        ),
+    )
+    .map((term) => term.value);
+  if (!termMatches.length && !areaMatches.length && !learned.length)
+    return null;
+
+  let score = 30;
+  const reasons: string[] = [];
+  if (termMatches.length) {
+    score += Math.min(20, termMatches.length * 10);
+    reasons.push(
+      `Combina com sua oferta ou palavra-chave: ${termMatches.slice(0, 3).join(", ")}`,
+    );
+  }
+  if (areaMatches.length) {
+    score += 15;
+    const labels = [
+      ...new Set(
+        areaMatches.map(
+          (area) => opportunityAreaLabels[area as OpportunityArea] ?? area,
+        ),
+      ),
+    ];
+    reasons.push(`Área ligada ao seu perfil: ${labels.slice(0, 3).join(", ")}`);
+  }
+  if (learned.length) {
+    score += 10;
+    reasons.push(
+      `Relacionado aos seus interesses aprendidos: ${learned.slice(0, 3).join(", ")}`,
+    );
+  }
+  const purposeReasons: Record<string, string> = {
+    culture: "Chamada ligada à cultura",
+    funding: "Oportunidade de fomento",
+    research: "Oportunidade ligada à pesquisa",
+  };
+  score += 10;
+  reasons.push(...matchingPurposes.map((purpose) => purposeReasons[purpose]!));
+
+  // Only the declared audience can support a proponent reason, never an incidental body mention.
+  const audience = normalizeText(opportunity.audience ?? "");
+  const applicantWords: Record<string, { terms: string[]; label: string }> = {
+    individual: {
+      terms: [
+        "pessoa física",
+        "proponente individual",
+        "artista",
+        "pesquisador",
+      ],
+      label: "pessoa física",
+    },
+    mei: { terms: ["MEI", "microempreendedor"], label: "MEI" },
+    company: {
+      terms: ["empresa", "pessoa jurídica", "startup", "negócio"],
+      label: "empresa",
+    },
+    nonprofit: {
+      terms: ["sem fins lucrativos", "ONG", "associação", "organização social"],
+      label: "organização sem fins lucrativos",
+    },
+  };
+  const applicants = applicantTypes.filter((type) =>
+    applicantWords[type]?.terms.some((term) =>
+      matchesRecommendationTerm(audience, term),
+    ),
+  );
+  if (applicants.length) {
+    score += 8;
+    reasons.push(
+      `Público informado na chamada: ${applicants.map((type) => applicantWords[type]!.label).join(", ")}`,
+    );
+  }
+
+  let regionPriority = 1;
+  const location = declaredOpportunityLocation(opportunity);
+  if (profile && profile.coverageScope !== "national" && location.state) {
+    const legacyCustom = profile.coverageScope === "states";
+    const mode =
+      profile.coverageMode ?? (legacyCustom ? "prioritize" : "strict");
+    const center = profile.headquartersMunicipalityIbge
+      ? municipalityReference(profile.headquartersMunicipalityIbge)
+      : null;
+    const region = matchServiceRegion(
+      {
+        scope: "custom",
+        mode,
+        acceptsRemote: profile.acceptsRemote ?? false,
+        regions: legacyCustom ? [] : (profile.coverageRegions ?? []),
+        states: profile.coverageStates.map((value) => value.toUpperCase()),
+        municipalities: (profile.coverageMunicipalities ?? []).flatMap(
+          (code) => {
+            const city = municipalityReference(code);
+            return city ? [city] : [];
+          },
+        ),
+        radius:
+          center && profile.coverageRadiusKm
+            ? {
+                center,
+                km: profile.coverageRadiusKm as 50 | 100 | 200 | 300 | 500,
+              }
+            : null,
+      },
+      { ...location, categories: opportunity.areas.map((slug) => ({ slug })) },
+    );
+    if (!region.matches && mode === "strict") return null;
+    regionPriority = region.matches ? 2 : 0;
+    if (region.matches) score += 10;
+    // Keep geography visible even on clients that show only the first three reasons.
+    reasons.unshift(region.reason);
+  }
+  return { score, reasons, regionPriority };
 }
 
 export async function dismissRecommendation(
