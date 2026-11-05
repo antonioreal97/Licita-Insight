@@ -1884,7 +1884,7 @@ const declaredOpportunityPurposes = (
 ): string[] => {
   const purposes: string[] = [];
   const type = normalizedWords(opportunity.opportunityType ?? "").join(" ");
-  const researchSource = ["cnpq", "capes", "finep"].includes(
+  const researchSource = ["cnpq", "capes", "finep", "fap"].includes(
     opportunity.source,
   );
   if (

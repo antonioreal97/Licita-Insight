@@ -53,6 +53,7 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   worldbank: 'Banco Mundial',
   eu_ft: 'União Europeia (Funding & Tenders)',
   idb: 'BID',
+  fap: 'FAPs estaduais',
 };
 
 /** Credit a source requires as a condition of reuse, printed next to the link to the official notice. */

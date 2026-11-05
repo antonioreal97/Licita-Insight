@@ -4536,6 +4536,7 @@ components:
           worldbank,
           eu_ft,
           idb,
+          fap,
         ]
     OpportunityScope:
       type: string

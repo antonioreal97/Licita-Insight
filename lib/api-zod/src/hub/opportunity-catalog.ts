@@ -245,6 +245,7 @@ export const CulturalOpportunityCatalogSourceSchema = z
       "worldbank",
       "eu_ft",
       "idb",
+      "fap",
     ]),
     title: z.string().min(1),
     summary: z.string().nullable(),
