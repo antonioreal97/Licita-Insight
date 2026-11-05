@@ -884,7 +884,7 @@ export type OpportunityStatus = 'open' | 'upcoming' | 'closed' | 'undated';
 
 export type OpportunityProgram = 'audiovisual' | 'lpg' | 'fac' | 'fsa';
 export type OpportunityKind = 'culture' | 'funding' | 'innovation' | 'partnership' | 'procurement';
-export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic' | 'worldbank' | 'eu_ft' | 'idb';
+export type OpportunitySource = 'mapas' | 'finep' | 'cnpq' | 'capes' | 'transferegov' | 'funarte' | 'minc' | 'salic' | 'worldbank' | 'eu_ft' | 'idb' | 'fap';
 /** Reach of a call, not its nature: an international call still has a `kind`. */
 export type OpportunityScope = 'national' | 'international';
 export type InternationalRegion = 'america-latina' | 'africa' | 'europa' | 'asia' | 'oriente-medio' | 'global';
