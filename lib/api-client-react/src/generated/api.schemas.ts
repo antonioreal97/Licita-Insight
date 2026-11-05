@@ -1803,6 +1803,7 @@ export const OpportunitySource = {
   worldbank: 'worldbank',
   eu_ft: 'eu_ft',
   idb: 'idb',
+  fap: 'fap',
 } as const;
 
 export interface OpportunityDocument {
