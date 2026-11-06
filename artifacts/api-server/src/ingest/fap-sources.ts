@@ -1,9 +1,27 @@
+import {
+  fapescPages,
+  fapitecPages,
+  parseFapescOpportunities,
+  parseFapitecOpportunities,
+  fapScSeDetail,
+} from "./fap-parsers-sc-se-am";
 import type { FundingOpportunityDraft } from "./funding-parsers";
 import {
   fapdfYearPages,
   parseFapdfOpportunities,
   type FapIdentity,
 } from "./fap-parsers";
+import {
+  fapegDetail,
+  fapegPages,
+  parseFapegOpportunities,
+} from "./fap-parsers-go";
+import {
+  fapemaDetail,
+  fapemaPages,
+  parseFapemaOpportunities,
+} from "./fap-parsers-ma";
+import { facepePages, parseFacepeOpportunities } from "./fap-parsers-pe";
 
 type FetchText = (url: string) => Promise<string>;
 
@@ -16,6 +34,23 @@ type FapAdapter = {
     identity: FapIdentity,
     now: Date,
   ) => FundingOpportunityDraft[];
+  /**
+   * For listings that carry no dates: reads each call's own page (`draft.sourceUrl`) and returns the call
+   * completed with period, summary and documents, or `null` to drop it (no period, not a call). Keep
+   * `sourceUrl` unchanged: the call id is derived from it.
+   */
+  detail?: (
+    draft: FundingOpportunityDraft,
+    html: string,
+    identity: FapIdentity,
+    now: Date,
+  ) => FundingOpportunityDraft | null;
+};
+
+/** Most call pages read per FAP and per run when the adapter has `detail` (`FAP_MAX_DETAILS`). */
+export const fapMaxDetails = (value = process.env.FAP_MAX_DETAILS): number => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 30;
 };
 
 /**
@@ -57,6 +92,7 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPEAM",
     name: "Fundação de Amparo à Pesquisa do Estado do Amazonas",
     home: "https://www.fapeam.am.gov.br/",
+    // Listagem Vue depende de /wp-admin/ proibido; sitemaps indisponíveis.
     collection: "pending",
   },
   {
@@ -100,14 +136,24 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPEG",
     name: "Fundação de Amparo à Pesquisa do Estado de Goiás",
     home: "https://goias.gov.br/fapeg/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapegPages(home),
+      parse: parseFapegOpportunities,
+      detail: fapegDetail,
+    },
   },
   {
     uf: "MA",
     acronym: "FAPEMA",
     name: "Fundação de Amparo à Pesquisa e ao Desenvolvimento Científico e Tecnológico do Maranhão",
     home: "https://www.fapema.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapemaPages(home),
+      parse: parseFapemaOpportunities,
+      detail: fapemaDetail,
+    },
   },
   {
     uf: "MG",
@@ -149,7 +195,11 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FACEPE",
     name: "Fundação de Amparo à Ciência e Tecnologia do Estado de Pernambuco",
     home: "https://www.facepe.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => facepePages(home),
+      parse: parseFacepeOpportunities,
+    },
   },
   {
     uf: "PI",
@@ -205,14 +255,24 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPESC",
     name: "Fundação de Amparo à Pesquisa e Inovação do Estado de Santa Catarina",
     home: "https://fapesc.sc.gov.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: fapescPages,
+      parse: parseFapescOpportunities,
+      detail: fapScSeDetail,
+    },
   },
   {
     uf: "SE",
     acronym: "FAPITEC",
     name: "Fundação de Apoio à Pesquisa e à Inovação Tecnológica do Estado de Sergipe",
     home: "https://fapitec.se.gov.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: fapitecPages,
+      parse: parseFapitecOpportunities,
+      detail: fapScSeDetail,
+    },
   },
   {
     uf: "SP",
@@ -277,5 +337,25 @@ export const collectFapDrafts = async (
       drafts.push(item);
     }
   }
-  return { drafts, pages };
+  const detail = entry.adapter.detail;
+  if (!detail) return { drafts, pages };
+  // A call page that fails to load keeps the call as listed; the others are still read.
+  const completed: FundingOpportunityDraft[] = [];
+  for (const [index, item] of drafts.entries()) {
+    if (index >= fapMaxDetails()) {
+      completed.push(item);
+      continue;
+    }
+    await options.wait();
+    let html: string;
+    try {
+      html = await options.fetchText(item.sourceUrl);
+    } catch {
+      completed.push(item);
+      continue;
+    }
+    const result = detail(item, html, identity, options.now);
+    if (result) completed.push(result);
+  }
+  return { drafts: completed, pages };
 };
