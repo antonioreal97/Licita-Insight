@@ -11,6 +11,17 @@ import {
   parseFapdfOpportunities,
   type FapIdentity,
 } from "./fap-parsers";
+import {
+  fapegDetail,
+  fapegPages,
+  parseFapegOpportunities,
+} from "./fap-parsers-go";
+import {
+  fapemaDetail,
+  fapemaPages,
+  parseFapemaOpportunities,
+} from "./fap-parsers-ma";
+import { facepePages, parseFacepeOpportunities } from "./fap-parsers-pe";
 
 type FetchText = (url: string) => Promise<string>;
 
@@ -125,14 +136,24 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPEG",
     name: "Fundação de Amparo à Pesquisa do Estado de Goiás",
     home: "https://goias.gov.br/fapeg/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapegPages(home),
+      parse: parseFapegOpportunities,
+      detail: fapegDetail,
+    },
   },
   {
     uf: "MA",
     acronym: "FAPEMA",
     name: "Fundação de Amparo à Pesquisa e ao Desenvolvimento Científico e Tecnológico do Maranhão",
     home: "https://www.fapema.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapemaPages(home),
+      parse: parseFapemaOpportunities,
+      detail: fapemaDetail,
+    },
   },
   {
     uf: "MG",
@@ -174,7 +195,11 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FACEPE",
     name: "Fundação de Amparo à Ciência e Tecnologia do Estado de Pernambuco",
     home: "https://www.facepe.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => facepePages(home),
+      parse: parseFacepeOpportunities,
+    },
   },
   {
     uf: "PI",
