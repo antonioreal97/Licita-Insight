@@ -1,0 +1,57 @@
+User-agent: *
+
+# Painel administrativo e arquivos internos do WordPress
+Disallow: /wp-admin/
+Disallow: /wp-includes/
+Disallow: /wp-login.php
+Disallow: /wp-register.php
+Disallow: /wp-trackback.php
+Disallow: /xmlrpc.php
+
+# Arquivos de plugins e temas (sem valor de indexação)
+Disallow: /wp-content/plugins/
+Disallow: /wp-content/themes/
+Disallow: /wp-content/cache/
+
+# Buscas internas (evita indexação de URLs ?s=termo)
+Disallow: /?s=
+Disallow: /search/
+
+# Páginas de utilitários WordPress
+Disallow: /wp-json/
+Disallow: /?p=
+Disallow: /?page_id=
+Disallow: /?attachment_id=
+
+# Feeds RSS (reduz rastreamento redundante)
+Disallow: /feed/
+Disallow: /comments/feed/
+Disallow: /*/feed/
+
+# Páginas de comentários paginados
+Disallow: /*/comment-page-*
+
+# Permitir arquivos CSS e JS para renderização correta pelo Google
+Allow: /wp-content/themes/*.css
+Allow: /wp-content/themes/*.js
+Allow: /wp-includes/*.css
+Allow: /wp-includes/*.js
+
+# Sitemap — atualizar quando gerado pelo Yoast SEO ou plugin equivalente
+# Sitemap: https://www.fapeam.am.gov.br/sitemap.xml
+
+# Regras específicas para bots de IA (reduz rastreamento massivo)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
