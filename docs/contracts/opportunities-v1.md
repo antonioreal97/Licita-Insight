@@ -145,6 +145,9 @@ As chamadas das Fundações de Amparo à Pesquisa entram na mesma coleta de fome
 - `externalId` é o SHA-256 truncado de `<página>#<âncora>`. A âncora vem do número do edital (`edital-06-2026`, `chamada-12-2026`), então retificações publicadas na mesma página atualizam a mesma chamada.
 - `FAP_SOURCES=df,sp` restringe a coleta a essas UFs; `FAP_SOURCES=off` desliga todas as FAPs.
 - **FAPDF** (ativa): a página inicial lista uma página por ano (`/editais-fapdf-20261` em 2026). A coleta lê a do ano corrente em Brasília e, em janeiro e fevereiro, também a do ano anterior; sem página do ano, lê a mais recente. Cada edital é um painel `panel-title`, e as chamadas de um programa são painéis aninhados. O período vem de "PERÍODO DE SUBMISSÃO: dd/mm/aaaa a dd/mm/aaaa". Os documentos são os links do edital e das retificações; extratos do DODF e resultados ficam de fora.
+- **FAPEG** (ativa): usa `/fapeg/editais/inscricoes-abertas/` no portal `goias.gov.br` (WordPress). A página "Em andamento" lista chamadas ainda em execução (julgamento/homologação), não só inscrição aberta — por isso a coleta não a lê. Cada linha da tabela vira uma chamada com `status: "open"`; o `detail` completa edital/retificações em PDF.
+- **FAPEMA** (ativa): categoria WordPress `/category/editais/editais-em-aberto/` (só abertos). A listagem traz o post de cada edital; o `detail` lê o período de submissão/inscrição no post e os PDFs do edital/retificações (via visualizador ou link direto). Sem período no post, a chamada cai fora.
+- **FACEPE** (ativa): listagem filtrada `/editais/todos/?c=aberto` (cards `card-edital-grupo`, status oficial aberto) e `/editais-x-fluxo-continuo/`. Sem página própria por chamada: `sourceUrl` é a listagem com âncora. Documentos são os PDFs do edital/erratas (sem resultados). Chamada de fluxo contínuo sem data final fica `status: "open"`; a página de fluxo contínuo ainda pode estar "em construção".
 
 ### Fontes federais de cultura
 

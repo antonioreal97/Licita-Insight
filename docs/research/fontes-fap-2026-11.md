@@ -14,14 +14,14 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 | CE | FUNCAP | pendente | Notícias em `ce.gov.br/funcap/…` | Sem `robots.txt`; editais misturados com notícias de resultado |
 | DF | FAPDF | **ativa** | `/editais-fapdf-<ano>` (Liferay, painéis por edital) | Adaptador `parseFapdfOpportunities` |
 | ES | FAPES | pendente | `/editais` (abertos, encerrados, resultados) | Sem `robots.txt` |
-| GO | FAPEG | pendente | `goias.gov.br/fapeg/editais/em-andamento/` | Portal do estado (WordPress) |
-| MA | FAPEMA | pendente | `/category/editais/editais-em-aberto/` | Categoria só de abertos |
+| GO | FAPEG | **ativa** | `/fapeg/editais/inscricoes-abertas/` (não `em-andamento`) | Portal do estado; "em andamento" ≠ inscrição aberta |
+| MA | FAPEMA | **ativa** | `/category/editais/editais-em-aberto/` | Categoria só de abertos; período no post (`detail`) |
 | MG | FAPEMIG | pendente | `/oportunidades/chamadas-e-editais` | Catálogo com status, datas e valor (Nuxt); começar pela página de cada chamada |
 | MS | FUNDECT | pendente | `ms.gov.br/ciencia-e-tecnologia/consultar-chamadas-publicas-da-fundect…` | Portal do estado |
 | MT | FAPEMAT | **bloqueada** | — | `robots.txt` com `Disallow: /`; não coletar |
 | PA | FAPESPA | pendente | Posts de notícia por chamada | Sem página de editais clara na home |
 | PB | FAPESQ | pendente | `/editais/2026/editais-2026` | Página por ano, como a FAPDF |
-| PE | FACEPE | pendente | `/editais/todos/?c=aberto` | Filtro de abertos na URL |
+| PE | FACEPE | **ativa** | `/editais/todos/?c=aberto` (+ `/editais-x-fluxo-continuo/`) | Filtro de abertos na URL; fluxo contínuo sem data final = open |
 | PI | FAPEPI | pendente | `/editais-fapepi/` | WordPress |
 | PR | Fundação Araucária | pendente | — | Home sem links de edital no HTML; verificar menu e sitemap |
 | RJ | FAPERJ | pendente | `faperj.br/?id=28.5.7` (pesquisa 2026-10) | Home sem links no HTML; usar a lista de editais conhecida |
