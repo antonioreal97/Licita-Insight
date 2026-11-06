@@ -1,3 +1,10 @@
+import {
+  fapescPages,
+  fapitecPages,
+  parseFapescOpportunities,
+  parseFapitecOpportunities,
+  fapScSeDetail,
+} from "./fap-parsers-sc-se-am";
 import type { FundingOpportunityDraft } from "./funding-parsers";
 import {
   fapdfYearPages,
@@ -74,6 +81,7 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPEAM",
     name: "Fundação de Amparo à Pesquisa do Estado do Amazonas",
     home: "https://www.fapeam.am.gov.br/",
+    // Listagem Vue depende de /wp-admin/ proibido; sitemaps indisponíveis.
     collection: "pending",
   },
   {
@@ -222,14 +230,24 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPESC",
     name: "Fundação de Amparo à Pesquisa e Inovação do Estado de Santa Catarina",
     home: "https://fapesc.sc.gov.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: fapescPages,
+      parse: parseFapescOpportunities,
+      detail: fapScSeDetail,
+    },
   },
   {
     uf: "SE",
     acronym: "FAPITEC",
     name: "Fundação de Apoio à Pesquisa e à Inovação Tecnológica do Estado de Sergipe",
     home: "https://fapitec.se.gov.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: fapitecPages,
+      parse: parseFapitecOpportunities,
+      detail: fapScSeDetail,
+    },
   },
   {
     uf: "SP",
