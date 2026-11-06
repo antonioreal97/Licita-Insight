@@ -16,7 +16,7 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 | ES | FAPES | pendente | `/editais` (abertos, encerrados, resultados) | Sem `robots.txt` |
 | GO | FAPEG | **ativa** | `/fapeg/editais/inscricoes-abertas/` (não `em-andamento`) | Portal do estado; "em andamento" ≠ inscrição aberta |
 | MA | FAPEMA | **ativa** | `/category/editais/editais-em-aberto/` | Categoria só de abertos; período no post (`detail`) |
-| MG | FAPEMIG | pendente | `/oportunidades/chamadas-e-editais` | Catálogo com status, datas e valor (Nuxt); começar pela página de cada chamada |
+| MG | FAPEMIG | **ativa** | `/oportunidades/chamadas-e-editais?status=aberta` (payload Nuxt) | Listagem filtrada já traz título, datas, valor e anexos; `sourceUrl` é a página de cada chamada |
 | MS | FUNDECT | pendente | `ms.gov.br/ciencia-e-tecnologia/consultar-chamadas-publicas-da-fundect…` | Portal do estado |
 | MT | FAPEMAT | **bloqueada** | — | `robots.txt` com `Disallow: /`; não coletar |
 | PA | FAPESPA | pendente | Posts de notícia por chamada | Sem página de editais clara na home |
@@ -28,7 +28,7 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 | RN | FAPERN | pendente | `/documentos/Editais/` | Listagem de documentos |
 | RO | FAPERO | inacessível | — | Não respondeu no levantamento; testar de novo |
 | RR | FAPERR | pendente | Posts de notícia | Poucas chamadas próprias; muitas do CONFAP |
-| RS | FAPERGS | pendente | `/chamadas-e-editais` | Página única de chamadas |
+| RS | FAPERGS | **ativa** | `/abertos` via `/_service/conteudo/pagedlistfilho?id=2042…` | HTML de `/abertos` vem vazio; chamadas no JSON do serviço (Allow: /); `detail` lê o post |
 | SC | FAPESC | **ativa** | `/chamadas-abertas/` e posts dos editais | Prazo explícito prevalece sobre listagem; fluxo contínuo preservado; leitura real: 5 chamadas, 4 abertas (06/11/2026) |
 | SE | FAPITEC | **ativa** | `/editais-abertos/` e posts dos editais | Exclui consultoria ad hoc; em andamento já inclui resultados (Inovathon: inscrições até 24/09/2026); cronograma da bolsa em imagem, status aberto pela listagem; leitura real: 1 chamada aberta (06/11/2026) |
 | SP | FAPESP | **ativa** | `fapesp.br/chamadas`, painel “Chamadas Abertas (Todas)” | Prazo, área e modalidade; parcerias e fluxo contínuo incluídos; 24 chamadas abertas em 06/11/2026 |
