@@ -6,8 +6,7 @@ import {
 } from "./funding-parsers";
 import { fapAnchor, type FapIdentity } from "./fap-parsers";
 
-export const FACEPE_OPEN_PAGE =
-  "https://www.facepe.br/editais/todos/?c=aberto";
+export const FACEPE_OPEN_PAGE = "https://www.facepe.br/editais/todos/?c=aberto";
 export const FACEPE_CONTINUOUS_PAGE =
   "https://www.facepe.br/editais-x-fluxo-continuo/";
 
@@ -18,8 +17,8 @@ const normalizeFacepe = (url: string): string =>
 
 /** Abertos (`?c=aberto`) e a página de fluxo contínuo, ligadas na home. */
 export const facepePages = (homeHtml: string): string[] => {
-  const links = linksFromHtml(homeHtml, "https://www.facepe.br/").map(({ url }) =>
-    normalizeFacepe(url),
+  const links = linksFromHtml(homeHtml, "https://www.facepe.br/").map(
+    ({ url }) => normalizeFacepe(url),
   );
   const pages: string[] = [];
   if (
@@ -36,7 +35,22 @@ export const facepePages = (homeHtml: string): string[] => {
 };
 
 const SKIP_TITLE =
-  /\bresultado\b|\bhomologa|\bmembros do conselho|\bservidor(?:es)?\b|\bestagi[aá]ri/i;
+  /\bresultado\b|\bhomologa|\bmembros do conselho|\bservidor(?:es)?\b|\bestagi[aá]ri|\bpr[eê]mio\b|\bcronograma\b|\beleitora|\bcandidaturas\b|\benquadramento\b|\blista de espera\b/i;
+
+/**
+ * The `?c=aberto` filter is not reliable: in 2026-11 it listed 60 cards, calls from 2023 and 2024 among
+ * them, and no card carries a date. Only calls numbered in the current year (Brasília) are kept, and in
+ * January and February also those of the previous year. The card number is "35/2026 - …".
+ */
+const facepeCallYear = (title: string): number | null => {
+  const match = /^\s*\d{1,3}\s*\/\s*(\d{4})\b/.exec(title);
+  return match ? Number(match[1]) : null;
+};
+const facepeYearsKept = (now: Date): number[] => {
+  const local = new Date(now.getTime() - 3 * 60 * 60 * 1_000);
+  const year = local.getUTCFullYear();
+  return local.getUTCMonth() <= 1 ? [year, year - 1] : [year];
+};
 const DOC_SKIP = /resultado|homologa|lista de espera|extrato|di[aá]rio/i;
 
 const isContinuousPage = (pageUrl: string): boolean =>
@@ -109,6 +123,12 @@ export const parseFacepeOpportunities = (
     if (!header) return [];
     const title = textFromHtml(header).replace(/\s+/g, " ").trim();
     if (!title || SKIP_TITLE.test(title)) return [];
+    const callYear = facepeCallYear(title);
+    if (
+      !isContinuousPage(pageUrl) &&
+      (callYear === null || !facepeYearsKept(now).includes(callYear))
+    )
+      return [];
     const anchor = fapAnchor(title);
     if (seen.has(anchor)) return [];
     seen.add(anchor);
@@ -128,8 +148,9 @@ export const parseFacepeOpportunities = (
         audience: identity.audience,
         sourceUrl,
         documents,
-        // Listagem ?c=aberto ou fluxo contínuo sem data final: aberta como a CAPES.
-        status: "open",
+        // No card carries a date, and the "aberto" filter also lists closed calls: `undated` instead of a
+        // guessed `open`. A continuous-flow call (its own page) stays open.
+        status: isContinuousPage(pageUrl) ? "open" : "undated",
         raw: { sourceUrl: pageUrl.split("#")[0], anchor },
         now,
       }),

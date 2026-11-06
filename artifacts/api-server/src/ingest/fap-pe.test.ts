@@ -27,7 +27,7 @@ test("FACEPE: acha abertos e fluxo contínuo na home", async () => {
   assert.deepEqual(facepePages("<html></html>"), []);
 });
 
-test("FACEPE: cards ?c=aberto viram chamadas open com documentos", async () => {
+test("FACEPE: cards do ano viram chamadas sem data (undated) com documentos", async () => {
   const now = new Date("2026-11-05T15:00:00Z");
   const rows = parseFacepeOpportunities(
     await fixture("facepe-abertos.html"),
@@ -36,11 +36,14 @@ test("FACEPE: cards ?c=aberto viram chamadas open com documentos", async () => {
     now,
   );
   assert.ok(rows.length >= 2);
-  assert.ok(rows.every((row) => row.status === "open"));
+  // O filtro "aberto" da FACEPE também lista chamadas encerradas e nenhum card traz data.
+  assert.ok(rows.every((row) => row.status === "undated"));
   assert.ok(rows.every((row) => row.state === "PE"));
   assert.ok(rows.every((row) => row.installationId === "fap-pe"));
   assert.ok(rows.every((row) => row.organizationName === "FACEPE"));
-  assert.ok(rows.every((row) => row.sourceUrl.startsWith(`${FACEPE_OPEN_PAGE}#`)));
+  assert.ok(
+    rows.every((row) => row.sourceUrl.startsWith(`${FACEPE_OPEN_PAGE}#`)),
+  );
   const bolsa = rows.find((row) => /35\/2026/.test(row.title))!;
   assert.ok(bolsa.documents.some((doc) => /\.pdf/i.test(doc.url)));
   assert.ok(
@@ -83,5 +86,41 @@ test("coleta FACEPE: home e listagem com fixtures", async () => {
   const fap = results.find((result) => result.installationId === "fap-pe")!;
   assert.equal(fap.outcome, "ok");
   assert.ok(fap.count >= 2);
-  assert.ok(fap.drafts.every((row) => row.status === "open" && row.state === "PE"));
+  assert.ok(
+    fap.drafts.every((row) => row.status === "undated" && row.state === "PE"),
+  );
+});
+
+test("FACEPE: descarta cards de anos anteriores, resultados, prêmios e eleição", async () => {
+  const card = (title: string) =>
+    `<div class="card-edital-grupo"><h4 class="titulo-pai">${title}</h4></div>`;
+  const html =
+    (await fixture("facepe-abertos.html")) +
+    card("23/2024 - Tecnova III") +
+    card("38/2025 - Resultado complementar edital do PBPG 2026.1") +
+    card("02/2026 - Edital nº 02/2026 – Prêmio Facepe/Confap de Ciência") +
+    card(
+      "41/2025 - Lista de candidaturas homologadas para o processo eleitoral",
+    ) +
+    card("Programa sem número");
+  const titles = (now: Date) =>
+    parseFacepeOpportunities(
+      html,
+      FACEPE_OPEN_PAGE,
+      fapIdentity(facepe),
+      now,
+    ).map((row) => row.title);
+  const november = titles(new Date("2026-11-05T15:00:00Z"));
+  assert.ok(november.every((title) => /^\d{2}\/2026/.test(title)));
+  assert.ok(
+    !november.some((title) =>
+      /Prêmio|Tecnova|Resultado|eleitoral|sem número/.test(title),
+    ),
+  );
+  // Em janeiro, os editais do ano anterior ainda entram (mas resultados e eleição não).
+  const january = titles(new Date("2027-01-10T15:00:00Z"));
+  assert.ok(january.some((title) => /35\/2026/.test(title)));
+  assert.ok(
+    !january.some((title) => /Tecnova|Resultado|eleitoral/.test(title)),
+  );
 });

@@ -21,7 +21,7 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 | MT | FAPEMAT | **bloqueada** | — | `robots.txt` com `Disallow: /`; não coletar |
 | PA | FAPESPA | pendente | Posts de notícia por chamada | Sem página de editais clara na home |
 | PB | FAPESQ | pendente | `/editais/2026/editais-2026` | Página por ano, como a FAPDF |
-| PE | FACEPE | **ativa** | `/editais/todos/?c=aberto` (+ `/editais-x-fluxo-continuo/`) | Filtro de abertos na URL; fluxo contínuo sem data final = open |
+| PE | FACEPE | **ativa** | `/editais/todos/?c=aberto` (+ `/editais-x-fluxo-continuo/`) | O filtro "aberto" também lista editais antigos e nenhum card traz data: só os editais do ano, com status `undated` |
 | PI | FAPEPI | pendente | `/editais-fapepi/` | WordPress |
 | PR | Fundação Araucária | pendente | — | Home sem links de edital no HTML; verificar menu e sitemap |
 | RJ | FAPERJ | pendente | `faperj.br/?id=28.5.7` (pesquisa 2026-10) | Home sem links no HTML; usar a lista de editais conhecida |
