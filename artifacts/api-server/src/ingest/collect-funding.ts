@@ -93,7 +93,10 @@ export async function collectFunding(
     const status = ok ? "complete" : "failed";
     const errors = sources
       .filter((source) => source.outcome !== "ok")
-      .map((source) => `${source.source}: ${source.message}`);
+      .map(
+        (source) =>
+          `${source.installationId ?? source.source}: ${source.message}`,
+      );
     await db
       .update(ingestRunsTable)
       .set({

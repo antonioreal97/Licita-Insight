@@ -41,6 +41,7 @@ export const OPPORTUNITY_SOURCES = [
   "worldbank",
   "eu_ft",
   "idb",
+  "fap",
 ] as const satisfies readonly OpportunitySource[];
 /** `national` is the default, so a client that never heard of international calls keeps its results. */
 export const OPPORTUNITY_SCOPES = ["national", "international", "all"] as const;

@@ -9,7 +9,8 @@ import type {
 
 export type FundingOpportunityDraft = {
   id: string;
-  installationId: OpportunitySource;
+  /** The source itself, or one install of it (`fap-df`): calls are keyed by install. */
+  installationId: string;
   externalId: string;
   kind: OpportunityKind;
   source: OpportunitySource;
@@ -86,7 +87,7 @@ export const linksFromHtml = (
     }
   });
 
-const parseBrazilianDate = (value: string | undefined): Date | null => {
+export const parseBrazilianDate = (value: string | undefined): Date | null => {
   if (!value) return null;
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
   if (!match) return null;
@@ -106,8 +107,11 @@ const idFor = (source: OpportunitySource, url: string): string => {
   return `${source}-${digest}`;
 };
 
-const draft = (input: {
+export const draft = (input: {
   source: OpportunitySource;
+  installationId?: string;
+  /** UF where the call is run, when the publisher is a state body. */
+  state?: string | null;
   kind: OpportunityKind;
   title: string;
   summary?: string | null;
@@ -131,7 +135,7 @@ const draft = (input: {
   );
   return {
     id: `${input.source}-${externalId}`,
-    installationId: input.source,
+    installationId: input.installationId ?? input.source,
     externalId,
     kind: input.kind,
     source: input.source,
@@ -141,7 +145,7 @@ const draft = (input: {
     audience,
     amount,
     documents: input.documents ?? [],
-    state: null,
+    state: input.state ?? null,
     registrationFrom,
     registrationTo,
     status:
@@ -164,7 +168,10 @@ const draft = (input: {
   };
 };
 
-const pdfDocuments = (html: string, baseUrl: string): OpportunityDocument[] =>
+export const pdfDocuments = (
+  html: string,
+  baseUrl: string,
+): OpportunityDocument[] =>
   linksFromHtml(html, baseUrl)
     .filter(({ url }) => /\.pdf(?:$|[?#])/i.test(url))
     .map(({ title, url }) => ({ title, url, mediaType: "application/pdf" }));

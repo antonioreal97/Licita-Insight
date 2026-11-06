@@ -1,0 +1,3 @@
+User-Agent: *
+Disallow:
+Sitemap: https://fap.df.gov.br/sitemap.xml
