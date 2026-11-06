@@ -11,6 +11,15 @@ DAYS_30 = f"""generate_series(
       date_trunc('day', now() at time zone '{TZ}'),
       interval '1 day') as d(day)"""
 
+# One row per nightly classification run that measured the holdout (the app writes the summary to ingest_runs).
+AGREEMENT_NIGHTS = f"""(select (window_to at time zone '{TZ}')::date as night, finished_at,
+         (details->'holdout'->>'agreement')::float as agreement,
+         (details->'holdout'->>'agreementCovered')::float as agreement_covered,
+         (details->'holdout'->>'coverage')::float as coverage,
+         (details->'holdout'->>'belowJevThreshold')::float as below_jev
+      from ingest_runs
+      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r"""
+
 PANELS = [
     # ---------------------------------------------------------------- Usuários
     ("Usuários", "Usuários cadastrados", "stat", "select count(*) as \"Usuários\" from users", {}),
@@ -88,6 +97,22 @@ select (d.day at time zone '{TZ}') as time,
          where t.generated_at is not null and date_trunc('day', t.generated_at at time zone '{TZ}') = d.day) as "Fichas geradas"
 from {DAYS_30}
 order by d.day""", {"bars": True}),
+    ("IA", "Concordância do aluno na última noite", "stat", f"""
+select distinct on (night) agreement as "Concordância", coverage as "Cobertura", below_jev as "Abaixo do limiar Jev"
+from {AGREEMENT_NIGHTS}
+order by night desc, finished_at desc
+limit 1""", {"unit": "percentunit", "decimals": 1,
+             "description": "Aluno (embeddings + vizinhos) contra o rótulo do professor em exemplos do holdout que ele nunca viu. "
+                            "Última execução da noite mais recente; histórico em ingest_runs (source nightly-category)."}),
+    ("IA", "Concordância do aluno com o professor (30 noites)", "timeseries", f"""
+select distinct on (night) (night::timestamp at time zone '{TZ}') as time,
+       agreement as "Concordância", agreement_covered as "Concordância nos cobertos",
+       coverage as "Cobertura", below_jev as "Abaixo do limiar Jev"
+from {AGREEMENT_NIGHTS}
+where night >= (now() at time zone '{TZ}')::date - 29
+order by night, finished_at desc""", {"unit": "percentunit", "decimals": 1,
+     "description": "Uma linha por noite (a última execução dela). O monitor alerta (nightly:agreement) quando a "
+                    "concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding."}),
     ("IA", "Cota de processos por usuário e dia (30 dias)", "table", f"""
 select q.quota_day as "Dia", coalesce(u.name, '') as "Nome", u.email as "E-mail",
        count(*) as "Processos consultados", cast(${{daily_process_limit:sqlstring}} as integer) as "Limite"

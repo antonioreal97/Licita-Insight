@@ -49,6 +49,10 @@ def load_config():
         "REALERT_HOURS": "6",
         "BACKUP_DIR": str(HOME / "backups/licita"),
         "BACKUP_MAX_AGE_HOURS": "26",
+        # Concordância do aluno com o professor no holdout (histórico em ingest_runs, source nightly-category).
+        "AGREEMENT_DROP": "0.05",
+        "AGREEMENT_MIN": "",
+        "AGREEMENT_MIN_SAMPLE": "200",
     }
     path = BASE / "config.env"
     if path.exists():
@@ -154,6 +158,18 @@ def collect():
                  and status = 'succeeded' and started_at > now() - interval '24 hours') minutes_24h
     """)[0]
 
+    # Última execução de cada noite que mediu o holdout (o app grava o resumo em ingest_runs).
+    m["agreement"] = sql_json("""
+      select distinct on (night) night, model, total, agreement
+        from (select (window_to at time zone 'America/Sao_Paulo')::date night, details->>'embedModel' model,
+                     (details->'holdout'->>'total')::int total, (details->'holdout'->>'agreement')::float agreement,
+                     finished_at
+                from ingest_runs
+               where source = 'nightly-category' and window_to > now() - interval '15 days'
+                 and details->'holdout'->>'agreement' is not null) r
+       order by night desc, finished_at desc
+    """)
+
     m["emails"] = sql_json("""
       select (select count(*) from email_deliveries where sent_at > now() - interval '24 hours') sent_24h,
              (select count(*) from email_deliveries where status = 'failed' and updated_at > now() - interval '24 hours') failed_24h
@@ -249,6 +265,36 @@ def collect():
 
 # ---------------------------------------------------------------- anomalias
 
+def agreement_anomaly(nights, drop=0.05, floor=None, min_sample=200, today=None):
+    """Concordância da última noite contra a mediana das até 7 noites anteriores do mesmo modelo de embedding.
+
+    `nights` vem do mais recente para o mais antigo ({night, model, total, agreement}). Devolve (chave, texto) ou None.
+    Amostra pequena não decide nada; noite com mais de 2 dias não é "a última" (o job parou: isso é o nightly:failed).
+    """
+    if not nights:
+        return None
+    last = nights[0]
+    night = str(last["night"])[:10]
+    today = today or dt.date.today()
+    if (today - dt.date.fromisoformat(night)).days > 2 or (last.get("total") or 0) < min_sample:
+        return None
+    value = float(last["agreement"])
+    previous = sorted(float(n["agreement"]) for n in nights[1:8]
+                      if n.get("model") == last.get("model") and (n.get("total") or 0) >= min_sample)
+    if floor is not None and value < floor:
+        return (f"nightly:agreement:{night}",
+                f"concordância do aluno com o professor em {night}: {value:.1%} (abaixo do mínimo de {floor:.0%}; "
+                f"n = {last['total']}, modelo {last.get('model')})")
+    if len(previous) >= 3:
+        half = len(previous) // 2
+        median = previous[half] if len(previous) % 2 else (previous[half - 1] + previous[half]) / 2
+        if median - value >= drop:
+            return (f"nightly:agreement:{night}",
+                    f"concordância do aluno com o professor caiu para {value:.1%} em {night} "
+                    f"(mediana das {len(previous)} noites anteriores: {median:.1%}; n = {last['total']}, modelo {last.get('model')})")
+    return None
+
+
 def anomalies(m, prev):
     found = []
 
@@ -310,6 +356,14 @@ def anomalies(m, prev):
     night = m.get("nightly") or {}
     if night.get("runs_failed_24h", 0) >= 6 and night.get("runs_ok_24h", 0) == 0:
         add("nightly:failed", "media", f"classificação noturna falhou {night['runs_failed_24h']}× e não concluiu nenhuma execução em 24 h (Ollama?)")
+    found_agreement = agreement_anomaly(
+        m.get("agreement") or [],
+        drop=float(CFG["AGREEMENT_DROP"]),
+        floor=float(CFG["AGREEMENT_MIN"]) if CFG["AGREEMENT_MIN"] else None,
+        min_sample=int(CFG["AGREEMENT_MIN_SAMPLE"]),
+    )
+    if found_agreement:
+        add(found_agreement[0], "media", found_agreement[1])
     budget = float(CFG["AI_DAILY_BUDGET_USD"])
     if m["ai"]["cost_today_usd"] >= 0.8 * budget:
         add("ai:budget80", "media", f"custo de IA hoje US$ {m['ai']['cost_today_usd']:.2f} (≥ 80% de US$ {budget:.0f})")
@@ -706,6 +760,9 @@ def render_digest(m):
         f"- Aluno: {night.get('student_24h', 0)} editais; baixa confiança (< 0,6): {night.get('low_confidence_24h', 0)}; pendentes: {night.get('pending', 0)}",
         f"- Jev professor: {night.get('jev_calls_24h', 0)} chamadas, US$ {float(night.get('jev_cost_24h') or 0):.4f}; gravados como professor: {night.get('teacher_24h', 0)}; exemplos novos: {night.get('examples_new_24h', 0)} (sem embedding: {night.get('examples_without_embedding', 0)})",
         f"- Job: {night.get('runs_ok_24h', 0)} execuções ok ({night.get('minutes_24h', 0)} min), {night.get('runs_failed_24h', 0)} falhas",
+        (f"- Concordância com o professor (holdout): {float(m['agreement'][0]['agreement']):.1%} em {str(m['agreement'][0]['night'])[:10]}"
+         f" (n = {m['agreement'][0]['total']}, modelo {m['agreement'][0]['model']})"
+         if m.get("agreement") else "- Concordância com o professor (holdout): sem medição nos últimos 15 dias"),
         "",
         "**Coletas**",
     ]

@@ -843,6 +843,112 @@
     },
     {
       "id": 20,
+      "type": "stat",
+      "title": "Concordância do aluno na última noite",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 6,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select distinct on (night) agreement as \"Concordância\", coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\norder by night desc, finished_at desc\nlimit 1"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "description": "Aluno (embeddings + vizinhos) contra o rótulo do professor em exemplos do holdout que ele nunca viu. Última execução da noite mais recente; histórico em ingest_runs (source nightly-category)."
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Concordância do aluno com o professor (30 noites)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "licita-pg"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "licita-pg"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "select distinct on (night) (night::timestamp at time zone 'America/Sao_Paulo') as time,\n       agreement as \"Concordância\", agreement_covered as \"Concordância nos cobertos\",\n       coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\nwhere night >= (now() at time zone 'America/Sao_Paulo')::date - 29\norder by night, finished_at desc"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "description": "Uma linha por noite (a última execução dela). O monitor alerta (nightly:agreement) quando a concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding."
+    },
+    {
+      "id": 22,
       "type": "table",
       "title": "Cota de processos por usuário e dia (30 dias)",
       "datasource": {
@@ -851,7 +957,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 64,
         "w": 24,
         "h": 9
       },
@@ -880,20 +986,20 @@
       }
     },
     {
-      "id": 21,
+      "id": 23,
       "type": "row",
       "title": "Coletas e base",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 64,
+        "y": 73,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 22,
+      "id": 24,
       "type": "stat",
       "title": "Editais na base",
       "datasource": {
@@ -902,7 +1008,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 65,
+        "y": 74,
         "w": 6,
         "h": 5
       },
@@ -940,7 +1046,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 25,
       "type": "stat",
       "title": "Contratos PNCP na base",
       "datasource": {
@@ -949,7 +1055,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 65,
+        "y": 74,
         "w": 6,
         "h": 5
       },
@@ -987,7 +1093,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 26,
       "type": "table",
       "title": "Última execução por fonte",
       "datasource": {
@@ -996,7 +1102,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 70,
+        "y": 79,
         "w": 24,
         "h": 9
       },
@@ -1025,7 +1131,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 27,
       "type": "timeseries",
       "title": "Editais novos por dia (30 dias)",
       "datasource": {
@@ -1034,7 +1140,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 79,
+        "y": 88,
         "w": 12,
         "h": 9
       },
@@ -1081,20 +1187,20 @@
       "description": "Janela fixa dos últimos 30 dias (fuso de São Paulo); não depende do seletor de tempo."
     },
     {
-      "id": 26,
+      "id": 28,
       "type": "row",
       "title": "Usuários recentes (dados pessoais, uso interno)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 88,
+        "y": 97,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 27,
+      "id": 29,
       "type": "table",
       "title": "Usuários recentes",
       "datasource": {
@@ -1103,7 +1209,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 89,
+        "y": 98,
         "w": 24,
         "h": 9
       },
@@ -1132,20 +1238,20 @@
       }
     },
     {
-      "id": 28,
+      "id": 30,
       "type": "row",
       "title": "Servidor",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 98,
+        "y": 107,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 29,
+      "id": 31,
       "type": "timeseries",
       "title": "CPU por núcleo",
       "datasource": {
@@ -1154,7 +1260,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 99,
+        "y": 108,
         "w": 12,
         "h": 9
       },
@@ -1201,7 +1307,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 32,
       "type": "timeseries",
       "title": "Load average",
       "datasource": {
@@ -1210,7 +1316,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 99,
+        "y": 108,
         "w": 12,
         "h": 9
       },
@@ -1281,7 +1387,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 33,
       "type": "stat",
       "title": "RAM usada",
       "datasource": {
@@ -1290,7 +1396,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 108,
+        "y": 117,
         "w": 6,
         "h": 5
       },
@@ -1330,7 +1436,7 @@
       }
     },
     {
-      "id": 32,
+      "id": 34,
       "type": "stat",
       "title": "Swap usada",
       "datasource": {
@@ -1339,7 +1445,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 108,
+        "y": 117,
         "w": 6,
         "h": 5
       },
@@ -1379,7 +1485,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 35,
       "type": "timeseries",
       "title": "Disco usado por filesystem",
       "datasource": {
@@ -1388,7 +1494,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 108,
+        "y": 117,
         "w": 12,
         "h": 9
       },
@@ -1435,7 +1541,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 36,
       "type": "timeseries",
       "title": "Rede do servidor",
       "datasource": {
@@ -1444,7 +1550,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 117,
+        "y": 126,
         "w": 12,
         "h": 9
       },
@@ -1503,7 +1609,7 @@
       }
     },
     {
-      "id": 35,
+      "id": 37,
       "type": "timeseries",
       "title": "Temperatura",
       "datasource": {
@@ -1512,7 +1618,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 117,
+        "y": 126,
         "w": 12,
         "h": 9
       },
@@ -1559,7 +1665,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 38,
       "type": "stat",
       "title": "Bateria",
       "datasource": {
@@ -1568,7 +1674,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 126,
+        "y": 135,
         "w": 6,
         "h": 5
       },
@@ -1608,20 +1714,20 @@
       "description": "Aparece somente se o host expuser uma bateria em /sys/class/power_supply."
     },
     {
-      "id": 37,
+      "id": 39,
       "type": "row",
       "title": "Containers",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 131,
+        "y": 140,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 38,
+      "id": 40,
       "type": "timeseries",
       "title": "CPU por container",
       "datasource": {
@@ -1630,7 +1736,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 132,
+        "y": 141,
         "w": 12,
         "h": 9
       },
@@ -1677,7 +1783,7 @@
       }
     },
     {
-      "id": 39,
+      "id": 41,
       "type": "timeseries",
       "title": "Memória usada vs limite",
       "datasource": {
@@ -1686,7 +1792,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 132,
+        "y": 141,
         "w": 12,
         "h": 9
       },
@@ -1745,7 +1851,7 @@
       }
     },
     {
-      "id": 40,
+      "id": 42,
       "type": "timeseries",
       "title": "Memória do limite",
       "datasource": {
@@ -1754,7 +1860,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 141,
+        "y": 150,
         "w": 12,
         "h": 9
       },
@@ -1802,7 +1908,7 @@
       "description": "Containers sem mem_limit não aparecem neste painel."
     },
     {
-      "id": 41,
+      "id": 43,
       "type": "stat",
       "title": "Reinícios no período",
       "datasource": {
@@ -1811,7 +1917,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 141,
+        "y": 150,
         "w": 6,
         "h": 5
       },
@@ -1851,7 +1957,7 @@
       }
     },
     {
-      "id": 42,
+      "id": 44,
       "type": "timeseries",
       "title": "Rede por container",
       "datasource": {
@@ -1860,7 +1966,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 150,
+        "y": 159,
         "w": 12,
         "h": 9
       },
@@ -1919,7 +2025,7 @@
       }
     },
     {
-      "id": 43,
+      "id": 45,
       "type": "timeseries",
       "title": "I/O de disco por container",
       "datasource": {
@@ -1928,7 +2034,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 150,
+        "y": 159,
         "w": 12,
         "h": 9
       },
@@ -1987,20 +2093,20 @@
       }
     },
     {
-      "id": 44,
+      "id": 46,
       "type": "row",
       "title": "API",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 159,
+        "y": 168,
         "w": 24,
         "h": 1
       },
       "panels": []
     },
     {
-      "id": 45,
+      "id": 47,
       "type": "timeseries",
       "title": "Requisições por segundo",
       "datasource": {
@@ -2009,7 +2115,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 160,
+        "y": 169,
         "w": 12,
         "h": 9
       },
@@ -2056,7 +2162,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 48,
       "type": "timeseries",
       "title": "Latência p95",
       "datasource": {
@@ -2065,7 +2171,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 160,
+        "y": 169,
         "w": 12,
         "h": 9
       },
@@ -2112,7 +2218,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 49,
       "type": "stat",
       "title": "Erros 5xx por segundo",
       "datasource": {
@@ -2121,7 +2227,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 169,
+        "y": 178,
         "w": 6,
         "h": 5
       },
@@ -2161,7 +2267,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 50,
       "type": "timeseries",
       "title": "Fila de IA durável",
       "datasource": {
@@ -2170,7 +2276,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 169,
+        "y": 178,
         "w": 12,
         "h": 9
       },
@@ -2217,7 +2323,7 @@
       }
     },
     {
-      "id": 49,
+      "id": 51,
       "type": "timeseries",
       "title": "Fila Jev",
       "datasource": {
@@ -2226,7 +2332,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 178,
+        "y": 187,
         "w": 12,
         "h": 9
       },

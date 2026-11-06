@@ -152,7 +152,7 @@ da coleta das 06:00 e retoma na noite seguinte o que faltar. Detalhes: `docs/ops
   `docker exec licita-macbook-postgres-1 psql -U licita -d licita -Atc "select status, started_at, duration_ms/60000 from job_run_audit where job_key='nightly_category_classification' order by started_at desc limit 5"`.
 - Fora da janela o modelo sai da memória em ~2 min: `docker exec licita-macbook-ollama-1 ollama ps` vazio e
   `docker stats --no-stream licita-macbook-ollama-1` com poucas dezenas de MB.
-- O relatório diário das 08:00 tem a seção "Classificação noturna (24 h)".
+- O relatório diário das 08:00 tem a seção "Classificação noturna (24 h)", com a concordância da última noite.
 
 **Trocar o modelo de embedding** (decisão do owner, depois do benchmark): definir `OLLAMA_EMBED_MODEL=<modelo>` no
 `.env` do servidor e `up -d`; o `ollama-pull` baixa o modelo novo e o job re-embute os exemplos nas noites
@@ -161,6 +161,16 @@ seguintes antes de voltar a classificar. Isso é mudança de `.env`: só com ped
 **Anomalia `nightly:failed`**: seis falhas e nenhuma execução concluída em 24 h. Quase sempre é o `ollama` parado,
 sem o modelo (`ollama list` vazio → `up -d ollama-pull`) ou sem memória (`docker inspect` com `OOMKilled`). O app
 segue normal sem ele: os editais ficam com a categoria das regras até a noite seguinte.
+
+**Anomalia `nightly:agreement`**: a concordância do aluno com o professor no holdout caiu 5 pontos ou mais abaixo da
+mediana das até 7 noites anteriores do mesmo modelo de embedding (amostra mínima de 200; com `AGREEMENT_MIN` no
+`config.env`, também abaixo desse piso). É aviso de qualidade, não de indisponibilidade: o app segue normal. Só leitura:
+1. Histórico: `docker exec licita-macbook-postgres-1 psql -U licita -d licita -c "select distinct on (noite) noite, details->>'embedModel' modelo, details->'holdout'->>'total' n, details->'holdout'->>'agreement' concordancia, details->'holdout'->>'coverage' cobertura, details->>'trainExamples' exemplos from (select (window_to at time zone 'America/Sao_Paulo')::date noite, * from ingest_runs where source = 'nightly-category') r order by noite desc, finished_at desc limit 10"`
+   (ou o painel **Concordância do aluno com o professor** no Grafana).
+2. Mudou `OLLAMA_EMBED_MODEL` ou o número de exemplos saltou (rótulos novos do Jev ou da OpenAI)? Uma queda logo depois é
+   esperada e costuma voltar em 1 ou 2 noites.
+3. Confusões da noite: `docker logs --since 24h licita-macbook-app-1 2>&1 | grep 'Nightly category classification summary' | tail -n 1 | jq -c '.holdout'`.
+Relate na issue de monitoramento com a tabela das últimas noites. Não mude `.env`, limiares nem modelo: decisão do owner.
 
 **Voltar atrás**: no `.env`, `CATEGORY_STUDENT_ENABLED=false` desliga o job; `TITLE_TEACHER_OPENAI_ENABLED=true`
 religa o professor OpenAI. Em seguida `up -d` (o `restart` não relê o `.env`).
