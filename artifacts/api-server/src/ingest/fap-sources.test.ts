@@ -36,13 +36,13 @@ test("catálogo tem uma FAP por UF, com as 27 unidades da federação", () => {
 test("FAP_SOURCES filtra por UF e desliga com off", () => {
   assert.deepEqual(
     activeFaps(undefined).map((entry) => entry.uf),
-      ["DF", "GO", "MA", "PE", "SC", "SE"],
+      ["DF", "GO", "MA", "PE", "RJ", "SC", "SE", "SP"],
   );
   assert.deepEqual(
     activeFaps("df").map((entry) => entry.uf),
     ["DF"],
   );
-  assert.deepEqual(activeFaps("sp"), []);
+  assert.deepEqual(activeFaps("sp").map((entry) => entry.uf), ["SP"]);
   assert.deepEqual(activeFaps("off"), []);
 });
 
