@@ -208,6 +208,32 @@ select count(*) as chamadas, sum(input_tokens) as tokens, sum(estimated_cost_usd
 from ai_title_usage where model like 'jev-teacher/%' and created_at > now() - interval '24 hours';
 ```
 
+### Histórico da concordância
+
+Toda execução que mede o holdout grava o resumo inteiro em `ingest_runs`, com
+`source = 'nightly-category'`, `status = 'succeeded'`, `upserted` = editais categorizados pelo aluno,
+`window_to` = fechamento da janela (identifica a noite) e `details` = o mesmo JSON do log. Uma noite
+retomada depois de um restart grava uma linha por execução; vale a última da noite. Execuções sem
+holdout (sem exemplos, ou paradas antes da medição) não entram. Não há migração: a tabela e a coluna
+`details` já existem. Se a gravação falhar, o job registra um aviso e a noite segue.
+
+```sql
+-- Concordância por noite (última execução de cada noite)
+select distinct on (noite) noite, details->>'embedModel' as modelo,
+       (details->'holdout'->>'total')::int as n,
+       (details->'holdout'->>'agreement')::numeric as concordancia,
+       (details->'holdout'->>'coverage')::numeric as cobertura,
+       (details->'holdout'->>'belowJevThreshold')::numeric as abaixo_do_limiar_jev
+from (select (window_to at time zone 'America/Sao_Paulo')::date as noite, * from ingest_runs
+      where source = 'nightly-category') r
+order by noite desc, finished_at desc
+limit 30;
+```
+
+O painel **Concordância do aluno** do dashboard admin e o alerta `nightly:agreement` do monitor
+(branch `ops/macbook-worker`) leem esse histórico. O alerta compara a última noite com a mediana das
+noites anteriores do mesmo modelo de embedding: troca de `OLLAMA_EMBED_MODEL` começa uma série nova.
+
 Métricas Prometheus: `licitai_nightly_category_tenders_total{result}`,
 `licitai_nightly_category_low_confidence_total`, `licitai_nightly_category_jev_total{result}`,
 `licitai_nightly_category_jev_cost_usd_total`, `licitai_nightly_category_examples_embedded_total` e
