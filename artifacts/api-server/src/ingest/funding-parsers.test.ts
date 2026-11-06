@@ -92,6 +92,7 @@ test("coleta mockada respeita robots e agrega as três fontes", async () => {
   const results = await collectFundingOnce({
     now,
     delayMs: 0,
+    faps: [],
     fetchText: async (url) => {
       requested.push(url);
       const body = bodies.get(url);

@@ -6,11 +6,19 @@ import {
   parseFinepOpportunities,
 } from "./funding-parsers";
 import type { OpportunitySource } from "@workspace/db";
+import {
+  activeFaps,
+  collectFapDrafts,
+  fapInstallationId,
+  type FapCatalogEntry,
+} from "./fap-sources";
 
 export const FUNDING_USER_AGENT = `PardalDigital/${process.env.npm_package_version ?? "0.0.0"} (+https://pardaldigital.com; contato@pardaldigital.com)`;
 
 export type FundingSourceResult = {
   source: OpportunitySource;
+  /** Set for sources with several installs (`fap-df`): each install is reported on its own. */
+  installationId?: string;
   outcome: "ok" | "blocked_by_robots" | "failed";
   count: number;
   message: string | null;
@@ -123,6 +131,8 @@ export const collectFundingOnce = async (options?: {
   fetchText?: FetchText;
   now?: Date;
   delayMs?: number;
+  /** FAPs to read; defaults to the active ones (`FAP_SOURCES`). */
+  faps?: readonly FapCatalogEntry[];
 }): Promise<FundingSourceResult[]> => {
   const fetchText = options?.fetchText ?? defaultFundingFetch;
   const now = options?.now ?? new Date();
@@ -165,6 +175,54 @@ export const collectFundingOnce = async (options?: {
     } catch (error) {
       results.push({
         source: definition.source,
+        outcome: "failed",
+        count: 0,
+        message: error instanceof Error ? error.message : String(error),
+        drafts: [],
+      });
+    }
+    await wait(delayMs);
+  }
+  for (const fap of options?.faps ?? activeFaps()) {
+    const installationId = fapInstallationId(fap.uf);
+    try {
+      const robots = await fetchText(
+        new URL("/robots.txt", fap.home).toString(),
+      );
+      if (!robotsAllows(robots, fap.home)) {
+        results.push({
+          source: "fap",
+          installationId,
+          outcome: "blocked_by_robots",
+          count: 0,
+          message:
+            "A fonte proíbe coleta automatizada desta página no robots.txt.",
+          drafts: [],
+        });
+        continue;
+      }
+      await wait(delayMs);
+      const { drafts } = await collectFapDrafts(fap, {
+        fetchText: async (url) => {
+          if (!robotsAllows(robots, url))
+            throw new Error(`robots.txt proíbe ${url}`);
+          return fetchText(url);
+        },
+        now,
+        wait: () => wait(delayMs),
+      });
+      results.push({
+        source: "fap",
+        installationId,
+        outcome: "ok",
+        count: drafts.length,
+        message: null,
+        drafts,
+      });
+    } catch (error) {
+      results.push({
+        source: "fap",
+        installationId,
         outcome: "failed",
         count: 0,
         message: error instanceof Error ? error.message : String(error),

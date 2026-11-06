@@ -5,7 +5,7 @@ O endpoint preserva o contrato cultural original e passa a reunir oportunidades 
 ## Modelo e compatibilidade
 
 - `kind`: `culture` | `funding` | `innovation` | `partnership` | `procurement`. `procurement` é aviso de aquisição de organismo internacional; licitações do PNCP continuam fora daqui.
-- `source`: `mapas` | `finep` | `cnpq` | `capes` | `transferegov` | `funarte` | `minc` | `salic` | `worldbank` | `eu_ft` | `idb`. `sourceName` traz o rótulo exibido como selo: "Mapas Culturais", "FINEP", "CNPq", "CAPES", "Transferegov.br", "Funarte", "Ministério da Cultura", "Lei Rouanet (Salic)", "Banco Mundial", "União Europeia (Funding & Tenders)" e "BID".
+- `source`: `mapas` | `finep` | `cnpq` | `capes` | `transferegov` | `funarte` | `minc` | `salic` | `worldbank` | `eu_ft` | `idb` | `fap`. `sourceName` traz o rótulo exibido como selo: "Mapas Culturais", "FINEP", "CNPq", "CAPES", "Transferegov.br", "Funarte", "Ministério da Cultura", "Lei Rouanet (Salic)", "Banco Mundial", "União Europeia (Funding & Tenders)", "BID" e "FAPs estaduais". Nas chamadas de FAP, `organizationName` traz a sigla da fundação (FAPDF, FAPESP…) e `state` traz a UF dela.
 - `scope`: `national` | `international`. É abrangência, não tipo: uma chamada internacional continua com seu `kind`. Toda chamada das fontes brasileiras é `national`.
 - `international`: `null` nas chamadas nacionais; nas internacionais, o objeto descrito em "Oportunidades internacionais".
 - `status`: `open` | `upcoming` | `closed` | `undated`.
@@ -133,6 +133,18 @@ docker exec licita-macbook-app-1 node artifacts/api-server/dist/collect-internat
 Cada executável aceita `--help` sem banco. As execuções com gravação usam o mesmo lock da agenda correspondente; as variáveis `*_DRY_RUN` documentadas abaixo continuam disponíveis via `docker exec -e`.
 
 FINEP atualmente publica `Disallow: /`; portanto o adaptador e o parser ficam prontos, mas a coleta real retorna zero e `blocked_by_robots` até autorização/alteração oficial. CNPq usa a página “Abertas para Submissão”. CAPES usa a seção “Editais Abertos”; o catálogo CKAN não continha, na pesquisa de referência, um recurso que substituísse integralmente essa lista.
+
+### FAPs estaduais (`source = fap`)
+
+As chamadas das Fundações de Amparo à Pesquisa entram na mesma coleta de fomento (`collect:funding`), depois de CAPES, CNPq e FINEP. Precisam da migração [`0054`](../migrations/0054-opportunity-source-fap.md).
+
+- O catálogo das 27 FAPs, uma por UF, fica em `artifacts/api-server/src/ingest/fap-sources.ts`. Cada FAP tem um estado de coleta: `active` (tem adaptador), `pending` (listagem pública vista no levantamento, adaptador a escrever), `blocked_by_robots` (nunca coletada) ou `unreachable`. O levantamento está em [`docs/research/fontes-fap-2026-11.md`](../research/fontes-fap-2026-11.md).
+- Cada FAP é uma instalação: `installationId = fap-<uf>` (`fap-df`), `state = <UF>`, `organizationName` = sigla. A região declarada no perfil vale para as FAPs como para os editais. Cada FAP aparece em separado no `details.sources` da execução, com `installationId`, e a falha de uma não derruba as outras.
+- Por FAP: `robots.txt` da origem, a página inicial (para achar as páginas de editais do momento) e cada página de editais, com `FUNDING_PAGE_DELAY_MS` entre as requisições. Uma URL proibida pelo `robots.txt` interrompe aquela FAP.
+- Só entra a chamada que publica um período de submissão ou de inscrição explícito. Prêmios sem período, painéis só de resultados e seleções de servidores ficam de fora. O status sai das datas (`open`, `upcoming`, `closed`).
+- `externalId` é o SHA-256 truncado de `<página>#<âncora>`. A âncora vem do número do edital (`edital-06-2026`, `chamada-12-2026`), então retificações publicadas na mesma página atualizam a mesma chamada.
+- `FAP_SOURCES=df,sp` restringe a coleta a essas UFs; `FAP_SOURCES=off` desliga todas as FAPs.
+- **FAPDF** (ativa): a página inicial lista uma página por ano (`/editais-fapdf-20261` em 2026). A coleta lê a do ano corrente em Brasília e, em janeiro e fevereiro, também a do ano anterior; sem página do ano, lê a mais recente. Cada edital é um painel `panel-title`, e as chamadas de um programa são painéis aninhados. O período vem de "PERÍODO DE SUBMISSÃO: dd/mm/aaaa a dd/mm/aaaa". Os documentos são os links do edital e das retificações; extratos do DODF e resultados ficam de fora.
 
 ### Fontes federais de cultura
 

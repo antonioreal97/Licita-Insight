@@ -74,6 +74,7 @@ export const opportunitySourceLabels: Record<OpportunitySource, string> = {
   worldbank: "Banco Mundial",
   eu_ft: "União Europeia (Funding & Tenders)",
   idb: "BID",
+  fap: "FAPs estaduais",
 };
 
 export const brazilEligibilityLabels: Record<BrazilEligibility, string> = {
