@@ -73,12 +73,10 @@ export const robotsAllows = (
   let group: (typeof groups)[number] | undefined;
   let rulesStarted = false;
   for (const rawLine of robots.split(/\r?\n/)) {
-    const line = rawLine.replace(/\s+#.*$/, "").trim();
-    if (!line) {
-      group = undefined;
-      rulesStarted = false;
-      continue;
-    }
+    // RFC 9309: comments and blank lines are not significant; a group ends only at a user-agent line
+    // that follows rules. Resetting on blank lines dropped every rule written after a commented section.
+    const line = rawLine.replace(/#.*$/, "").trim();
+    if (!line) continue;
     const field = /^([^:]+):\s*(.*)$/.exec(line);
     if (!field) continue;
     const name = field[1]!.trim().toLowerCase();

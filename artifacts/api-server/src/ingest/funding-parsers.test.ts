@@ -130,3 +130,32 @@ test("LGPD: fomento grava a instituição da fonte e só o endereço da chamada 
     assert.deepEqual(Object.keys(row.raw), ["sourceUrl"]);
   }
 });
+
+test("robots: linhas em branco e comentários não encerram o grupo (RFC 9309)", () => {
+  const robots = [
+    "User-agent: *",
+    "",
+    "# Painel administrativo",
+    "Disallow: /wp-admin/",
+    "",
+    "# Feeds",
+    "Disallow: /feed/",
+    "Disallow: /*/feed/",
+    "",
+    "User-agent: OutroBot",
+    "Disallow: /",
+  ].join("\n");
+  assert.equal(
+    robotsAllows(
+      robots,
+      "https://fap.example.org/wp-admin/admin-ajax.php?action=x",
+    ),
+    false,
+  );
+  assert.equal(robotsAllows(robots, "https://fap.example.org/feed/"), false);
+  assert.equal(
+    robotsAllows(robots, "https://fap.example.org/editais/feed/"),
+    false,
+  );
+  assert.equal(robotsAllows(robots, "https://fap.example.org/editais/"), true);
+});

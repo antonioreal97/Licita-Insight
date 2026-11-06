@@ -36,7 +36,7 @@ test("catálogo tem uma FAP por UF, com as 27 unidades da federação", () => {
 test("FAP_SOURCES filtra por UF e desliga com off", () => {
   assert.deepEqual(
     activeFaps(undefined).map((entry) => entry.uf),
-    ["DF"],
+      ["DF", "GO", "MA", "PE", "SC", "SE"],
   );
   assert.deepEqual(
     activeFaps("df").map((entry) => entry.uf),
@@ -179,4 +179,84 @@ test("coleta FAP: robots.txt que proíbe tudo não lê a home", async () => {
   const fap = results.find((result) => result.source === "fap")!;
   assert.equal(fap.outcome, "blocked_by_robots");
   assert.ok(!requested.includes("https://www.fap.df.gov.br/"));
+});
+
+test("detail: lê a página de cada chamada, completa o período e descarta o que não é chamada", async () => {
+  const { collectFapDrafts } = await import("./fap-sources");
+  const { draft } = await import("./funding-parsers");
+  const { submissionPeriod } = await import("./fap-parsers");
+  const now = new Date("2026-11-05T15:00:00Z");
+  const listed = (path: string) =>
+    draft({
+      source: "fap",
+      installationId: "fap-xx",
+      state: "XX",
+      kind: "funding",
+      title: `Chamada ${path}`,
+      organizationName: "FAPXX",
+      sourceUrl: `https://fap.example.org/${path}`,
+      now,
+    });
+  const requested: string[] = [];
+  const bodies = new Map([
+    ["https://fap.example.org/", "<html></html>"],
+    ["https://fap.example.org/editais", "lista"],
+    [
+      "https://fap.example.org/a",
+      "PERÍODO DE INSCRIÇÃO: 01/11/2026 a 30/11/2026",
+    ],
+    ["https://fap.example.org/b", "Resultado final"],
+  ]);
+  const { drafts } = await collectFapDrafts(
+    {
+      uf: "XX",
+      acronym: "FAPXX",
+      name: "FAP de teste",
+      home: "https://fap.example.org/",
+      collection: "active",
+      adapter: {
+        pages: () => ["https://fap.example.org/editais"],
+        parse: () => [listed("a"), listed("b"), listed("c")],
+        detail: (item, html) => {
+          const period = submissionPeriod(html);
+          return period
+            ? {
+                ...item,
+                registrationFrom: period.from,
+                registrationTo: period.to,
+                status: "open",
+              }
+            : null;
+        },
+      },
+    },
+    {
+      now,
+      wait: async () => {},
+      fetchText: async (url) => {
+        requested.push(url);
+        const body = bodies.get(url);
+        if (body === undefined) throw new Error(`404 ${url}`);
+        return body;
+      },
+    },
+  );
+  // a: completed; b: dropped by detail; c: page failed, kept as listed.
+  assert.deepEqual(
+    drafts.map((item) => item.sourceUrl.split("/").pop()),
+    ["a", "c"],
+  );
+  assert.equal(
+    drafts[0]!.registrationTo?.toISOString(),
+    "2026-11-30T15:00:00.000Z",
+  );
+  assert.ok(requested.includes("https://fap.example.org/c"));
+});
+
+test("FAP_MAX_DETAILS aceita só inteiro positivo e cai para 30", async () => {
+  const { fapMaxDetails } = await import("./fap-sources");
+  assert.equal(fapMaxDetails("5"), 5);
+  assert.equal(fapMaxDetails(undefined), 30);
+  assert.equal(fapMaxDetails("0"), 30);
+  assert.equal(fapMaxDetails("abc"), 30);
 });
