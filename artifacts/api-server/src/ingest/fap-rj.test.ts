@@ -59,6 +59,14 @@ test("FAPERJ: períodos da lista, prorrogação, título dividido e exclusão do
     ).length,
     0,
   );
+  // Em janeiro e fevereiro os editais do ano anterior continuam: o status sai das datas.
+  const january = parse(await fixture(), FAPERJ_PAGE, fapIdentity(entry), new Date("2027-01-15T15:00:00Z"));
+  assert.equal(january.length, rows.length);
+  assert.ok(january.every((row) => row.status === "closed"));
+  assert.equal(
+    parse(await fixture(), FAPERJ_PAGE, fapIdentity(entry), new Date("2027-03-01T15:00:00Z")).length,
+    0,
+  );
 });
 test("FAPERJ: sem período, resultados e seleção de servidores não entram", () => {
   const html =

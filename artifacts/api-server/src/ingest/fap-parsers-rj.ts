@@ -99,7 +99,10 @@ export const parse = (
   ].filter(([anchor]) =>
     /^Edital\s+FAPERJ\s+N[º°o]?\s*\d+\s*\/\s*\d{4}/i.test(textFromHtml(anchor)),
   );
-  const year = new Date(now.getTime() - 3 * 3600000).getUTCFullYear();
+  // Brasília (UTC-3). Em janeiro e fevereiro, editais do ano anterior ainda podem estar recebendo propostas.
+  const local = new Date(now.getTime() - 3 * 3600000);
+  const year = local.getUTCFullYear();
+  const years = local.getUTCMonth() < 2 ? [year, year - 1] : [year];
   const seen = new Set<string>();
   return anchors.flatMap((anchor, index) => {
     const block = listing.slice(
@@ -113,7 +116,7 @@ export const parse = (
     if (links[1]?.url === first.url)
       title += `${/^[a-záéíóúâêôãõç]/.test(links[1].title) ? "" : " "}${links[1].title}`;
     if (
-      !title.includes(`/${year}`) ||
+      !years.some((kept) => title.includes(`/${kept}`)) ||
       /servidor|estagi[aá]rio|conselho superior|listas tr[ií]plices|processo seletivo simplificado/i.test(
         title,
       )
