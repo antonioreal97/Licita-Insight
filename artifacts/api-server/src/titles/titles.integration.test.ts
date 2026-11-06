@@ -98,6 +98,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
   const cleanup = async () => {
     const { pool } = await import("@workspace/db");
     await pool.query("delete from tender_title_examples");
+    await pool.query("delete from ingest_runs");
     await pool.query("delete from ai_jobs where kind = 'title_rewrite'");
     await pool.query("delete from tenders where organization_id = $1", [`pncp-${ORG}`]);
   };
@@ -117,6 +118,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       "ai_ask_requests",
       "company_tender_fits",
       "job_run_audit",
+      "ingest_runs",
       "saved_tenders",
       "notifications",
     ]) {
@@ -799,6 +801,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       const [{ pool }, { insertTitleExample }] = await Promise.all([import("@workspace/db"), import("./examples")]);
       await pool.query("delete from ai_title_usage where model like 'jev-teacher/%'");
       await pool.query("delete from tender_title_examples");
+      await pool.query("delete from ingest_runs");
       await pool.query("delete from tenders where organization_id = $1 and status = $2", [`pncp-${ORG}`, NIGHT_STATUS]);
       for (const [sourceText, category] of EXAMPLES) {
         await insertTitleExample({
@@ -1165,6 +1168,31 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       // Every held-out title is confident here, so any share would need a threshold above 0.9.
       assert.ok(thresholdForShare.p10 > 0.9 && thresholdForShare.p10 <= thresholdForShare.p20);
       assert.deepEqual(bands, [{ from: 0.9, to: 1, total: 3, agreement: 0.6667 }], "só a faixa com exemplos aparece");
+
+      // The summary is kept in ingest_runs: the history behind the agreement panel and the monitor alert.
+      const runs = await pool.query<{ status: string; upserted: number; agreement: string; model: string }>(
+        `select status, upserted, details->'holdout'->>'agreement' as agreement, details->>'embedModel' as model
+         from ingest_runs where source = 'nightly-category'`,
+      );
+      assert.deepEqual(runs.rows, [{
+        status: "succeeded", upserted: result.categorized, agreement: "0.6667", model: result.embedModel,
+      }]);
+    });
+
+    it("sem holdout medido, a noite não entra no histórico de concordância", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      // beforeEach leaves every example in train: nothing held out to measure.
+      const { client } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const result = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.equal(result.holdout, null);
+      const runs = await pool.query("select 1 from ingest_runs where source = 'nightly-category'");
+      assert.equal(runs.rowCount, 0);
     });
 
     it("o lock deixa uma execução só por vez", async () => {
