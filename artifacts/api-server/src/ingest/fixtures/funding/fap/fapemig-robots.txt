@@ -1,0 +1,7 @@
+# START nuxt-robots (indexable)
+User-agent: *
+Disallow: /pt/*
+Disallow: /preview/**
+
+Sitemap: https://fapemig.br/sitemap_index.xml
+# END nuxt-robots
