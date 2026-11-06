@@ -24,7 +24,7 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 | PE | FACEPE | **ativa** | `/editais/todos/?c=aberto` (+ `/editais-x-fluxo-continuo/`) | O filtro "aberto" também lista editais antigos e nenhum card traz data: só os editais do ano, com status `undated` |
 | PI | FAPEPI | pendente | `/editais-fapepi/` | WordPress |
 | PR | Fundação Araucária | pendente | — | Home sem links de edital no HTML; verificar menu e sitemap |
-| RJ | FAPERJ | **ativa** | `www.faperj.br/?id=28.5.7` → `?id=530.6.6` (lista de 2026) | Cronogramas na lista; ignora datas riscadas, conselho e anos anteriores; 32 editais, 8 abertos em 06/11/2026 |
+| RJ | FAPERJ | **ativa** | `www.faperj.br/?id=28.5.7` → `?id=530.6.6` (lista de 2026) | Cronogramas na lista; ignora datas riscadas, conselho e anos anteriores (em jan. e fev., mantém o ano anterior); 32 editais, 8 abertos em 06/11/2026 |
 | RN | FAPERN | pendente | `/documentos/Editais/` | Listagem de documentos |
 | RO | FAPERO | inacessível | — | Não respondeu no levantamento; testar de novo |
 | RR | FAPERR | pendente | Posts de notícia | Poucas chamadas próprias; muitas do CONFAP |
@@ -36,8 +36,8 @@ Regra comum: a coleta mostra título, período, sigla da FAP e link oficial com 
 
 ## Próximos lotes sugeridos
 
-1. Páginas só de abertos, mais simples: FAPESC, FAPITEC, FAPEMA, FACEPE, FAPEAM e FAPEG.
-2. Maior volume: FAPESP, FAPEMIG, FAPERJ e FAPERGS.
+1. Páginas só de abertos, mais simples: FAPESC, FAPITEC, FAPEMA, FACEPE, FAPEAM e FAPEG. **Feito no #207**, menos a FAPEAM (endpoint de dados proibido no `robots.txt`).
+2. Maior volume: FAPESP, FAPEMIG, FAPERJ e FAPERGS. **Feito neste lote.**
 3. WordPress com um post por edital (lista e depois o post): FAPEAL, FAPESB, FAPEPI e FAPAC.
 4. Casos difíceis (notícias, PDFs diretos ou portal do estado): FUNCAP, FAPEAP, FAPESPA, FAPERR, FUNDECT, FAPERN, FAPES, FAPESQ e Fundação Araucária.
 5. Testar de novo: FAPERO e FAPT.
