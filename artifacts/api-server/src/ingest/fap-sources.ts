@@ -22,6 +22,15 @@ import {
   parseFapemaOpportunities,
 } from "./fap-parsers-ma";
 import { facepePages, parseFacepeOpportunities } from "./fap-parsers-pe";
+import {
+  fapemigPages,
+  parseFapemigOpportunities,
+} from "./fap-parsers-mg";
+import {
+  fapergsDetail,
+  fapergsPages,
+  parseFapergsOpportunities,
+} from "./fap-parsers-rs";
 
 type FetchText = (url: string) => Promise<string>;
 
@@ -160,7 +169,11 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPEMIG",
     name: "Fundação de Amparo à Pesquisa do Estado de Minas Gerais",
     home: "https://fapemig.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapemigPages(home),
+      parse: parseFapemigOpportunities,
+    },
   },
   {
     uf: "MS",
@@ -248,7 +261,12 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPERGS",
     name: "Fundação de Amparo à Pesquisa do Estado do Rio Grande do Sul",
     home: "https://fapergs.rs.gov.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: {
+      pages: (home) => fapergsPages(home),
+      parse: parseFapergsOpportunities,
+      detail: fapergsDetail,
+    },
   },
   {
     uf: "SC",
