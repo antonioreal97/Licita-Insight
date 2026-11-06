@@ -23,6 +23,8 @@ const JEV_USD_PER_INPUT_TOKEN = 0.000000042;
 const JEV_CALL_GUARD_MS = 120_000;
 const JEV_FAILURES_BEFORE_GIVING_UP = 5;
 const MAX_NIGHT_PREDICTIONS = 50_000;
+/** `ingest_runs.source` of the nightly summary: the history behind the agreement panel and alert. */
+export const NIGHTLY_CATEGORY_RUN_SOURCE = "nightly-category";
 const EMBED_ATTEMPTS = 3;
 
 /**
@@ -247,6 +249,23 @@ export async function evaluateHoldoutSample(options: {
   };
 }
 
+/**
+ * Keeps the summary of every run that measured the holdout, so agreement can be followed night by
+ * night (admin dashboard, monitor alert). A failed write is logged and never fails the night.
+ */
+async function recordNightlyRun(result: NightlyResult, startedAt: Date, deadline: Date): Promise<void> {
+  if (!result.holdout) return;
+  try {
+    await pool.query(
+      `insert into ingest_runs (id, source, status, window_from, window_to, upserted, details, started_at, heartbeat_at, finished_at)
+       values ($1, $2, 'succeeded', $3, $4, $5, $6::jsonb, $3, now(), now())`,
+      [crypto.randomUUID(), NIGHTLY_CATEGORY_RUN_SOURCE, startedAt, deadline, result.categorized, JSON.stringify(result)],
+    );
+  } catch (error) {
+    logger.warn({ err: error }, "Could not record the nightly category run");
+  }
+}
+
 const withGuard = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   let timer: NodeJS.Timeout | undefined;
   const guard = new Promise<never>((_, reject) => {
@@ -322,6 +341,7 @@ export async function runNightlyCategoryClassification(options: {
     setMetric("licitai_nightly_category_pending", backlog.pendingExamples, { kind: "examples" });
     setMetric("licitai_nightly_category_pending", backlog.jevBacklog, { kind: "jev" });
     logger.info(result, "Nightly category classification summary");
+    await recordNightlyRun(result, startedAt, options.deadline);
     return result;
   };
 
