@@ -18,6 +18,16 @@ export type FapIdentity = {
 const SUBMISSION_PERIOD =
   /PER[IÍ]ODO\s+DE\s+(?:SUBMISS(?:[AÃ]O|[OÕ]ES)|INSCRI[CÇ](?:[AÃ]O|[OÕ]ES))\s*:?\s*(\d{2}\/\d{2}\/\d{4})\s*(?:a|at[eé]|[–-])\s*(\d{2}\/\d{2}\/\d{4})/i;
 
+/** The submission period written in a call's text, or `null` when the text gives none. */
+export const submissionPeriod = (
+  text: string,
+): { from: Date | null; to: Date | null } | null => {
+  const match = SUBMISSION_PERIOD.exec(text.replace(/\s+/g, " "));
+  return match
+    ? { from: parseBrazilianDate(match[1]), to: parseBrazilianDate(match[2]) }
+    : null;
+};
+
 /** Staff selections are published next to the calls but are hiring, not funding. */
 const STAFF_SELECTION = /\bservidor(?:es)?\b|processo seletivo simplificado/i;
 

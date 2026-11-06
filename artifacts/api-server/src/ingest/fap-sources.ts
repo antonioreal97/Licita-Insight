@@ -16,6 +16,23 @@ type FapAdapter = {
     identity: FapIdentity,
     now: Date,
   ) => FundingOpportunityDraft[];
+  /**
+   * For listings that carry no dates: reads each call's own page (`draft.sourceUrl`) and returns the call
+   * completed with period, summary and documents, or `null` to drop it (no period, not a call). Keep
+   * `sourceUrl` unchanged: the call id is derived from it.
+   */
+  detail?: (
+    draft: FundingOpportunityDraft,
+    html: string,
+    identity: FapIdentity,
+    now: Date,
+  ) => FundingOpportunityDraft | null;
+};
+
+/** Most call pages read per FAP and per run when the adapter has `detail` (`FAP_MAX_DETAILS`). */
+export const fapMaxDetails = (value = process.env.FAP_MAX_DETAILS): number => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 30;
 };
 
 /**
@@ -277,5 +294,25 @@ export const collectFapDrafts = async (
       drafts.push(item);
     }
   }
-  return { drafts, pages };
+  const detail = entry.adapter.detail;
+  if (!detail) return { drafts, pages };
+  // A call page that fails to load keeps the call as listed; the others are still read.
+  const completed: FundingOpportunityDraft[] = [];
+  for (const [index, item] of drafts.entries()) {
+    if (index >= fapMaxDetails()) {
+      completed.push(item);
+      continue;
+    }
+    await options.wait();
+    let html: string;
+    try {
+      html = await options.fetchText(item.sourceUrl);
+    } catch {
+      completed.push(item);
+      continue;
+    }
+    const result = detail(item, html, identity, options.now);
+    if (result) completed.push(result);
+  }
+  return { drafts: completed, pages };
 };
