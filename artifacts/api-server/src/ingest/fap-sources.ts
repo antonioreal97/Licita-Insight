@@ -1,3 +1,5 @@
+import * as fapesp from "./fap-parsers-sp";
+import * as faperj from "./fap-parsers-rj";
 import {
   fapescPages,
   fapitecPages,
@@ -220,7 +222,8 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPERJ",
     name: "Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro",
     home: "https://www.faperj.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: { pages: faperj.pages, parse: faperj.parse },
   },
   {
     uf: "RN",
@@ -279,7 +282,8 @@ export const FAP_CATALOG: readonly FapCatalogEntry[] = [
     acronym: "FAPESP",
     name: "Fundação de Amparo à Pesquisa do Estado de São Paulo",
     home: "https://fapesp.br/",
-    collection: "pending",
+    collection: "active",
+    adapter: { pages: fapesp.pages, parse: fapesp.parse },
   },
   {
     uf: "TO",
