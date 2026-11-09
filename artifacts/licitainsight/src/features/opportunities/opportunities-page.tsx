@@ -14,6 +14,7 @@ import { AccessPanel, OpportunityAccessGate } from './components/access-gate';
 import { ActiveOpportunityFilters, OpportunityFilterSheet, OpportunityFiltersButton, opportunityAppliedMessage } from './components/opportunity-filter-sheet';
 import { InternationalFilters, InternationalRow, OfficialNoticeBanner } from './components/international';
 import { CLEAR_INTERNATIONAL_FILTERS } from './components/international';
+import { UnProcurementGuide } from './components/un-procurement-guide';
 import { CLEAR_NATIONAL_FILTERS, OpportunityFilters } from './components/opportunity-filters';
 import { ApplicationBadge } from './components/application-panel';
 import { NOTICE_DATE_NOTE, registrationDates } from './lib/application';
@@ -148,6 +149,7 @@ function OpportunitySearch() {
   return (
     <>
       {international && <OfficialNoticeBanner className="mb-4" />}
+      {international && <UnProcurementGuide className="mb-4" />}
       <form onSubmit={onSearch} className="mb-5 sm:mb-6">
         <label className="min-w-0 flex-1">
           <span className="sr-only">Buscar chamadas</span>
