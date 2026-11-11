@@ -25,13 +25,23 @@ const JEV_FAILURES_BEFORE_GIVING_UP = 5;
 const MAX_NIGHT_PREDICTIONS = 50_000;
 /** `ingest_runs.source` of the nightly summary: the history behind the agreement panel and alert. */
 export const NIGHTLY_CATEGORY_RUN_SOURCE = "nightly-category";
-const EMBED_ATTEMPTS = 3;
+const EMBED_ATTEMPTS = 4;
+
+/** Waits up to `ms`, returning early when the night stops (window closed or shutdown). */
+const pause = async (ms: number, signal: StopSignal): Promise<void> => {
+  const until = Date.now() + ms;
+  while (!signal.stopped && Date.now() < until) {
+    await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, until - Date.now())));
+  }
+};
 
 /**
- * The first request of the night loads the model from disk and may time out on a slow machine;
- * asking again right away finds it loaded. A 4xx is a configuration error and is not repeated.
+ * The first request of the night loads the model from disk and may time out on a slow machine.
+ * It is asked again after a growing pause (`embedRetryDelayMs` times the attempt), so a model still
+ * loading under memory pressure gets time instead of more requests. A 4xx is a configuration error
+ * and is not repeated.
  */
-const patientEmbedding = (client: OllamaClient): OllamaClient => ({
+const patientEmbedding = (client: OllamaClient, retryDelayMs: number, signal: StopSignal): OllamaClient => ({
   ...client,
   async embed(texts) {
     for (let attempt = 1; ; attempt += 1) {
@@ -39,8 +49,10 @@ const patientEmbedding = (client: OllamaClient): OllamaClient => ({
         return await client.embed(texts);
       } catch (error) {
         const transient = error instanceof OllamaError && (error.kind !== "http" || (error.status ?? 500) >= 500);
-        if (!transient || attempt >= EMBED_ATTEMPTS) throw error;
-        logger.warn({ err: error, attempt }, "Ollama embedding failed; trying again");
+        if (!transient || attempt >= EMBED_ATTEMPTS || signal.stopped) throw error;
+        const waitMs = retryDelayMs * attempt;
+        logger.warn({ err: error, attempt, waitMs }, "Ollama embedding failed; trying again");
+        await pause(waitMs, signal);
       }
     }
   },
@@ -314,11 +326,11 @@ export async function runNightlyCategoryClassification(options: {
   budgetPaused?: () => Promise<boolean>;
 }): Promise<NightlyResult> {
   const config = options.config ?? nightlyCategoryConfig();
-  const client = patientEmbedding(options.client ?? createOllamaClient());
   const statuses = [...(options.statuses ?? DEFAULT_CLASSIFY_STATUSES)];
   const signal = options.signal ?? NEVER_STOP;
+  const ollama = options.client ?? createOllamaClient();
   const now = options.now ?? (() => new Date());
-  const embedModel = client.config.embedModel;
+  const embedModel = ollama.config.embedModel;
   const startedAt = now();
   const until = (limit: Date): StopSignal => ({
     get stopped() {
@@ -326,6 +338,7 @@ export async function runNightlyCategoryClassification(options: {
     },
   });
   const night = until(options.deadline);
+  const client = patientEmbedding(ollama, config.embedRetryDelayMs, night);
   const totals: NightlyTotals = {
     examplesEmbedded: 0, processed: 0, reused: 0, categorized: 0, kept: 0, lowConfidence: 0, jevSent: 0, jevTaught: 0,
     jevRejected: 0, jevFailed: 0, jevInputTokens: 0, jevCostUsd: 0, examplesAdded: 0,
