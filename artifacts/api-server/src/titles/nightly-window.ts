@@ -27,6 +27,23 @@ const nonNegativeInteger = (name: string, fallback: number): number => {
   return value;
 };
 
+/** An instant from the environment; "off" turns the setting off. */
+const instantOrOff = (name: string, fallback: string): Date | null => {
+  const raw = process.env[name]?.trim() || fallback;
+  if (raw.toLowerCase() === "off") return null;
+  const value = new Date(raw);
+  if (Number.isNaN(value.getTime())) throw new Error(`${name} must be an ISO date-time or "off", received "${raw}"`);
+  return value;
+};
+
+/**
+ * Examples created before this instant form the holdout scored every night. Fixed, so the score of
+ * one night compares with the next: new teacher examples come from the student's doubtful tenders
+ * and would otherwise make the test harder night after night. On 2026-11-08 at 00:00 (Sao Paulo)
+ * the holdout already had the 500 examples the nightly sample takes.
+ */
+export const DEFAULT_HOLDOUT_FROZEN_AT = "2026-11-08T03:00:00Z";
+
 const probability = (name: string, fallback: number): number => {
   const raw = process.env[name]?.trim();
   if (!raw) return fallback;
@@ -57,6 +74,11 @@ export type NightlyCategoryConfig = {
   minExamples: number;
   /** Holdout examples checked each night for the agreement in the summary; 0 skips it. */
   holdoutSample: number;
+  /**
+   * Only holdout examples created before this instant are scored for the agreement; the newer ones
+   * are scored apart. Null scores the whole holdout, as before.
+   */
+  holdoutFrozenAt: Date | null;
   jev: {
     enabled: boolean;
     /** Student confidence below which a tender goes to Jev. */
@@ -78,6 +100,7 @@ export const nightlyCategoryConfig = (): NightlyCategoryConfig => ({
   exampleShare: probability("NIGHTLY_CATEGORY_EXAMPLE_SHARE", 0.4),
   minExamples: positiveInteger("NIGHTLY_CATEGORY_MIN_EXAMPLES", 200),
   holdoutSample: nonNegativeInteger("NIGHTLY_CATEGORY_HOLDOUT_SAMPLE", 500),
+  holdoutFrozenAt: instantOrOff("NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT", DEFAULT_HOLDOUT_FROZEN_AT),
   jev: {
     enabled: process.env.JEV_TEACHER_ENABLED?.trim().toLowerCase() !== "false" && aiConfig().apiKey !== null,
     threshold: probability("JEV_TEACHER_CONFIDENCE_THRESHOLD", 0.6),
