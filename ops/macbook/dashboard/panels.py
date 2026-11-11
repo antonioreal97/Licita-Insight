@@ -16,7 +16,8 @@ AGREEMENT_NIGHTS = f"""(select (window_to at time zone '{TZ}')::date as night, f
          (details->'holdout'->>'agreement')::float as agreement,
          (details->'holdout'->>'agreementCovered')::float as agreement_covered,
          (details->'holdout'->>'coverage')::float as coverage,
-         (details->'holdout'->>'belowJevThreshold')::float as below_jev
+         (details->'holdout'->>'belowJevThreshold')::float as below_jev,
+         (details->'holdoutRecent'->>'agreement')::float as recent_agreement
       from ingest_runs
       where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r"""
 
@@ -107,12 +108,15 @@ limit 1""", {"unit": "percentunit", "decimals": 1,
     ("IA", "Concordância do aluno com o professor (30 noites)", "timeseries", f"""
 select distinct on (night) (night::timestamp at time zone '{TZ}') as time,
        agreement as "Concordância", agreement_covered as "Concordância nos cobertos",
-       coverage as "Cobertura", below_jev as "Abaixo do limiar Jev"
+       coverage as "Cobertura", below_jev as "Abaixo do limiar Jev", recent_agreement as "Exemplos novos (fora da prova)"
 from {AGREEMENT_NIGHTS}
 where night >= (now() at time zone '{TZ}')::date - 29
 order by night, finished_at desc""", {"unit": "percentunit", "decimals": 1,
      "description": "Uma linha por noite (a última execução dela). O monitor alerta (nightly:agreement) quando a "
-                    "concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding."}),
+                    "concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding "
+                    "e da mesma prova fixa (exemplos do holdout criados antes de NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT). "
+                    "As noites antes da prova fixa mediam o holdout inteiro e tendem a cair. "
+                    "'Exemplos novos' são os rótulos do Jev depois da data, medidos à parte e sem alerta."}),
     ("IA", "Cota de processos por usuário e dia (30 dias)", "table", f"""
 select q.quota_day as "Dia", coalesce(u.name, '') as "Nome", u.email as "E-mail",
        count(*) as "Processos consultados", cast(${{daily_process_limit:sqlstring}} as integer) as "Limite"
