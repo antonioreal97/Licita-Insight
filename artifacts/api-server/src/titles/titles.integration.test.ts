@@ -762,7 +762,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     };
 
     const night = async (overrides: {
-      batch?: number; embedChunk?: number; jev?: Partial<{
+      batch?: number; embedChunk?: number; holdoutFrozenAt?: Date | null; jev?: Partial<{
         enabled: boolean; threshold: number; dailyLimit: number; minConfidence: number; concurrency: number;
       }>;
     } = {}) => {
@@ -773,6 +773,8 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
         batch: overrides.batch ?? 2,
         embedChunk: overrides.embedChunk ?? 2,
         minExamples: 1,
+        // The examples here are created by the test itself: the whole holdout, unless a test freezes it.
+        holdoutFrozenAt: overrides.holdoutFrozenAt ?? null,
         jev: { enabled: true, threshold: 0.6, dailyLimit: 1_500, minConfidence: 0.5, concurrency: 2, ...overrides.jev },
       };
     };
@@ -1163,8 +1165,9 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       assert.equal(result.trainExamples, 6);
       const { thresholdForShare, bands, ...holdout } = result.holdout!;
       assert.deepEqual(holdout, {
-        total: 3, agreement: 0.6667, coverage: 1, agreementCovered: 0.6667, belowJevThreshold: 0,
+        frozenAt: null, total: 3, agreement: 0.6667, coverage: 1, agreementCovered: 0.6667, belowJevThreshold: 0,
       });
+      assert.equal(result.holdoutRecent, null, "sem prova fixa, não há exemplos novos à parte");
       // Every held-out title is confident here, so any share would need a threshold above 0.9.
       assert.ok(thresholdForShare.p10 > 0.9 && thresholdForShare.p10 <= thresholdForShare.p20);
       assert.deepEqual(bands, [{ from: 0.9, to: 1, total: 3, agreement: 0.6667 }], "só a faixa com exemplos aparece");
@@ -1177,6 +1180,48 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       assert.deepEqual(runs.rows, [{
         status: "succeeded", upserted: result.categorized, agreement: "0.6667", model: result.embedModel,
       }]);
+    });
+
+    it("a prova da concordância é fixa: exemplos novos do professor são medidos à parte", async () => {
+      const [{ pool }, { runNightlyCategoryClassification }] = await Promise.all([
+        import("@workspace/db"),
+        import("./nightly-classification"),
+      ]);
+      const frozenAt = new Date("2026-11-08T03:00:00Z");
+      // Two examples held out before the cut (one with a wrong label), one taught after it.
+      await pool.query(
+        `update tender_title_examples set split = 'holdout', created_at = $2
+         where source_text = any($1::text[])`,
+        [["Aquisição de extintores ABC", "Aquisição de medicamentos básicos"], new Date("2026-11-01T12:00:00Z")],
+      );
+      await pool.query(
+        "update tender_title_examples set categories = '{outros}' where source_text = 'Aquisição de medicamentos básicos'",
+      );
+      await pool.query(
+        `update tender_title_examples set split = 'holdout', created_at = $2 where source_text = $1`,
+        ["Aquisição de pneus para veículos leves", new Date("2026-11-10T12:00:00Z")],
+      );
+      const { client } = createFakeOllama();
+      const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const result = await runNightlyCategoryClassification({
+        deadline: farDeadline(), client, jev, config: await night({ holdoutFrozenAt: frozenAt }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+      });
+      assert.deepEqual(
+        [result.holdout?.frozenAt, result.holdout?.total, result.holdout?.agreement],
+        [frozenAt.toISOString(), 2, 0.5],
+        "a prova fixa só tem os exemplos de antes do corte",
+      );
+      assert.deepEqual(
+        [result.holdoutRecent?.frozenAt, result.holdoutRecent?.total, result.holdoutRecent?.agreement],
+        [frozenAt.toISOString(), 1, 1],
+        "o exemplo novo é medido à parte",
+      );
+      const runs = await pool.query<{ frozen_at: string; recent: string }>(
+        `select details->'holdout'->>'frozenAt' as frozen_at, details->'holdoutRecent'->>'agreement' as recent
+         from ingest_runs where source = 'nightly-category'`,
+      );
+      assert.deepEqual(runs.rows, [{ frozen_at: frozenAt.toISOString(), recent: "1" }]);
     });
 
     it("sem holdout medido, a noite não entra no histórico de concordância", async () => {

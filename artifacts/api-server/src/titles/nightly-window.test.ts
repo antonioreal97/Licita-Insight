@@ -74,6 +74,18 @@ describe("janela do job noturno", () => {
     assert.equal(nightlyCategoryConfig().jev.enabled, false, "sem chave do Jev não há professor");
   });
 
+  it("a prova fixa da concordância tem data padrão, aceita outra e desliga com off", async () => {
+    const { nightlyCategoryConfig } = await import("./nightly-window");
+    delete process.env.NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT;
+    assert.equal(nightlyCategoryConfig().holdoutFrozenAt?.toISOString(), "2026-11-08T03:00:00.000Z");
+    process.env.NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT = "2026-12-01T03:00:00Z";
+    assert.equal(nightlyCategoryConfig().holdoutFrozenAt?.toISOString(), "2026-12-01T03:00:00.000Z");
+    process.env.NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT = "off";
+    assert.equal(nightlyCategoryConfig().holdoutFrozenAt, null);
+    process.env.NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT = "ontem";
+    assert.throws(() => nightlyCategoryConfig(), /NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT/u);
+  });
+
   it("o job noturno é o modo do aluno; NIGHTLY_CATEGORY_ENABLED=false volta à classificação pós-coleta", async () => {
     const { nightlyCategoryEnabled } = await import("./nightly-window");
     delete process.env.CATEGORY_STUDENT_ENABLED;

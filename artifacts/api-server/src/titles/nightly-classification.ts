@@ -80,6 +80,11 @@ export type NightlyBacklog = {
 
 /** Student against the teachers' labels on examples it never saw (the holdout split). */
 export type NightlyHoldout = {
+  /**
+   * Examples created before this instant (ISO) are the ones scored: the same test every night.
+   * Null when the whole holdout was scored.
+   */
+  frozenAt: string | null;
   total: number;
   /** Share whose first category is the teacher's. */
   agreement: number;
@@ -103,6 +108,11 @@ export type NightlyResult = NightlyTotals & NightlyBacklog & {
   embedModel: string;
   trainExamples: number;
   holdout: NightlyHoldout | null;
+  /**
+   * The newest holdout examples, created after the frozen set: how the student does on tonight's
+   * kind of doubt. Informative only; the alert follows `holdout`.
+   */
+  holdoutRecent: NightlyHoldout | null;
   durationMs: number;
 };
 
@@ -200,17 +210,29 @@ const share = (part: number, whole: number): number => (whole === 0 ? 0 : Number
 
 const HOLDOUT_BAND_EDGES = [0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 
+/**
+ * Scores the student on held-out examples. `frozen` takes those created before `frozenAt` (all of
+ * them when it is null), in a fixed order; `recent` takes the newest created from `frozenAt` on.
+ */
 export async function evaluateHoldoutSample(options: {
   student: CategoryStudent;
   embedModel: string;
   threshold: number;
   limit: number;
+  frozenAt?: Date | null;
+  part?: "frozen" | "recent";
 }): Promise<NightlyHoldout | null> {
+  const frozenAt = options.frozenAt ?? null;
+  const part = options.part ?? "frozen";
+  if (part === "recent" && frozenAt === null) return null;
+  const slice = part === "recent"
+    ? "and created_at >= $3 order by created_at desc, text_hash"
+    : "and ($3::timestamptz is null or created_at < $3) order by text_hash";
   const rows = (await pool.query<{ categories: string[]; embedding: number[] }>(
     `select categories, embedding from tender_title_examples
      where split = 'holdout' and embedding is not null and embedding_model = $1 and cardinality(categories) > 0
-     order by text_hash limit $2`,
-    [options.embedModel, options.limit],
+     ${slice} limit $2`,
+    [options.embedModel, options.limit, frozenAt],
   )).rows;
   if (rows.length === 0) return null;
   let agree = 0;
@@ -238,6 +260,7 @@ export async function evaluateHoldoutSample(options: {
   const quantile = (part: number): number =>
     Number(confidences[Math.min(confidences.length - 1, Math.floor(part * confidences.length))].toFixed(4));
   return {
+    frozenAt: frozenAt?.toISOString() ?? null,
     total: rows.length,
     agreement: share(agree, rows.length),
     coverage: share(covered, rows.length),
@@ -310,6 +333,7 @@ export async function runNightlyCategoryClassification(options: {
   let jevSkipped: JevSkipReason | null = null;
   let jevFailuresInARow = 0;
   let holdout: NightlyHoldout | null = null;
+  let holdoutRecent: NightlyHoldout | null = null;
   /** Vectors of tonight's doubtful titles, reused when Jev turns them into examples. */
   const vectors = new Map<string, Float32Array>();
 
@@ -335,6 +359,7 @@ export async function runNightlyCategoryClassification(options: {
       embedModel,
       trainExamples: student?.size ?? 0,
       holdout,
+      holdoutRecent,
       durationMs: now().getTime() - startedAt.getTime(),
     };
     setMetric("licitai_nightly_category_pending", backlog.pendingTenders, { kind: "tenders" });
@@ -455,9 +480,11 @@ export async function runNightlyCategoryClassification(options: {
   }
   if (student.size === 0) return await finish(student, "no_examples");
   if (!night.stopped) {
-    holdout = await evaluateHoldoutSample({
-      student, embedModel, threshold: config.jev.threshold, limit: config.holdoutSample,
-    });
+    const sample = {
+      student, embedModel, threshold: config.jev.threshold, limit: config.holdoutSample, frozenAt: config.holdoutFrozenAt,
+    };
+    holdout = await evaluateHoldoutSample(sample);
+    holdoutRecent = await evaluateHoldoutSample({ ...sample, part: "recent" });
   }
 
   // (b) The student, newest tenders first, each batch followed by its own doubtful ones: tonight's
