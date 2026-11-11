@@ -59,6 +59,8 @@ export async function loadStudent(embedModel: string, options = studentConfig())
       examples.push({ textHash: row.text_hash, embedding: normalizeVector(row.embedding), categories: row.categories });
     }
     cursor = rows.at(-1)?.text_hash ?? cursor;
+    // Tens of thousands of vectors are normalized here: let the API answer between pages.
+    await new Promise((resolve) => setImmediate(resolve));
   }
   return { student: new CategoryStudent(examples, options), latestExampleAt: latest };
 }

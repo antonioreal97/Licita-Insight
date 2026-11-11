@@ -28,6 +28,11 @@ Ordem de uma noite:
    `NIGHTLY_CATEGORY_MIN_EXAMPLES` (200) exemplos utilizáveis, a noite inteira vai para eles.
 2. **Concordância.** Classifica até `NIGHTLY_CATEGORY_HOLDOUT_SAMPLE` (500) exemplos do `holdout`
    (20% que o aluno nunca usa como vizinho) e compara com o rótulo do professor. Não chama o Ollama.
+   A prova é **fixa**: só entram exemplos criados antes de `NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT`
+   (08/11/2026 00:00 de Brasília). Os exemplos novos do Jev vêm dos editais em que o aluno teve
+   dúvida; se entrassem na prova, ela ficaria mais difícil a cada noite e a concordância cairia sem o
+   aluno piorar. Os exemplos de holdout criados depois da data são medidos à parte
+   (`holdoutRecent`, os 500 mais novos), só para leitura.
 3. **Aluno.** Editais `open`/`under_review` que não são `teacher` e ainda não têm
    `category_confidence`, os mais novos primeiro, em lotes de `NIGHTLY_CATEGORY_BATCH` (64). Depois
    de gravar cada lote, os duvidosos dele vão ao Jev: os editais da noite usam o teto diário antes
@@ -74,6 +79,8 @@ professor não é chamado.
 | `NIGHTLY_CATEGORY_EXAMPLE_SHARE` | `0.4` | parte da janela reservada aos exemplos |
 | `NIGHTLY_CATEGORY_MIN_EXAMPLES` | `200` | mínimo de exemplos para o aluno classificar |
 | `NIGHTLY_CATEGORY_HOLDOUT_SAMPLE` | `500` | exemplos do holdout medidos por noite; `0` desliga |
+| `NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT` | `2026-11-08T03:00:00Z` | só exemplos criados antes disso entram na prova; `off` mede o holdout inteiro (sem prova fixa) |
+| `NIGHTLY_CATEGORY_EMBED_RETRY_DELAY_MS` | `20000` | pausa antes de repetir um embedding que falhou, multiplicada pela tentativa (4 tentativas: 20 s, 40 s, 60 s) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | no compose de produção: `http://ollama:11434` |
 | `OLLAMA_EMBED_MODEL` | `bge-m3` | modelo de embedding; trocar re-embute os exemplos |
 | `OLLAMA_KEEP_ALIVE` | `10m` | produção: `2m`, para o modelo sair da memória fora da janela |
@@ -223,7 +230,9 @@ select distinct on (noite) noite, details->>'embedModel' as modelo,
        (details->'holdout'->>'total')::int as n,
        (details->'holdout'->>'agreement')::numeric as concordancia,
        (details->'holdout'->>'coverage')::numeric as cobertura,
-       (details->'holdout'->>'belowJevThreshold')::numeric as abaixo_do_limiar_jev
+       (details->'holdout'->>'belowJevThreshold')::numeric as abaixo_do_limiar_jev,
+       details->'holdout'->>'frozenAt' as prova_fixa_ate,
+       (details->'holdoutRecent'->>'agreement')::numeric as concordancia_exemplos_novos
 from (select (window_to at time zone 'America/Sao_Paulo')::date as noite, * from ingest_runs
       where source = 'nightly-category') r
 order by noite desc, finished_at desc
@@ -232,7 +241,10 @@ limit 30;
 
 O painel **Concordância do aluno** do dashboard admin e o alerta `nightly:agreement` do monitor
 (branch `ops/macbook-worker`) leem esse histórico. O alerta compara a última noite com a mediana das
-noites anteriores do mesmo modelo de embedding: troca de `OLLAMA_EMBED_MODEL` começa uma série nova.
+noites anteriores com o mesmo modelo de embedding e a mesma prova (`holdout.frozenAt`): trocar
+`OLLAMA_EMBED_MODEL` ou `NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT` começa uma série nova, e o alerta espera
+três noites dela. As noites anteriores a esta mudança mediram o holdout inteiro (`frozenAt` ausente) e não se
+comparam com as seguintes.
 
 Métricas Prometheus: `licitai_nightly_category_tenders_total{result}`,
 `licitai_nightly_category_low_confidence_total`, `licitai_nightly_category_jev_total{result}`,
