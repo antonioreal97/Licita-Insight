@@ -155,14 +155,19 @@ def collect():
              (select count(*) from job_run_audit where job_key = 'nightly_category_classification'
                  and status = 'failed' and started_at > now() - interval '24 hours') runs_failed_24h,
              (select coalesce(sum(duration_ms), 0) / 60000 from job_run_audit where job_key = 'nightly_category_classification'
-                 and status = 'succeeded' and started_at > now() - interval '24 hours') minutes_24h
+                 and status = 'succeeded' and started_at > now() - interval '24 hours') minutes_24h,
+             (select left(error, 200) from job_run_audit where job_key = 'nightly_category_classification'
+                 and status = 'failed' and started_at > now() - interval '24 hours' order by started_at desc limit 1) last_error
     """)[0]
 
     # Última execução de cada noite que mediu o holdout (o app grava o resumo em ingest_runs).
     m["agreement"] = sql_json("""
-      select distinct on (night) night, model, total, agreement
+      select distinct on (night) night, model, frozen_at, total, agreement, recent_total, recent_agreement
         from (select (window_to at time zone 'America/Sao_Paulo')::date night, details->>'embedModel' model,
+                     details->'holdout'->>'frozenAt' frozen_at,
                      (details->'holdout'->>'total')::int total, (details->'holdout'->>'agreement')::float agreement,
+                     (details->'holdoutRecent'->>'total')::int recent_total,
+                     (details->'holdoutRecent'->>'agreement')::float recent_agreement,
                      finished_at
                 from ingest_runs
                where source = 'nightly-category' and window_to > now() - interval '15 days'
@@ -266,9 +271,11 @@ def collect():
 # ---------------------------------------------------------------- anomalias
 
 def agreement_anomaly(nights, drop=0.05, floor=None, min_sample=200, today=None):
-    """Concordância da última noite contra a mediana das até 7 noites anteriores do mesmo modelo de embedding.
+    """Concordância da última noite contra a mediana das até 7 noites anteriores do mesmo modelo e da mesma prova.
 
-    `nights` vem do mais recente para o mais antigo ({night, model, total, agreement}). Devolve (chave, texto) ou None.
+    `nights` vem do mais recente para o mais antigo ({night, model, frozen_at, total, agreement}). Devolve (chave, texto)
+    ou None. A prova é o conjunto de exemplos do holdout medido (`frozen_at`: criados antes dessa data; ausente nas
+    noites que mediam o holdout inteiro, que crescia com os casos difíceis): prova diferente não se compara.
     Amostra pequena não decide nada; noite com mais de 2 dias não é "a última" (o job parou: isso é o nightly:failed).
     """
     if not nights:
@@ -279,8 +286,9 @@ def agreement_anomaly(nights, drop=0.05, floor=None, min_sample=200, today=None)
     if (today - dt.date.fromisoformat(night)).days > 2 or (last.get("total") or 0) < min_sample:
         return None
     value = float(last["agreement"])
-    previous = sorted(float(n["agreement"]) for n in nights[1:8]
-                      if n.get("model") == last.get("model") and (n.get("total") or 0) >= min_sample)
+    same_test = [n for n in nights[1:]
+                 if n.get("model") == last.get("model") and n.get("frozen_at") == last.get("frozen_at")]
+    previous = sorted(float(n["agreement"]) for n in same_test[:7] if (n.get("total") or 0) >= min_sample)
     if floor is not None and value < floor:
         return (f"nightly:agreement:{night}",
                 f"concordância do aluno com o professor em {night}: {value:.1%} (abaixo do mínimo de {floor:.0%}; "
@@ -293,6 +301,19 @@ def agreement_anomaly(nights, drop=0.05, floor=None, min_sample=200, today=None)
                     f"concordância do aluno com o professor caiu para {value:.1%} em {night} "
                     f"(mediana das {len(previous)} noites anteriores: {median:.1%}; n = {last['total']}, modelo {last.get('model')})")
     return None
+
+
+def agreement_line(nights):
+    """Linha do relatório: a prova fixa (e de quando ela é) e, à parte, os exemplos novos do professor."""
+    if not nights:
+        return "- Concordância com o professor (holdout): sem medição nos últimos 15 dias"
+    last = nights[0]
+    test = f"prova fixa até {str(last['frozen_at'])[:10]}" if last.get("frozen_at") else "holdout inteiro"
+    line = (f"- Concordância com o professor ({test}): {float(last['agreement']):.1%} em {str(last['night'])[:10]}"
+            f" (n = {last['total']}, modelo {last['model']})")
+    if last.get("recent_agreement") is not None:
+        line += f"; exemplos novos: {float(last['recent_agreement']):.1%} (n = {last['recent_total']})"
+    return line
 
 
 def anomalies(m, prev):
@@ -759,10 +780,9 @@ def render_digest(m):
         "**Classificação noturna (24 h)**",
         f"- Aluno: {night.get('student_24h', 0)} editais; baixa confiança (< 0,6): {night.get('low_confidence_24h', 0)}; pendentes: {night.get('pending', 0)}",
         f"- Jev professor: {night.get('jev_calls_24h', 0)} chamadas, US$ {float(night.get('jev_cost_24h') or 0):.4f}; gravados como professor: {night.get('teacher_24h', 0)}; exemplos novos: {night.get('examples_new_24h', 0)} (sem embedding: {night.get('examples_without_embedding', 0)})",
-        f"- Job: {night.get('runs_ok_24h', 0)} execuções ok ({night.get('minutes_24h', 0)} min), {night.get('runs_failed_24h', 0)} falhas",
-        (f"- Concordância com o professor (holdout): {float(m['agreement'][0]['agreement']):.1%} em {str(m['agreement'][0]['night'])[:10]}"
-         f" (n = {m['agreement'][0]['total']}, modelo {m['agreement'][0]['model']})"
-         if m.get("agreement") else "- Concordância com o professor (holdout): sem medição nos últimos 15 dias"),
+        f"- Job: {night.get('runs_ok_24h', 0)} execuções ok ({night.get('minutes_24h', 0)} min), {night.get('runs_failed_24h', 0)} falhas"
+        + (f"; última falha: `{night['last_error']}`" if night.get("last_error") else ""),
+        agreement_line(m.get("agreement") or []),
         "",
         "**Coletas**",
     ]

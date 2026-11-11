@@ -872,7 +872,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "select distinct on (night) agreement as \"Concordância\", coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\norder by night desc, finished_at desc\nlimit 1"
+          "rawSql": "select distinct on (night) agreement as \"Concordância\", coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev,\n         (details->'holdoutRecent'->>'agreement')::float as recent_agreement\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\norder by night desc, finished_at desc\nlimit 1"
         }
       ],
       "options": {
@@ -931,7 +931,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "select distinct on (night) (night::timestamp at time zone 'America/Sao_Paulo') as time,\n       agreement as \"Concordância\", agreement_covered as \"Concordância nos cobertos\",\n       coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\nwhere night >= (now() at time zone 'America/Sao_Paulo')::date - 29\norder by night, finished_at desc"
+          "rawSql": "select distinct on (night) (night::timestamp at time zone 'America/Sao_Paulo') as time,\n       agreement as \"Concordância\", agreement_covered as \"Concordância nos cobertos\",\n       coverage as \"Cobertura\", below_jev as \"Abaixo do limiar Jev\", recent_agreement as \"Exemplos novos (fora da prova)\"\nfrom (select (window_to at time zone 'America/Sao_Paulo')::date as night, finished_at,\n         (details->'holdout'->>'agreement')::float as agreement,\n         (details->'holdout'->>'agreementCovered')::float as agreement_covered,\n         (details->'holdout'->>'coverage')::float as coverage,\n         (details->'holdout'->>'belowJevThreshold')::float as below_jev,\n         (details->'holdoutRecent'->>'agreement')::float as recent_agreement\n      from ingest_runs\n      where source = 'nightly-category' and details->'holdout'->>'agreement' is not null) r\nwhere night >= (now() at time zone 'America/Sao_Paulo')::date - 29\norder by night, finished_at desc"
         }
       ],
       "options": {
@@ -945,7 +945,7 @@
           "sort": "none"
         }
       },
-      "description": "Uma linha por noite (a última execução dela). O monitor alerta (nightly:agreement) quando a concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding."
+      "description": "Uma linha por noite (a última execução dela). O monitor alerta (nightly:agreement) quando a concordância cai 5 pontos ou mais abaixo da mediana das 7 noites anteriores do mesmo modelo de embedding e da mesma prova fixa (exemplos do holdout criados antes de NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT). As noites antes da prova fixa mediam o holdout inteiro e tendem a cair. 'Exemplos novos' são os rótulos do Jev depois da data, medidos à parte e sem alerta."
     },
     {
       "id": 22,

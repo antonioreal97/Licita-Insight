@@ -163,12 +163,13 @@ sem o modelo (`ollama list` vazio → `up -d ollama-pull`) ou sem memória (`doc
 segue normal sem ele: os editais ficam com a categoria das regras até a noite seguinte.
 
 **Anomalia `nightly:agreement`**: a concordância do aluno com o professor no holdout caiu 5 pontos ou mais abaixo da
-mediana das até 7 noites anteriores do mesmo modelo de embedding (amostra mínima de 200; com `AGREEMENT_MIN` no
+mediana das até 7 noites anteriores do mesmo modelo de embedding e da mesma prova fixa (`frozenAt`; amostra mínima de 200; com `AGREEMENT_MIN` no
 `config.env`, também abaixo desse piso). É aviso de qualidade, não de indisponibilidade: o app segue normal. Só leitura:
-1. Histórico: `docker exec licita-macbook-postgres-1 psql -U licita -d licita -c "select distinct on (noite) noite, details->>'embedModel' modelo, details->'holdout'->>'total' n, details->'holdout'->>'agreement' concordancia, details->'holdout'->>'coverage' cobertura, details->>'trainExamples' exemplos from (select (window_to at time zone 'America/Sao_Paulo')::date noite, * from ingest_runs where source = 'nightly-category') r order by noite desc, finished_at desc limit 10"`
+1. Histórico: `docker exec licita-macbook-postgres-1 psql -U licita -d licita -c "select distinct on (noite) noite, details->>'embedModel' modelo, details->'holdout'->>'frozenAt' prova, details->'holdout'->>'total' n, details->'holdout'->>'agreement' concordancia, details->'holdoutRecent'->>'agreement' novos, details->'holdout'->>'coverage' cobertura, details->>'trainExamples' exemplos from (select (window_to at time zone 'America/Sao_Paulo')::date noite, * from ingest_runs where source = 'nightly-category') r order by noite desc, finished_at desc limit 10"`
    (ou o painel **Concordância do aluno com o professor** no Grafana).
 2. Mudou `OLLAMA_EMBED_MODEL` ou o número de exemplos saltou (rótulos novos do Jev ou da OpenAI)? Uma queda logo depois é
-   esperada e costuma voltar em 1 ou 2 noites.
+   esperada e costuma voltar em 1 ou 2 noites. A prova (`prova`) só muda se o owner trocar
+   `NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT`; os exemplos novos (`novos`) ficam fora dela e não disparam o alerta.
 3. Confusões da noite: `docker logs --since 24h licita-macbook-app-1 2>&1 | grep 'Nightly category classification summary' | tail -n 1 | jq -c '.holdout'`.
 Relate na issue de monitoramento com a tabela das últimas noites. Não mude `.env`, limiares nem modelo: decisão do owner.
 
