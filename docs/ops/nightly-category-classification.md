@@ -80,6 +80,7 @@ professor não é chamado.
 | `NIGHTLY_CATEGORY_MIN_EXAMPLES` | `200` | mínimo de exemplos para o aluno classificar |
 | `NIGHTLY_CATEGORY_HOLDOUT_SAMPLE` | `500` | exemplos do holdout medidos por noite; `0` desliga |
 | `NIGHTLY_CATEGORY_HOLDOUT_FROZEN_AT` | `2026-11-08T03:00:00Z` | só exemplos criados antes disso entram na prova; `off` mede o holdout inteiro (sem prova fixa) |
+| `NIGHTLY_CATEGORY_EMBED_RETRY_DELAY_MS` | `20000` | pausa antes de repetir um embedding que falhou, multiplicada pela tentativa (4 tentativas: 20 s, 40 s, 60 s) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | no compose de produção: `http://ollama:11434` |
 | `OLLAMA_EMBED_MODEL` | `bge-m3` | modelo de embedding; trocar re-embute os exemplos |
 | `OLLAMA_KEEP_ALIVE` | `10m` | produção: `2m`, para o modelo sair da memória fora da janela |

@@ -762,7 +762,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
     };
 
     const night = async (overrides: {
-      batch?: number; embedChunk?: number; holdoutFrozenAt?: Date | null; jev?: Partial<{
+      batch?: number; embedChunk?: number; embedRetryDelayMs?: number; holdoutFrozenAt?: Date | null; jev?: Partial<{
         enabled: boolean; threshold: number; dailyLimit: number; minConfidence: number; concurrency: number;
       }>;
     } = {}) => {
@@ -772,6 +772,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
         ...base,
         batch: overrides.batch ?? 2,
         embedChunk: overrides.embedChunk ?? 2,
+        embedRetryDelayMs: overrides.embedRetryDelayMs ?? 0,
         minExamples: 1,
         // The examples here are created by the test itself: the whole holdout, unless a test freezes it.
         holdoutFrozenAt: overrides.holdoutFrozenAt ?? null,
@@ -1110,7 +1111,7 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
       const [{ runNightlyCategoryClassification }] = await Promise.all([import("./nightly-classification")]);
       await insertTenders([[948001, "Recarga de extintores da biblioteca"]], NIGHT_STATUS);
       const { client } = createFakeOllama();
-      let failures = 2;
+      let failures = 3;
       const coldStart = {
         ...client,
         embed: async (texts: string[]) => {
@@ -1122,10 +1123,14 @@ describe("professor e aluno no PostgreSQL", { skip: !databaseUrl }, () => {
         },
       };
       const { jev } = createFakeJev(() => ({ category: "outros", confidence: 0.9 }));
+      const startedAt = Date.now();
       const result = await runNightlyCategoryClassification({
-        deadline: farDeadline(), client: coldStart, jev, config: await night(), statuses: [NIGHT_STATUS], budgetPaused: async () => false,
+        deadline: farDeadline(), client: coldStart, jev, config: await night({ embedRetryDelayMs: 20 }),
+        statuses: [NIGHT_STATUS], budgetPaused: async () => false,
       });
       assert.deepEqual([result.examplesEmbedded, result.processed, result.complete], [9, 1, true]);
+      // Three timeouts in a row, then the model answers: 20 + 40 + 60 ms of pauses in between.
+      assert.ok(Date.now() - startedAt >= 120, "espera mais a cada tentativa em vez de insistir na hora");
 
       // A wrong model name is a 4xx: no point insisting, the scheduler waits and tries later.
       await insertTenders([[948002, "Recarga de extintores do arquivo"]], NIGHT_STATUS);

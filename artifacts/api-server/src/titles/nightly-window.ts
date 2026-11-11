@@ -68,6 +68,12 @@ export type NightlyCategoryConfig = {
   batch: number;
   /** Texts per Ollama request: small enough to finish inside the shutdown grace period. */
   embedChunk: number;
+  /**
+   * Pause before asking Ollama again after a failed embedding, times the attempt number. The first
+   * request of the night loads the model; on a machine short of memory that takes minutes, and
+   * asking again at once only adds load.
+   */
+  embedRetryDelayMs: number;
   /** Share of the window the example embeddings may take before tenders start. */
   exampleShare: number;
   /** Below this many usable examples the job keeps embedding instead of classifying. */
@@ -97,6 +103,7 @@ export const nightlyCategoryConfig = (): NightlyCategoryConfig => ({
   retryMs: positiveInteger("NIGHTLY_CATEGORY_RETRY_MS", 10 * 60_000),
   batch: positiveInteger("NIGHTLY_CATEGORY_BATCH", 64),
   embedChunk: positiveInteger("NIGHTLY_CATEGORY_EMBED_CHUNK", 8),
+  embedRetryDelayMs: nonNegativeInteger("NIGHTLY_CATEGORY_EMBED_RETRY_DELAY_MS", 20_000),
   exampleShare: probability("NIGHTLY_CATEGORY_EXAMPLE_SHARE", 0.4),
   minExamples: positiveInteger("NIGHTLY_CATEGORY_MIN_EXAMPLES", 200),
   holdoutSample: nonNegativeInteger("NIGHTLY_CATEGORY_HOLDOUT_SAMPLE", 500),
